@@ -8,12 +8,20 @@ use scanopy::server::auth::r#impl::api::{
 use scanopy::server::daemons::r#impl::base::Daemon;
 use scanopy::server::networks::r#impl::Network;
 use scanopy::server::organizations::r#impl::base::Organization;
+use scanopy::server::shared::storage::generic::GenericPostgresStorage;
+use scanopy::server::shared::storage::traits::{Storage, StorableEntity};
 use scanopy::server::shared::types::api::ApiResponse;
 use scanopy::server::users::r#impl::base::User;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
+use std::fmt::Display;
 use std::process::{Child, Command};
 use uuid::Uuid;
+
+/// Database URL for test database (exposed on port 5435 by docker-compose.dev.yml)
+const TEST_DATABASE_URL: &str = "postgres://postgres:password@localhost:5435/scanopy";
 
 pub const BASE_URL: &str = "http://localhost:60072";
 pub const TEST_PASSWORD: &str = "TestPassword123!";
@@ -327,11 +335,42 @@ pub struct TestContext {
     pub client: TestClient,
     pub network_id: Uuid,
     pub organization_id: Uuid,
+    pub db_pool: PgPool,
+}
+
+impl TestContext {
+    /// Insert an entity directly into the database, bypassing API authorization.
+    /// Useful for creating test fixtures that the current user shouldn't have access to.
+    pub async fn insert_entity<T: StorableEntity + Display>(&self, entity: &T) -> Result<T, String> {
+        let storage: GenericPostgresStorage<T> = GenericPostgresStorage::new(self.db_pool.clone());
+        storage
+            .create(entity)
+            .await
+            .map_err(|e| format!("Failed to insert entity: {}", e))
+    }
+
+    /// Delete an entity directly from the database by ID.
+    pub async fn delete_entity<T: StorableEntity + Display>(&self, id: &Uuid) -> Result<(), String> {
+        let storage: GenericPostgresStorage<T> = GenericPostgresStorage::new(self.db_pool.clone());
+        storage
+            .delete(id)
+            .await
+            .map_err(|e| format!("Failed to delete entity: {}", e))
+    }
 }
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
+
+/// Create a database connection pool for direct database access in tests
+pub async fn create_test_db_pool() -> Result<PgPool, String> {
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(TEST_DATABASE_URL)
+        .await
+        .map_err(|e| format!("Failed to connect to test database: {}", e))
+}
 
 pub async fn retry<T, F, Fut>(
     description: &str,

@@ -6,6 +6,8 @@ use crate::infra::{TestContext, exec_sql};
 use cidr::{IpCidr, Ipv4Cidr};
 use reqwest::StatusCode;
 use scanopy::server::hosts::r#impl::api::CreateHostRequest;
+use scanopy::server::hosts::r#impl::base::{Host, HostBase};
+use scanopy::server::networks::r#impl::{Network, NetworkBase};
 use scanopy::server::shared::storage::traits::StorableEntity;
 use scanopy::server::shared::types::entities::EntitySource;
 use scanopy::server::subnets::r#impl::base::{Subnet, SubnetBase};
@@ -16,38 +18,53 @@ use uuid::Uuid;
 pub async fn run_permission_tests(ctx: &TestContext) -> Result<(), String> {
     println!("\n=== Testing Permissions & Access Control ===\n");
 
-    // Create a second network that the user doesn't have access to
+    // Create a second network in the same org that we won't grant access to
     let other_network_id = create_inaccessible_network(ctx).await?;
+
+    // Downgrade user to Member so they don't auto-get access to all networks
+    // (Owners/Admins automatically have access to all networks in their org)
+    set_user_permissions("Member")?;
 
     test_cannot_read_host_on_other_network(ctx, other_network_id).await?;
     test_cannot_create_host_on_other_network(ctx, other_network_id).await?;
     test_cannot_create_subnet_on_other_network(ctx, other_network_id).await?;
 
+    // Restore Owner permissions
+    set_user_permissions("Owner")?;
+
     // Clean up
-    cleanup_inaccessible_network(other_network_id)?;
+    cleanup_inaccessible_network(ctx, other_network_id).await?;
 
     println!("\n✅ All permission tests passed!");
     Ok(())
 }
 
-/// Creates a network in the same organization that the user doesn't have access to
-async fn create_inaccessible_network(ctx: &TestContext) -> Result<Uuid, String> {
-    let network_id = Uuid::new_v4();
-
-    // Insert network directly into database (bypassing API which would grant access)
-    let sql = format!(
-        "INSERT INTO networks (id, name, organization_id, created_at, updated_at) \
-         VALUES ('{}', 'Inaccessible Network', '{}', NOW(), NOW());",
-        network_id, ctx.organization_id
-    );
-    exec_sql(&sql)?;
-
-    println!("  Created inaccessible network: {}", network_id);
-    Ok(network_id)
+/// Set user permissions via direct SQL update
+fn set_user_permissions(permissions: &str) -> Result<(), String> {
+    exec_sql(&format!(
+        "UPDATE users SET permissions = '{}';",
+        permissions
+    ))?;
+    println!("  Set user permissions to: {}", permissions);
+    Ok(())
 }
 
-fn cleanup_inaccessible_network(network_id: Uuid) -> Result<(), String> {
-    // Clean up in reverse order of dependencies
+/// Creates a network in the same organization that we won't grant the user access to.
+/// Combined with downgrading user to Member, this tests intra-org network permissions.
+async fn create_inaccessible_network(ctx: &TestContext) -> Result<Uuid, String> {
+    let network = Network::new(NetworkBase {
+        name: "Inaccessible Network".to_string(),
+        organization_id: ctx.organization_id,
+        ..Default::default()
+    });
+    let created = ctx.insert_entity(&network).await?;
+
+    println!("  Created inaccessible network: {}", created.id);
+    Ok(created.id)
+}
+
+async fn cleanup_inaccessible_network(ctx: &TestContext, network_id: Uuid) -> Result<(), String> {
+    // Clean up in reverse order of dependencies using exec_sql for bulk deletes
     let _ = exec_sql(&format!(
         "DELETE FROM subnets WHERE network_id = '{}';",
         network_id
@@ -56,10 +73,8 @@ fn cleanup_inaccessible_network(network_id: Uuid) -> Result<(), String> {
         "DELETE FROM hosts WHERE network_id = '{}';",
         network_id
     ));
-    let _ = exec_sql(&format!(
-        "DELETE FROM networks WHERE id = '{}';",
-        network_id
-    ));
+    // Delete the network
+    let _ = ctx.delete_entity::<Network>(&network_id).await;
     Ok(())
 }
 
@@ -71,22 +86,22 @@ async fn test_cannot_read_host_on_other_network(
     println!("Testing: Cannot read hosts on inaccessible network...");
 
     // Create a host directly in the database on the other network
-    let host_id = Uuid::new_v4();
-    let sql = format!(
-        "INSERT INTO hosts (id, name, network_id, source, hidden, tags, created_at, updated_at) \
-         VALUES ('{}', 'Secret Host', '{}', '\"System\"', false, '[]', NOW(), NOW());",
-        host_id, other_network_id
-    );
-    exec_sql(&sql)?;
+    let host = Host::new(HostBase {
+        name: "Secret Host".to_string(),
+        network_id: other_network_id,
+        source: EntitySource::System,
+        ..Default::default()
+    });
+    let created_host = ctx.insert_entity(&host).await?;
 
     // Try to read this host - should fail
     let result = ctx
         .client
-        .get_expect_status(&format!("/api/hosts/{}", host_id), StatusCode::NOT_FOUND)
+        .get_expect_status(&format!("/api/hosts/{}", created_host.id), StatusCode::UNAUTHORIZED)
         .await;
 
     // Clean up
-    let _ = exec_sql(&format!("DELETE FROM hosts WHERE id = '{}';", host_id));
+    let _ = ctx.delete_entity::<Host>(&created_host.id).await;
 
     assert!(
         result.is_ok(),

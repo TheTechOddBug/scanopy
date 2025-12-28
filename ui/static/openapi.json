@@ -6,7 +6,7 @@
     "license": {
       "name": "Dual (AGPL3.0, Commercial License Available)"
     },
-    "version": "0.12.5"
+    "version": "0.12.6"
   },
   "paths": {
     "/api/auth/daemon-setup": {
@@ -6490,14 +6490,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2025-12-28T03:33:18.094145Z",
-              "id": "8780532e-4eeb-494c-8b1d-dcf7c0a357e9",
+              "created_at": "2025-12-28T15:52:09.785582Z",
+              "id": "28f9da3b-605a-4e5b-b006-3c55d423862b",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2025-12-28T03:33:18.094145Z"
+              "updated_at": "2025-12-28T15:52:09.785582Z"
             }
           },
           "error": {
@@ -7535,14 +7535,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2025-12-28T03:33:18.089197Z",
-                  "id": "26d284d4-54a6-4ec8-a32b-8906ce77dc1c",
+                  "created_at": "2025-12-28T15:52:09.782094Z",
+                  "id": "70165f64-cf00-4771-b1ef-5debb47ca7cd",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2025-12-28T03:33:18.089197Z"
+                  "updated_at": "2025-12-28T15:52:09.782094Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -7550,7 +7550,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
-              "service_definition": "Nagios",
+              "service_definition": "Kerberos",
               "source": {
                 "type": "Manual"
               },
@@ -8176,14 +8176,14 @@
               ],
               "description": "Association between a service and a port / interface that the service is listening on",
               "example": {
-                "created_at": "2025-12-28T03:33:18.093735Z",
-                "id": "08bb54b8-1bc8-41e7-87ec-6d3c14687cc8",
+                "created_at": "2025-12-28T15:52:09.785390Z",
+                "id": "07a9be6a-286e-40a1-9092-6a2ccc9fda85",
                 "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "port_id": "550e8400-e29b-41d4-a716-446655440006",
                 "service_id": "550e8400-e29b-41d4-a716-446655440007",
                 "type": "Port",
-                "updated_at": "2025-12-28T03:33:18.093735Z"
+                "updated_at": "2025-12-28T15:52:09.785390Z"
               }
             }
           },
@@ -8881,14 +8881,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2025-12-28T03:33:18.087530Z",
-                    "id": "1e071f8a-9bb5-4497-adc3-ca48447cfc13",
+                    "created_at": "2025-12-28T15:52:09.781289Z",
+                    "id": "f110ec0d-7ed1-4e2e-94ef-ac3cc9addfa3",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2025-12-28T03:33:18.087530Z"
+                    "updated_at": "2025-12-28T15:52:09.781289Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -8896,7 +8896,7 @@
                 "id": "550e8400-e29b-41d4-a716-446655440007",
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
-                "service_definition": "Nagios",
+                "service_definition": "Kerberos",
                 "source": {
                   "type": "Manual"
                 },
@@ -9454,14 +9454,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2025-12-28T03:33:18.077813Z",
-          "id": "632b76df-6271-4bcf-9fef-2a3dc387386c",
+          "created_at": "2025-12-28T15:52:09.775132Z",
+          "id": "eee38b0f-e671-48b0-b67f-16a32dfcf393",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2025-12-28T03:33:18.077813Z"
+          "updated_at": "2025-12-28T15:52:09.775132Z"
         }
       },
       "BindingBase": {
@@ -9569,7 +9569,6 @@
           "Rose",
           "Red",
           "Orange",
-          "Yellow",
           "Green",
           "Emerald",
           "Teal",
@@ -9577,7 +9576,8 @@
           "Blue",
           "Indigo",
           "Purple",
-          "Gray"
+          "Gray",
+          "Yellow"
         ]
       },
       "CreateBindingInput": {
@@ -12123,14 +12123,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2025-12-28T03:33:18.077686Z",
-              "id": "652c8e92-7835-48f7-98f1-82bdee636648",
+              "created_at": "2025-12-28T15:52:09.775086Z",
+              "id": "fbe66fd8-5000-4974-8d21-d8a0b54832c3",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2025-12-28T03:33:18.077686Z"
+              "updated_at": "2025-12-28T15:52:09.775086Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -12138,7 +12138,7 @@
           "id": "550e8400-e29b-41d4-a716-446655440007",
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
-          "service_definition": "Nagios",
+          "service_definition": "Kerberos",
           "source": {
             "type": "Manual"
           },

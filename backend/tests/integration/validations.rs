@@ -4,12 +4,12 @@ use crate::infra::{BASE_URL, TestContext};
 use reqwest::StatusCode;
 use scanopy::server::daemons::r#impl::base::Daemon;
 use scanopy::server::hosts::r#impl::api::{CreateHostRequest, HostResponse};
+use scanopy::server::networks::r#impl::{Network, NetworkBase};
 use scanopy::server::services::definitions::ServiceDefinitionRegistry;
 use scanopy::server::services::r#impl::base::{Service, ServiceBase};
 use scanopy::server::shared::storage::traits::StorableEntity;
 use scanopy::server::shared::types::entities::EntitySource;
 use scanopy::server::tags::r#impl::base::{Tag, TagBase};
-use uuid::Uuid;
 
 pub async fn run_validation_tests(ctx: &TestContext) -> Result<(), String> {
     println!("\n=== Testing Handler Validations ===\n");
@@ -25,6 +25,15 @@ pub async fn run_validation_tests(ctx: &TestContext) -> Result<(), String> {
 async fn test_service_network_validation(ctx: &TestContext) -> Result<(), String> {
     println!("Testing: Service must be on same network as host...");
 
+    // Create a second network that the user has access to
+    let second_network = Network::new(NetworkBase {
+        name: "Validation Test Network".to_string(),
+        organization_id: ctx.organization_id,
+        ..Default::default()
+    });
+    let second_network: Network = ctx.client.post("/api/networks", &second_network).await?;
+
+    // Create host on the first network
     let host_request = CreateHostRequest {
         name: "Validation Test Host".to_string(),
         hostname: Some("validation.local".to_string()),
@@ -38,12 +47,13 @@ async fn test_service_network_validation(ctx: &TestContext) -> Result<(), String
     };
     let created_host: HostResponse = ctx.client.post("/api/hosts", &host_request).await?;
 
+    // Try to create a service on the second network that references the host on the first network
     let service_def = ServiceDefinitionRegistry::all_service_definitions()[0].clone();
     let service = Service::new(ServiceBase {
         name: "Wrong Network Service".to_string(),
         host_id: created_host.id,
         bindings: vec![],
-        network_id: Uuid::new_v4(), // Different network!
+        network_id: second_network.id, // Different network than host!
         service_definition: service_def,
         virtualization: None,
         source: EntitySource::System,
@@ -61,8 +71,12 @@ async fn test_service_network_validation(ctx: &TestContext) -> Result<(), String
     );
     println!("  ✓ Service with different network_id than host returns 400");
 
+    // Cleanup
     ctx.client
         .delete_no_content(&format!("/api/hosts/{}", created_host.id))
+        .await?;
+    ctx.client
+        .delete_no_content(&format!("/api/networks/{}", second_network.id))
         .await?;
 
     Ok(())

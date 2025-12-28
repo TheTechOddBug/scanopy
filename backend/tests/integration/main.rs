@@ -20,8 +20,8 @@ mod permissions;
 mod validations;
 
 use infra::{
-    ContainerManager, TestClient, TestContext, setup_authenticated_user, wait_for_daemon,
-    wait_for_network, wait_for_organization,
+    ContainerManager, TestClient, TestContext, create_test_db_pool, setup_authenticated_user,
+    wait_for_daemon, wait_for_network, wait_for_organization,
 };
 
 /// Single integration test that runs all test categories with shared containers.
@@ -95,10 +95,15 @@ async fn integration_tests() {
     println!("Phase 2: CRUD Endpoint Tests");
     println!("============================================================");
 
+    let db_pool = create_test_db_pool()
+        .await
+        .expect("Failed to create test database pool");
+
     let ctx = TestContext {
         client: TestClient::new(),
         network_id: network.id,
         organization_id: organization.id,
+        db_pool,
     };
 
     // Re-authenticate for CRUD tests

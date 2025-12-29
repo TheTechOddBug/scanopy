@@ -10,7 +10,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use uuid::Uuid;
 
 use crate::server::{
-    api_keys::r#impl::base::{ApiKey, ApiKeyBase},
+    daemon_api_keys::r#impl::base::{DaemonApiKey, DaemonApiKeyBase},
     bindings::r#impl::base::Binding,
     daemons::r#impl::{
         api::DaemonCapabilities,
@@ -59,7 +59,7 @@ pub struct DemoData {
     pub subnets: Vec<Subnet>,
     pub hosts_with_services: Vec<HostWithServices>,
     pub daemons: Vec<Daemon>,
-    pub api_keys: Vec<ApiKey>,
+    pub api_keys: Vec<DaemonApiKey>,
     pub groups: Vec<Group>,
     pub topologies: Vec<Topology>,
 }
@@ -1482,7 +1482,7 @@ fn generate_daemons(
 // API Keys
 // ============================================================================
 
-fn generate_api_keys(networks: &[Network], now: DateTime<Utc>) -> Vec<ApiKey> {
+fn generate_api_keys(networks: &[Network], now: DateTime<Utc>) -> Vec<DaemonApiKey> {
     let find_network = |name: &str| {
         networks
             .iter()
@@ -1491,11 +1491,11 @@ fn generate_api_keys(networks: &[Network], now: DateTime<Utc>) -> Vec<ApiKey> {
     };
 
     vec![
-        ApiKey {
+        DaemonApiKey {
             id: Uuid::new_v4(),
             created_at: now,
             updated_at: now,
-            base: ApiKeyBase {
+            base: DaemonApiKeyBase {
                 key: format!("demo_hq_{}", Uuid::new_v4().simple()),
                 name: "HQ Daemon Key".to_string(),
                 last_used: Some(now),
@@ -1505,11 +1505,11 @@ fn generate_api_keys(networks: &[Network], now: DateTime<Utc>) -> Vec<ApiKey> {
                 tags: vec![],
             },
         },
-        ApiKey {
+        DaemonApiKey {
             id: Uuid::new_v4(),
             created_at: now,
             updated_at: now,
-            base: ApiKeyBase {
+            base: DaemonApiKeyBase {
                 key: format!("demo_cloud_{}", Uuid::new_v4().simple()),
                 name: "Cloud Daemon Key".to_string(),
                 last_used: Some(now),
@@ -1519,11 +1519,11 @@ fn generate_api_keys(networks: &[Network], now: DateTime<Utc>) -> Vec<ApiKey> {
                 tags: vec![],
             },
         },
-        ApiKey {
+        DaemonApiKey {
             id: Uuid::new_v4(),
             created_at: now,
             updated_at: now,
-            base: ApiKeyBase {
+            base: DaemonApiKeyBase {
                 key: format!("demo_denver_{}", Uuid::new_v4().simple()),
                 name: "Denver Daemon Key".to_string(),
                 last_used: Some(now),
@@ -1533,11 +1533,11 @@ fn generate_api_keys(networks: &[Network], now: DateTime<Utc>) -> Vec<ApiKey> {
                 tags: vec![],
             },
         },
-        ApiKey {
+        DaemonApiKey {
             id: Uuid::new_v4(),
             created_at: now,
             updated_at: now,
-            base: ApiKeyBase {
+            base: DaemonApiKeyBase {
                 key: format!("demo_riverside_{}", Uuid::new_v4().simple()),
                 name: "Riverside Daemon Key".to_string(),
                 last_used: Some(now),

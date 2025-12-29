@@ -4,16 +4,17 @@ use crate::server::github::handlers::{__path_get_stars, get_stars};
 use crate::server::openapi::create_docs_router;
 use crate::server::shared::types::metadata::{__path_get_metadata_registry, get_metadata_registry};
 use crate::server::{
-    api_keys::handlers as api_key_handlers, auth::handlers as auth_handlers,
+    daemon_api_keys::handlers as daemon_api_key_handlers, auth::handlers as auth_handlers,
     billing::handlers as billing_handlers, bindings::handlers as binding_handlers,
     config::AppState, daemons::handlers as daemon_handlers,
     discovery::handlers as discovery_handlers, groups::handlers as group_handlers,
     hosts::handlers as host_handlers, interfaces::handlers as interface_handlers,
     invites::handlers as invite_handlers, networks::handlers as network_handlers,
     organizations::handlers as organization_handlers, ports::handlers as port_handlers,
-    services::handlers as service_handlers, shares::handlers as share_handlers,
-    subnets::handlers as subnet_handlers, tags::handlers as tag_handlers,
-    topology::handlers as topology_handlers, users::handlers as user_handlers,
+    services::handlers as service_handlers,
+    shares::handlers as share_handlers, subnets::handlers as subnet_handlers,
+    tags::handlers as tag_handlers, topology::handlers as topology_handlers,
+    user_api_keys::handlers as user_api_key_handlers, users::handlers as user_handlers,
 };
 use axum::Router;
 use axum::http::HeaderValue;
@@ -43,7 +44,9 @@ pub fn create_openapi_routes() -> OpenApiRouter<Arc<AppState>> {
         .nest("/api/tags", tag_handlers::create_router())
         .nest("/api/ports", port_handlers::create_router())
         .nest("/api/bindings", binding_handlers::create_router())
-        .nest("/api/auth/keys", api_key_handlers::create_router())
+        // API key routes
+        .nest("/api/auth/keys", user_api_key_handlers::create_router())
+        .nest("/api/auth/daemon", daemon_api_key_handlers::create_router())
         // Topology endpoints (tagged as internal - hidden from public docs)
         .nest("/api/topology", topology_handlers::create_router())
 }

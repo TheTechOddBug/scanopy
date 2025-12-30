@@ -105,7 +105,35 @@ async fn register_daemon(
 
     tracing::info!("{:?}", request);
 
-    // Create a dummy host to return a host_id to the daemon
+    // Check if daemon already exists (re-registration scenario)
+    // This handles cases where a previous registration partially succeeded
+    if let Some(mut existing_daemon) = service.get_by_id(&request.daemon_id).await? {
+        tracing::info!(
+            daemon_id = %request.daemon_id,
+            host_id = %existing_daemon.base.host_id,
+            "Daemon already registered, updating registration"
+        );
+
+        // Update daemon with current info
+        existing_daemon.base.url = request.url;
+        existing_daemon.base.capabilities = request.capabilities;
+        existing_daemon.base.last_seen = Utc::now();
+        existing_daemon.base.mode = request.mode;
+        existing_daemon.base.name = request.name;
+
+        let updated_daemon = service
+            .update(&mut existing_daemon, auth_daemon.into())
+            .await
+            .map_err(|e| ApiError::internal_error(&format!("Failed to update daemon: {}", e)))?;
+
+        // Return early - host and discoveries already exist from initial registration
+        return Ok(Json(ApiResponse::success(DaemonRegistrationResponse {
+            daemon: updated_daemon,
+            host_id: existing_daemon.base.host_id,
+        })));
+    }
+
+    // New registration - create host and daemon
     let dummy_host = Host::new(HostBase {
         network_id: request.network_id,
         name: request.name.clone(),

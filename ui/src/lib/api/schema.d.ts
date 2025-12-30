@@ -1733,14 +1733,14 @@ export interface components {
 			/**
 			 * @description Association between a service and a port / interface that the service is listening on
 			 * @example {
-			 *       "created_at": "2025-12-28T03:33:18.094145Z",
-			 *       "id": "8780532e-4eeb-494c-8b1d-dcf7c0a357e9",
+			 *       "created_at": "2025-12-30T17:21:24.086401Z",
+			 *       "id": "bbeb20e6-5f4f-403a-8e3b-42bc94650b08",
 			 *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 			 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
 			 *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
 			 *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
 			 *       "type": "Port",
-			 *       "updated_at": "2025-12-28T03:33:18.094145Z"
+			 *       "updated_at": "2025-12-30T17:21:24.086401Z"
 			 *     }
 			 */
 			data?: components['schemas']['BindingBase'] & {
@@ -2076,14 +2076,14 @@ export interface components {
 			 * @example {
 			 *       "bindings": [
 			 *         {
-			 *           "created_at": "2025-12-28T03:33:18.089197Z",
-			 *           "id": "26d284d4-54a6-4ec8-a32b-8906ce77dc1c",
+			 *           "created_at": "2025-12-30T17:21:24.081775Z",
+			 *           "id": "d3e03e22-9c78-4ba5-ae6f-38d5b8db6500",
 			 *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 			 *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
 			 *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
 			 *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
 			 *           "type": "Port",
-			 *           "updated_at": "2025-12-28T03:33:18.089197Z"
+			 *           "updated_at": "2025-12-30T17:21:24.081775Z"
 			 *         }
 			 *       ],
 			 *       "created_at": "2026-01-15T10:30:00Z",
@@ -2091,7 +2091,7 @@ export interface components {
 			 *       "id": "550e8400-e29b-41d4-a716-446655440007",
 			 *       "name": "nginx",
 			 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
-			 *       "service_definition": "Nagios",
+			 *       "service_definition": "FreeIPA",
 			 *       "source": {
 			 *         "type": "Manual"
 			 *       },
@@ -2523,14 +2523,14 @@ export interface components {
 		/**
 		 * @description Association between a service and a port / interface that the service is listening on
 		 * @example {
-		 *       "created_at": "2025-12-28T03:33:18.077813Z",
-		 *       "id": "632b76df-6271-4bcf-9fef-2a3dc387386c",
+		 *       "created_at": "2025-12-30T17:21:24.070407Z",
+		 *       "id": "ff29a6c7-7ce1-4bec-9278-22539c5ec533",
 		 *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 		 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
 		 *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
 		 *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
 		 *       "type": "Port",
-		 *       "updated_at": "2025-12-28T03:33:18.077813Z"
+		 *       "updated_at": "2025-12-30T17:21:24.070407Z"
 		 *     }
 		 */
 		Binding: components['schemas']['BindingBase'] & {
@@ -2590,7 +2590,6 @@ export interface components {
 			| 'Rose'
 			| 'Red'
 			| 'Orange'
-			| 'Yellow'
 			| 'Green'
 			| 'Emerald'
 			| 'Teal'
@@ -2598,7 +2597,8 @@ export interface components {
 			| 'Blue'
 			| 'Indigo'
 			| 'Purple'
-			| 'Gray';
+			| 'Gray'
+			| 'Yellow';
 		/**
 		 * @description Input for creating a binding with a service.
 		 *     `service_id` and `network_id` are assigned by the server after the service is created.
@@ -3303,6 +3303,7 @@ export interface components {
 			onboarding: components['schemas']['TelemetryOperation'][];
 			plan: null | components['schemas']['BillingPlan'];
 			readonly plan_status: string | null;
+			readonly stripe_customer_id: string | null;
 		};
 		PlanConfig: {
 			/** Format: int64 */
@@ -3419,14 +3420,14 @@ export interface components {
 		 * @example {
 		 *       "bindings": [
 		 *         {
-		 *           "created_at": "2025-12-28T03:33:18.077686Z",
-		 *           "id": "652c8e92-7835-48f7-98f1-82bdee636648",
+		 *           "created_at": "2025-12-30T17:21:24.070311Z",
+		 *           "id": "9b6219c7-4876-4831-8c29-c4713038ac59",
 		 *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 		 *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
 		 *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
 		 *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
 		 *           "type": "Port",
-		 *           "updated_at": "2025-12-28T03:33:18.077686Z"
+		 *           "updated_at": "2025-12-30T17:21:24.070311Z"
 		 *         }
 		 *       ],
 		 *       "created_at": "2026-01-15T10:30:00Z",
@@ -3434,7 +3435,7 @@ export interface components {
 		 *       "id": "550e8400-e29b-41d4-a716-446655440007",
 		 *       "name": "nginx",
 		 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
-		 *       "service_definition": "Nagios",
+		 *       "service_definition": "FreeIPA",
 		 *       "source": {
 		 *         "type": "Manual"
 		 *       },
@@ -3623,6 +3624,7 @@ export interface components {
 		TelemetryOperation:
 			| 'OrgCreated'
 			| 'OnboardingModalCompleted'
+			| 'PlanSelected'
 			| 'PersonalPlanSelected'
 			| 'CommercialPlanSelected'
 			| 'FirstApiKeyCreated'

@@ -55,11 +55,11 @@ pub async fn capture_fixtures_middleware(request: Request, next: Next) -> Respon
         };
 
         let path = manifest_path(version);
-        if let Some(parent) = path.parent() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
-                tracing::warn!("Failed to create fixtures directory: {}", e);
-                return;
-            }
+        if let Some(parent) = path.parent()
+            && let Err(e) = std::fs::create_dir_all(parent)
+        {
+            tracing::warn!("Failed to create fixtures directory: {}", e);
+            return;
         }
 
         if let Ok(json) = serde_json::to_string_pretty(&manifest) {

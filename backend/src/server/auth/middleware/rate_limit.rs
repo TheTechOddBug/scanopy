@@ -164,47 +164,53 @@ pub async fn rate_limit_middleware(
     next: Next,
 ) -> Result<Response, Response> {
     #[cfg(feature = "generate-fixtures")]
-    return Ok(next.run(request).await);
-
-    let path = request.uri().path();
-
-    let exempt_paths = ["/api/billing/webhooks/", "/api/config", "/api/metadata"];
-
-    // Exempt static file serving, billing webhooks, config and metadata
-    if !path.starts_with("/api/") || exempt_paths.contains(&path) {
-        return Ok(next.run(request).await);
-    }
-
-    let (mut parts, body) = request.into_parts();
-
-    let entity = AuthenticatedEntity::from_request_parts(&mut parts, &state)
-        .await
-        .ok();
-
-    // Daemons and System are exempt from rate limiting
-    if let Some(ref e) = entity
-        && matches!(
-            e,
-            AuthenticatedEntity::Daemon { .. } | AuthenticatedEntity::System
-        )
     {
-        let request = Request::from_parts(parts, body);
+        let _ = (state, ip);
         return Ok(next.run(request).await);
     }
 
-    let check_result = match entity {
-        Some(AuthenticatedEntity::User { user_id, .. }) => check_user(user_id),
-        Some(AuthenticatedEntity::ApiKey { user_id, .. }) => check_user(user_id),
-        _ => check_anonymous(ip),
-    };
+    #[cfg(not(feature = "generate-fixtures"))]
+    {
+        let path = request.uri().path();
 
-    match check_result {
-        Ok(info) => {
-            let request = Request::from_parts(parts, body);
-            let mut response = next.run(request).await;
-            info.apply_headers(&mut response);
-            Ok(response)
+        let exempt_paths = ["/api/billing/webhooks/", "/api/config", "/api/metadata"];
+
+        // Exempt static file serving, billing webhooks, config and metadata
+        if !path.starts_with("/api/") || exempt_paths.contains(&path) {
+            return Ok(next.run(request).await);
         }
-        Err(info) => Err(info.to_error_response()),
+
+        let (mut parts, body) = request.into_parts();
+
+        let entity = AuthenticatedEntity::from_request_parts(&mut parts, &state)
+            .await
+            .ok();
+
+        // Daemons and System are exempt from rate limiting
+        if let Some(ref e) = entity
+            && matches!(
+                e,
+                AuthenticatedEntity::Daemon { .. } | AuthenticatedEntity::System
+            )
+        {
+            let request = Request::from_parts(parts, body);
+            return Ok(next.run(request).await);
+        }
+
+        let check_result = match entity {
+            Some(AuthenticatedEntity::User { user_id, .. }) => check_user(user_id),
+            Some(AuthenticatedEntity::ApiKey { user_id, .. }) => check_user(user_id),
+            _ => check_anonymous(ip),
+        };
+
+        match check_result {
+            Ok(info) => {
+                let request = Request::from_parts(parts, body);
+                let mut response = next.run(request).await;
+                info.apply_headers(&mut response);
+                Ok(response)
+            }
+            Err(info) => Err(info.to_error_response()),
+        }
     }
 }

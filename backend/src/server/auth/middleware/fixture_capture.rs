@@ -68,17 +68,17 @@ pub async fn capture_fixtures_middleware(request: Request, next: Next) -> Respon
             .parent()
             .map(|p| p.join("ui/static/openapi.json"));
 
-        if let Some(source) = source {
-            if source.exists() {
-                if let Err(e) = std::fs::create_dir_all(&version_dir) {
-                    tracing::warn!("Failed to create fixtures directory: {}", e);
-                    return;
-                }
-                if let Err(e) = std::fs::copy(&source, &spec_path) {
-                    tracing::warn!("Failed to copy OpenAPI spec: {}", e);
-                } else {
-                    tracing::info!("Saved OpenAPI spec: {:?}", spec_path);
-                }
+        if let Some(source) = source
+            && source.exists()
+        {
+            if let Err(e) = std::fs::create_dir_all(&version_dir) {
+                tracing::warn!("Failed to create fixtures directory: {}", e);
+                return;
+            }
+            if let Err(e) = std::fs::copy(&source, &spec_path) {
+                tracing::warn!("Failed to copy OpenAPI spec: {}", e);
+            } else {
+                tracing::info!("Saved OpenAPI spec: {:?}", spec_path);
             }
         }
     }
@@ -102,11 +102,11 @@ pub async fn capture_fixtures_middleware(request: Request, next: Next) -> Respon
         };
 
         let path = manifest_path(version);
-        if let Some(parent) = path.parent() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
-                tracing::warn!("Failed to create fixtures directory: {}", e);
-                return;
-            }
+        if let Some(parent) = path.parent()
+            && let Err(e) = std::fs::create_dir_all(parent)
+        {
+            tracing::warn!("Failed to create fixtures directory: {}", e);
+            return;
         }
 
         if let Ok(json) = serde_json::to_string_pretty(&manifest) {

@@ -59,8 +59,12 @@
 
 	let hasDaemon = $derived(daemonsData.some((d) => d.host_id == host.id));
 
-	// Get filtered data for this host
-	let hostServices = $derived(servicesData.filter((s) => s.host_id === host.id));
+	// Get filtered data for this host, sorted by position
+	let hostServices = $derived(
+		servicesData
+			.filter((s) => s.host_id === host.id)
+			.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+	);
 	let hostInterfaces = $derived(interfacesData.filter((i) => i.host_id === host.id));
 	let virtualizationService = $derived(
 		host.virtualization
@@ -149,8 +153,7 @@
 								label: sv.name,
 								color: entities.getColorHelper('Service').color
 							};
-						})
-						.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
+						}),
 					emptyText: 'No services assigned'
 				},
 				{

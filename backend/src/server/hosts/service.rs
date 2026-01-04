@@ -4,8 +4,8 @@ use crate::server::{
     daemons::service::DaemonService,
     hosts::r#impl::{
         api::{
-            ConflictBehavior, CreateHostRequest, HostResponse, InterfaceInput, PortInput,
-            ServiceInput, UpdateHostRequest,
+            BindingInput, ConflictBehavior, CreateHostRequest, HostResponse, InterfaceInput,
+            PortInput, ServiceInput, UpdateHostRequest,
         },
         base::{Host, HostBase},
     },
@@ -19,7 +19,7 @@ use crate::server::{
             types::{EntityEvent, EntityOperation},
         },
         handlers::traits::CrudHandlers,
-        position::validate_input_positions,
+        position::resolve_and_validate_input_positions,
         services::traits::{ChildCrudService, CrudService, EventBusService},
         storage::{
             filter::EntityFilter,
@@ -285,7 +285,7 @@ impl HostService {
         let ports = self.port_service.get_for_host(host_id).await?;
         let services = self
             .service_service
-            .get_all(EntityFilter::unfiltered().host_id(host_id))
+            .get_all_ordered(EntityFilter::unfiltered().host_id(host_id), "position ASC")
             .await?;
 
         Ok((interfaces, ports, services))
@@ -303,10 +303,13 @@ impl HostService {
         let interfaces_map = self.interface_service.get_for_hosts(host_ids).await?;
         let ports_map = self.port_service.get_for_hosts(host_ids).await?;
 
-        // Load services and group by host_id
+        // Load services ordered by position and group by host_id
         let services = self
             .service_service
-            .get_all(EntityFilter::unfiltered().host_ids(host_ids))
+            .get_all_ordered(
+                EntityFilter::unfiltered().host_ids(host_ids),
+                "position ASC",
+            )
             .await?;
 
         let mut services_map: HashMap<Uuid, Vec<Service>> = HashMap::new();
@@ -346,10 +349,14 @@ impl HostService {
             services: service_inputs,
         } = request;
 
-        // Validate that interface and service positions are sequential
-        validate_input_positions(&interface_inputs, "interface")
+        // Resolve and validate positions (no existing entities for create)
+        let empty_interfaces: Vec<Interface> = vec![];
+        let empty_services: Vec<Service> = vec![];
+        let mut interface_inputs = interface_inputs;
+        let mut service_inputs = service_inputs;
+        resolve_and_validate_input_positions(&mut interface_inputs, &empty_interfaces, "interface")
             .map_err(|e| ValidationError::new(e.message))?;
-        validate_input_positions(&service_inputs, "service")
+        resolve_and_validate_input_positions(&mut service_inputs, &empty_services, "service")
             .map_err(|e| ValidationError::new(e.message))?;
 
         // TODO: Add ID collision validation (Phase 2)
@@ -795,13 +802,14 @@ impl HostService {
     ) -> Result<()> {
         use std::collections::HashSet;
 
-        // Validate that positions are sequential (0, 1, 2, ..., n-1)
-        validate_input_positions(&inputs, "interface")
-            .map_err(|e| ValidationError::new(e.message))?;
-
-        // Get existing interfaces for this host
+        // Get existing interfaces for this host (needed for position resolution)
         let existing = self.interface_service.get_for_host(host_id).await?;
         let existing_ids: HashSet<Uuid> = existing.iter().map(|i| i.id).collect();
+
+        // Resolve and validate positions
+        let mut inputs = inputs;
+        resolve_and_validate_input_positions(&mut inputs, &existing, "interface")
+            .map_err(|e| ValidationError::new(e.message))?;
 
         // All input IDs (client-provided)
         let input_ids: HashSet<Uuid> = inputs.iter().map(|i| i.id).collect();
@@ -901,13 +909,14 @@ impl HostService {
     ) -> Result<()> {
         use std::collections::HashSet;
 
-        // Validate that positions are sequential (0, 1, 2, ..., n-1)
-        validate_input_positions(&inputs, "service")
-            .map_err(|e| ValidationError::new(e.message))?;
-
-        // Get existing services for this host
+        // Get existing services for this host (needed for position resolution)
         let existing = self.service_service.get_for_parent(host_id).await?;
         let existing_ids: HashSet<Uuid> = existing.iter().map(|s| s.id).collect();
+
+        // Resolve and validate positions
+        let mut inputs = inputs;
+        resolve_and_validate_input_positions(&mut inputs, &existing, "service")
+            .map_err(|e| ValidationError::new(e.message))?;
 
         // All input IDs (client-provided)
         let input_ids: HashSet<Uuid> = inputs.iter().map(|s| s.id).collect();
@@ -920,8 +929,51 @@ impl HostService {
                 .await?;
         }
 
+        // Partition inputs: services losing port bindings must be processed first.
+        // This ensures bindings are freed in DB before other services try to claim them,
+        // which is required for port transfers between services to work correctly.
+        let (losing_bindings, others): (Vec<_>, Vec<_>) = inputs.into_iter().partition(|input| {
+            if let Some(existing_svc) = existing.iter().find(|s| s.id == input.id) {
+                // Get current port binding keys (port_id, interface_id)
+                let current_ports: HashSet<_> = existing_svc
+                    .base
+                    .bindings
+                    .iter()
+                    .filter_map(|b| match &b.base.binding_type {
+                        BindingType::Port {
+                            port_id,
+                            interface_id,
+                        } => Some((*port_id, *interface_id)),
+                        _ => None,
+                    })
+                    .collect();
+
+                // Get input port binding keys
+                let input_ports: HashSet<_> = input
+                    .bindings
+                    .iter()
+                    .filter_map(|b| match b {
+                        BindingInput::Port {
+                            port_id,
+                            interface_id,
+                            ..
+                        } => Some((*port_id, *interface_id)),
+                        _ => None,
+                    })
+                    .collect();
+
+                // Service is "losing" if it has ports in DB that aren't in input
+                current_ports.difference(&input_ports).next().is_some()
+            } else {
+                false // New service, not losing anything
+            }
+        });
+
+        // Process losing-bindings services first, then others
+        let ordered_inputs = losing_bindings.into_iter().chain(others);
+
         // Process each input - create or update based on whether ID exists for this host
-        for input in inputs {
+        for input in ordered_inputs {
             let id = input.id;
             // For new services, source is Manual (API-created)
             // For existing services, we'll preserve their source below

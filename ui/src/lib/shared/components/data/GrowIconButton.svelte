@@ -17,12 +17,11 @@
 <button
 	onclick={action.onClick}
 	disabled={action.disabled}
-	class="group relative overflow-visible transition-all duration-200 ease-in-out {cls} {action.animation ||
-		''}"
+	class="group relative overflow-visible transition-all duration-200 ease-in-out {cls}"
 	title={action.label}
 >
 	<div class="flex items-center justify-center {action.forceLabel ? 'opacity-0' : ''}">
-		<action.icon size={16} class="flex-shrink-0" />
+		<action.icon size={16} class="flex-shrink-0 {action.animation || ''}" />
 	</div>
 
 	<div
@@ -36,7 +35,7 @@
 				? 'right-0'
 				: 'left-1/2 -translate-x-1/2'} {cls}"
 	>
-		<action.icon size={16} class="flex-shrink-0" />
+		<action.icon size={16} class="flex-shrink-0 {action.animation || ''}" />
 		<span class="ml-2">{action.label}</span>
 	</div>
 </button>

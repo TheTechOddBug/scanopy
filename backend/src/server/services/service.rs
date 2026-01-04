@@ -226,9 +226,6 @@ impl CrudService<Service> for ServiceService {
             .await?
             .ok_or_else(|| anyhow!("Could not find service"))?;
 
-        // Preserve position (users cannot change position via /api/services, use host endpoints)
-        service.base.position = current_service.base.position;
-
         // Deduplicate bindings before validation
         service.base.bindings =
             Self::deduplicate_bindings(std::mem::take(&mut service.base.bindings));
@@ -343,6 +340,30 @@ impl ServiceService {
             service_locks: Arc::new(Mutex::new(HashMap::new())),
             event_bus,
         }
+    }
+
+    /// Get all services matching filter, ordered by the specified column.
+    /// Also loads bindings for each service.
+    pub async fn get_all_ordered(
+        &self,
+        filter: EntityFilter,
+        order_by: &str,
+    ) -> Result<Vec<Service>> {
+        let mut services = self.storage.get_all_ordered(filter, order_by).await?;
+        if services.is_empty() {
+            return Ok(services);
+        }
+
+        let service_ids: Vec<Uuid> = services.iter().map(|s| s.id).collect();
+        let bindings_map = self.binding_service.get_for_parents(&service_ids).await?;
+
+        for service in &mut services {
+            if let Some(bindings) = bindings_map.get(&service.id) {
+                service.base.bindings = bindings.clone();
+            }
+        }
+
+        Ok(services)
     }
 
     async fn get_service_lock(&self, service_id: &Uuid) -> Arc<Mutex<()>> {

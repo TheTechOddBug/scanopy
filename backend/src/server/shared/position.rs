@@ -43,10 +43,17 @@ pub trait Positioned {
     fn entity_name() -> &'static str;
 }
 
-/// Trait for input types (create/update requests) that carry a position field.
+/// Trait for input types (create/update requests) that carry an optional position field.
+/// Used for ServiceInput, InterfaceInput in host create/update requests.
 pub trait PositionedInput {
-    /// Get the position from the input
-    fn position(&self) -> i32;
+    /// Get the position from the input (None if omitted)
+    fn position(&self) -> Option<i32>;
+
+    /// Set the position on the input (used during resolution)
+    fn set_position(&mut self, position: i32);
+
+    /// Get the entity ID (used to look up existing entities)
+    fn id(&self) -> Uuid;
 }
 
 // =============================================================================
@@ -112,16 +119,86 @@ pub fn validate_sequential_positions(positions: &[i32], entity_name: &str) -> Re
     Ok(())
 }
 
-/// Validates positions from a collection of positioned inputs.
+/// Validates positions from a collection of positioned inputs where all positions are specified.
 ///
 /// Convenience wrapper around `validate_sequential_positions` that extracts
 /// positions from input types implementing `PositionedInput`.
+/// All inputs must have Some(position); use `resolve_and_validate_input_positions` for optional positions.
 pub fn validate_input_positions<T: PositionedInput>(
     inputs: &[T],
     entity_name: &str,
 ) -> Result<(), ApiError> {
-    let positions: Vec<i32> = inputs.iter().map(|i| i.position()).collect();
+    let positions: Vec<i32> = inputs.iter().filter_map(|i| i.position()).collect();
     validate_sequential_positions(&positions, entity_name)
+}
+
+/// Resolves optional positions on inputs, then validates.
+///
+/// Handles three cases:
+/// - All positions are `None`: Auto-assign positions (existing items keep their positions,
+///   new items are appended to the end)
+/// - All positions are `Some`: Validate that they are sequential (0, 1, 2, ...)
+/// - Mixed: Returns an error (must be all specified or all omitted)
+///
+/// # Arguments
+/// * `inputs` - Mutable slice of inputs to resolve positions on
+/// * `existing` - Slice of existing entities (used to preserve positions for updates)
+/// * `entity_name` - Name for error messages (e.g., "interface", "service")
+///
+/// # Returns
+/// * `Ok(())` if positions were resolved/validated successfully
+/// * `Err(ApiError)` if validation fails
+pub fn resolve_and_validate_input_positions<T: PositionedInput, E: Positioned>(
+    inputs: &mut [T],
+    existing: &[E],
+    entity_name: &str,
+) -> Result<(), ApiError> {
+    use std::collections::HashMap;
+
+    if inputs.is_empty() {
+        return Ok(());
+    }
+
+    // Count how many have explicit positions
+    let specified_count = inputs.iter().filter(|i| i.position().is_some()).count();
+
+    // Check for mixed case (some specified, some not)
+    if specified_count > 0 && specified_count < inputs.len() {
+        return Err(ApiError::bad_request(&format!(
+            "{} positions must be all specified or all omitted. \
+             Found {} with positions and {} without.",
+            capitalize(entity_name),
+            specified_count,
+            inputs.len() - specified_count
+        )));
+    }
+
+    if specified_count == inputs.len() {
+        // All specified - validate sequential
+        let positions: Vec<i32> = inputs.iter().filter_map(|i| i.position()).collect();
+        return validate_sequential_positions(&positions, entity_name);
+    }
+
+    // All omitted - resolve automatically
+    // Build lookup of existing entity positions by ID
+    let existing_by_id: HashMap<Uuid, i32> =
+        existing.iter().map(|e| (e.id(), e.position())).collect();
+
+    // Next position for new items starts after all existing items
+    let mut next_pos = existing.len() as i32;
+
+    for input in inputs.iter_mut() {
+        if let Some(&pos) = existing_by_id.get(&input.id()) {
+            // Existing item: preserve its current position
+            input.set_position(pos);
+        } else {
+            // New item: append to end
+            input.set_position(next_pos);
+            next_pos += 1;
+        }
+    }
+
+    Ok(())
 }
 
 /// Validates positions from a collection of positioned entities.
@@ -341,13 +418,36 @@ mod tests {
         }
     }
 
+    #[derive(Clone, Debug)]
     struct TestInput {
-        position: i32,
+        id: Uuid,
+        position: Option<i32>,
+    }
+
+    impl TestInput {
+        fn new(position: Option<i32>) -> Self {
+            Self {
+                id: Uuid::new_v4(),
+                position,
+            }
+        }
+
+        fn with_id(id: Uuid, position: Option<i32>) -> Self {
+            Self { id, position }
+        }
     }
 
     impl PositionedInput for TestInput {
-        fn position(&self) -> i32 {
+        fn position(&self) -> Option<i32> {
             self.position
+        }
+
+        fn set_position(&mut self, position: i32) {
+            self.position = Some(position);
+        }
+
+        fn id(&self) -> Uuid {
+            self.id
         }
     }
 
@@ -404,11 +504,126 @@ mod tests {
     #[test]
     fn test_validate_input_positions() {
         let inputs = vec![
-            TestInput { position: 0 },
-            TestInput { position: 1 },
-            TestInput { position: 2 },
+            TestInput::new(Some(0)),
+            TestInput::new(Some(1)),
+            TestInput::new(Some(2)),
         ];
         assert!(validate_input_positions(&inputs, "test").is_ok());
+    }
+
+    // =========================================================================
+    // resolve_and_validate_input_positions tests
+    // =========================================================================
+
+    #[test]
+    fn test_resolve_all_omitted_empty() {
+        let mut inputs: Vec<TestInput> = vec![];
+        let existing: Vec<TestEntity> = vec![];
+        assert!(resolve_and_validate_input_positions(&mut inputs, &existing, "test").is_ok());
+    }
+
+    #[test]
+    fn test_resolve_all_omitted_create() {
+        // All positions omitted on create - should assign 0, 1, 2 in input order
+        let mut inputs = vec![
+            TestInput::new(None),
+            TestInput::new(None),
+            TestInput::new(None),
+        ];
+        let existing: Vec<TestEntity> = vec![];
+
+        assert!(resolve_and_validate_input_positions(&mut inputs, &existing, "test").is_ok());
+
+        assert_eq!(inputs[0].position, Some(0));
+        assert_eq!(inputs[1].position, Some(1));
+        assert_eq!(inputs[2].position, Some(2));
+    }
+
+    #[test]
+    fn test_resolve_all_omitted_update_existing_only() {
+        // Update with all positions omitted - existing items keep their positions
+        let existing = vec![TestEntity::new(0), TestEntity::new(1), TestEntity::new(2)];
+        let mut inputs = vec![
+            TestInput::with_id(existing[0].id, None),
+            TestInput::with_id(existing[1].id, None),
+            TestInput::with_id(existing[2].id, None),
+        ];
+
+        assert!(resolve_and_validate_input_positions(&mut inputs, &existing, "test").is_ok());
+
+        // Should preserve existing positions
+        assert_eq!(inputs[0].position, Some(0));
+        assert_eq!(inputs[1].position, Some(1));
+        assert_eq!(inputs[2].position, Some(2));
+    }
+
+    #[test]
+    fn test_resolve_all_omitted_update_with_new_items() {
+        // Update with existing items plus new items - new items append to end
+        let existing = vec![TestEntity::new(0), TestEntity::new(1)];
+        let mut inputs = vec![
+            TestInput::with_id(existing[0].id, None), // existing
+            TestInput::with_id(existing[1].id, None), // existing
+            TestInput::new(None),                     // new
+            TestInput::new(None),                     // new
+        ];
+
+        assert!(resolve_and_validate_input_positions(&mut inputs, &existing, "test").is_ok());
+
+        // Existing keep their positions
+        assert_eq!(inputs[0].position, Some(0));
+        assert_eq!(inputs[1].position, Some(1));
+        // New items appended
+        assert_eq!(inputs[2].position, Some(2));
+        assert_eq!(inputs[3].position, Some(3));
+    }
+
+    #[test]
+    fn test_resolve_all_specified_valid() {
+        // All positions specified and valid
+        let mut inputs = vec![
+            TestInput::new(Some(0)),
+            TestInput::new(Some(1)),
+            TestInput::new(Some(2)),
+        ];
+        let existing: Vec<TestEntity> = vec![];
+
+        assert!(resolve_and_validate_input_positions(&mut inputs, &existing, "test").is_ok());
+    }
+
+    #[test]
+    fn test_resolve_all_specified_invalid() {
+        // All positions specified but not sequential
+        let mut inputs = vec![
+            TestInput::new(Some(0)),
+            TestInput::new(Some(2)), // gap
+            TestInput::new(Some(3)),
+        ];
+        let existing: Vec<TestEntity> = vec![];
+
+        let result = resolve_and_validate_input_positions(&mut inputs, &existing, "test");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().message.contains("sequential"));
+    }
+
+    #[test]
+    fn test_resolve_mixed_error() {
+        // Mixed: some specified, some not - should error
+        let mut inputs = vec![
+            TestInput::new(Some(0)),
+            TestInput::new(None), // mixed!
+            TestInput::new(Some(2)),
+        ];
+        let existing: Vec<TestEntity> = vec![];
+
+        let result = resolve_and_validate_input_positions(&mut inputs, &existing, "test");
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .message
+                .contains("all specified or all omitted")
+        );
     }
 
     // =========================================================================
@@ -462,7 +677,7 @@ mod tests {
 
     #[test]
     fn test_validate_no_conflict_exclude_self() {
-        let mut entities = vec![TestEntity::new(0), TestEntity::new(1)];
+        let entities = vec![TestEntity::new(0), TestEntity::new(1)];
         let self_id = entities[1].id;
         // Position 1 is occupied by self, so no conflict when excluding self
         assert!(validate_no_position_conflict(1, Some(self_id), &entities).is_ok());

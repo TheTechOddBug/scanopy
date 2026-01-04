@@ -27,15 +27,19 @@ use crate::server::{
         types::GroupType,
     },
     hosts::r#impl::{
-        api::{CreateHostRequest, HostResponse, InterfaceInput, PortInput},
+        api::{
+            BindingInput, CreateHostRequest, HostResponse, InterfaceInput, PortInput, ServiceInput,
+        },
         base::{Host, HostBase},
     },
     interfaces::r#impl::base::{Interface, InterfaceBase},
     networks::r#impl::{Network, NetworkBase},
     organizations::r#impl::base::{Organization, OrganizationBase},
     ports::r#impl::base::{Port, PortBase, PortType, TransportProtocol},
-    services::definitions::ServiceDefinitionRegistry,
-    services::r#impl::base::{Service, ServiceBase},
+    services::{
+        definitions::ServiceDefinitionRegistry,
+        r#impl::base::{Service, ServiceBase},
+    },
     shared::types::{Color, entities::EntitySource},
     subnets::r#impl::{
         base::{Subnet, SubnetBase},
@@ -337,6 +341,9 @@ pub fn discovery() -> Discovery {
 
 /// Example CreateHostRequest.
 pub fn create_host_request() -> CreateHostRequest {
+    let service_def = ServiceDefinitionRegistry::find_by_id("Nginx")
+        .unwrap_or_else(|| ServiceDefinitionRegistry::all_service_definitions()[0].clone());
+
     CreateHostRequest {
         name: "web-server-01".to_string(),
         network_id: ids::NETWORK,
@@ -351,14 +358,26 @@ pub fn create_host_request() -> CreateHostRequest {
             ip_address: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
             mac_address: Some(MacAddress::new([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])),
             name: Some("eth0".to_string()),
-            position: 0,
+            position: Some(0),
         }],
         ports: vec![PortInput {
             id: ids::PORT,
             number: 80,
             protocol: TransportProtocol::Tcp,
         }],
-        services: vec![],
+        services: vec![ServiceInput {
+            id: ids::SERVICE,
+            name: "nginx".to_string(),
+            service_definition: service_def,
+            bindings: vec![BindingInput::Port {
+                id: ids::BINDING,
+                port_id: ids::PORT,
+                interface_id: Some(ids::INTERFACE),
+            }],
+            virtualization: None,
+            tags: vec![],
+            position: Some(0),
+        }],
     }
 }
 

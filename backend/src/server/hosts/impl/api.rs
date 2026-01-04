@@ -71,13 +71,17 @@ pub struct InterfaceInput {
     #[schema(value_type = Option<String>)]
     pub mac_address: Option<MacAddress>,
     pub name: Option<String>,
-    /// Position of this interface in the host's interface list (for ordering)
-    #[serde(default)]
-    pub position: i32,
+    /// Position in the host's interface list (for ordering).
+    /// If omitted on create: appends to end of list.
+    /// If omitted on update: existing interfaces keep their positions; new interfaces append.
+    /// Must be all specified or all omitted across all interfaces in the request.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<i32>,
 }
 
 impl InterfaceInput {
     /// Convert to Interface entity with the given host_id and network_id.
+    /// Position must be resolved before calling this (via `resolve_and_validate_input_positions`).
     pub fn into_interface(self, host_id: Uuid, network_id: Uuid) -> Interface {
         let now = chrono::Utc::now();
         Interface {
@@ -91,15 +95,23 @@ impl InterfaceInput {
                 ip_address: self.ip_address,
                 mac_address: self.mac_address,
                 name: self.name,
-                position: self.position,
+                position: self.position.unwrap_or(0),
             },
         }
     }
 }
 
 impl PositionedInput for InterfaceInput {
-    fn position(&self) -> i32 {
+    fn position(&self) -> Option<i32> {
         self.position
+    }
+
+    fn set_position(&mut self, position: i32) {
+        self.position = Some(position);
+    }
+
+    fn id(&self) -> Uuid {
+        self.id
     }
 }
 
@@ -156,13 +168,17 @@ pub struct ServiceInput {
     /// Tags for categorization
     #[serde(default)]
     pub tags: Vec<Uuid>,
-    /// Position of this service in the host's service list (for ordering)
-    #[serde(default)]
-    pub position: i32,
+    /// Position in the host's service list (for ordering).
+    /// If omitted on create: appends to end of list.
+    /// If omitted on update: existing services keep their positions; new services append.
+    /// Must be all specified or all omitted across all services in the request.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<i32>,
 }
 
 impl ServiceInput {
     /// Convert to Service entity with the given host_id, network_id, and source.
+    /// Position must be resolved before calling this (via `resolve_and_validate_input_positions`).
     pub fn into_service(self, host_id: Uuid, network_id: Uuid, source: EntitySource) -> Service {
         let now = chrono::Utc::now();
         let service_id = self.id;
@@ -187,15 +203,23 @@ impl ServiceInput {
                 virtualization: self.virtualization,
                 source,
                 tags: self.tags,
-                position: self.position,
+                position: self.position.unwrap_or(0),
             },
         }
     }
 }
 
 impl PositionedInput for ServiceInput {
-    fn position(&self) -> i32 {
+    fn position(&self) -> Option<i32> {
         self.position
+    }
+
+    fn set_position(&mut self, position: i32) {
+        self.position = Some(position);
+    }
+
+    fn id(&self) -> Uuid {
+        self.id
     }
 }
 
@@ -219,6 +243,7 @@ pub enum BindingInput {
         id: Uuid,
         port_id: Uuid,
         #[serde(skip_serializing_if = "Option::is_none")]
+        /// null = bind to all interfaces
         interface_id: Option<Uuid>,
     },
 }

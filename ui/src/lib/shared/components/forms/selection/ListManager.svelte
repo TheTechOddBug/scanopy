@@ -139,18 +139,12 @@
 
 	function moveItemUp(index: number) {
 		if (index > 0 && allowReorder) {
-			const newItems = [...items];
-			[newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
-			items = newItems;
 			onMoveUp(index, index - 1);
 		}
 	}
 
 	function moveItemDown(index: number) {
 		if (index < items.length - 1 && allowReorder) {
-			const newItems = [...items];
-			[newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
-			items = newItems;
 			onMoveDown(index, index + 1);
 		}
 	}

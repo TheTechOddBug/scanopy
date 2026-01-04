@@ -128,12 +128,14 @@
 
 	async function handleDelete() {
 		if (!currentTopology) return;
-		if (confirm(`Are you sure you want to delete topology ${currentTopology.name}?`)) {
-			await deleteTopologyMutation.mutateAsync(currentTopology.id);
-			// Select first remaining topology
-			const remaining = topologiesData.filter((t) => t.id !== currentTopology.id);
-			if (remaining.length > 0) {
-				selectedTopologyId.set(remaining[0].id);
+		// Capture values before async operation (currentTopology becomes null after query refetch)
+		const toDeleteId = currentTopology.id;
+		const toDeleteName = currentTopology.name;
+		if (confirm(`Are you sure you want to delete topology ${toDeleteName}?`)) {
+			await deleteTopologyMutation.mutateAsync(toDeleteId);
+			// After mutation, topologiesData is already updated without the deleted topology
+			if (topologiesData.length > 0) {
+				selectedTopologyId.set(topologiesData[0].id);
 			} else {
 				selectedTopologyId.set(null);
 			}

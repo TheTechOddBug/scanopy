@@ -24,7 +24,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 1,
@@ -61,7 +66,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 3,
@@ -98,7 +108,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 5,
@@ -135,7 +150,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": true,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 25,
@@ -172,7 +192,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 1,
@@ -209,7 +234,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 3,
@@ -246,7 +276,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 5,
@@ -283,7 +318,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": true,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Cloud",
       "included_networks": 25,
@@ -320,7 +360,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": true,
-        "whitelabeling": true
+        "whitelabeling": true,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Managed",
       "included_networks": null,
@@ -357,7 +402,12 @@
         "remove_created_with": false,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "SelfHosted",
       "included_networks": null,
@@ -394,7 +444,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": true,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "SelfHosted",
       "included_networks": null,
@@ -431,7 +486,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": true,
-        "whitelabeling": true
+        "whitelabeling": true,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "Managed",
       "included_networks": null,
@@ -468,7 +528,12 @@
         "remove_created_with": false,
         "share_views": true,
         "webhooks": false,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "SelfHosted",
       "included_networks": null,
@@ -505,7 +570,12 @@
         "remove_created_with": true,
         "share_views": true,
         "webhooks": true,
-        "whitelabeling": false
+        "whitelabeling": false,
+        "unlimited_scans": true,
+        "unlimited_hosts": true,
+        "service_definitions": true,
+        "docker_integration": true,
+        "real_time_updates": true
       },
       "hosting": "SelfHosted",
       "included_networks": null,

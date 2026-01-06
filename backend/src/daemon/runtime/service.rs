@@ -20,6 +20,15 @@ const HEALTH_LOG_INTERVAL: u64 = 10;
 /// Log target for consistent daemon logging output
 const LOG_TARGET: &str = "daemon";
 
+/// Error message for invalid API key when daemon is not registered (onboarding scenario).
+/// Used by server auth middleware and daemon error detection.
+pub const INVALID_API_KEY_ERROR: &str = "Invalid API key";
+
+/// Error message for invalid API key when daemon IS registered (key rotated/revoked).
+/// Used by server auth middleware and daemon error detection.
+pub const REGISTERED_INVALID_KEY_ERROR: &str = "Invalid API key: daemon is registered but key is invalid or revoked. \
+     Please reconfigure with a valid API key.";
+
 /// Format a duration as human-readable uptime (e.g., "1h 23m", "45m", "2d 5h")
 fn format_uptime(duration: Duration) -> String {
     let secs = duration.as_secs();
@@ -131,6 +140,20 @@ impl DaemonRuntimeService {
         let error_str = error.to_string().to_lowercase();
         (error_str.contains("not found") && error_str.contains("daemon"))
             || (error_str.contains("http 404") && error_str.contains("daemon"))
+    }
+
+    /// Check if an error indicates an authorization failure where the daemon is registered
+    /// but the API key is invalid/revoked. Should fail immediately with a clear message.
+    fn is_registered_daemon_auth_error(error: &anyhow::Error) -> bool {
+        error.to_string().contains(REGISTERED_INVALID_KEY_ERROR)
+    }
+
+    /// Check if an error indicates an authorization failure for an unregistered daemon.
+    /// This happens during onboarding when the API key isn't active yet in the database.
+    fn is_unregistered_auth_error(error: &anyhow::Error) -> bool {
+        let error_str = error.to_string();
+        (error_str.contains(INVALID_API_KEY_ERROR) || error_str.contains("HTTP 401"))
+            && !error_str.contains(REGISTERED_INVALID_KEY_ERROR)
     }
 
     pub async fn request_work(&self) -> Result<()> {
@@ -333,6 +356,22 @@ impl DaemonRuntimeService {
             Err(e) if Self::is_daemon_not_found_error(&e) => {
                 tracing::info!(target: LOG_TARGET, "  Status:          Daemon not registered, registering now");
             }
+            Err(e) if Self::is_registered_daemon_auth_error(&e) => {
+                // Daemon exists but API key is invalid/revoked - fail immediately
+                tracing::error!(
+                    target: LOG_TARGET,
+                    "  Status:          API key invalid for registered daemon. Reconfigure with valid key."
+                );
+                return Err(e);
+            }
+            Err(e) if Self::is_unregistered_auth_error(&e) => {
+                // Unregistered daemon with invalid key - likely onboarding scenario
+                // Proceed to registration which has retry logic
+                tracing::info!(
+                    target: LOG_TARGET,
+                    "  Status:          API key not yet active, attempting registration with retry"
+                );
+            }
             Err(e) => {
                 tracing::error!(target: LOG_TARGET, "  Status:          Failed to connect: {}", e);
                 return Err(e);
@@ -402,9 +441,11 @@ impl DaemonRuntimeService {
 
         // Retry loop for handling pending API keys (pre-registration setup flow)
         // First attempt immediately, then wait 10s (user fills form), then exponential backoff: 1, 2, 4, 8...
-        // Caps at heartbeat_interval
+        // Caps at heartbeat_interval. Total retry duration capped at 5 minutes.
         let heartbeat_interval = config.get_heartbeat_interval().await?;
         let mut attempt = 0;
+        let retry_start = std::time::Instant::now();
+        const MAX_AUTH_RETRY_DURATION: Duration = Duration::from_secs(300); // 5 minutes
 
         loop {
             attempt += 1;
@@ -449,6 +490,20 @@ impl DaemonRuntimeService {
                     // Check if this is an "Invalid API key" error
                     // This can happen when daemon is installed before user completes registration
                     if error_str.contains("Invalid API key") || error_str.contains("HTTP 401") {
+                        // Check if we've exceeded the maximum retry duration
+                        if retry_start.elapsed() > MAX_AUTH_RETRY_DURATION {
+                            tracing::error!(
+                                target: LOG_TARGET,
+                                daemon_id = %daemon_id,
+                                "API key validation failed after 5 minutes of retrying. \
+                                 The API key may be invalid or the user may not have completed registration. \
+                                 Please verify the API key is correct and restart the daemon to try again."
+                            );
+                            return Err(anyhow::anyhow!(
+                                "API key validation timed out after 5 minutes. Verify the API key and restart the daemon."
+                            ));
+                        }
+
                         // Calculate retry delay:
                         // Attempt 1 failed -> wait 10s (user filling out registration form)
                         // Attempt 2 failed -> wait 1s

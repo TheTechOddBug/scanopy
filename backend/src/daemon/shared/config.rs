@@ -93,7 +93,7 @@ pub struct DaemonCli {
     #[arg(long)]
     arp_retries: Option<u32>,
 
-    /// Maximum ARP packets per second (default: 50, conservative for enterprise switches)
+    /// Maximum ARP packets per second (default: 50, go more conservative for networks with enterprise switches)
     #[arg(long)]
     arp_rate_pps: Option<u32>,
 }
@@ -141,13 +141,10 @@ pub struct AppConfig {
     docker_proxy_ssl_key: Option<String>,
     #[serde(default)]
     docker_proxy_ssl_chain: Option<String>,
-    /// (Windows only) Use Npcap for broadcast ARP scanning instead of native SendARP
     #[serde(default)]
     pub use_npcap_arp: bool,
-    /// Number of ARP retry rounds for non-responding hosts (0 = single attempt)
     #[serde(default = "default_arp_retries")]
     pub arp_retries: u32,
-    /// Maximum ARP packets per second (rate limiting for enterprise switch compatibility)
     #[serde(default = "default_arp_rate_pps")]
     pub arp_rate_pps: u32,
 }

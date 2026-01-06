@@ -5287,14 +5287,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-01-06T00:51:30.801440Z",
-              "id": "aeaedce7-b953-4d37-a812-1fd2b3c2b6b3",
+              "created_at": "2026-01-06T18:14:22.479974Z",
+              "id": "ed14265a-40e5-4a38-8acb-aba7f2eb69d2",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-01-06T00:51:30.801440Z"
+              "updated_at": "2026-01-06T18:14:22.479974Z"
             }
           },
           "error": {
@@ -6549,14 +6549,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-01-06T00:51:30.798211Z",
-                  "id": "c2935eba-30ab-472a-b813-6f18bac6cd07",
+                  "created_at": "2026-01-06T18:14:22.476823Z",
+                  "id": "1bbffbb9-77ba-4f81-b4ff-eaaeb4d45163",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-01-06T00:51:30.798211Z"
+                  "updated_at": "2026-01-06T18:14:22.476823Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -6565,7 +6565,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "NUT",
+              "service_definition": "Lidarr",
               "source": {
                 "type": "Manual"
               },
@@ -7266,14 +7266,14 @@
               ],
               "description": "Association between a service and a port / interface that the service is listening on",
               "example": {
-                "created_at": "2026-01-06T00:51:30.801219Z",
-                "id": "c82b9009-0bbc-49b8-9eef-e8236bb2c8e7",
+                "created_at": "2026-01-06T18:14:22.479723Z",
+                "id": "34b546f6-ff56-4814-a02f-0ad003840636",
                 "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "port_id": "550e8400-e29b-41d4-a716-446655440006",
                 "service_id": "550e8400-e29b-41d4-a716-446655440007",
                 "type": "Port",
-                "updated_at": "2026-01-06T00:51:30.801219Z"
+                "updated_at": "2026-01-06T18:14:22.479723Z"
               }
             }
           },
@@ -8070,14 +8070,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-01-06T00:51:30.797277Z",
-                    "id": "54d25ad8-2005-420e-90c7-21829f70921b",
+                    "created_at": "2026-01-06T18:14:22.475933Z",
+                    "id": "1af5b956-a6cc-4698-bf6e-5ef2c70a1314",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-01-06T00:51:30.797277Z"
+                    "updated_at": "2026-01-06T18:14:22.475933Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -8086,7 +8086,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "NUT",
+                "service_definition": "Lidarr",
                 "source": {
                   "type": "Manual"
                 },
@@ -8780,14 +8780,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-01-06T00:51:30.792440Z",
-          "id": "a01f2621-7c51-47b0-bfe0-377ba2d525f6",
+          "created_at": "2026-01-06T18:14:22.470445Z",
+          "id": "c52b837b-6ca7-4220-aa27-53a5be81ed94",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-01-06T00:51:30.792440Z"
+          "updated_at": "2026-01-06T18:14:22.470445Z"
         }
       },
       "BindingBase": {
@@ -9148,7 +9148,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "NUT",
+              "service_definition": "Lidarr",
               "tags": [],
               "virtualization": null
             }
@@ -11827,14 +11827,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-01-06T00:51:30.792378Z",
-              "id": "5d396bcf-ea41-4b46-9344-5393daf9fe59",
+              "created_at": "2026-01-06T18:14:22.470348Z",
+              "id": "058b513f-d7ee-470f-9afa-69fd824fe0e6",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-01-06T00:51:30.792378Z"
+              "updated_at": "2026-01-06T18:14:22.470348Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -11843,7 +11843,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "NUT",
+          "service_definition": "Lidarr",
           "source": {
             "type": "Manual"
           },

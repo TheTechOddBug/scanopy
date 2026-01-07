@@ -21,7 +21,7 @@ export function useNetworksQuery() {
 				return [];
 			}
 			const { data } = await apiClient.GET('/api/v1/networks', {
-				params: { query: { pagination: { limit: 0 } } }
+				params: { query: { limit: 0 } }
 			});
 			if (!data?.success || !data.data) {
 				throw new Error(data?.error || 'Failed to fetch networks');

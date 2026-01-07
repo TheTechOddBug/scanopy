@@ -14,12 +14,12 @@ use crate::server::shared::storage::filter::EntityFilter;
 /// Default behavior:
 /// - `limit`: 50 (returns up to 50 results)
 /// - `offset`: 0 (starts from the beginning)
-/// - `limit=0`: Returns all results (unlimited)
-/// - Maximum `limit`: 1000 (to prevent abuse)
+/// - `limit=0`: No limit (returns all results)
+/// - `limit` values above 1000 are capped to 1000
 #[derive(Deserialize, Default, Debug, Clone, IntoParams, utoipa::ToSchema)]
 pub struct PaginationParams {
-    /// Maximum number of results to return. Default: 50. Use 0 for unlimited.
-    #[param(minimum = 0, maximum = 1000)]
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0)]
     pub limit: Option<u32>,
     /// Number of results to skip. Default: 0.
     #[param(minimum = 0)]
@@ -86,8 +86,12 @@ pub trait FilterQueryExtractor: DeserializeOwned + Send + Sync + Default {
 pub struct NetworkFilterQuery {
     /// Filter by network ID
     pub network_id: Option<Uuid>,
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 impl FilterQueryExtractor for NetworkFilterQuery {
@@ -105,15 +109,22 @@ impl FilterQueryExtractor for NetworkFilterQuery {
     }
 
     fn pagination(&self) -> PaginationParams {
-        self.pagination.clone().unwrap_or_default()
+        PaginationParams {
+            limit: self.limit,
+            offset: self.offset,
+        }
     }
 }
 
 /// Empty filter query for entities that are scoped to org (or are the org itself) and don't support further filtering by query param
 #[derive(Deserialize, Default, Debug, Clone, IntoParams)]
 pub struct NoFilterQuery {
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 impl FilterQueryExtractor for NoFilterQuery {
@@ -128,7 +139,10 @@ impl FilterQueryExtractor for NoFilterQuery {
     }
 
     fn pagination(&self) -> PaginationParams {
-        self.pagination.clone().unwrap_or_default()
+        PaginationParams {
+            limit: self.limit,
+            offset: self.offset,
+        }
     }
 }
 
@@ -139,8 +153,12 @@ pub struct GroupIdQuery {
     pub group_id: Uuid,
     /// Filter by network ID
     pub network_id: Uuid,
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 // ============================================================================
@@ -154,8 +172,12 @@ pub struct HostChildQuery {
     pub host_id: Option<Uuid>,
     /// Filter by network ID
     pub network_id: Option<Uuid>,
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 impl FilterQueryExtractor for HostChildQuery {
@@ -177,7 +199,10 @@ impl FilterQueryExtractor for HostChildQuery {
     }
 
     fn pagination(&self) -> PaginationParams {
-        self.pagination.clone().unwrap_or_default()
+        PaginationParams {
+            limit: self.limit,
+            offset: self.offset,
+        }
     }
 }
 
@@ -192,8 +217,12 @@ pub struct BindingQuery {
     pub port_id: Option<Uuid>,
     /// Filter by interface ID
     pub interface_id: Option<Uuid>,
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 impl FilterQueryExtractor for BindingQuery {
@@ -225,7 +254,10 @@ impl FilterQueryExtractor for BindingQuery {
     }
 
     fn pagination(&self) -> PaginationParams {
-        self.pagination.clone().unwrap_or_default()
+        PaginationParams {
+            limit: self.limit,
+            offset: self.offset,
+        }
     }
 }
 
@@ -238,8 +270,12 @@ pub struct InterfaceQuery {
     pub subnet_id: Option<Uuid>,
     /// Filter by network ID
     pub network_id: Option<Uuid>,
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 impl FilterQueryExtractor for InterfaceQuery {
@@ -267,7 +303,10 @@ impl FilterQueryExtractor for InterfaceQuery {
     }
 
     fn pagination(&self) -> PaginationParams {
-        self.pagination.clone().unwrap_or_default()
+        PaginationParams {
+            limit: self.limit,
+            offset: self.offset,
+        }
     }
 }
 
@@ -278,8 +317,12 @@ pub struct DiscoveryQuery {
     pub network_id: Option<Uuid>,
     /// Filter by daemon ID
     pub daemon_id: Option<Uuid>,
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 impl FilterQueryExtractor for DiscoveryQuery {
@@ -303,7 +346,10 @@ impl FilterQueryExtractor for DiscoveryQuery {
     }
 
     fn pagination(&self) -> PaginationParams {
-        self.pagination.clone().unwrap_or_default()
+        PaginationParams {
+            limit: self.limit,
+            offset: self.offset,
+        }
     }
 }
 
@@ -314,8 +360,12 @@ pub struct SharesQuery {
     pub network_id: Option<Uuid>,
     /// Filter by topology ID
     pub topology_id: Option<Uuid>,
-    /// Pagination parameters
-    pub pagination: Option<PaginationParams>,
+    /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
+    #[param(minimum = 0, maximum = 1000)]
+    pub limit: Option<u32>,
+    /// Number of results to skip. Default: 0.
+    #[param(minimum = 0)]
+    pub offset: Option<u32>,
 }
 
 impl FilterQueryExtractor for SharesQuery {
@@ -339,6 +389,9 @@ impl FilterQueryExtractor for SharesQuery {
     }
 
     fn pagination(&self) -> PaginationParams {
-        self.pagination.clone().unwrap_or_default()
+        PaginationParams {
+            limit: self.limit,
+            offset: self.offset,
+        }
     }
 }

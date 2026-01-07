@@ -10,7 +10,10 @@ use crate::server::{
         },
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
-        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
+        types::api::{
+            ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse,
+            PaginatedApiResponse,
+        },
     },
     topology::{
         service::main::BuildGraphParams,
@@ -82,7 +85,7 @@ async fn update_topology(
     tags = ["topology", "internal"],
     params(NetworkFilterQuery),
     responses(
-        (status = 200, description = "List of topologies", body = ApiResponse<Vec<Topology>>),
+        (status = 200, description = "List of topologies", body = PaginatedApiResponse<Topology>),
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
@@ -90,7 +93,7 @@ async fn get_all_topologies(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Viewer>,
     query: Query<NetworkFilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<Topology>>>> {
+) -> ApiResult<Json<PaginatedApiResponse<Topology>>> {
     let network_ids = auth.network_ids();
     let organization_id = auth
         .organization_id()
@@ -111,7 +114,7 @@ async fn get_all_topologies(
     let limit = pagination.effective_limit().unwrap_or(0);
     let offset = pagination.effective_offset();
 
-    Ok(Json(ApiResponse::success_paginated(
+    Ok(Json(PaginatedApiResponse::success(
         result.items,
         result.total_count,
         limit,

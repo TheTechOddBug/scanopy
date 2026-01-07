@@ -632,7 +632,7 @@ export interface paths {
         };
         /**
          * Get all daemons
-         * @description Returns all daemons accessible to the user with computed version status.
+         * @description Returns all daemons accessible to the user
          */
         get: operations["get_daemons"];
         put?: never;
@@ -1875,17 +1875,22 @@ export interface components {
             error?: string | null;
             success: boolean;
         };
-        /** @description API version metadata included in all responses */
+        /**
+         * @description API metadata included in all responses
+         * @example {
+         *       "api_version": 1,
+         *       "server_version": "0.13.1"
+         *     }
+         */
         ApiMeta: {
             /**
              * Format: int32
              * @description API version (integer, increments on breaking changes)
              */
             api_version: number;
-            pagination?: null | components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.12.10
+             * @example 0.13.1
              */
             server_version: string;
         };
@@ -1899,23 +1904,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-<<<<<<< HEAD
-             *       "created_at": "2026-01-06T20:32:01.966436Z",
-             *       "id": "78cedba0-7c25-49b5-97b3-f666286f84ee",
-=======
-             *       "created_at": "2026-01-07T00:11:35.216805Z",
-             *       "id": "a9a38688-e728-4b2c-b6d2-511389ef77a8",
->>>>>>> feature/tags-refactor
+             *       "created_at": "2026-01-07T18:51:34.754668Z",
+             *       "id": "cd90f6ad-f630-43f8-bc4f-9c61eceb1040",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-<<<<<<< HEAD
-             *       "updated_at": "2026-01-06T20:32:01.966436Z"
-=======
-             *       "updated_at": "2026-01-07T00:11:35.216805Z"
->>>>>>> feature/tags-refactor
+             *       "updated_at": "2026-01-07T18:51:34.754668Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2318,23 +2314,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-<<<<<<< HEAD
-             *           "created_at": "2026-01-06T20:32:01.962789Z",
-             *           "id": "defdef0b-2208-44f8-9a34-bb89f8f88a0a",
-=======
-             *           "created_at": "2026-01-07T00:11:35.212862Z",
-             *           "id": "fc153ce3-cef3-42ab-b5bc-2828475b2a63",
->>>>>>> feature/tags-refactor
+             *           "created_at": "2026-01-07T18:51:34.749647Z",
+             *           "id": "85c0b3ed-cf96-416b-9fff-6eb94495acc2",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-<<<<<<< HEAD
-             *           "updated_at": "2026-01-06T20:32:01.962789Z"
-=======
-             *           "updated_at": "2026-01-07T00:11:35.212862Z"
->>>>>>> feature/tags-refactor
+             *           "updated_at": "2026-01-07T18:51:34.749647Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -2343,11 +2330,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-<<<<<<< HEAD
-             *       "service_definition": "Confluence",
-=======
-             *       "service_definition": "Jump",
->>>>>>> feature/tags-refactor
+             *       "service_definition": "AWX",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2532,60 +2515,6 @@ export interface components {
             meta: components["schemas"]["ApiMeta"];
             success: boolean;
         };
-        ApiResponse_Vec_Binding: {
-            data?: (components["schemas"]["BindingBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_DaemonApiKey: {
-            data?: (components["schemas"]["DaemonApiKeyBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_DaemonResponse: {
-            data?: (components["schemas"]["DaemonBase"] & {
-                /** Format: date-time */
-                created_at: string;
-                /** Format: uuid */
-                id: string;
-                /** Format: date-time */
-                updated_at: string;
-                /** @description Computed version status including health and warnings */
-                version_status: components["schemas"]["DaemonVersionStatus"];
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Discovery: {
-            data?: (components["schemas"]["DiscoveryBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
         ApiResponse_Vec_DiscoveryUpdatePayload: {
             data?: {
                 /** Format: uuid */
@@ -2608,176 +2537,8 @@ export interface components {
             meta: components["schemas"]["ApiMeta"];
             success: boolean;
         };
-        ApiResponse_Vec_Group: {
-            data?: (components["schemas"]["GroupBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_HostResponse: {
-            data?: {
-                /** Format: date-time */
-                created_at: string;
-                description?: string | null;
-                hidden: boolean;
-                hostname?: string | null;
-                /** Format: uuid */
-                id: string;
-                interfaces: components["schemas"]["Interface"][];
-                name: string;
-                /** Format: uuid */
-                network_id: string;
-                ports: components["schemas"]["Port"][];
-                services: components["schemas"]["Service"][];
-                source: components["schemas"]["EntitySource"];
-                tags: string[];
-                /** Format: date-time */
-                updated_at: string;
-                virtualization?: null | components["schemas"]["HostVirtualization"];
-            }[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Interface: {
-            data?: (components["schemas"]["InterfaceBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
         ApiResponse_Vec_Invite: {
             data?: (components["schemas"]["InviteBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Network: {
-            data?: (components["schemas"]["NetworkBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Port: {
-            data?: (components["schemas"]["PortBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Service: {
-            data?: (components["schemas"]["ServiceBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Share: {
-            data?: (components["schemas"]["ShareBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Subnet: {
-            data?: (components["schemas"]["SubnetBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Tag: {
-            data?: (components["schemas"]["TagBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_Topology: {
-            data?: (components["schemas"]["TopologyBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_User: {
-            data?: (components["schemas"]["UserBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Vec_UserApiKey: {
-            data?: (components["schemas"]["UserApiKeyBase"] & {
                 /** Format: date-time */
                 readonly created_at: string;
                 /** Format: uuid */
@@ -2852,23 +2613,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-<<<<<<< HEAD
-         *       "created_at": "2026-01-06T20:32:01.954230Z",
-         *       "id": "3986e7c8-aec1-4ab6-b8cf-dc9cf857ee7e",
-=======
-         *       "created_at": "2026-01-07T00:11:35.203417Z",
-         *       "id": "67068e3f-8d64-460d-9b13-84af21fc050f",
->>>>>>> feature/tags-refactor
+         *       "created_at": "2026-01-07T18:51:34.738796Z",
+         *       "id": "c74fc8b3-b79c-4cbf-be29-34705d0a1d6d",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-<<<<<<< HEAD
-         *       "updated_at": "2026-01-06T20:32:01.954230Z"
-=======
-         *       "updated_at": "2026-01-07T00:11:35.203417Z"
->>>>>>> feature/tags-refactor
+         *       "updated_at": "2026-01-07T18:51:34.738796Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3032,11 +2784,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-<<<<<<< HEAD
-         *           "service_definition": "Confluence",
-=======
-         *           "service_definition": "Jump",
->>>>>>> feature/tags-refactor
+         *           "service_definition": "AWX",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3361,7 +3109,7 @@ export interface components {
         /** @enum {string} */
         EdgeTypeDiscriminants: "Interface" | "HostVirtualization" | "ServiceVirtualization" | "RequestPath" | "HubAndSpoke";
         /** @enum {string} */
-        EntityDiscriminants: "Organization" | "Invite" | "Share" | "Network" | "DaemonApiKey" | "UserApiKey" | "User" | "Tag" | "Discovery" | "Daemon" | "Host" | "Service" | "Port" | "Binding" | "Interface" | "Subnet" | "Group" | "Topology";
+        EntityDiscriminants: "Organization" | "Invite" | "Share" | "Network" | "DaemonApiKey" | "UserApiKey" | "User" | "Tag" | "Discovery" | "Daemon" | "Host" | "Service" | "Port" | "Binding" | "Interface" | "Subnet" | "Group" | "Topology" | "GroupBinding" | "EntityTag" | "UserApiKeyNetworkAccess" | "UserNetworkAccess" | "Unknown";
         EntityMetadata: {
             color: components["schemas"]["Color"];
             icon: string;
@@ -3741,7 +3489,280 @@ export interface components {
             readonly plan_status: string | null;
             readonly stripe_customer_id: string | null;
         };
-        /** @description Pagination metadata returned with paginated responses. */
+        /**
+         * @description API metadata for paginated list responses (pagination is always present)
+         * @example {
+         *       "api_version": 1,
+         *       "pagination": {
+         *         "has_more": true,
+         *         "limit": 50,
+         *         "offset": 0,
+         *         "total_count": 142
+         *       },
+         *       "server_version": "0.13.1"
+         *     }
+         */
+        PaginatedApiMeta: {
+            /**
+             * Format: int32
+             * @description API version (integer, increments on breaking changes)
+             */
+            api_version: number;
+            /** @description Pagination info */
+            pagination: components["schemas"]["PaginationMeta"];
+            /**
+             * @description Server version (semver)
+             * @example 0.13.1
+             */
+            server_version: string;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Binding: {
+            data: (components["schemas"]["BindingBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_DaemonApiKey: {
+            data: (components["schemas"]["DaemonApiKeyBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_DaemonResponse: {
+            data: (components["schemas"]["DaemonBase"] & {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                updated_at: string;
+                /** @description Computed version status including health and warnings */
+                version_status: components["schemas"]["DaemonVersionStatus"];
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Discovery: {
+            data: (components["schemas"]["DiscoveryBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Group: {
+            data: (components["schemas"]["GroupBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_HostResponse: {
+            data: {
+                /** Format: date-time */
+                created_at: string;
+                description?: string | null;
+                hidden: boolean;
+                hostname?: string | null;
+                /** Format: uuid */
+                id: string;
+                interfaces: components["schemas"]["Interface"][];
+                name: string;
+                /** Format: uuid */
+                network_id: string;
+                ports: components["schemas"]["Port"][];
+                services: components["schemas"]["Service"][];
+                source: components["schemas"]["EntitySource"];
+                tags: string[];
+                /** Format: date-time */
+                updated_at: string;
+                virtualization?: null | components["schemas"]["HostVirtualization"];
+            }[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Interface: {
+            data: (components["schemas"]["InterfaceBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Network: {
+            data: (components["schemas"]["NetworkBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Port: {
+            data: (components["schemas"]["PortBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Service: {
+            data: (components["schemas"]["ServiceBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Share: {
+            data: (components["schemas"]["ShareBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Subnet: {
+            data: (components["schemas"]["SubnetBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Tag: {
+            data: (components["schemas"]["TagBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Topology: {
+            data: (components["schemas"]["TopologyBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_User: {
+            data: (components["schemas"]["UserBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_UserApiKey: {
+            data: (components["schemas"]["UserApiKeyBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /**
+         * @description Pagination metadata returned with paginated responses.
+         * @example {
+         *       "has_more": true,
+         *       "limit": 50,
+         *       "offset": 0,
+         *       "total_count": 142
+         *     }
+         */
         PaginationMeta: {
             /** @description Whether there are more items after this page */
             has_more: boolean;
@@ -3767,13 +3788,13 @@ export interface components {
          *     Default behavior:
          *     - `limit`: 50 (returns up to 50 results)
          *     - `offset`: 0 (starts from the beginning)
-         *     - `limit=0`: Returns all results (unlimited)
-         *     - Maximum `limit`: 1000 (to prevent abuse)
+         *     - `limit=0`: No limit (returns all results)
+         *     - `limit` values above 1000 are capped to 1000
          */
         PaginationParams: {
             /**
              * Format: int32
-             * @description Maximum number of results to return. Default: 50. Use 0 for unlimited.
+             * @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
              */
             limit?: number | null;
             /**
@@ -3922,23 +3943,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-<<<<<<< HEAD
-         *           "created_at": "2026-01-06T20:32:01.954147Z",
-         *           "id": "bb514eca-521b-4020-89bd-2087680b2fcc",
-=======
-         *           "created_at": "2026-01-07T00:11:35.203314Z",
-         *           "id": "ff30e8da-3466-4498-92c7-2aa2f0ad3ed0",
->>>>>>> feature/tags-refactor
+         *           "created_at": "2026-01-07T18:51:34.738689Z",
+         *           "id": "e3e17d16-9aee-4387-add9-40bfb6786def",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-<<<<<<< HEAD
-         *           "updated_at": "2026-01-06T20:32:01.954147Z"
-=======
-         *           "updated_at": "2026-01-07T00:11:35.203314Z"
->>>>>>> feature/tags-refactor
+         *           "updated_at": "2026-01-07T18:51:34.738689Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -3947,11 +3959,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-<<<<<<< HEAD
-         *       "service_definition": "Confluence",
-=======
-         *       "service_definition": "Jump",
->>>>>>> feature/tags-refactor
+         *       "service_definition": "AWX",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5058,8 +5066,10 @@ export interface operations {
             query?: {
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -5073,7 +5083,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_DaemonApiKey"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_DaemonApiKey"];
                 };
             };
         };
@@ -5289,8 +5299,10 @@ export interface operations {
     get_all_user_api_keys: {
         parameters: {
             query?: {
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -5304,7 +5316,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_UserApiKey"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_UserApiKey"];
                 };
             };
             /** @description Not authenticated */
@@ -5564,8 +5576,10 @@ export interface operations {
                 port_id?: string | null;
                 /** @description Filter by interface ID */
                 interface_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -5579,7 +5593,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Binding"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Binding"];
                 };
             };
         };
@@ -5765,8 +5779,10 @@ export interface operations {
             query?: {
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -5780,7 +5796,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_DaemonResponse"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_DaemonResponse"];
                 };
             };
         };
@@ -5890,8 +5906,10 @@ export interface operations {
                 network_id?: string | null;
                 /** @description Filter by daemon ID */
                 daemon_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -5905,7 +5923,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Discovery"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Discovery"];
                 };
             };
         };
@@ -6176,8 +6194,10 @@ export interface operations {
             query?: {
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -6191,7 +6211,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Group"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Group"];
                 };
             };
         };
@@ -6368,8 +6388,10 @@ export interface operations {
             query?: {
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -6383,7 +6405,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_HostResponse"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_HostResponse"];
                 };
             };
         };
@@ -6667,8 +6689,10 @@ export interface operations {
                 subnet_id?: string | null;
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -6682,7 +6706,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Interface"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Interface"];
                 };
             };
         };
@@ -7000,8 +7024,10 @@ export interface operations {
     list_networks: {
         parameters: {
             query?: {
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -7015,7 +7041,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Network"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Network"];
                 };
             };
         };
@@ -7359,8 +7385,10 @@ export interface operations {
                 host_id?: string | null;
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -7374,7 +7402,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Port"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Port"];
                 };
             };
         };
@@ -7553,8 +7581,10 @@ export interface operations {
                 host_id?: string | null;
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -7568,7 +7598,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Service"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Service"];
                 };
             };
         };
@@ -7747,8 +7777,10 @@ export interface operations {
                 network_id?: string | null;
                 /** @description Filter by topology ID */
                 topology_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -7762,7 +7794,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Share"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Share"];
                 };
             };
         };
@@ -8007,8 +8039,10 @@ export interface operations {
             query?: {
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -8022,7 +8056,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Subnet"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Subnet"];
                 };
             };
         };
@@ -8197,8 +8231,10 @@ export interface operations {
     list_tags: {
         parameters: {
             query?: {
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -8212,7 +8248,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Tag"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Tag"];
                 };
             };
         };
@@ -8506,8 +8542,10 @@ export interface operations {
             query?: {
                 /** @description Filter by network ID */
                 network_id?: string | null;
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -8521,7 +8559,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_Topology"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_Topology"];
                 };
             };
         };
@@ -8816,8 +8854,10 @@ export interface operations {
     get_all_users: {
         parameters: {
             query?: {
-                /** @description Pagination parameters */
-                pagination?: null | components["schemas"]["PaginationParams"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
             };
             header?: never;
             path?: never;
@@ -8831,7 +8871,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_Vec_User"];
+                    "application/json": components["schemas"]["PaginatedApiResponse_User"];
                 };
             };
         };

@@ -338,7 +338,8 @@ impl EntityFilter {
     pub fn entity_type(mut self, entity_type: &EntityDiscriminants) -> Self {
         self.conditions
             .push(format!("entity_type = ${}", self.values.len() + 1));
-        self.values.push(SqlValue::String(entity_type.to_string()));
+        // Use EntityDiscriminant to match JSON serialization used when inserting
+        self.values.push(SqlValue::EntityDiscriminant(*entity_type));
         self
     }
 

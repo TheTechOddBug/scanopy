@@ -29,7 +29,7 @@ use crate::server::{
         events::types::TelemetryEvent,
         services::traits::EventBusService,
         types::{
-            api::{ApiError, ApiResponse, ApiResult, EmptyApiResponse},
+            api::{ApiError, ApiResponse, ApiResult, EmptyApiResponse, PaginatedApiResponse},
             entities::EntitySource,
         },
     },
@@ -71,7 +71,7 @@ pub fn create_internal_router() -> OpenApiRouter<Arc<AppState>> {
 
 /// Get all daemons
 ///
-/// Returns all daemons accessible to the user with computed version status.
+/// Returns all daemons accessible to the user
 #[utoipa::path(
     get,
     path = "",
@@ -80,7 +80,7 @@ pub fn create_internal_router() -> OpenApiRouter<Arc<AppState>> {
     summary = "Get all daemons",
     params(NetworkFilterQuery),
     responses(
-        (status = 200, description = "List of daemons", body = ApiResponse<Vec<DaemonResponse>>),
+        (status = 200, description = "List of daemons", body = PaginatedApiResponse<DaemonResponse>),
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
@@ -88,7 +88,7 @@ async fn get_all(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Viewer>,
     query: Query<NetworkFilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<DaemonResponse>>>> {
+) -> ApiResult<Json<PaginatedApiResponse<DaemonResponse>>> {
     let network_ids = auth.network_ids();
     let organization_id = auth
         .organization_id()
@@ -121,7 +121,7 @@ async fn get_all(
     let limit = pagination.effective_limit().unwrap_or(0);
     let offset = pagination.effective_offset();
 
-    Ok(Json(ApiResponse::success_paginated(
+    Ok(Json(PaginatedApiResponse::success(
         responses,
         result.total_count,
         limit,

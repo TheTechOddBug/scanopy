@@ -23,7 +23,7 @@ export function useTagsQuery() {
 		queryKey: queryKeys.tags.all,
 		queryFn: async () => {
 			const { data } = await apiClient.GET('/api/v1/tags', {
-				params: { query: { pagination: { limit: 0 } } }
+				params: { query: { limit: 0 } }
 			});
 			if (!data?.success || !data.data) {
 				throw new Error(data?.error || 'Failed to fetch tags');
@@ -158,16 +158,28 @@ const entityTypeToQueryKeyName: Record<EntityDiscriminants, keyof typeof queryKe
 	Port: null,
 	Binding: null,
 	Interface: null,
-	Topology: null
+	Topology: null,
+	Unknown: null,
+	GroupBinding: null,
+	EntityTag: null,
+	UserApiKeyNetworkAccess: null,
+	UserNetworkAccess: null
 };
 
 /**
  * Get the query key for an entity type, or undefined if not taggable.
+ * Returns the list query key pattern (e.g., ['hosts', 'list']) to ensure
+ * invalidation matches paginated list queries.
  */
 function getQueryKeyForEntityType(entityType: EntityDiscriminants): readonly string[] | undefined {
 	const keyName = entityTypeToQueryKeyName[entityType];
 	if (keyName) {
-		return queryKeys[keyName].all;
+		const queryKeyGroup = queryKeys[keyName];
+		// Use 'lists' key if available (for paginated queries), otherwise fall back to 'all'
+		if ('lists' in queryKeyGroup && typeof queryKeyGroup.lists === 'function') {
+			return queryKeyGroup.lists();
+		}
+		return queryKeyGroup.all;
 	}
 	return undefined;
 }

@@ -267,7 +267,8 @@ impl EntityTagStorage {
         Ok(())
     }
 
-    /// Bulk add a tag to multiple entities
+    /// Bulk add a tag to multiple entities.
+    /// Silently skips entities that already have the tag.
     pub async fn bulk_add(
         &self,
         entity_ids: &[Uuid],
@@ -280,10 +281,7 @@ impl EntityTagStorage {
 
         let mut added = 0;
         for entity_id in entity_ids {
-            let entity_tag = EntityTag::new(EntityTagBase::new(*entity_id, entity_type, tag_id));
-
-            // Ignore unique constraint violations (already exists)
-            if self.storage.create(&entity_tag).await.is_ok() {
+            if self.add(*entity_id, entity_type, tag_id).await? {
                 added += 1;
             }
         }

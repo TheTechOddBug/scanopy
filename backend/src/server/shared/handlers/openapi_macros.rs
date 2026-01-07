@@ -207,8 +207,9 @@ macro_rules! crud_bulk_delete_handler {
 #[macro_export]
 macro_rules! crud_get_all_handler {
     ($entity:ty, $response:ty, $tag:expr, $singular:expr) => {
-        // Type alias to resolve the associated type in a way utoipa can process
+        // Type aliases to help utoipa resolve types
         type __GetAllFilterQuery = <$entity as $crate::server::shared::handlers::traits::CrudHandlers>::FilterQuery;
+        type __PaginatedResponse = $crate::server::shared::types::api::PaginatedApiResponse<$response>;
 
         #[utoipa::path(
             get,
@@ -218,7 +219,7 @@ macro_rules! crud_get_all_handler {
             summary = concat!("List all ", $tag),
             params(__GetAllFilterQuery),
             responses(
-                (status = 200, description = concat!("List of ", $tag), body = $crate::server::shared::types::api::ApiResponse<Vec<$response>>),
+                (status = 200, description = concat!("List of ", $tag), body = __PaginatedResponse),
             ),
              security(("user_api_key" = []), ("session" = []))
         )]
@@ -227,7 +228,7 @@ macro_rules! crud_get_all_handler {
             auth: $crate::server::auth::middleware::permissions::Authorized<$crate::server::auth::middleware::permissions::Viewer>,
             query: $crate::server::shared::extractors::Query<__GetAllFilterQuery>,
         ) -> $crate::server::shared::types::api::ApiResult<
-            axum::response::Json<$crate::server::shared::types::api::ApiResponse<Vec<$response>>>,
+            axum::response::Json<__PaginatedResponse>,
         > {
             $crate::server::shared::handlers::traits::get_all_handler::<$entity>(state, auth, query)
                 .await

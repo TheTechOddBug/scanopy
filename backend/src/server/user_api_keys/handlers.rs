@@ -13,7 +13,10 @@ use crate::server::{
             traits::{BulkDeleteResponse, bulk_delete_handler, delete_handler, get_by_id_handler},
         },
         services::traits::CrudService,
-        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
+        types::api::{
+            ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse,
+            PaginatedApiResponse,
+        },
     },
     user_api_keys::{
         r#impl::{api::UserApiKeyResponse, base::UserApiKey},
@@ -47,7 +50,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     operation_id = "get_all_user_api_keys",
     params(NoFilterQuery),
     responses(
-        (status = 200, description = "List of user API keys", body = ApiResponse<Vec<UserApiKey>>),
+        (status = 200, description = "List of user API keys", body = PaginatedApiResponse<UserApiKey>),
         (status = 401, description = "Not authenticated", body = ApiErrorResponse),
         (status = 500, description = "Internal server error", body = ApiErrorResponse),
     ),
@@ -58,7 +61,7 @@ pub async fn get_all(
     _feature: RequireFeature<ApiKeyFeature>,
     auth: Authorized<IsUser>,
     query: Query<NoFilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<UserApiKey>>>> {
+) -> ApiResult<Json<PaginatedApiResponse<UserApiKey>>> {
     let user_id = auth.require_user_id()?;
     let service = &state.services.user_api_key_service;
 
@@ -85,7 +88,7 @@ pub async fn get_all(
     let limit = limit.unwrap_or(0);
     let offset = pagination.effective_offset();
 
-    Ok(Json(ApiResponse::success_paginated(
+    Ok(Json(PaginatedApiResponse::success(
         keys,
         total_count,
         limit,

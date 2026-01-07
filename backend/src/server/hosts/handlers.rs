@@ -17,7 +17,7 @@ use crate::server::{
         base::Host,
         legacy::{HostCreateRequestBody, HostCreateResponse, LegacyHostWithServicesResponse},
     },
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
+    shared::types::api::{ApiError, ApiResponse, ApiResult, PaginatedApiResponse},
 };
 use axum::extract::{Path, State};
 use axum::response::Json;
@@ -46,7 +46,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     tag = "hosts",
     params(crate::server::shared::handlers::query::NetworkFilterQuery),
     responses(
-        (status = 200, description = "List of hosts with their children", body = ApiResponse<Vec<HostResponse>>),
+        (status = 200, description = "List of hosts with their children", body = PaginatedApiResponse<HostResponse>),
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
@@ -54,7 +54,7 @@ async fn get_all_hosts(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Viewer>,
     Query(query): Query<crate::server::shared::handlers::query::NetworkFilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<HostResponse>>>> {
+) -> ApiResult<Json<PaginatedApiResponse<HostResponse>>> {
     let network_ids = auth.network_ids();
     let organization_id = auth
         .organization_id()
@@ -77,7 +77,7 @@ async fn get_all_hosts(
     let limit = pagination.effective_limit().unwrap_or(0);
     let offset = pagination.effective_offset();
 
-    Ok(Json(ApiResponse::success_paginated(
+    Ok(Json(PaginatedApiResponse::success(
         result.items,
         result.total_count,
         limit,

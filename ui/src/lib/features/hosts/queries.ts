@@ -178,10 +178,8 @@ export function useHostsQuery(optionsOrGetter: PaginationOptions | (() => Pagina
 				const { data } = await apiClient.GET('/api/v1/hosts', {
 					params: {
 						query: {
-							pagination: {
-								limit: options.limit,
-								offset: options.offset
-							}
+							limit: options.limit,
+							offset: options.offset
 						}
 					}
 				});

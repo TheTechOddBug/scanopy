@@ -699,9 +699,9 @@
 			title={viewMode === 'card' ? 'Switch to list view' : 'Switch to card view'}
 		>
 			{#if viewMode === 'card'}
-				<List class="h-4 w-4" />
+				<List class="h-5.5 w-5.5" />
 			{:else}
-				<LayoutGrid class="h-4 w-4" />
+				<LayoutGrid class="h-5.5 w-5.5" />
 			{/if}
 		</button>
 
@@ -747,9 +747,9 @@
 		{#if sortState.field}
 			<button onclick={() => toggleSort(sortState.field || '')} class="btn-secondary">
 				{#if sortState.direction === 'asc'}
-					<ChevronUp class="h-4 w-4" />
+					<ChevronUp class="h-5.5 w-5.5" />
 				{:else}
-					<ChevronDown class="h-4 w-4" />
+					<ChevronDown class="h-5.5 w-5.5" />
 				{/if}
 			</button>
 		{/if}

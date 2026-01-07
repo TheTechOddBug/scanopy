@@ -458,11 +458,7 @@
 				<Menu class="h-5 w-5 flex-shrink-0" />
 				{#if !collapsed}
 					<div class="absolute left-1/2 flex -translate-x-1/2 transform items-center">
-						<img
-							src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
-							alt="Logo"
-							class="h-8 w-auto"
-						/>
+						<img src="/logos/scanopy-logo.png" alt="Logo" class="h-8 w-auto" />
 						<h1 class="text-primary ml-3 truncate whitespace-nowrap text-xl font-bold">Scanopy</h1>
 					</div>
 				{/if}

@@ -1,10 +1,3 @@
-use axum::Json;
-use axum::extract::{Path, State};
-use std::collections::HashSet;
-use std::sync::Arc;
-use utoipa_axum::{router::OpenApiRouter, routes};
-use uuid::Uuid;
-
 use crate::server::auth::middleware::permissions::{Authorized, Member};
 use crate::server::config::AppState;
 use crate::server::interfaces::r#impl::base::Interface;
@@ -15,6 +8,12 @@ use crate::server::shared::types::api::{
     ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse,
 };
 use crate::server::shared::validation::{validate_bulk_delete_access, validate_delete_access};
+use axum::Json;
+use axum::extract::{Path, State};
+use std::collections::HashSet;
+use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
+use uuid::Uuid;
 
 // Generated handlers for read operations only
 mod generated {

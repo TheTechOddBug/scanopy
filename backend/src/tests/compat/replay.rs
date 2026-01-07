@@ -117,7 +117,7 @@ pub async fn replay_exchange(
     // Add daemon headers for server requests
     req = req
         .header("X-Daemon-ID", ctx.daemon_id.to_string())
-        .header("X-API-Key", &ctx.api_key);
+        .header("Authorization", format!("Bearer {}", &ctx.api_key));
 
     let response = req.send().await.map_err(|e| e.to_string())?;
     let actual_status = response.status().as_u16();

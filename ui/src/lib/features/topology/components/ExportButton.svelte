@@ -178,7 +178,7 @@
 			`;
 
 			const logo = document.createElement('img');
-			logo.src = 'https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png';
+			logo.src = '/logos/scanopy-logo.png';
 			logo.style.cssText = `
 				height: 18px;
 				width: auto;

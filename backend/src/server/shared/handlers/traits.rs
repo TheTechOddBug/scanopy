@@ -7,7 +7,7 @@ use crate::server::{
         handlers::query::FilterQueryExtractor,
         services::traits::{CrudService, EventBusService},
         storage::{filter::EntityFilter, traits::StorableEntity},
-        types::api::{ApiError, ApiResponse, ApiResult},
+        types::api::{ApiError, ApiResponse, ApiResult, PaginatedApiResponse},
         types::entities::EntitySource,
         validation::{
             validate_bulk_delete_access, validate_create_access, validate_delete_access,
@@ -123,7 +123,7 @@ pub async fn get_all_handler<T>(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Viewer>,
     Query(query): Query<T::FilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<T>>>>
+) -> ApiResult<Json<PaginatedApiResponse<T>>>
 where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
@@ -168,7 +168,7 @@ where
     let offset = pagination.effective_offset();
 
     // Return paginated response with metadata
-    Ok(Json(ApiResponse::success_paginated(
+    Ok(Json(PaginatedApiResponse::success(
         result.items,
         result.total_count,
         limit,

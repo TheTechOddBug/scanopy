@@ -4,7 +4,9 @@ use crate::server::shared::extractors::Query;
 use crate::server::shared::handlers::query::{FilterQueryExtractor, NoFilterQuery};
 use crate::server::shared::handlers::traits::{BulkDeleteResponse, CrudHandlers, delete_handler};
 use crate::server::shared::storage::filter::EntityFilter;
-use crate::server::shared::types::api::{ApiError, ApiErrorResponse, EmptyApiResponse};
+use crate::server::shared::types::api::{
+    ApiError, ApiErrorResponse, EmptyApiResponse, PaginatedApiResponse,
+};
 use crate::server::users::r#impl::base::User;
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use crate::server::{
@@ -81,7 +83,7 @@ pub async fn get_user_by_id(
     tag = "users",
     params(NoFilterQuery),
     responses(
-        (status = 200, description = "List of users", body = ApiResponse<Vec<User>>),
+        (status = 200, description = "List of users", body = PaginatedApiResponse<User>),
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
@@ -89,7 +91,7 @@ pub async fn get_all_users(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Admin>,
     query: Query<NoFilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<User>>>> {
+) -> ApiResult<Json<PaginatedApiResponse<User>>> {
     let organization_id = auth
         .organization_id()
         .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
@@ -150,7 +152,7 @@ pub async fn get_all_users(
     let limit = limit.unwrap_or(0);
     let offset = pagination.effective_offset();
 
-    Ok(Json(ApiResponse::success_paginated(
+    Ok(Json(PaginatedApiResponse::success(
         users,
         total_count,
         limit,

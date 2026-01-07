@@ -7,8 +7,11 @@
 //! but filtered out of the public Scalar documentation.
 
 use axum::{Extension, Json, Router};
+use serde_json::json;
 use std::sync::Arc;
 use utoipa::OpenApi as OpenApiDerive;
+use utoipa::openapi::RefOr;
+use utoipa::openapi::schema::Schema;
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::openapi::{Components, OpenApi, PathItem};
 use utoipa_scalar::{Scalar, Servable};
@@ -19,6 +22,7 @@ use crate::server::shared::handlers::query::PaginationParams;
 /// Tag used to mark endpoints that should be hidden from public documentation
 /// but included in the full OpenAPI spec for client generation.
 const INTERNAL_TAG: &str = "internal";
+const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// OpenAPI base configuration
 ///
@@ -54,6 +58,17 @@ Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Res
 
 When rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.
 
+## Pagination
+
+List endpoints support pagination via query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |
+| `offset` | integer | 0 | Number of results to skip |
+
+Example: `GET /api/v1/hosts?limit=10&offset=20`
+
 ## Response Format
 
 All responses use a standard envelope:
@@ -64,12 +79,38 @@ All responses use a standard envelope:
   "data": { ... },
   "meta": {
     "api_version": 1,
-    "server_version": "0.12.10"
+    "server_version": "{{SERVER_VERSION}}"
   }
 }
 ```
 
-Error responses include an `error` field instead of `data`:
+**Paginated list responses** include pagination metadata:
+
+```json
+{
+  "success": true,
+  "data": [ ... ],
+  "meta": {
+    "api_version": 1,
+    "server_version": "{{SERVER_VERSION}}",
+    "pagination": {
+      "total_count": 142,
+      "limit": 50,
+      "offset": 0,
+      "has_more": true
+    }
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `total_count` | Total items matching your query (ignoring pagination) |
+| `limit` | Applied limit (your request or default) |
+| `offset` | Applied offset |
+| `has_more` | `true` if more results exist beyond this page |
+
+**Error responses** include an `error` field instead of `data`:
 
 ```json
 {
@@ -135,6 +176,11 @@ pub struct ApiDoc;
 pub fn build_openapi(paths_from_handlers: OpenApi) -> OpenApi {
     let mut base = ApiDoc::openapi();
 
+    // Replace version placeholder in description
+    if let Some(ref mut description) = base.info.description {
+        *description = description.replace("{{SERVER_VERSION}}", SERVER_VERSION);
+    }
+
     // Merge paths from handlers
     base.paths.paths.extend(paths_from_handlers.paths.paths);
 
@@ -159,7 +205,27 @@ pub fn build_openapi(paths_from_handlers: OpenApi) -> OpenApi {
     // Add security schemes
     add_security_schemes(&mut base);
 
+    // Fix schema examples that utoipa doesn't handle well
+    fix_schema_examples(&mut base);
+
     base
+}
+
+/// Fix schema examples that utoipa doesn't properly generate for nested optional types
+fn fix_schema_examples(spec: &mut OpenApi) {
+    let Some(ref mut components) = spec.components else {
+        return;
+    };
+
+    // Add proper example to PaginationMeta schema
+    if let Some(RefOr::T(Schema::Object(schema))) = components.schemas.get_mut("PaginationMeta") {
+        schema.example = Some(json!({
+            "total_count": 142,
+            "limit": 50,
+            "offset": 0,
+            "has_more": true
+        }));
+    }
 }
 
 /// Add security scheme definitions to the OpenAPI spec

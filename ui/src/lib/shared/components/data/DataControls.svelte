@@ -5,6 +5,8 @@
 		X,
 		ChevronDown,
 		ChevronUp,
+		ChevronLeft,
+		ChevronRight,
 		LayoutGrid,
 		List,
 		Trash2,
@@ -14,7 +16,16 @@
 	import type { FieldConfig } from './types';
 	import { onMount, type Snippet } from 'svelte';
 	import Tag from './Tag.svelte';
+	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
+	import {
+		useBulkAddTagMutation,
+		useBulkRemoveTagMutation,
+		type EntityDiscriminants
+	} from '$lib/features/tags/queries';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+
+	// Client-side pagination: 20 items per page
+	const PAGE_SIZE = 20;
 
 	let {
 		items = $bindable([]),
@@ -22,6 +33,8 @@
 		storageKey = null,
 		onBulkDelete = null,
 		allowBulkDelete = true,
+		entityType = null,
+		getItemTags = null,
 		children,
 		getItemId
 	}: {
@@ -30,9 +43,15 @@
 		storageKey?: string | null;
 		onBulkDelete?: ((ids: string[]) => Promise<void>) | null;
 		allowBulkDelete?: boolean;
+		entityType?: EntityDiscriminants | null;
+		getItemTags?: ((item: T) => string[]) | null;
 		children: Snippet<[T, 'card' | 'list', boolean, (selected: boolean) => void]>;
 		getItemId: (item: T) => string;
 	} = $props();
+
+	// Bulk tag mutations
+	const bulkAddTagMutation = useBulkAddTagMutation();
+	const bulkRemoveTagMutation = useBulkRemoveTagMutation();
 
 	// Search state
 	let searchQuery = $state('');
@@ -67,6 +86,9 @@
 	// View mode state
 	let viewMode = $state<'card' | 'list'>('card');
 
+	// Pagination state (client-side)
+	let currentPage = $state(1);
+
 	// Bulk selection state (always enabled when onBulkDelete is provided)
 	let selectedIds = new SvelteSet<string>();
 
@@ -85,6 +107,7 @@
 		selectedGroupField: string | null;
 		showFilters: boolean;
 		viewMode: 'card' | 'list';
+		currentPage: number;
 	}
 
 	// Load state from localStorage
@@ -132,6 +155,11 @@
 			if (state.viewMode) {
 				viewMode = state.viewMode;
 			}
+
+			// Restore current page
+			if (state.currentPage) {
+				currentPage = state.currentPage;
+			}
 		} catch (e) {
 			console.warn('Failed to load DataControls state from localStorage:', e);
 		}
@@ -157,7 +185,8 @@
 				sortState,
 				selectedGroupField,
 				showFilters,
-				viewMode
+				viewMode,
+				currentPage
 			};
 
 			localStorage.setItem(storageKey, JSON.stringify(state));
@@ -210,6 +239,7 @@
 					void selectedGroupField;
 					void showFilters;
 					void viewMode;
+					void currentPage;
 
 					// Debounce saves
 					clearTimeout(saveTimeout);
@@ -504,6 +534,56 @@
 		}
 	}
 
+	// Handle bulk tag add
+	async function handleBulkTagAdd(tagId: string) {
+		if (!entityType || selectedIds.size === 0) return;
+
+		try {
+			await bulkAddTagMutation.mutateAsync({
+				entity_ids: Array.from(selectedIds),
+				entity_type: entityType,
+				tag_id: tagId
+			});
+		} catch (error) {
+			console.error('Bulk tag add failed:', error);
+		}
+	}
+
+	// Handle bulk tag remove
+	async function handleBulkTagRemove(tagId: string) {
+		if (!entityType || selectedIds.size === 0) return;
+
+		try {
+			await bulkRemoveTagMutation.mutateAsync({
+				entity_ids: Array.from(selectedIds),
+				entity_type: entityType,
+				tag_id: tagId
+			});
+		} catch (error) {
+			console.error('Bulk tag remove failed:', error);
+		}
+	}
+
+	// Compute common tags across selected items (intersection)
+	let commonTags = $derived.by(() => {
+		if (!getItemTags || selectedIds.size === 0) return [];
+
+		const selectedItems = items.filter((item) => selectedIds.has(getItemId(item)));
+		if (selectedItems.length === 0) return [];
+
+		// Start with first item's tags, then intersect with others
+		let common = new Set(getItemTags(selectedItems[0]));
+		for (let i = 1; i < selectedItems.length; i++) {
+			const itemTags = new Set(getItemTags(selectedItems[i]));
+			common = new Set([...common].filter((tag) => itemTags.has(tag)));
+		}
+
+		return Array.from(common);
+	});
+
+	// Check if bulk tagging is enabled
+	let hasBulkTagging = $derived(entityType !== null && getItemTags !== null);
+
 	// Derived states
 	let allSelected = $derived(
 		processedItems.length > 0 && selectedIds.size === processedItems.length
@@ -526,6 +606,38 @@
 
 	let hasActiveSearch = $derived(searchQuery.trim().length > 0);
 	let hasActiveGrouping = $derived(selectedGroupField !== null);
+
+	// Client-side pagination derived values
+	let totalPages = $derived(Math.ceil(processedItems.length / PAGE_SIZE));
+	let canGoPrev = $derived(currentPage > 1);
+	let canGoNext = $derived(currentPage < totalPages);
+	let showingStart = $derived(Math.min((currentPage - 1) * PAGE_SIZE + 1, processedItems.length));
+	let showingEnd = $derived(Math.min(currentPage * PAGE_SIZE, processedItems.length));
+
+	// Paginated items for display (slice of processedItems)
+	let paginatedItems = $derived(
+		processedItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+	);
+
+	// Reset to page 1 when filters/search change and current page would be out of bounds
+	$effect(() => {
+		if (currentPage > totalPages && totalPages > 0) {
+			currentPage = 1;
+		}
+	});
+
+	// Pagination handlers
+	function goToPrevPage() {
+		if (canGoPrev) {
+			currentPage = currentPage - 1;
+		}
+	}
+
+	function goToNextPage() {
+		if (canGoNext) {
+			currentPage = currentPage + 1;
+		}
+	}
 </script>
 
 <div class="space-y-4">
@@ -564,8 +676,8 @@
 			</button>
 		{/if}
 
-		<!-- Select All/None Buttons (only show if onBulkDelete is provided) -->
-		{#if onBulkDelete}
+		<!-- Select All/None Buttons (show if bulk operations are available) -->
+		{#if onBulkDelete || hasBulkTagging}
 			<button
 				onclick={allSelected ? selectNone : selectAll}
 				class="btn-secondary flex items-center gap-2"
@@ -587,9 +699,9 @@
 			title={viewMode === 'card' ? 'Switch to list view' : 'Switch to card view'}
 		>
 			{#if viewMode === 'card'}
-				<List class="h-4 w-4" />
+				<List class="h-5.5 w-5.5" />
 			{:else}
-				<LayoutGrid class="h-4 w-4" />
+				<LayoutGrid class="h-5.5 w-5.5" />
 			{/if}
 		</button>
 
@@ -635,34 +747,51 @@
 		{#if sortState.field}
 			<button onclick={() => toggleSort(sortState.field || '')} class="btn-secondary">
 				{#if sortState.direction === 'asc'}
-					<ChevronUp class="h-4 w-4" />
+					<ChevronUp class="h-5.5 w-5.5" />
 				{:else}
-					<ChevronDown class="h-4 w-4" />
+					<ChevronDown class="h-5.5 w-5.5" />
 				{/if}
 			</button>
 		{/if}
 	</div>
 
 	<!-- Bulk Action Bar (shown when items are selected) -->
-	{#if onBulkDelete && selectedIds.size > 0}
-		<div class="card flex items-center justify-between p-4">
-			<div class="flex items-center gap-4">
-				<span class="text-primary text-sm font-medium">
-					{selectedIds.size}
-					{selectedIds.size === 1 ? 'item' : 'items'} selected
-				</span>
-				<button
-					onclick={selectNone}
-					class="text-tertiary hover:text-secondary text-sm transition-colors"
-				>
-					Clear selection
-				</button>
+	{#if (onBulkDelete || hasBulkTagging) && selectedIds.size > 0}
+		<div class="card space-y-3 p-4">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-4">
+					<span class="text-primary text-sm font-medium">
+						{selectedIds.size}
+						{selectedIds.size === 1 ? 'item' : 'items'} selected
+					</span>
+					<button
+						onclick={selectNone}
+						class="text-tertiary hover:text-secondary text-sm transition-colors"
+					>
+						Clear selection
+					</button>
+				</div>
+				{#if allowBulkDelete && onBulkDelete}
+					<button onclick={handleBulkDelete} class="btn-danger flex items-center gap-2">
+						<Trash2 class="h-4 w-4" />
+						Delete Selected
+					</button>
+				{/if}
 			</div>
-			{#if allowBulkDelete}
-				<button onclick={handleBulkDelete} class="btn-danger flex items-center gap-2">
-					<Trash2 class="h-4 w-4" />
-					Delete Selected
-				</button>
+
+			<!-- Bulk Tagging -->
+			{#if hasBulkTagging}
+				<div class="flex items-center gap-3 border-t border-gray-700 pt-3">
+					<span class="text-secondary text-sm">Tags:</span>
+					<TagPickerInline
+						selectedTagIds={commonTags}
+						onAdd={handleBulkTagAdd}
+						onRemove={handleBulkTagRemove}
+					/>
+					{#if commonTags.length === 0 && selectedIds.size > 1}
+						<span class="text-tertiary text-xs">No common tags</span>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	{/if}
@@ -738,18 +867,50 @@
 		</div>
 	{/if}
 
-	<!-- Results Count -->
+	<!-- Results Count and Pagination -->
 	<div class="text-tertiary flex items-center justify-between text-sm">
 		<span>
-			Showing {processedItems.length} of {items.length}
-			{items.length === 1 ? 'item' : 'items'}
+			{#if processedItems.length === 0}
+				No items
+			{:else if totalPages > 1}
+				Showing {showingStart}-{showingEnd} of {processedItems.length}
+				{processedItems.length === 1 ? 'item' : 'items'}
+			{:else}
+				Showing {processedItems.length} of {items.length}
+				{items.length === 1 ? 'item' : 'items'}
+			{/if}
 		</span>
-		{#if hasActiveGrouping}
-			<span>
-				{groupedItems.size}
-				{groupedItems.size === 1 ? 'group' : 'groups'}
-			</span>
-		{/if}
+		<div class="flex items-center gap-4">
+			{#if hasActiveGrouping}
+				<span>
+					{groupedItems.size}
+					{groupedItems.size === 1 ? 'group' : 'groups'}
+				</span>
+			{/if}
+			{#if totalPages > 1}
+				<div class="flex items-center gap-2">
+					<button
+						onclick={goToPrevPage}
+						disabled={!canGoPrev}
+						class="btn-secondary p-1 disabled:cursor-not-allowed disabled:opacity-50"
+						title="Previous page"
+					>
+						<ChevronLeft class="h-4 w-4" />
+					</button>
+					<span class="text-secondary min-w-[80px] text-center">
+						Page {currentPage} of {totalPages}
+					</span>
+					<button
+						onclick={goToNextPage}
+						disabled={!canGoNext}
+						class="btn-secondary p-1 disabled:cursor-not-allowed disabled:opacity-50"
+						title="Next page"
+					>
+						<ChevronRight class="h-4 w-4" />
+					</button>
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<!-- Content -->
@@ -787,13 +948,13 @@
 			{/each}
 		</div>
 	{:else}
-		<!-- Ungrouped view -->
+		<!-- Ungrouped view (paginated) -->
 		<div
 			class={viewMode === 'list'
 				? 'space-y-2'
 				: 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}
 		>
-			{#each processedItems as item (getItemId(item))}
+			{#each paginatedItems as item (getItemId(item))}
 				{@const itemId = getItemId(item)}
 				{@const isSelected = selectedIds.has(itemId)}
 				{@render children(item, viewMode, isSelected, (selected) => {

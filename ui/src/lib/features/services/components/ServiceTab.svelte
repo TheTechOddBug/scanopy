@@ -24,7 +24,8 @@
 	// Queries
 	const tagsQuery = useTagsQuery();
 	const servicesQuery = useServicesQuery();
-	const hostsQuery = useHostsQuery();
+	// Use limit: 0 to get all hosts for lookups
+	const hostsQuery = useHostsQuery({ limit: 0 });
 	const networksQuery = useNetworksQuery();
 
 	// Mutations
@@ -35,7 +36,7 @@
 	// Derived data
 	let tagsData = $derived(tagsQuery.data ?? []);
 	let servicesData = $derived(servicesQuery.data ?? []);
-	let hostsData = $derived(hostsQuery.data ?? []);
+	let hostsData = $derived(hostsQuery.data?.items ?? []);
 	let networksData = $derived(networksQuery.data ?? []);
 	let isLoading = $derived(hostsQuery.isPending);
 
@@ -83,6 +84,10 @@
 		if (confirm(`Are you sure you want to delete ${ids.length} Services?`)) {
 			await bulkDeleteServicesMutation.mutateAsync(ids);
 		}
+	}
+
+	function getServiceTags(service: Service): string[] {
+		return service.tags;
 	}
 
 	// Define field configuration for the DataTableControls
@@ -183,6 +188,8 @@
 			fields={serviceFields}
 			storageKey="scanopy-services-table-state"
 			onBulkDelete={isReadOnly ? undefined : handleBulkDelete}
+			entityType={isReadOnly ? undefined : 'Service'}
+			getItemTags={getServiceTags}
 			getItemId={(item) => item.id}
 		>
 			{#snippet children(

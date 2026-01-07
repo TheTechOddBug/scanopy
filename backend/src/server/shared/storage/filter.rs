@@ -2,15 +2,20 @@ use chrono::{DateTime, Utc};
 use email_address::EmailAddress;
 use uuid::Uuid;
 
+use mac_address::MacAddress;
+
 use crate::server::{
-    shared::storage::traits::SqlValue, users::r#impl::permissions::UserOrgPermissions,
+    shared::{entities::EntityDiscriminants, storage::traits::SqlValue},
+    users::r#impl::permissions::UserOrgPermissions,
 };
 
-/// Builder pattern for common WHERE clauses
+/// Builder pattern for common WHERE clauses with optional pagination.
 #[derive(Clone)]
 pub struct EntityFilter {
     conditions: Vec<String>,
     values: Vec<SqlValue>,
+    limit_value: Option<u32>,
+    offset_value: Option<u32>,
 }
 
 impl EntityFilter {
@@ -18,7 +23,61 @@ impl EntityFilter {
         Self {
             conditions: Vec::new(),
             values: Vec::new(),
+            limit_value: None,
+            offset_value: None,
         }
+    }
+
+    /// Set the maximum number of results to return.
+    pub fn limit(mut self, limit: u32) -> Self {
+        self.limit_value = Some(limit);
+        self
+    }
+
+    /// Set the number of results to skip.
+    pub fn offset(mut self, offset: u32) -> Self {
+        self.offset_value = Some(offset);
+        self
+    }
+
+    /// Get the limit value, if set.
+    pub fn get_limit(&self) -> Option<u32> {
+        self.limit_value
+    }
+
+    /// Get the offset value, if set.
+    pub fn get_offset(&self) -> Option<u32> {
+        self.offset_value
+    }
+
+    /// Generate LIMIT clause if limit is set.
+    pub fn to_limit_clause(&self) -> String {
+        match self.limit_value {
+            Some(limit) => format!("LIMIT {}", limit),
+            None => String::new(),
+        }
+    }
+
+    /// Generate OFFSET clause if offset is set.
+    pub fn to_offset_clause(&self) -> String {
+        match self.offset_value {
+            Some(offset) if offset > 0 => format!("OFFSET {}", offset),
+            _ => String::new(),
+        }
+    }
+
+    /// Generate combined LIMIT and OFFSET clause.
+    pub fn to_pagination_clause(&self) -> String {
+        let mut parts = Vec::new();
+        if let Some(limit) = self.limit_value {
+            parts.push(format!("LIMIT {}", limit));
+        }
+        if let Some(offset) = self.offset_value
+            && offset > 0
+        {
+            parts.push(format!("OFFSET {}", offset));
+        }
+        parts.join(" ")
     }
 
     pub fn entity_id(mut self, id: &Uuid) -> Self {
@@ -99,6 +158,13 @@ impl EntityFilter {
         self.conditions
             .push(format!("subnet_id = ${}", self.values.len() + 1));
         self.values.push(SqlValue::Uuid(*id));
+        self
+    }
+
+    pub fn mac_address(mut self, mac: &MacAddress) -> Self {
+        self.conditions
+            .push(format!("mac_address = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::MacAddress(*mac));
         self
     }
 
@@ -264,6 +330,23 @@ impl EntityFilter {
     pub fn service_id(mut self, id: &Uuid) -> Self {
         self.conditions
             .push(format!("service_id = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::Uuid(*id));
+        self
+    }
+
+    /// Filter by entity_type (for entity_tags junction table)
+    pub fn entity_type(mut self, entity_type: &EntityDiscriminants) -> Self {
+        self.conditions
+            .push(format!("entity_type = ${}", self.values.len() + 1));
+        // Use EntityDiscriminant to match JSON serialization used when inserting
+        self.values.push(SqlValue::EntityDiscriminant(*entity_type));
+        self
+    }
+
+    /// Filter by tag_id (for entity_tags junction table)
+    pub fn tag_id(mut self, id: &Uuid) -> Self {
+        self.conditions
+            .push(format!("tag_id = ${}", self.values.len() + 1));
         self.values.push(SqlValue::Uuid(*id));
         self
     }

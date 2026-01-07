@@ -32,8 +32,8 @@
 
 	const tagsQuery = useTagsQuery();
 	const networksQuery = useNetworksQuery();
-	// Load related data
-	useHostsQuery();
+	// Load related data (limit: 0 to get all hosts for network cards)
+	useHostsQuery({ limit: 0 });
 	useDaemonsQuery();
 	useSubnetsQuery();
 	useGroupsQuery();
@@ -88,6 +88,10 @@
 		if (confirm(`Are you sure you want to delete ${ids.length} Networks?`)) {
 			await bulkDeleteNetworksMutation.mutateAsync(ids);
 		}
+	}
+
+	function getNetworkTags(network: Network): string[] {
+		return network.tags;
 	}
 
 	async function handleNetworkCreate(data: Network) {
@@ -170,6 +174,8 @@
 			items={networksData}
 			fields={networkFields}
 			onBulkDelete={handleBulkDelete}
+			entityType={allowBulkDelete ? 'Network' : undefined}
+			getItemTags={getNetworkTags}
 			{allowBulkDelete}
 			storageKey="scanopy-networks-table-state"
 			getItemId={(item) => item.id}

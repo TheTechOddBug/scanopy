@@ -23,7 +23,7 @@ impl ServiceDefinition for ScanopyDaemon {
     }
 
     fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+        "https://cdn.jsdelivr.net/gh/scanopy/scanopy@main/media/logo.png"
     }
 }
 

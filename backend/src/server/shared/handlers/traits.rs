@@ -1,3 +1,4 @@
+use crate::server::shared::extractors::Query;
 use crate::server::{
     auth::middleware::permissions::{Authorized, Member, Viewer},
     config::AppState,
@@ -6,18 +7,18 @@ use crate::server::{
         handlers::query::FilterQueryExtractor,
         services::traits::{CrudService, EventBusService},
         storage::{filter::EntityFilter, traits::StorableEntity},
-        types::api::{ApiError, ApiResponse, ApiResult},
+        types::api::{ApiError, ApiResponse, ApiResult, PaginatedApiResponse},
         types::entities::EntitySource,
         validation::{
-            validate_and_dedupe_tags, validate_bulk_delete_access, validate_create_access,
-            validate_delete_access, validate_entity, validate_read_access, validate_update_access,
+            validate_bulk_delete_access, validate_create_access, validate_delete_access,
+            validate_entity, validate_read_access, validate_update_access,
         },
     },
 };
 use async_trait::async_trait;
 use axum::{
     Router,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     response::Json,
     routing::{delete, get, post, put},
 };
@@ -52,34 +53,6 @@ where
     /// Validate entity before create/update (uses validator crate by default)
     fn validate(&self) -> Result<(), String> {
         validator::Validate::validate(self).map_err(|e| e.to_string())
-    }
-
-    /// Optional: Set the source field on the entity.
-    /// Override for entities with a source field to set it appropriately.
-    /// Default is a no-op for entities without a source field.
-    fn set_source(&mut self, _source: EntitySource) {
-        // Default: no-op
-    }
-
-    /// Optional: Preserve entity-specific immutable fields from the existing entity.
-    /// Override for entities that have additional read-only fields beyond id/created_at.
-    /// For example, ApiKey should preserve `key` and `last_used`.
-    /// Default is a no-op for entities without extra immutable fields.
-    fn preserve_immutable_fields(&mut self, _existing: &Self) {
-        // Default: no-op
-    }
-
-    /// Optional: Get the tags field from the entity for validation.
-    /// Override for entities with a tags field.
-    /// Returns None for entities without tags.
-    fn get_tags(&self) -> Option<&Vec<Uuid>> {
-        None
-    }
-
-    /// Optional: Set the tags field on the entity.
-    /// Override for entities with a tags field.
-    fn set_tags(&mut self, _tags: Vec<Uuid>) {
-        // Default: no-op
     }
 }
 
@@ -126,14 +99,6 @@ where
         organization_id,
     )?;
 
-    // Validate and dedupe tags if entity has them
-    if let Some(tags) = entity.get_tags() {
-        let validated_tags =
-            validate_and_dedupe_tags(tags.clone(), organization_id, &state.services.tag_service)
-                .await?;
-        entity.set_tags(validated_tags);
-    }
-
     let created = service
         .create(entity, auth.into_entity())
         .await
@@ -158,7 +123,7 @@ pub async fn get_all_handler<T>(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Viewer>,
     Query(query): Query<T::FilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<T>>>>
+) -> ApiResult<Json<PaginatedApiResponse<T>>>
 where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
@@ -178,11 +143,17 @@ where
         EntityFilter::unfiltered().organization_id(&organization_id)
     };
 
+    // Apply entity-specific filters
     let filter = query.apply_to_filter(base_filter, &network_ids, organization_id);
+
+    // Apply pagination
+    let pagination = query.pagination();
+    let filter = pagination.apply_to_filter(filter);
 
     let service = T::get_service(&state);
 
-    let entities = service.get_all(filter).await.map_err(|e| {
+    // Use paginated query to get items and total count
+    let result = service.get_paginated(filter).await.map_err(|e| {
         tracing::error!(
             entity_type = T::table_name(),
             user_id = ?user_id,
@@ -192,7 +163,17 @@ where
         ApiError::internal_error(&e.to_string())
     })?;
 
-    Ok(Json(ApiResponse::success(entities)))
+    // Get effective pagination values for response metadata
+    let limit = pagination.effective_limit().unwrap_or(0);
+    let offset = pagination.effective_offset();
+
+    // Return paginated response with metadata
+    Ok(Json(PaginatedApiResponse::success(
+        result.items,
+        result.total_count,
+        limit,
+        offset,
+    )))
 }
 
 pub async fn get_by_id_handler<T>(
@@ -306,14 +287,6 @@ where
         &network_ids,
         organization_id,
     )?;
-
-    // Validate and dedupe tags if entity has them
-    if let Some(tags) = entity.get_tags() {
-        let validated_tags =
-            validate_and_dedupe_tags(tags.clone(), organization_id, &state.services.tag_service)
-                .await?;
-        entity.set_tags(validated_tags);
-    }
 
     let updated = service
         .update(&mut entity, auth.into_entity())

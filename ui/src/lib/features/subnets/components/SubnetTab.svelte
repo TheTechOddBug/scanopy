@@ -27,7 +27,8 @@
 	const tagsQuery = useTagsQuery();
 	const subnetsQuery = useSubnetsQuery();
 	const networksQuery = useNetworksQuery();
-	useHostsQuery();
+	// Load related data (limit: 0 to get all hosts for subnet cards)
+	useHostsQuery({ limit: 0 });
 	useServicesQuery();
 
 	// Mutations
@@ -90,6 +91,10 @@
 		if (confirm(`Are you sure you want to delete ${ids.length} Subnets?`)) {
 			await bulkDeleteSubnetsMutation.mutateAsync(ids);
 		}
+	}
+
+	function getSubnetTags(subnet: Subnet): string[] {
+		return subnet.tags;
 	}
 
 	// Define field configuration for the DataTableControls
@@ -183,6 +188,8 @@
 			fields={subnetFields}
 			storageKey="scanopy-subnets-table-state"
 			onBulkDelete={isReadOnly ? undefined : handleBulkDelete}
+			entityType={isReadOnly ? undefined : 'Subnet'}
+			getItemTags={getSubnetTags}
 			getItemId={(item) => item.id}
 		>
 			{#snippet children(

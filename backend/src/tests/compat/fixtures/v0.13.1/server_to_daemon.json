@@ -1,0 +1,44 @@
+{
+  "version": "0.13.1",
+  "exchanges": [
+    {
+      "method": "POST",
+      "path": "/api/discovery/initiate",
+      "request_body": {
+        "discovery_type": {
+          "host_id": "09900acc-93fd-4af9-8a9b-9f45ace7475c",
+          "type": "SelfReport"
+        },
+        "session_id": "b64df0ca-f173-4ba8-a48b-edf7e372974a"
+      },
+      "response_status": 200,
+      "response_body": {
+        "data": {
+          "session_id": "b64df0ca-f173-4ba8-a48b-edf7e372974a"
+        },
+        "meta": {
+          "api_version": 1,
+          "server_version": "0.13.1"
+        },
+        "success": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/initialize",
+      "request_body": {
+        "api_key": "scp_d_MBw8s1I3HCBIXZAqr2TbJrFIAcMXqMgE",
+        "network_id": "44b371cf-4808-4589-9b28-18d9bc3ec434"
+      },
+      "response_status": 200,
+      "response_body": {
+        "data": "Daemon initialized successfully",
+        "meta": {
+          "api_version": 1,
+          "server_version": "0.13.1"
+        },
+        "success": true
+      }
+    }
+  ]
+}

@@ -3,6 +3,7 @@ use std::net::IpAddr;
 use crate::server::bindings::r#impl::base::Binding;
 use crate::server::groups::r#impl::base::Group;
 use crate::server::services::r#impl::base::Service;
+use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::{
@@ -30,6 +31,15 @@ use sqlx::postgres::PgRow;
 use stripe_billing::SubscriptionStatus;
 use uuid::Uuid;
 
+/// Result of a paginated query, containing items and total count.
+#[derive(Debug, Clone)]
+pub struct PaginatedResult<T> {
+    /// The items for the current page
+    pub items: Vec<T>,
+    /// Total count of items matching the filter (ignoring limit/offset)
+    pub total_count: u64,
+}
+
 #[async_trait]
 pub trait Storage<T: StorableEntity>: Send + Sync {
     async fn create(&self, entity: &T) -> Result<T, anyhow::Error>;
@@ -40,6 +50,13 @@ pub trait Storage<T: StorableEntity>: Send + Sync {
         filter: EntityFilter,
         order_by: &str,
     ) -> Result<Vec<T>, anyhow::Error>;
+    /// Get entities with pagination, returning items and total count.
+    /// The filter's limit/offset are applied to the query.
+    async fn get_paginated(
+        &self,
+        filter: EntityFilter,
+        order_by: &str,
+    ) -> Result<PaginatedResult<T>, anyhow::Error>;
     async fn get_one(&self, filter: EntityFilter) -> Result<Option<T>, anyhow::Error>;
     async fn update(&self, entity: &mut T) -> Result<T, anyhow::Error>;
     async fn delete(&self, id: &Uuid) -> Result<(), anyhow::Error>;
@@ -56,6 +73,8 @@ pub trait StorableEntity: Sized + Clone + Send + Sync + 'static + Default {
 
     /// Entity metadata
     fn table_name() -> &'static str;
+
+    fn entity_type() -> EntityDiscriminants;
 
     /// Primary key
     fn id(&self) -> Uuid;
@@ -79,6 +98,34 @@ pub trait StorableEntity: Sized + Clone + Send + Sync + 'static + Default {
 
     /// Deserialization from database
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error>;
+
+    /// Optional: Get the tags field from the entity for validation.
+    /// Override for entities with a tags field.
+    /// Returns None for entities without tags.
+    fn get_tags(&self) -> Option<&Vec<Uuid>> {
+        None
+    }
+
+    /// Optional: Set the tags field on the entity.
+    /// Override for entities with a tags field.
+    fn set_tags(&mut self, _tags: Vec<Uuid>) {
+        // Default: no-op
+    }
+
+    /// Optional: Set the source field on the entity.
+    /// Override for entities with a source field to set it appropriately.
+    /// Default is a no-op for entities without a source field.
+    fn set_source(&mut self, _source: EntitySource) {
+        // Default: no-op
+    }
+
+    /// Optional: Preserve entity-specific immutable fields from the existing entity.
+    /// Override for entities that have additional read-only fields beyond id/created_at.
+    /// For example, ApiKey should preserve `key` and `last_used`.
+    /// Default is a no-op for entities without extra immutable fields.
+    fn preserve_immutable_fields(&mut self, _existing: &Self) {
+        // Default: no-op
+    }
 }
 
 /// Helper type for SQL values
@@ -98,6 +145,7 @@ pub enum SqlValue {
     IpCidr(IpCidr),
     IpAddr(IpAddr),
     EntitySource(EntitySource),
+    EntityDiscriminant(EntityDiscriminants),
     ServiceDefinition(Box<dyn ServiceDefinition>),
     OptionalServiceVirtualization(Option<ServiceVirtualization>),
     OptionalHostVirtualization(Option<HostVirtualization>),
@@ -123,5 +171,6 @@ pub enum SqlValue {
     StringArray(Vec<String>),
     OptionalStringArray(Option<Vec<String>>),
     JsonValue(serde_json::Value),
+    MacAddress(MacAddress),
     OptionalMacAddress(Option<MacAddress>),
 }

@@ -13,7 +13,6 @@ use crate::server::shared::handlers::traits::{CrudHandlers, create_handler, upda
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult};
-
 impl CrudHandlers for Binding {
     type Service = BindingService;
     type FilterQuery = BindingQuery;

@@ -1,15 +1,15 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::{Authorized, IsDaemon, Member, Or, Viewer};
+use crate::server::shared::entities::EntityDiscriminants;
+use crate::server::shared::extractors::Query;
 use crate::server::shared::handlers::query::FilterQueryExtractor;
 use crate::server::shared::handlers::traits::{
-    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler,
+    BulkDeleteResponse, bulk_delete_handler, delete_handler,
 };
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::{ApiErrorResponse, EmptyApiResponse};
-use crate::server::shared::validation::{
-    validate_and_dedupe_tags, validate_network_access, validate_read_access,
-};
+use crate::server::shared::validation::{validate_network_access, validate_read_access};
 use crate::server::{
     config::AppState,
     hosts::r#impl::{
@@ -17,9 +17,9 @@ use crate::server::{
         base::Host,
         legacy::{HostCreateRequestBody, HostCreateResponse, LegacyHostWithServicesResponse},
     },
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
+    shared::types::api::{ApiError, ApiResponse, ApiResult, PaginatedApiResponse},
 };
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::response::Json;
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -38,21 +38,23 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
 /// List all hosts
 ///
 /// Returns all hosts the authenticated user has access to, with their
-/// interfaces, ports, and services included.
+/// interfaces, ports, and services included. Supports pagination via
+/// `limit` and `offset` query parameters.
 #[utoipa::path(
     get,
     path = "",
     tag = "hosts",
+    params(crate::server::shared::handlers::query::NetworkFilterQuery),
     responses(
-        (status = 200, description = "List of hosts with their children", body = ApiResponse<Vec<HostResponse>>),
+        (status = 200, description = "List of hosts with their children", body = PaginatedApiResponse<HostResponse>),
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
 async fn get_all_hosts(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Viewer>,
-    Query(query): Query<<Host as CrudHandlers>::FilterQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<HostResponse>>>> {
+    Query(query): Query<crate::server::shared::handlers::query::NetworkFilterQuery>,
+) -> ApiResult<Json<PaginatedApiResponse<HostResponse>>> {
     let network_ids = auth.network_ids();
     let organization_id = auth
         .organization_id()
@@ -61,12 +63,26 @@ async fn get_all_hosts(
     let base_filter = EntityFilter::unfiltered().network_ids(&network_ids);
     let filter = query.apply_to_filter(base_filter, &network_ids, organization_id);
 
-    let hosts = state
+    // Apply pagination
+    let pagination = query.pagination();
+    let filter = pagination.apply_to_filter(filter);
+
+    let result = state
         .services
         .host_service
-        .get_all_host_responses(filter)
+        .get_all_host_responses_paginated(filter)
         .await?;
-    Ok(Json(ApiResponse::success(hosts)))
+
+    // Get effective pagination values for response metadata
+    let limit = pagination.effective_limit().unwrap_or(0);
+    let offset = pagination.effective_offset();
+
+    Ok(Json(PaginatedApiResponse::success(
+        result.items,
+        result.total_count,
+        limit,
+        offset,
+    )))
 }
 
 /// Get a host by ID
@@ -93,7 +109,7 @@ async fn get_host_by_id(
         .organization_id()
         .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
 
-    let host = state
+    let mut host = state
         .services
         .host_service
         .get_host_response(&id)
@@ -101,6 +117,16 @@ async fn get_host_by_id(
         .ok_or_else(|| ApiError::not_found(format!("Host {} not found", id)))?;
 
     validate_read_access(Some(host.network_id), None, &network_ids, organization_id)?;
+
+    // Hydrate tags from junction table
+    let tags_map = state
+        .services
+        .entity_tag_service
+        .get_tags_map(&[host.id], EntityDiscriminants::Host)
+        .await?;
+    if let Some(tags) = tags_map.get(&host.id) {
+        host.tags = tags.clone();
+    }
 
     Ok(Json(ApiResponse::success(host)))
 }
@@ -139,7 +165,7 @@ async fn create_host(
 
     match (request, &entity) {
         // New format - standard flow
-        (HostCreateRequestBody::New(mut request), _) => {
+        (HostCreateRequestBody::New(request), _) => {
             // Validate request (name length, etc.)
             request
                 .validate()
@@ -172,19 +198,6 @@ async fn create_host(
                         request.network_id, subnet.base.name, subnet.base.network_id
                     )));
                 }
-            }
-
-            // Validate and dedupe tags (only for users, daemons don't use tags)
-            if let AuthenticatedEntity::User {
-                organization_id, ..
-            } = &entity
-            {
-                request.tags = validate_and_dedupe_tags(
-                    request.tags,
-                    *organization_id,
-                    &state.services.tag_service,
-                )
-                .await?;
             }
 
             let host_response = host_service.create_from_request(request, entity).await?;
@@ -295,14 +308,19 @@ async fn update_host(
         organization_id,
     )?;
 
-    // Validate and dedupe tags
-    request.tags =
-        validate_and_dedupe_tags(request.tags, organization_id, &state.services.tag_service)
-            .await?;
-
-    let host_response = host_service
+    let mut host_response = host_service
         .update_from_request(request, auth.into_entity())
         .await?;
+
+    // Hydrate tags from junction table
+    let tags_map = state
+        .services
+        .entity_tag_service
+        .get_tags_map(&[host_response.id], EntityDiscriminants::Host)
+        .await?;
+    if let Some(tags) = tags_map.get(&host_response.id) {
+        host_response.tags = tags.clone();
+    }
 
     Ok(Json(ApiResponse::success(host_response)))
 }
@@ -446,9 +464,19 @@ async fn consolidate_hosts(
         )));
     }
 
-    let host_response = host_service
+    let mut host_response = host_service
         .consolidate_hosts(destination_host, other_host, auth.into_entity())
         .await?;
+
+    // Hydrate tags from junction table
+    let tags_map = state
+        .services
+        .entity_tag_service
+        .get_tags_map(&[host_response.id], EntityDiscriminants::Host)
+        .await?;
+    if let Some(tags) = tags_map.get(&host_response.id) {
+        host_response.tags = tags.clone();
+    }
 
     Ok(Json(ApiResponse::success(host_response)))
 }

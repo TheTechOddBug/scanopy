@@ -341,11 +341,7 @@
 				rel="noopener noreferrer"
 				class="branding-badge"
 			>
-				<img
-					src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
-					alt="Scanopy"
-					class="h-4 w-4"
-				/>
+				<img src="/logos/scanopy-logo.png" alt="Scanopy" class="h-4 w-4" />
 				<span>Created with Scanopy</span>
 			</a>
 		{/if}

@@ -52,11 +52,7 @@
 	preventCloseOnClickOutside={true}
 >
 	{#snippet headerIcon()}
-		<img
-			src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
-			alt="Scanopy Logo"
-			class="h-8 w-8"
-		/>
+		<img src="/logos/scanopy-logo.png" alt="Scanopy Logo" class="h-8 w-8" />
 	{/snippet}
 
 	<div class="space-y-1 p-6">

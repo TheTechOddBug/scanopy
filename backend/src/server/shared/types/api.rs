@@ -11,6 +11,9 @@ use utoipa::ToSchema;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
+const API_VERSION: u32 = 1;
+const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// A validation error that should be returned as HTTP 400 Bad Request.
 /// Use this for user-facing errors like invalid input, constraint violations, etc.
 #[derive(Debug, Clone)]
@@ -45,21 +48,87 @@ macro_rules! bail_validation {
     };
 }
 
-/// API version metadata included in all responses
+/// Pagination metadata returned with paginated responses.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PaginationMeta {
+    /// Total number of items matching the filter (ignoring pagination)
+    pub total_count: u64,
+    /// Maximum items per page (as requested)
+    pub limit: u32,
+    /// Number of items skipped
+    pub offset: u32,
+    /// Whether there are more items after this page
+    pub has_more: bool,
+}
+
+impl PaginationMeta {
+    /// Create pagination metadata from query results.
+    pub fn new(total_count: u64, limit: u32, offset: u32) -> Self {
+        let has_more = (offset as u64 + limit as u64) < total_count;
+        Self {
+            total_count,
+            limit,
+            offset,
+            has_more,
+        }
+    }
+}
+
+fn server_version_example() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
+/// API metadata included in all responses
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[schema(example = json!({
+    "api_version": API_VERSION,
+    "server_version": SERVER_VERSION
+}))]
 pub struct ApiMeta {
     /// API version (integer, increments on breaking changes)
     pub api_version: u32,
     /// Server version (semver)
-    #[schema(value_type = String, example = "0.12.10")]
+    #[schema(value_type = String, example = server_version_example)]
     pub server_version: Version,
 }
 
 impl Default for ApiMeta {
     fn default() -> Self {
         Self {
-            api_version: 1,
+            api_version: API_VERSION,
             server_version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+        }
+    }
+}
+
+/// API metadata for paginated list responses (pagination is always present)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[schema(example = json!({
+    "api_version": API_VERSION,
+    "server_version": SERVER_VERSION,
+    "pagination": {
+        "total_count": 142,
+        "limit": 50,
+        "offset": 0,
+        "has_more": true
+    }
+}))]
+pub struct PaginatedApiMeta {
+    /// API version (integer, increments on breaking changes)
+    pub api_version: u32,
+    /// Server version (semver)
+    #[schema(value_type = String, example = server_version_example)]
+    pub server_version: Version,
+    /// Pagination info
+    pub pagination: PaginationMeta,
+}
+
+impl PaginatedApiMeta {
+    pub fn new(total_count: u64, limit: u32, offset: u32) -> Self {
+        Self {
+            api_version: API_VERSION,
+            server_version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            pagination: PaginationMeta::new(total_count, limit, offset),
         }
     }
 }
@@ -99,6 +168,27 @@ impl<T> ApiResponse<T> {
             data: None,
             error: Some(message),
             meta: ApiMeta::default(),
+        }
+    }
+}
+
+/// Response type for paginated list endpoints (pagination is always present in meta)
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct PaginatedApiResponse<T> {
+    pub success: bool,
+    pub data: Vec<T>,
+    pub meta: PaginatedApiMeta,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl<T> PaginatedApiResponse<T> {
+    pub fn success(data: Vec<T>, total_count: u64, limit: u32, offset: u32) -> Self {
+        Self {
+            success: true,
+            data,
+            error: None,
+            meta: PaginatedApiMeta::new(total_count, limit, offset),
         }
     }
 }

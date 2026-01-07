@@ -25,7 +25,7 @@
 	const daemonsQuery = useDaemonsQuery();
 	const networksQuery = useNetworksQuery();
 	// Hosts query to ensure data is loaded (needed for daemon display)
-	useHostsQuery();
+	useHostsQuery({ limit: 0 });
 
 	// Mutations
 	const deleteDaemonMutation = useDeleteDaemonMutation();
@@ -60,6 +60,10 @@
 		if (confirm(`Are you sure you want to delete ${ids.length} Daemons?`)) {
 			await bulkDeleteDaemonsMutation.mutateAsync(ids);
 		}
+	}
+
+	function getDaemonTags(daemon: Daemon): string[] {
+		return daemon.tags;
 	}
 
 	const daemonFields: FieldConfig<Daemon>[] = [
@@ -128,6 +132,8 @@
 			fields={daemonFields}
 			storageKey="scanopy-daemons-table-state"
 			onBulkDelete={isReadOnly ? undefined : handleBulkDelete}
+			entityType={isReadOnly ? undefined : 'Daemon'}
+			getItemTags={getDaemonTags}
 			getItemId={(item) => item.id}
 		>
 			{#snippet children(

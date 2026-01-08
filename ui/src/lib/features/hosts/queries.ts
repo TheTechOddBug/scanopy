@@ -209,6 +209,40 @@ export function useHostsQuery(optionsOrGetter: PaginationOptions | (() => Pagina
 }
 
 /**
+ * Query hook for fetching specific hosts by IDs (for selective loading)
+ * Used for lookups where only a subset of hosts is needed (e.g., service → host name)
+ *
+ * @param idsGetter - Getter function returning array of host IDs to fetch
+ */
+export function useHostsByIds(idsGetter: () => string[]) {
+	return createQuery(() => {
+		const ids = idsGetter();
+
+		return {
+			queryKey: [...queryKeys.hosts.all, 'byIds', ids],
+			queryFn: async (): Promise<Host[]> => {
+				if (ids.length === 0) return [];
+
+				const { data } = await apiClient.GET('/api/v1/hosts', {
+					params: {
+						query: {
+							ids: ids,
+							limit: 0 // No pagination when fetching by IDs
+						}
+					}
+				});
+				if (!data?.success || !data.data) {
+					throw new Error(data?.error || 'Failed to fetch hosts');
+				}
+
+				return data.data.map(toHostPrimitive);
+			},
+			enabled: ids.length > 0
+		};
+	});
+}
+
+/**
  * Mutation hook for creating a host
  */
 export function useCreateHostMutation() {

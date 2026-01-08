@@ -15,7 +15,7 @@
 		useDeleteServiceMutation,
 		useBulkDeleteServicesMutation
 	} from '../queries';
-	import { useHostsQuery } from '$lib/features/hosts/queries';
+	import { useHostsByIds } from '$lib/features/hosts/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import type { TabProps } from '$lib/shared/types';
 
@@ -23,10 +23,18 @@
 
 	// Queries
 	const tagsQuery = useTagsQuery();
-	const servicesQuery = useServicesQuery();
-	// Use limit: 0 to get all hosts for lookups
-	const hostsQuery = useHostsQuery({ limit: 0 });
+	// Paginated services - DataControls handles client-side filtering/sorting
+	const servicesQuery = useServicesQuery({ limit: 25 });
 	const networksQuery = useNetworksQuery();
+
+	// Selective host lookup - only fetches hosts needed for service display
+	// Extract host IDs from visible services for host name display
+	const hostsQuery = useHostsByIds(() => {
+		return (servicesQuery.data ?? [])
+			.filter((s) => s.host_id)
+			.map((s) => s.host_id)
+			.filter((id, idx, arr) => arr.indexOf(id) === idx);
+	});
 
 	// Mutations
 	const updateServiceMutation = useUpdateServiceMutation();
@@ -36,9 +44,9 @@
 	// Derived data
 	let tagsData = $derived(tagsQuery.data ?? []);
 	let servicesData = $derived(servicesQuery.data ?? []);
-	let hostsData = $derived(hostsQuery.data?.items ?? []);
+	let hostsData = $derived(hostsQuery.data ?? []);
 	let networksData = $derived(networksQuery.data ?? []);
-	let isLoading = $derived(hostsQuery.isPending);
+	let isLoading = $derived(servicesQuery.isPending);
 
 	let showServiceEditor = $state(false);
 	let editingService = $state<Service | null>(null);
@@ -179,7 +187,7 @@
 	<!-- Loading state -->
 	{#if isLoading}
 		<Loading />
-	{:else if hostsData.length === 0}
+	{:else if servicesData.length === 0}
 		<!-- Empty state -->
 		<EmptyState title="No services configured yet" subtitle="" />
 	{:else}

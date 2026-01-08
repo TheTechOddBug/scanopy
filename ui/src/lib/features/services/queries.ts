@@ -15,15 +15,28 @@ import { v4 as uuidv4 } from 'uuid';
 export type { Service };
 
 /**
+ * Query parameters for services query
+ */
+export interface ServicesQueryParams {
+	limit?: number;
+	network_id?: string;
+	host_id?: string;
+}
+
+/**
  * Query hook for accessing the services cache
  * This cache is primarily populated by useHostsQuery
+ *
+ * @param params - Optional query parameters for filtering and pagination
  */
-export function useServicesQuery() {
+export function useServicesQuery(params: ServicesQueryParams = {}) {
+	const { limit = 0, network_id, host_id } = params;
+
 	return createQuery(() => ({
-		queryKey: queryKeys.services.all,
+		queryKey: [...queryKeys.services.all, { limit, network_id, host_id }],
 		queryFn: async () => {
 			const { data } = await apiClient.GET('/api/v1/services', {
-				params: { query: { limit: 0 } }
+				params: { query: { limit, network_id, host_id } }
 			});
 			if (!data?.success || !data.data) {
 				throw new Error(data?.error || 'Failed to fetch services');
@@ -31,6 +44,40 @@ export function useServicesQuery() {
 			return data.data;
 		}
 	}));
+}
+
+/**
+ * Query hook for fetching specific services by IDs (for selective loading)
+ * Used for lookups where only a subset of services is needed (e.g., virtualization lookups)
+ *
+ * @param idsGetter - Getter function returning array of service IDs to fetch
+ */
+export function useServicesByIds(idsGetter: () => string[]) {
+	return createQuery(() => {
+		const ids = idsGetter();
+
+		return {
+			queryKey: [...queryKeys.services.all, 'byIds', ids],
+			queryFn: async (): Promise<Service[]> => {
+				if (ids.length === 0) return [];
+
+				const { data } = await apiClient.GET('/api/v1/services', {
+					params: {
+						query: {
+							ids: ids,
+							limit: 0 // No pagination when fetching by IDs
+						}
+					}
+				});
+				if (!data?.success || !data.data) {
+					throw new Error(data?.error || 'Failed to fetch services');
+				}
+
+				return data.data;
+			},
+			enabled: ids.length > 0
+		};
+	});
 }
 
 /**

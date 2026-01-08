@@ -65,13 +65,6 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         request: DaemonDiscoveryRequest,
         _cancel: CancellationToken,
     ) -> Result<(), Error> {
-        let discovery_start = std::time::Instant::now();
-        tracing::info!(
-            session_id = %request.session_id,
-            host_id = %self.domain.host_id,
-            "Starting self-report discovery"
-        );
-
         let daemon_id = self.as_ref().config_store.get_id().await?;
         let network_id = self
             .as_ref()
@@ -106,12 +99,11 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         let binding_address = self.as_ref().config_store.get_bind_address().await?;
         let binding_ip = IpAddr::V4(binding_address.parse::<Ipv4Addr>()?);
 
-        tracing::info!("Gathering network interfaces");
         let interface_start = std::time::Instant::now();
         let (interfaces, subnets, _) = utils
             .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
             .await?;
-        tracing::info!(
+        tracing::debug!(
             elapsed_ms = interface_start.elapsed().as_millis(),
             interface_count = interfaces.len(),
             subnet_count = subnets.len(),
@@ -119,7 +111,6 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         );
 
         // Get docker subnets to double verify that subnet interface string matching filtered them correctly
-        tracing::info!("Checking for Docker socket availability");
         let docker_proxy = self.as_ref().config_store.get_docker_proxy().await;
         let docker_proxy_ssl_info = self.as_ref().config_store.get_docker_proxy_ssl_info().await;
 
@@ -145,7 +136,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
                 Ok(docker_subnets) => {
                     let docker_cidrs: Vec<IpCidr> =
                         docker_subnets.iter().map(|s| s.base.cidr).collect();
-                    tracing::info!(
+                    tracing::debug!(
                         docker_subnet_count = docker_cidrs.len(),
                         cidrs = ?docker_cidrs.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
                         "Docker subnets detected (will be excluded from self-report)"
@@ -161,7 +152,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
                 }
             }
         } else {
-            tracing::info!("Docker socket not available - skipping Docker subnet detection");
+            tracing::debug!("Docker socket not available - skipping Docker subnet detection");
             (Vec::new(), false)
         };
 
@@ -220,7 +211,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             .flatten()
             .collect();
 
-        tracing::info!(
+        tracing::debug!(
             created_count = created_subnets.len(),
             requested_count = subnets_to_create.len(),
             "Subnet creation complete"
@@ -229,7 +220,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         // Update capabilities
         let interfaced_subnet_ids: Vec<Uuid> = created_subnets.iter().map(|s| s.id).collect();
 
-        tracing::info!(
+        tracing::debug!(
             "Updating capabilities with {} interfaced subnets: {:?}",
             interfaced_subnet_ids.len(),
             interfaced_subnet_ids
@@ -268,7 +259,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
                 "Some interfaces were dropped due to missing subnets"
             );
         } else {
-            tracing::info!(
+            tracing::debug!(
                 interface_count = interfaces.len(),
                 "All interfaces have matching subnets"
             );
@@ -341,7 +332,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
 
         services.push(daemon_service);
 
-        tracing::info!(
+        tracing::debug!(
             "Collected information about own host with local IP: {}, Hostname: {:?}",
             local_ip,
             host.base.hostname
@@ -351,14 +342,6 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         tracing::debug!("Creating host with interfaces, ports, and services");
         self.create_host(host, interfaces.clone(), ports, services)
             .await?;
-
-        tracing::info!(
-            elapsed_ms = discovery_start.elapsed().as_millis(),
-            interface_count = interfaces.len(),
-            subnet_count = created_subnets.len(),
-            session_id = %request.session_id,
-            "Self-report discovery completed successfully"
-        );
 
         self.report_discovery_update(DiscoverySessionUpdate {
             phase: DiscoveryPhase::Complete,

@@ -103,7 +103,7 @@ pub trait DaemonUtils {
     > {
         let interfaces = pnet::datalink::interfaces();
 
-        tracing::info!(
+        tracing::debug!(
             interface_count = interfaces.len(),
             "Enumerating network interfaces"
         );

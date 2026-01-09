@@ -125,10 +125,11 @@
 		selectedNetworkId = defaults.network_id ?? '';
 	}
 
-	// Available service bindings (exclude already selected ones)
+	// Available service bindings (exclude already selected ones and Unclaimed Open Ports)
 	let availableServiceBindings = $derived.by(() => {
 		return servicesData
 			.filter((s) => s.network_id == selectedNetworkId)
+			.filter((s) => s.service_definition !== 'Unclaimed Open Ports')
 			.flatMap((s) => s.bindings)
 			.filter((sb) => !bindingIds.some((binding) => binding === sb.id));
 	});

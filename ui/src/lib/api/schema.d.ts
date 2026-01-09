@@ -1879,7 +1879,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.13.2"
+         *       "server_version": "0.13.3"
          *     }
          */
         ApiMeta: {
@@ -1890,7 +1890,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.13.2
+             * @example 0.13.3
              */
             server_version: string;
         };
@@ -1904,14 +1904,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-01-08T02:40:35.790992Z",
-             *       "id": "5491e7b4-10fc-4bf1-bdff-c1029a74398d",
+             *       "created_at": "2026-01-09T00:02:12.521266Z",
+             *       "id": "e06da099-8851-479d-8e6d-4031d00d8808",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-01-08T02:40:35.790992Z"
+             *       "updated_at": "2026-01-09T00:02:12.521266Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2314,14 +2314,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-01-08T02:40:35.786793Z",
-             *           "id": "555fd07f-b892-4c92-bf69-3d6da019d0b5",
+             *           "created_at": "2026-01-09T00:02:12.518477Z",
+             *           "id": "e7cff844-c57b-4f35-9980-1872ca52502e",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-01-08T02:40:35.786793Z"
+             *           "updated_at": "2026-01-09T00:02:12.518477Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -2330,7 +2330,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "NFS",
+             *       "service_definition": "Sensu",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2613,14 +2613,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-01-08T02:40:35.777869Z",
-         *       "id": "77f739bb-1726-409a-8400-aec5a26443e1",
+         *       "created_at": "2026-01-09T00:02:12.513247Z",
+         *       "id": "0ac89fb9-0aab-4f1f-9b39-44b109471562",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-01-08T02:40:35.777869Z"
+         *       "updated_at": "2026-01-09T00:02:12.513247Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -2784,7 +2784,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "NFS",
+         *           "service_definition": "Sensu",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3499,7 +3499,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.13.2"
+         *       "server_version": "0.13.3"
          *     }
          */
         PaginatedApiMeta: {
@@ -3512,7 +3512,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.13.2
+             * @example 0.13.3
              */
             server_version: string;
         };
@@ -3803,14 +3803,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-01-08T02:40:35.777776Z",
-         *           "id": "e98f05f5-bb96-4beb-a4e8-b1f8dbf4cac3",
+         *           "created_at": "2026-01-09T00:02:12.513200Z",
+         *           "id": "01e556e1-5cbb-4640-b78a-b5b586e147be",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-01-08T02:40:35.777776Z"
+         *           "updated_at": "2026-01-09T00:02:12.513200Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -3819,7 +3819,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "NFS",
+         *       "service_definition": "Sensu",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -4055,6 +4055,27 @@ export interface components {
         TopologyOptions: {
             local: components["schemas"]["TopologyLocalOptions"];
             request: components["schemas"]["TopologyRequestOptions"];
+        };
+        /**
+         * @description Lightweight request type for topology rebuild/refresh operations.
+         *
+         *     This type only includes the fields actually needed by the server - entity data
+         *     (hosts, interfaces, services, etc.) is fetched fresh from the database.
+         *     Using this instead of the full Topology dramatically reduces payload size
+         *     for large networks (from MBs to KBs), fixing HTTP 413 errors.
+         */
+        TopologyRebuildRequest: {
+            /** @description Existing edges for reference during rebuild */
+            edges?: components["schemas"]["Edge"][];
+            /**
+             * Format: uuid
+             * @description Network ID for authorization and data fetching
+             */
+            network_id: string;
+            /** @description Existing nodes for position preservation during rebuild */
+            nodes?: components["schemas"]["Node"][];
+            /** @description Topology options for graph building */
+            options: components["schemas"]["TopologyOptions"];
         };
         TopologyRequestOptions: {
             group_docker_bridges_by_host: boolean;
@@ -8679,7 +8700,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Topology"];
+                "application/json": components["schemas"]["TopologyRebuildRequest"];
             };
         };
         responses: {
@@ -8701,6 +8722,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description Topology not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
         };
     };
     refresh: {
@@ -8715,7 +8745,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Topology"];
+                "application/json": components["schemas"]["TopologyRebuildRequest"];
             };
         };
         responses: {
@@ -8730,6 +8760,15 @@ export interface operations {
             };
             /** @description Access denied */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Topology not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

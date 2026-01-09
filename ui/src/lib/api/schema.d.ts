@@ -871,7 +871,8 @@ export interface paths {
          * List all hosts
          * @description Returns all hosts the authenticated user has access to, with their
          *     interfaces, ports, and services included. Supports pagination via
-         *     `limit` and `offset` query parameters.
+         *     `limit` and `offset` query parameters, and ordering via `group_by`,
+         *     `order_by`, and `order_direction`.
          */
         get: operations["get_all_hosts"];
         put?: never;
@@ -1310,8 +1311,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all services */
-        get: operations["list_services"];
+        /**
+         * List all services
+         * @description Returns all services the authenticated user has access to.
+         *     Supports pagination via `limit` and `offset` query parameters,
+         *     and ordering via `group_by`, `order_by`, and `order_direction`.
+         */
+        get: operations["get_all_services"];
         put?: never;
         /**
          * Create a new service
@@ -1879,7 +1885,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.13.2"
+         *       "server_version": "0.13.3"
          *     }
          */
         ApiMeta: {
@@ -1890,7 +1896,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.13.2
+             * @example 0.13.3
              */
             server_version: string;
         };
@@ -1904,14 +1910,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-01-08T02:40:35.790992Z",
-             *       "id": "5491e7b4-10fc-4bf1-bdff-c1029a74398d",
+             *       "created_at": "2026-01-09T06:10:09.113654Z",
+             *       "id": "75e29fe1-6a27-49db-95ca-92262a00a6a6",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-01-08T02:40:35.790992Z"
+             *       "updated_at": "2026-01-09T06:10:09.113654Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2314,14 +2320,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-01-08T02:40:35.786793Z",
-             *           "id": "555fd07f-b892-4c92-bf69-3d6da019d0b5",
+             *           "created_at": "2026-01-09T06:10:09.109942Z",
+             *           "id": "b782adc6-a784-42dd-9d06-29d3dead43ff",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-01-08T02:40:35.786793Z"
+             *           "updated_at": "2026-01-09T06:10:09.109942Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -2330,7 +2336,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "NFS",
+             *       "service_definition": "Grocy",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2613,14 +2619,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-01-08T02:40:35.777869Z",
-         *       "id": "77f739bb-1726-409a-8400-aec5a26443e1",
+         *       "created_at": "2026-01-09T06:10:09.101995Z",
+         *       "id": "aabbe8ae-3b48-48a9-9e09-f67ca384b2a3",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-01-08T02:40:35.777869Z"
+         *       "updated_at": "2026-01-09T06:10:09.101995Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -2784,7 +2790,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "NFS",
+         *           "service_definition": "Grocy",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3224,6 +3230,11 @@ export interface components {
         /** @enum {string} */
         HostNamingFallback: "Ip" | "BestService";
         /**
+         * @description Fields that hosts can be ordered/grouped by.
+         * @enum {string}
+         */
+        HostOrderField: "created_at" | "name" | "hostname" | "updated_at" | "virtualized_by" | "network_id";
+        /**
          * @description Response type for host endpoints.
          *     Includes hydrated children (interfaces, ports, services).
          * @example {
@@ -3474,6 +3485,11 @@ export interface components {
             name: string;
             slug: string;
         };
+        /**
+         * @description Direction for ORDER BY clauses.
+         * @enum {string}
+         */
+        OrderDirection: "asc" | "desc";
         Organization: components["schemas"]["OrganizationBase"] & {
             /** Format: date-time */
             readonly created_at: string;
@@ -3499,7 +3515,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.13.2"
+         *       "server_version": "0.13.3"
          *     }
          */
         PaginatedApiMeta: {
@@ -3512,7 +3528,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.13.2
+             * @example 0.13.3
              */
             server_version: string;
         };
@@ -3554,6 +3570,20 @@ export interface components {
                 updated_at: string;
                 virtualization?: null | components["schemas"]["HostVirtualization"];
             }[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_Service: {
+            data: (components["schemas"]["ServiceBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
             error?: string | null;
             meta: components["schemas"]["PaginatedApiMeta"];
             success: boolean;
@@ -3803,14 +3833,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-01-08T02:40:35.777776Z",
-         *           "id": "e98f05f5-bb96-4beb-a4e8-b1f8dbf4cac3",
+         *           "created_at": "2026-01-09T06:10:09.101912Z",
+         *           "id": "d4d8e096-de68-4ca9-a3f9-9a14af72ced6",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-01-08T02:40:35.777776Z"
+         *           "updated_at": "2026-01-09T06:10:09.101912Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -3819,7 +3849,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "NFS",
+         *       "service_definition": "Grocy",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -3885,6 +3915,11 @@ export interface components {
             tags?: string[];
             virtualization?: null | components["schemas"]["ServiceVirtualization"];
         };
+        /**
+         * @description Fields that services can be ordered/grouped by.
+         * @enum {string}
+         */
+        ServiceOrderField: "created_at" | "name" | "updated_at" | "host" | "network_id" | "position";
         /** ServiceVirtualization */
         ServiceVirtualization: {
             details: components["schemas"]["DockerVirtualization"];
@@ -6279,6 +6314,12 @@ export interface operations {
                 network_id?: string | null;
                 /** @description Filter by specific entity IDs (for selective loading) */
                 ids?: string[] | null;
+                /** @description Primary ordering field (used for grouping). Always sorts ASC to keep groups together. */
+                group_by?: null | components["schemas"]["HostOrderField"];
+                /** @description Secondary ordering field (sorting within groups or standalone sort). */
+                order_by?: null | components["schemas"]["HostOrderField"];
+                /** @description Direction for order_by field (group_by always uses ASC). */
+                order_direction?: null | components["schemas"]["OrderDirection"];
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */
@@ -7482,15 +7523,21 @@ export interface operations {
             };
         };
     };
-    list_services: {
+    get_all_services: {
         parameters: {
             query?: {
-                /** @description Filter by host ID */
-                host_id?: string | null;
                 /** @description Filter by network ID */
                 network_id?: string | null;
+                /** @description Filter by host ID */
+                host_id?: string | null;
                 /** @description Filter by specific entity IDs (for selective loading) */
                 ids?: string[] | null;
+                /** @description Primary ordering field (used for grouping). Always sorts ASC to keep groups together. */
+                group_by?: null | components["schemas"]["ServiceOrderField"];
+                /** @description Secondary ordering field (sorting within groups or standalone sort). */
+                order_by?: null | components["schemas"]["ServiceOrderField"];
+                /** @description Direction for order_by field (group_by always uses ASC). */
+                order_direction?: null | components["schemas"]["OrderDirection"];
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */
@@ -7508,12 +7555,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: components["schemas"]["Service"][];
-                        error?: string | null;
-                        meta: components["schemas"]["PaginatedApiMeta"];
-                        success: boolean;
-                    };
+                    "application/json": components["schemas"]["PaginatedApiResponse_Service"];
                 };
             };
         };

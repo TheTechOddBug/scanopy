@@ -94,5 +94,11 @@
     "cliFlag": "--use-npcap-arp",
     "envVar": "SCANOPY_USE_NPCAP_ARP",
     "helpText": "Enable faster ARP scanning on Windows by using broadcast ARP via Npcap instead of native SendARP, which doesn't support broadcast. **Requires Npcap installation**. Ignored on Linux/macOS"
+  },
+  {
+    "id": "interface",
+    "cliFlag": "--interface",
+    "envVar": "SCANOPY_INTERFACE",
+    "helpText": "Restrict daemon to specific network interface(s). Accepts comma-separated interface names. When set, daemon only scans subnets on these interfaces. Useful for multi-daemon deployments"
   }
 ]

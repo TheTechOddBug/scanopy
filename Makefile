@@ -87,7 +87,10 @@ dev-down:
 	docker compose -f docker-compose.dev.yml down --volumes --rmi local
 
 test:
-	cd ui && npx vite-node scripts/export-daemon-field-defs.ts > ../backend/src/tests/daemon-config-frontend-fields.json
+	cd ui && npx vite-node scripts/export-daemon-field-defs.ts 2>/dev/null | grep -v 'paraglide-js' > ../backend/src/tests/daemon-config-frontend-fields.json
+	@echo "Running frontend tests..."
+	cd ui && npm test
+	@echo "Running backend tests..."
 	make dev-down
 	rm -rf ./data/daemon_config/*
 	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/scanopy_test" && \

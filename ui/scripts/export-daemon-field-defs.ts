@@ -27,12 +27,12 @@ if (format === 'docs') {
 
 		return {
 			id: toSnakeCase(f.id),
-			label: f.label,
+			label: f.label(), // Call i18n function to get English string
 			cliFlag: f.cliFlag,
 			envVar: f.envVar,
 			configFileKey: toSnakeCase(f.id),
 			default: defaultDisplay,
-			description: f.helpText,
+			description: f.helpText(), // Call i18n function to get English string
 			docsOnly: f.docsOnly || false
 		};
 	});
@@ -45,7 +45,7 @@ if (format === 'docs') {
 			id: toSnakeCase(f.id),
 			cliFlag: f.cliFlag,
 			envVar: f.envVar,
-			helpText: f.helpText
+			helpText: f.helpText() // Call i18n function to get English string
 		}));
 	console.log(JSON.stringify(exported, null, 2));
 }

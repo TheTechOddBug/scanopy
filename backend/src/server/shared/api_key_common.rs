@@ -136,10 +136,18 @@ fn generate_base62_string(length: usize) -> String {
 /// Returns Ok(()) if valid, or an appropriate error
 pub fn check_key_validity<K: Entity + ApiKeyCommon>(key: &K) -> Result<(), ApiError> {
     if key.is_expired() {
-        return Err(ApiError::entity_expired::<K>());
+        // Use specific error for daemon keys for backward compatibility with daemons < v0.13.5
+        return Err(match K::KEY_TYPE {
+            ApiKeyType::Daemon => ApiError::daemon_api_key_expired(),
+            ApiKeyType::User => ApiError::entity_expired::<K>(),
+        });
     }
     if !key.is_enabled() {
-        return Err(ApiError::entity_disabled::<K>());
+        // Use specific error for daemon keys for backward compatibility with daemons < v0.13.5
+        return Err(match K::KEY_TYPE {
+            ApiKeyType::Daemon => ApiError::daemon_api_key_disabled(),
+            ApiKeyType::User => ApiError::entity_disabled::<K>(),
+        });
     }
     Ok(())
 }

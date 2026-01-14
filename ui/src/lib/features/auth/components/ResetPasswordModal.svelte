@@ -111,7 +111,7 @@
 					</button>
 				{:else}
 					<button type="submit" disabled={resetting} class="btn-primary w-full">
-						{resetting ? m.auth_resetting() : m.auth_resetPasswordTitle()}
+						{resetting ? m.common_resetting() : m.auth_resetPasswordTitle()}
 					</button>
 
 					<div class="text-center">

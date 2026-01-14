@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use rand::Rng;
 use sha2::{Digest, Sha256};
+use strum::IntoStaticStr;
 use uuid::Uuid;
 
 use std::fmt::Display;
@@ -25,7 +26,7 @@ use crate::server::{
 };
 
 /// The type of API key, used for prefix generation and routing
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr)]
 pub enum ApiKeyType {
     Daemon,
     User,
@@ -133,12 +134,12 @@ fn generate_base62_string(length: usize) -> String {
 
 /// Check if an API key is valid for authentication
 /// Returns Ok(()) if valid, or an appropriate error
-pub fn check_key_validity<K: ApiKeyCommon>(key: &K) -> Result<(), ApiError> {
+pub fn check_key_validity<K: Entity + ApiKeyCommon>(key: &K) -> Result<(), ApiError> {
     if key.is_expired() {
-        return Err(ApiError::unauthorized("API key has expired".to_string()));
+        return Err(ApiError::entity_expired::<K>());
     }
     if !key.is_enabled() {
-        return Err(ApiError::unauthorized("API key is not enabled".to_string()));
+        return Err(ApiError::entity_disabled::<K>());
     }
     Ok(())
 }

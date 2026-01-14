@@ -96,7 +96,7 @@
 
 			<div>
 				<label for="interface_ip_{iface.id}" class="text-secondary mb-1 block text-sm font-medium">
-					{m.hosts_interfaces_ipAddress()} <span class="text-red-400">*</span>
+					{m.common_ipAddress()} <span class="text-red-400">*</span>
 				</label>
 				<input
 					type="text"

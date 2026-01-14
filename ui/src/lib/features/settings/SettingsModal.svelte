@@ -36,9 +36,9 @@
 
 	// Define base tabs
 	let baseTabs = $derived<ModalTab[]>([
-		{ id: 'account', label: m.settings_account(), icon: User },
-		{ id: 'organization', label: m.settings_organization(), icon: Building2 },
-		{ id: 'billing', label: m.settings_billing(), icon: CreditCard }
+		{ id: 'account', label: m.common_account(), icon: User },
+		{ id: 'organization', label: m.common_organization(), icon: Building2 },
+		{ id: 'billing', label: m.common_billing(), icon: CreditCard }
 	]);
 
 	// Filter tabs based on permissions
@@ -74,7 +74,7 @@
 
 <GenericModal
 	{isOpen}
-	title={m.settings_title()}
+	title={m.common_settings()}
 	size="xl"
 	onClose={handleClose}
 	onOpen={handleOpen}

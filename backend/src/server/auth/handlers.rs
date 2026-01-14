@@ -589,7 +589,7 @@ async fn get_current_user(
         .user_service
         .get_by_id(&user_id)
         .await?
-        .ok_or_else(|| ApiError::user_not_found(user_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<User>(user_id))?;
 
     Ok(Json(ApiResponse::success(user)))
 }

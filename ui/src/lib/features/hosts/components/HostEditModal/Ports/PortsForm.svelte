@@ -144,7 +144,7 @@
 <ListConfigEditor bind:items={formData.ports}>
 	<svelte:fragment slot="list" let:items let:onEdit let:highlightedIndex>
 		<ListManager
-			label={m.hosts_ports_title()}
+			label={m.common_ports()}
 			helpText={m.hosts_ports_helpText()}
 			placeholder={m.hosts_ports_placeholder()}
 			emptyMessage={m.hosts_ports_emptyMessage()}
@@ -197,7 +197,7 @@
 	title={m.hosts_ports_deleteTitle()}
 	message={m.hosts_ports_deleteMessage()}
 	details={affectedServiceNames}
-	confirmLabel={m.hosts_ports_deleteConfirm()}
+	confirmLabel={m.hosts_ports_deleteTitle()}
 	cancelLabel={m.common_cancel()}
 	variant="warning"
 	onConfirm={confirmDelete}

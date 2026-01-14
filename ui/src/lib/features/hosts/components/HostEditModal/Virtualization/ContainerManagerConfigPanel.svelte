@@ -84,7 +84,7 @@
 
 <div class="space-y-6">
 	<ListManager
-		label={m.hosts_virtualization_containers()}
+		label={m.common_containers()}
 		helpText={m.hosts_virtualization_containerHelp({ serviceName: serviceMetadata?.name ?? '' })}
 		placeholder={m.hosts_virtualization_addContainer()}
 		emptyMessage={m.hosts_virtualization_noContainersYet()}

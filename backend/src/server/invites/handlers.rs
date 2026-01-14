@@ -193,7 +193,7 @@ async fn get_invite(
 
     // Validate invite belongs to the user's organization
     if invite.base.organization_id != organization_id {
-        return Err(ApiError::entity_access_denied("invite", id));
+        return Err(ApiError::entity_access_denied::<Invite>(id));
     }
 
     Ok(Json(ApiResponse::success(invite)))
@@ -282,7 +282,7 @@ async fn revoke_invite(
         .map_err(|e| ApiError::bad_request(&e.to_string()))?;
 
     if invite.base.organization_id != organization_id {
-        return Err(ApiError::entity_access_denied("invite", id));
+        return Err(ApiError::entity_access_denied::<Invite>(id));
     }
 
     // Verify user can revoke this invite

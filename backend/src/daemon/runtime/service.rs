@@ -3,11 +3,14 @@ use crate::daemon::shared::api_client::DaemonApiClient;
 use crate::daemon::shared::config::ConfigStore;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
+use crate::server::daemon_api_keys::r#impl::base::DaemonApiKey;
 use crate::server::daemons::r#impl::api::{
     DaemonCapabilities, DaemonHeartbeatPayload, DaemonRegistrationRequest,
     DaemonRegistrationResponse, DaemonStartupRequest, DiscoveryUpdatePayload, ServerCapabilities,
 };
+use crate::server::daemons::r#impl::base::Daemon;
 use crate::server::daemons::r#impl::version::DeprecationSeverity;
+use crate::server::shared::types::api::ApiError;
 use anyhow::Result;
 use std::net::IpAddr;
 use std::sync::Arc;
@@ -119,8 +122,15 @@ impl DaemonRuntimeService {
     /// Check if an error indicates the API key is no longer valid (rotated/revoked).
     /// Returns Some(error) if authorization failed and the daemon should stop, None otherwise.
     fn check_authorization_error(error: &anyhow::Error, daemon_id: &Uuid) -> Option<anyhow::Error> {
-        let error_str = error.to_string();
-        if error_str.contains("Invalid API key") || error_str.contains("HTTP 401") {
+        let error_str = error.to_string().to_lowercase();
+        let expired_msg = ApiError::entity_expired::<DaemonApiKey>()
+            .message
+            .to_lowercase();
+        let disabled_msg = ApiError::entity_disabled::<DaemonApiKey>()
+            .message
+            .to_lowercase();
+
+        if error_str.contains(&expired_msg) || error_str.contains(&disabled_msg) {
             tracing::error!(
                 daemon_id = %daemon_id,
                 "API key is no longer valid. The key may have been rotated or revoked. \
@@ -136,24 +146,28 @@ impl DaemonRuntimeService {
 
     /// Check if an error indicates the daemon record doesn't exist on the server.
     /// This can happen if the server's database was reset or the daemon was deleted.
-    fn is_daemon_not_found_error(error: &anyhow::Error) -> bool {
+    fn is_daemon_not_found_error(error: &anyhow::Error, daemon_id: &Uuid) -> bool {
         let error_str = error.to_string().to_lowercase();
-        (error_str.contains("not found") && error_str.contains("daemon"))
-            || (error_str.contains("http 404") && error_str.contains("daemon"))
+        let expected_msg = ApiError::entity_not_found::<Daemon>(daemon_id)
+            .message
+            .to_lowercase();
+        error_str.contains(&expected_msg)
     }
 
     /// Check if an error indicates an authorization failure where the daemon is registered
     /// but the API key is invalid/revoked. Should fail immediately with a clear message.
     fn is_registered_daemon_auth_error(error: &anyhow::Error) -> bool {
-        error.to_string().contains(REGISTERED_INVALID_KEY_ERROR)
+        let error_str = error.to_string().to_lowercase();
+        let expected_msg = ApiError::not_authenticated().message.to_lowercase();
+        error_str.contains(&expected_msg)
     }
 
     /// Check if an error indicates an authorization failure for an unregistered daemon.
     /// This happens during onboarding when the API key isn't active yet in the database.
     fn is_unregistered_auth_error(error: &anyhow::Error) -> bool {
-        let error_str = error.to_string();
-        (error_str.contains(INVALID_API_KEY_ERROR) || error_str.contains("HTTP 401"))
-            && !error_str.contains(REGISTERED_INVALID_KEY_ERROR)
+        let error_str = error.to_string().to_lowercase();
+        let expected_msg = ApiError::daemon_key_not_yet_active().message.to_lowercase();
+        error_str.contains(&expected_msg)
     }
 
     pub async fn request_work(&self) -> Result<()> {
@@ -353,8 +367,9 @@ impl DaemonRuntimeService {
                 tracing::info!(target: LOG_TARGET, "  Status:          Daemon recognized, startup announced");
                 return Ok(());
             }
-            Err(e) if Self::is_daemon_not_found_error(&e) => {
-                tracing::info!(target: LOG_TARGET, "  Status:          Daemon not registered, registering now");
+            Err(e) if Self::is_daemon_not_found_error(&e, &daemon_id) => {
+                tracing::error!(target: LOG_TARGET, "  Status:          Existing Daemon config with ID '{}' found on host, but Daemon ID '{}' does not exist on the server. Please remove the config to register a new daemon on this host.", daemon_id, daemon_id);
+                return Err(e);
             }
             Err(e) if Self::is_registered_daemon_auth_error(&e) => {
                 // Daemon exists but API key is invalid/revoked - fail immediately

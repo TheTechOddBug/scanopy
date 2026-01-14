@@ -1,0 +1,49 @@
+{
+  "version": "0.13.5",
+  "exchanges": [
+    {
+      "method": "POST",
+      "path": "/api/daemons/a61ecc46-22ee-487f-951f-d43980cf3eeb/startup",
+      "request_body": {
+        "daemon_version": "0.13.5"
+      },
+      "response_status": 404,
+      "response_body": {
+        "code": "entity_not_found",
+        "error": "daemon with ID 'a61ecc46-22ee-487f-951f-d43980cf3eeb' not found",
+        "meta": {
+          "api_version": 1,
+          "server_version": "0.13.5"
+        },
+        "params": {
+          "entity": "daemon",
+          "id": "a61ecc46-22ee-487f-951f-d43980cf3eeb"
+        },
+        "success": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/daemons/a61ecc46-22ee-487f-951f-d43980cf3eeb/heartbeat",
+      "request_body": {
+        "mode": "Push",
+        "name": "scanopy-daemon",
+        "url": "http://172.25.0.4:60073"
+      },
+      "response_status": 404,
+      "response_body": {
+        "code": "entity_not_found",
+        "error": "daemon with ID 'a61ecc46-22ee-487f-951f-d43980cf3eeb' not found",
+        "meta": {
+          "api_version": 1,
+          "server_version": "0.13.5"
+        },
+        "params": {
+          "entity": "daemon",
+          "id": "a61ecc46-22ee-487f-951f-d43980cf3eeb"
+        },
+        "success": false
+      }
+    }
+  ]
+}

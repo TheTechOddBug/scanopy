@@ -242,7 +242,7 @@ async fn get_host_by_id(
         .host_service
         .get_host_response(&id)
         .await?
-        .ok_or_else(|| ApiError::host_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Host>(id))?;
 
     validate_read_access(Some(host.network_id), None, &network_ids, organization_id)?;
 
@@ -427,7 +427,7 @@ async fn update_host(
     let existing_host = host_service
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::host_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Host>(id))?;
 
     validate_read_access(
         Some(existing_host.base.network_id),
@@ -554,11 +554,11 @@ async fn consolidate_hosts(
     let destination_host = host_service
         .get_by_id(&destination_host_id)
         .await?
-        .ok_or_else(|| ApiError::host_not_found(destination_host_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Host>(destination_host_id))?;
     let other_host = host_service
         .get_by_id(&other_host_id)
         .await?
-        .ok_or_else(|| ApiError::host_not_found(other_host_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Host>(other_host_id))?;
 
     // Validate user has access to both hosts
     validate_read_access(

@@ -100,11 +100,11 @@
 					: entities.getIconComponent('Host'),
 			fields: [
 				{
-					label: m.hosts_description(),
+					label: m.common_description(),
 					value: host.description
 				},
 				{
-					label: m.hosts_services(),
+					label: m.common_services(),
 					value: hostServices
 						.filter((sv) => !containerIds.includes(sv.id))
 						.map((sv) => {
@@ -117,7 +117,7 @@
 					emptyText: m.hosts_noServicesAssigned()
 				},
 				{
-					label: m.hosts_containers(),
+					label: m.common_containers(),
 					value: containers
 						.map((c) => {
 							return {
@@ -130,7 +130,7 @@
 					emptyText: m.hosts_noContainers()
 				},
 				{
-					label: m.hosts_interfaces(),
+					label: m.common_interfaces(),
 					value: hostInterfaces.map((i) => {
 						return {
 							id: i.id,
@@ -155,12 +155,12 @@
 						]
 					: []),
 				...(onConsolidate
-					? [{ label: m.hosts_consolidate(), icon: Replace, onClick: () => onConsolidate(host) }]
+					? [{ label: m.common_consolidate(), icon: Replace, onClick: () => onConsolidate(host) }]
 					: []),
 				...(onHide
 					? [
 							{
-								label: m.hosts_hide(),
+								label: m.common_hide(),
 								icon: Eye,
 								class: host.hidden ? 'text-blue-400' : '',
 								onClick: () => onHide(host)

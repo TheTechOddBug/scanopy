@@ -216,7 +216,7 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title={m.services_title()} subtitle={m.services_subtitle()} />
+	<TabHeader title={m.common_services()} subtitle={m.services_subtitle()} />
 
 	<!-- Loading state (only on initial load) -->
 	{#if isInitialLoading}

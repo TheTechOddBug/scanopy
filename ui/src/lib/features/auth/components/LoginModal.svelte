@@ -104,11 +104,11 @@
 					<InlineInfo title={m.auth_demoModeTitle()} body={m.auth_demoModeBody()} />
 					<div class="mt-3 rounded-md bg-gray-800 p-3 font-mono text-sm">
 						<div class="text-secondary">
-							<span class="text-gray-400">{m.auth_demoEmail()}</span>
+							<span class="text-gray-400">{m.common_demoEmail()}</span>
 							<span class="text-primary ml-2">demo@scanopy.net</span>
 						</div>
 						<div class="text-secondary mt-1">
-							<span class="text-gray-400">{m.auth_demoPassword()}</span>
+							<span class="text-gray-400">{m.common_demoPassword()}</span>
 							<span class="text-primary ml-2">password123</span>
 						</div>
 					</div>

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use strum::{EnumIter, IntoStaticStr};
+use uuid::Uuid;
 
 /// Helper macro to create a JSON map from key-value pairs.
 macro_rules! json_map {
@@ -70,6 +71,8 @@ pub enum ErrorCode {
     AuthOidcProviderError { provider: String },
     /// User not found
     AuthUserNotFound { id: String },
+    /// Daemon is trying to register with a key that has not yet been created (onboarding)
+    AuthDaemonKeyNotCreated,
 
     // === Generic Entity Operations ===
     /// Entity was not found
@@ -129,6 +132,8 @@ pub enum ErrorCode {
     DiscoveryHistoricalReadOnly,
     /// Subnet is on a different network than the discovery
     DiscoverySubnetNetworkMismatch { subnet: String },
+    /// Discovery session not found
+    DiscoverySessionNotFound { id: Uuid },
 
     // === Interface ===
     /// IP address is not within subnet range
@@ -203,6 +208,9 @@ impl ErrorCode {
             Self::AuthOidcNotConfigured => "OIDC not configured for this organization",
             Self::AuthOidcProviderError { .. } => "Failed to authenticate with {provider}",
             Self::AuthUserNotFound { .. } => "User with ID '{id}' not found",
+            Self::AuthDaemonKeyNotCreated => {
+                "Daemon is trying to register with an API key that has not yet been created"
+            }
 
             // Generic Entity Operations
             Self::EntityNotFound { .. } => "{entity} with ID '{id}' not found",
@@ -244,6 +252,7 @@ impl ErrorCode {
             Self::DiscoverySubnetNetworkMismatch { .. } => {
                 "Subnet '{subnet}' is on a different network"
             }
+            Self::DiscoverySessionNotFound { .. } => "Discovery session '{id}' not found",
 
             // Interface
             Self::InterfaceIpOutOfRange { .. } => {
@@ -295,6 +304,7 @@ impl ErrorCode {
             | Self::AuthPasswordRequired
             | Self::AuthPasswordInvalid
             | Self::AuthNotAuthenticated
+            | Self::AuthDaemonKeyNotCreated
             | Self::AuthOidcNotConfigured
             | Self::SharePasswordRequired
             | Self::SharePasswordIncorrect
@@ -356,6 +366,7 @@ impl ErrorCode {
             Self::DiscoverySubnetNetworkMismatch { subnet } => {
                 Some(json_map! { "subnet" => subnet })
             }
+            Self::DiscoverySessionNotFound { id } => Some(json_map! {"id" => id}),
             Self::InterfaceIpOutOfRange { ip, subnet } => {
                 Some(json_map! { "ip" => ip, "subnet" => subnet })
             }

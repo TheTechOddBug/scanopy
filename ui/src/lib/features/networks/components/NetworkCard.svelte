@@ -56,7 +56,7 @@
 		Icon: entities.getIconComponent('Network'),
 		fields: [
 			{
-				label: m.networks_daemons(),
+				label: m.common_daemons(),
 				value: networkDaemons.map((d) => {
 					return {
 						id: d.id,
@@ -66,7 +66,7 @@
 				})
 			},
 			{
-				label: m.networks_subnets(),
+				label: m.common_subnets(),
 				value: networkSubnets.map((s) => {
 					return {
 						id: s.id,
@@ -76,7 +76,7 @@
 				})
 			},
 			{
-				label: m.networks_groups(),
+				label: m.common_groupsLabel(),
 				value: networkGroups.map((g) => {
 					return {
 						id: g.id,
@@ -110,7 +110,7 @@
 
 {#snippet tagsSnippet()}
 	<div class="flex items-center gap-2">
-		<span class="text-secondary text-sm">{m.common_tags()}</span>
+		<span class="text-secondary text-sm">{m.common_tags()}:</span>
 		<TagPickerInline selectedTagIds={network.tags} entityId={network.id} entityType="Network" />
 	</div>
 {/snippet}

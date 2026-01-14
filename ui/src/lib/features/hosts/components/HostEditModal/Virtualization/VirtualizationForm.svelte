@@ -90,7 +90,7 @@
 				{/if}
 			{:else}
 				<EntityConfigEmpty
-					title={m.hosts_virtualization_noSelected()}
+					title={m.common_noServiceSelected()}
 					subtitle={m.hosts_virtualization_selectToManage()}
 				/>
 			{/if}

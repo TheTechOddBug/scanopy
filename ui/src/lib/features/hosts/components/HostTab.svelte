@@ -124,8 +124,8 @@
 	let hostFields = $derived(
 		defineFields<Host, HostOrderField>(
 			{
-				name: { label: m.hosts_fields_name(), type: 'string', searchable: true },
-				hostname: { label: m.hosts_fields_hostname(), type: 'string', searchable: true },
+				name: { label: m.common_name(), type: 'string', searchable: true },
+				hostname: { label: m.common_hostname(), type: 'string', searchable: true },
 				virtualized_by: {
 					label: m.hosts_fields_virtualizedBy(),
 					type: 'string',
@@ -144,27 +144,27 @@
 					}
 				},
 				network_id: {
-					label: m.hosts_fields_network(),
+					label: m.common_network(),
 					type: 'string',
 					filterable: true,
 					groupable: true,
 					getValue: (item) =>
-						networksData.find((n) => n.id == item.network_id)?.name || m.hosts_unknownNetwork()
+						networksData.find((n) => n.id == item.network_id)?.name || m.common_unknownNetwork()
 				},
-				created_at: { label: m.hosts_fields_created(), type: 'date' },
-				updated_at: { label: m.hosts_fields_updated(), type: 'date' }
+				created_at: { label: m.common_created(), type: 'date' },
+				updated_at: { label: m.common_updated(), type: 'date' }
 			},
 			[
 				{
 					key: 'description',
-					label: m.hosts_fields_description(),
+					label: m.common_description(),
 					type: 'string',
 					searchable: true
 				},
-				{ key: 'hidden', label: m.hosts_fields_hidden(), type: 'boolean', filterable: true },
+				{ key: 'hidden', label: m.common_hidden(), type: 'boolean', filterable: true },
 				{
 					key: 'tags',
-					label: m.hosts_fields_tags(),
+					label: m.common_tags(),
 					type: 'array',
 					searchable: true,
 					filterable: true,
@@ -193,7 +193,7 @@
 	}
 
 	function handleDeleteHost(host: Host) {
-		if (confirm(m.hosts_confirmDelete({ name: host.name }))) {
+		if (confirm(m.common_confirmDeleteName({ name: host.name }))) {
 			deleteHostMutation.mutate(host.id);
 		}
 	}
@@ -271,11 +271,11 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title={m.hosts_title()}>
+	<TabHeader title={m.common_hosts()}>
 		<svelte:fragment slot="actions">
 			{#if !isReadOnly}
 				<button class="btn-primary flex items-center" onclick={handleCreateHost}
-					><Plus class="h-5 w-5" />{m.hosts_createHost()}</button
+					><Plus class="h-5 w-5" />{m.common_create()}</button
 				>
 			{/if}
 		</svelte:fragment>
@@ -290,7 +290,7 @@
 			title={m.hosts_noHostsYet()}
 			subtitle=""
 			onClick={handleCreateHost}
-			cta={m.hosts_createFirstHost()}
+			cta={m.common_create()}
 		/>
 	{:else}
 		<DataControls

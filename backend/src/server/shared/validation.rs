@@ -1,4 +1,7 @@
-use crate::server::shared::types::api::ApiError;
+use crate::server::{
+    networks::r#impl::Network, organizations::r#impl::base::Organization,
+    shared::types::api::ApiError,
+};
 use uuid::Uuid;
 
 /// Validates that a user has access to a network.
@@ -11,7 +14,7 @@ pub fn validate_network_access(
     if let Some(network_id) = network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::network_access_denied(network_id));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     Ok(())
 }
@@ -26,7 +29,9 @@ pub fn validate_organization_access(
     if let Some(organization_id) = entity_organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::organization_access_denied(organization_id));
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
+        ));
     }
     Ok(())
 }
@@ -82,24 +87,28 @@ pub fn validate_update_access(
     if let Some(network_id) = existing_network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::network_access_denied(network_id));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = existing_organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::organization_access_denied(organization_id));
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
+        ));
     }
 
     // Then check access to new values being set
     if let Some(network_id) = new_network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::network_access_denied(network_id));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = new_organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::organization_access_denied(organization_id));
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
+        ));
     }
 
     Ok(())
@@ -116,12 +125,14 @@ pub fn validate_delete_access(
     if let Some(network_id) = network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::network_access_denied(network_id));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::organization_access_denied(organization_id));
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
+        ));
     }
     Ok(())
 }
@@ -137,12 +148,14 @@ pub fn validate_bulk_delete_access(
     if let Some(network_id) = network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::network_access_denied(network_id));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::organization_access_denied(organization_id));
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
+        ));
     }
     Ok(())
 }

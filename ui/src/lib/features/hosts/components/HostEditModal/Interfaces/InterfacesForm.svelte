@@ -178,7 +178,7 @@
 		let:onMoveDown
 	>
 		<ListManager
-			label={m.hosts_interfaces_title()}
+			label={m.common_interfaces()}
 			helpText={m.hosts_interfaces_helpText()}
 			placeholder={m.hosts_interfaces_placeholder()}
 			emptyMessage={m.hosts_interfaces_emptyMessage()}
@@ -241,7 +241,7 @@
 	title={m.hosts_interfaces_deleteTitle()}
 	message={m.hosts_interfaces_deleteMessage()}
 	details={affectedServiceNames}
-	confirmLabel={m.hosts_interfaces_deleteConfirm()}
+	confirmLabel={m.hosts_interfaces_deleteTitle()}
 	cancelLabel={m.common_cancel()}
 	variant="warning"
 	onConfirm={confirmDelete}

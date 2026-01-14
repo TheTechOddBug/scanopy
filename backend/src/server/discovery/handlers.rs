@@ -6,6 +6,7 @@ use crate::server::{
         base::Discovery,
         types::{DiscoveryType, RunType},
     },
+    networks::r#impl::Network,
     shared::{
         handlers::traits::{create_handler, update_handler},
         services::traits::CrudService,
@@ -192,11 +193,13 @@ async fn start_session(
         .discovery_service
         .get_by_id(&discovery_id)
         .await?
-        .ok_or_else(|| ApiError::not_found_entity("Discovery", discovery_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Discovery>(discovery_id))?;
 
     // Validate user has access to this discovery's network
     if !network_ids.contains(&discovery.base.network_id) {
-        return Err(ApiError::network_access_denied(discovery.base.network_id));
+        return Err(ApiError::entity_access_denied::<Network>(
+            discovery.base.network_id,
+        ));
     }
 
     // Update last_run BEFORE moving any fields
@@ -302,10 +305,12 @@ async fn cancel_discovery(
         .discovery_service
         .get_session(&session_id)
         .await
-        .ok_or_else(|| ApiError::not_found_entity("Discovery session", session_id))?;
+        .ok_or_else(|| ApiError::discovery_session_not_found(session_id))?;
 
     if !auth.network_ids().contains(&session.network_id) {
-        return Err(ApiError::network_access_denied(session.network_id));
+        return Err(ApiError::entity_access_denied::<Network>(
+            session.network_id,
+        ));
     }
 
     state

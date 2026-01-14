@@ -61,7 +61,12 @@
 				}}
 			>
 				{#snippet children(field: AnyFieldApi)}
-					<TextInput label={m.common_name()} id="interface_{iface.id}" placeholder="en0" {field} />
+					<TextInput
+						label={m.common_name()}
+						id="interface_{iface.id}"
+						placeholder={m.common_placeholderInterface()}
+						{field}
+					/>
 				{/snippet}
 			</form.Field>
 
@@ -79,9 +84,9 @@
 			>
 				{#snippet children(field: AnyFieldApi)}
 					<TextInput
-						label={m.hosts_interfaces_ipAddress()}
+						label={m.common_ipAddress()}
 						id="interface_ip_{iface.id}"
-						placeholder="192.168.1.100"
+						placeholder={m.common_placeholderIpAddress()}
 						required={true}
 						helpText={m.hosts_interfaces_ipMustBeWithin({ cidr: subnet.cidr })}
 						{field}

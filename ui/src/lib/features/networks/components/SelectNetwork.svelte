@@ -56,7 +56,7 @@
 
 <div>
 	<label for="network" class="text-secondary mb-2 block text-sm font-medium">
-		{m.networks_networkLabel()}</label
+		{m.common_network()}</label
 	>
 	<select
 		id="network"

@@ -20,6 +20,8 @@ use crate::server::{
     },
     billing::types::base::BillingPlan,
     config::AppState,
+    networks::r#impl::Network,
+    organizations::r#impl::base::Organization,
     shared::{
         handlers::traits::{CrudHandlers, create_handler, update_handler},
         services::traits::CrudService,
@@ -33,6 +35,7 @@ use crate::server::{
         api::{CreateUpdateShareRequest, PublicShareMetadata, ShareWithTopology},
         base::Share,
     },
+    topology::types::base::Topology,
 };
 
 // Generated handlers for generic CRUD operations
@@ -139,7 +142,7 @@ async fn update_share(
     let existing = Share::get_service(&state)
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::share_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     // Handle password field:
     // - None: preserve existing password_hash
@@ -180,7 +183,7 @@ async fn get_share_org_plan(state: &AppState, share: &Share) -> Result<BillingPl
         .get_by_id(&share.base.network_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::network_not_found(share.base.network_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Network>(share.base.network_id))?;
 
     // Get organization to find plan
     let org = state
@@ -189,7 +192,7 @@ async fn get_share_org_plan(state: &AppState, share: &Share) -> Result<BillingPl
         .get_by_id(&network.base.organization_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::organization_not_found(network.base.organization_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Organization>(network.base.organization_id))?;
 
     Ok(org.base.plan.unwrap_or_default())
 }
@@ -217,10 +220,10 @@ async fn get_public_share_metadata(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::share_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     if !share.is_valid() {
-        return Err(ApiError::share_disabled());
+        return Err(ApiError::entity_disabled::<Share>());
     }
 
     Ok(Json(ApiResponse::success(PublicShareMetadata::from(
@@ -252,10 +255,10 @@ async fn verify_share_password(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::share_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     if !share.is_valid() {
-        return Err(ApiError::share_disabled());
+        return Err(ApiError::entity_disabled::<Share>());
     }
 
     if !share.requires_password() {
@@ -286,10 +289,10 @@ async fn get_share_topology(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::share_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     if !share.is_valid() {
-        return Err(ApiError::share_disabled());
+        return Err(ApiError::entity_disabled::<Share>());
     }
 
     // Get org's plan to check embed feature
@@ -346,7 +349,7 @@ async fn get_share_topology(
         .get_by_id(&share.base.topology_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found_entity("Topology", share.base.topology_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Topology>(share.base.topology_id))?;
 
     let response_data = ShareWithTopology {
         share: PublicShareMetadata::from(&share),

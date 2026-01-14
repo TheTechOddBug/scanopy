@@ -109,7 +109,7 @@
 				label={m.common_email()}
 				id="email"
 				{field}
-				placeholder="your@email.com"
+				placeholder={m.common_emailPlaceholder()}
 				helpText={m.onboarding_emailOptional()}
 			/>
 		{/snippet}
@@ -136,7 +136,7 @@
 			{/if}
 			<button type="button" class="btn-primary" disabled={!canSubmit} onclick={handleSubmit}>
 				{#if hasSubmitted}
-					{m.onboarding_submitted()}
+					{m.common_submitted()}
 				{:else if isSubmitting}
 					{m.common_sending()}
 				{:else}

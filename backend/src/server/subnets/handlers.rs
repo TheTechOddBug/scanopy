@@ -1,6 +1,7 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::{Authorized, IsDaemon, Member, Or, Viewer};
 use crate::server::interfaces::r#impl::base::Interface;
+use crate::server::networks::r#impl::Network;
 use crate::server::shared::extractors::Query;
 use crate::server::shared::handlers::ordering::OrderField;
 use crate::server::shared::handlers::query::{
@@ -267,13 +268,15 @@ async fn create_subnet(
                 })?;
                 Json(ApiResponse::success(created))
             } else {
-                return Err(ApiError::entity_network_mismatch("subnet"));
+                return Err(ApiError::entity_network_mismatch::<Subnet>());
             }
         }
         _ => {
             // User/API key - validate network access and create
             if !network_ids.contains(&request.base.network_id) {
-                return Err(ApiError::network_access_denied(request.base.network_id));
+                return Err(ApiError::entity_access_denied::<Network>(
+                    request.base.network_id,
+                ));
             }
             let service = Subnet::get_service(&state);
             let created = service.create(request, entity).await.map_err(|e| {
@@ -317,7 +320,7 @@ async fn update_subnet(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::subnet_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Subnet>(id))?;
 
     if current.base.cidr != subnet.base.cidr {
         // CIDR is changing - validate that all existing interfaces are within the new CIDR

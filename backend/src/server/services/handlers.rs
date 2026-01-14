@@ -1,4 +1,5 @@
 use crate::server::auth::middleware::permissions::{Authorized, Member, Viewer};
+use crate::server::hosts::r#impl::base::Host;
 use crate::server::shared::handlers::ordering::OrderField;
 use crate::server::shared::handlers::query::{
     FilterQueryExtractor, OrderDirection, PaginationParams,
@@ -290,7 +291,7 @@ pub async fn create_service(
         .await?
         && host.base.network_id != request.network_id()
     {
-        return Err(ApiError::entity_network_mismatch("service"));
+        return Err(ApiError::entity_network_mismatch::<Host>());
     }
 
     // Convert request to Service entity
@@ -345,7 +346,7 @@ pub async fn update_service(
         .await?
         && host.base.network_id != service.base.network_id
     {
-        return Err(ApiError::entity_network_mismatch("service"));
+        return Err(ApiError::entity_network_mismatch::<Host>());
     }
 
     // Delegate to generic handler (handles validation, auth checks, update)

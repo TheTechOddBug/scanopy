@@ -212,7 +212,7 @@ where
                 user_id = ?user_id,
                 "Entity not found"
             );
-            ApiError::not_found_entity(T::entity_name_singular(), id)
+            ApiError::entity_not_found::<T>(id)
         })?;
 
     validate_read_access(
@@ -265,7 +265,7 @@ where
                 user_id = ?user_id,
                 "Entity not found for update"
             );
-            ApiError::not_found_entity(T::entity_name_singular(), id)
+            ApiError::entity_not_found::<T>(id)
         })?;
 
     // Preserve immutable fields from existing entity.
@@ -344,7 +344,7 @@ where
                 entity_id = %id,
                 "Entity not found for deletion"
             );
-            ApiError::not_found_entity(T::entity_name_singular(), id)
+            ApiError::entity_not_found::<T>(id)
         })?;
 
     validate_delete_access(

@@ -133,14 +133,14 @@
 									<div class="border-t border-gray-700 pt-3">
 										<div class="flex items-baseline justify-between">
 											<div>
-												<p class="text-primary font-medium">{m.settings_billing_seats()}</p>
+												<p class="text-primary font-medium">{m.common_seats()}</p>
 												<p class="text-secondary text-sm">
-													{m.settings_billing_seatsUsage({
+													{m.common_billingUsage({
 														count: seatCount,
 														included: org.plan.included_seats ?? 0
 													})}
 													{#if extraSeats > 0}
-														{m.settings_billing_extraSeats({
+														{m.common_billingExtra({
 															extra: extraSeats,
 															price: org.plan.seat_cents ? org.plan.seat_cents / 100 : 0
 														})}
@@ -158,7 +158,7 @@
 													</p>
 												</div>
 											{:else}
-												<p class="text-tertiary text-sm">{m.settings_billing_included()}</p>
+												<p class="text-tertiary text-sm">{m.common_included()}</p>
 											{/if}
 										</div>
 									</div>
@@ -169,14 +169,14 @@
 									<div class="border-t border-gray-700 pt-3">
 										<div class="flex items-baseline justify-between">
 											<div>
-												<p class="text-primary font-medium">{m.settings_billing_networks()}</p>
+												<p class="text-primary font-medium">{m.common_networks()}</p>
 												<p class="text-secondary text-sm">
-													{m.settings_billing_networksUsage({
+													{m.common_billingUsage({
 														count: networkCount,
 														included: org.plan.included_networks ?? 0
 													})}
 													{#if extraNetworks > 0}
-														{m.settings_billing_extraNetworks({
+														{m.common_billingExtra({
 															extra: extraNetworks,
 															price: org.plan.network_cents ? org.plan.network_cents / 100 : 0
 														})}
@@ -194,7 +194,7 @@
 													</p>
 												</div>
 											{:else}
-												<p class="text-tertiary text-sm">{m.settings_billing_included()}</p>
+												<p class="text-tertiary text-sm">{m.common_included()}</p>
 											{/if}
 										</div>
 									</div>
@@ -245,7 +245,7 @@
 		{:else}
 			<div class="text-secondary py-8 text-center">
 				<p>{m.settings_billing_unableToLoad()}</p>
-				<p class="text-tertiary mt-2 text-sm">{m.settings_billing_tryAgainLater()}</p>
+				<p class="text-tertiary mt-2 text-sm">{m.common_tryAgainLater()}</p>
 			</div>
 		{/if}
 	</div>

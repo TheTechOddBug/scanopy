@@ -78,7 +78,7 @@
 					pushSuccess(m.settings_account_credentialsUpdated());
 					subView = 'main';
 				} else {
-					pushError(data?.error || 'Failed to update credentials');
+					pushError(data?.error || m.settings_account_failedToUpdate());
 				}
 			} finally {
 				savingCredentials = false;
@@ -158,12 +158,10 @@
 				<div class="space-y-6">
 					<!-- User Info -->
 					<InfoCard title={m.settings_account_userInfo()}>
-						<InfoRow label={m.settings_account_organization()}>{organization?.name}</InfoRow>
+						<InfoRow label={m.common_organization()}>{organization?.name}</InfoRow>
 						<InfoRow label={m.common_email()}>{user.email}</InfoRow>
-						<InfoRow label={m.settings_account_permissions()} mono={true}
-							>{user.permissions}</InfoRow
-						>
-						<InfoRow label={m.settings_account_userId()} mono={true}>{user.id}</InfoRow>
+						<InfoRow label={m.common_permissions()} mono={true}>{user.permissions}</InfoRow>
+						<InfoRow label={m.common_userId()} mono={true}>{user.id}</InfoRow>
 					</InfoCard>
 
 					<!-- Authentication Methods -->
@@ -179,7 +177,7 @@
 										<Key class="text-secondary h-5 w-5 flex-shrink-0" />
 										<div>
 											<p class="text-primary text-sm font-medium">
-												{m.settings_account_emailPassword()}
+												{m.common_emailAndPassword()}
 											</p>
 											<p class="text-secondary text-xs">
 												{m.settings_account_updateEmailPassword()}
@@ -194,7 +192,7 @@
 										}}
 										class="btn-primary"
 									>
-										{m.settings_account_update()}
+										{m.common_update()}
 									</button>
 								</div>
 							</InfoCard>
@@ -242,7 +240,7 @@
 														onclick={() => unlinkOidcAccount(provider.slug)}
 														class="btn-danger"
 													>
-														{m.settings_account_unlink()}
+														{m.common_unlink()}
 													</button>
 												{:else if !hasLinkedOidc}
 													<button
@@ -254,12 +252,12 @@
 														class={isDisabled ? 'btn-disabled' : 'btn-primary'}
 													>
 														{linkingProviderSlug == provider.slug
-															? m.settings_account_redirecting()
-															: m.settings_account_link()}
+															? m.common_redirecting()
+															: m.common_link()}
 													</button>
 												{:else}
 													<button type="button" disabled={isDisabled} class="btn-primary">
-														{m.settings_account_link()}
+														{m.common_link()}
 													</button>
 												{/if}
 											</div>
@@ -278,7 +276,7 @@
 								<span class="text-primary text-sm">{m.settings_account_signOut()}</span>
 							</div>
 							<button type="button" onclick={handleLogout} class="btn-secondary">
-								{m.settings_account_logout()}
+								{m.common_logout()}
 							</button>
 						</div>
 					</InfoCard>
@@ -339,7 +337,7 @@
 			</button>
 			{#if showSave}
 				<button type="submit" disabled={savingCredentials} class="btn-primary">
-					{savingCredentials ? m.settings_account_saving() : m.settings_account_saveChanges()}
+					{savingCredentials ? m.common_saving() : m.common_saveChanges()}
 				</button>
 			{/if}
 		</div>

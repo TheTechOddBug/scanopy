@@ -123,7 +123,7 @@
 			<div class="flex items-center justify-end gap-3">
 				<button type="button" onclick={onClose} class="btn-secondary"> {m.common_cancel()} </button>
 				<button type="button" onclick={handleSubmit} disabled={loading} class="btn-primary">
-					{loading ? m.services_updating() : m.services_updateService()}
+					{loading ? m.common_updating() : m.services_updateService()}
 				</button>
 			</div>
 		</div>

@@ -89,7 +89,7 @@
 			updatedServices[index] = service;
 			formData.services = updatedServices;
 		} else {
-			pushError('Invalid service index');
+			pushError(m.hosts_services_invalidIndex());
 		}
 	}
 
@@ -124,7 +124,7 @@
 		>
 			{@const isTransferringPortBindings = selectedPortBindings.length > 0}
 			<ListManager
-				label={m.hosts_services_title()}
+				label={m.common_services()}
 				helpText={m.hosts_services_helpText()}
 				placeholder={m.hosts_services_placeholder()}
 				emptyMessage={m.hosts_services_emptyMessage()}
@@ -163,7 +163,9 @@
 									handleTransferPorts(item, highlightedItem);
 								}}
 								class="btn-secondary flex-shrink-0 text-xs"
-								title="Transfer {selectedPortBindings.length} binding(s) here"
+								title={m.hosts_services_transferBindingsTitle({
+									count: selectedPortBindings.length
+								})}
 							>
 								<ArrowRightLeft size={12} />
 								<span>{m.hosts_services_transferPorts()}</span>
@@ -192,7 +194,7 @@
 
 			{#if !selectedItem}
 				<EntityConfigEmpty
-					title={m.hosts_services_noSelected()}
+					title={m.common_noServiceSelected()}
 					subtitle={m.hosts_services_selectToConfig()}
 				/>
 			{/if}

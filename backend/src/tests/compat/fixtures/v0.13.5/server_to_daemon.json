@@ -1,0 +1,22 @@
+{
+  "version": "0.13.5",
+  "exchanges": [
+    {
+      "method": "POST",
+      "path": "/api/initialize",
+      "request_body": {
+        "api_key": "scp_d_S62OFizZHffvgvNBmO7ys00NS0rSDPM5",
+        "network_id": "34109ab7-9a2f-45c3-989a-907d2079797a"
+      },
+      "response_status": 500,
+      "response_body": {
+        "error": "Startup announcement failed: daemon with ID 'a61ecc46-22ee-487f-951f-d43980cf3eeb' not found",
+        "meta": {
+          "api_version": 1,
+          "server_version": "0.13.5"
+        },
+        "success": false
+      }
+    }
+  ]
+}

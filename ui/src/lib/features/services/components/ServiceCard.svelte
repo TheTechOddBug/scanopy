@@ -72,7 +72,7 @@
 				const portList = ports.map((p) => formatPort(p)).join(', ');
 				const label = iface
 					? `${iface.name ? iface.name + ': ' : ''} ${iface.ip_address} (${portList})`
-					: `${m.services_unbound()} (${portList})`;
+					: `${m.common_unbound()} (${portList})`;
 				return {
 					id: iface?.id ?? 'unbound',
 					label,
@@ -104,12 +104,12 @@
 		Icon: serviceDefinitions.getIconComponent(service.service_definition),
 		fields: [
 			{
-				label: m.services_portBindings(),
+				label: m.common_portBindings(),
 				value: groupedPortBindings,
 				emptyText: m.services_noPortsAssigned()
 			},
 			{
-				label: m.services_interfaceBindings(),
+				label: m.common_interfaceBindings(),
 				value: ifaces.map((iface: Interface) => ({
 					id: iface.id,
 					label: formatInterface(iface, isContainerSubnetFn),

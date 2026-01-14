@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::server::auth::middleware::permissions::{Authorized, Member};
 use crate::server::config::AppState;
+use crate::server::hosts::r#impl::base::Host;
 use crate::server::ports::{r#impl::base::Port, service::PortService};
 use crate::server::shared::handlers::query::HostChildQuery;
 use crate::server::shared::handlers::traits::{CrudHandlers, create_handler, update_handler};
@@ -49,7 +50,7 @@ async fn validate_port_network_consistency(state: &AppState, port: &Port) -> Res
         .await?
         && host.base.network_id != port.base.network_id
     {
-        return Err(ApiError::entity_network_mismatch("port"));
+        return Err(ApiError::entity_network_mismatch::<Host>());
     }
 
     Ok(())

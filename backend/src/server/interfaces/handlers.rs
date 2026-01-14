@@ -1,5 +1,6 @@
 use crate::server::auth::middleware::permissions::{Authorized, Member};
 use crate::server::config::AppState;
+use crate::server::hosts::r#impl::base::Host;
 use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::shared::handlers::traits::{BulkDeleteResponse, create_handler, update_handler};
 use crate::server::shared::services::traits::CrudService;
@@ -8,6 +9,7 @@ use crate::server::shared::types::api::{
     ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse,
 };
 use crate::server::shared::validation::{validate_bulk_delete_access, validate_delete_access};
+use crate::server::subnets::r#impl::base::Subnet;
 use axum::Json;
 use axum::extract::{Path, State};
 use std::collections::HashSet;
@@ -47,7 +49,7 @@ async fn validate_interface_consistency(
         .await?
         && host.base.network_id != interface.base.network_id
     {
-        return Err(ApiError::entity_network_mismatch("Host"));
+        return Err(ApiError::entity_network_mismatch::<Host>());
     }
 
     // Validate subnet is on the same network AND IP is within CIDR
@@ -58,7 +60,7 @@ async fn validate_interface_consistency(
         .await?
     {
         if subnet.base.network_id != interface.base.network_id {
-            return Err(ApiError::entity_network_mismatch("Subnet"));
+            return Err(ApiError::entity_network_mismatch::<Subnet>());
         }
 
         // Validate IP address is within subnet CIDR
@@ -169,7 +171,7 @@ async fn delete_interface(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found_entity("Interface", id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Interface>(id))?;
 
     validate_delete_access(
         Some(entity.base.network_id),

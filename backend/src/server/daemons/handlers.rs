@@ -261,11 +261,11 @@ async fn get_by_id(
         .daemon_service
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::daemon_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Daemon>(id))?;
 
     // Validate user has access to this daemon's network
     if !network_ids.contains(&daemon.base.network_id) {
-        return Err(ApiError::daemon_access_denied(id));
+        return Err(ApiError::entity_access_denied::<Daemon>(id));
     }
 
     // Hydrate tags from junction table
@@ -593,11 +593,11 @@ async fn daemon_startup(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
-        .ok_or_else(|| ApiError::daemon_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Daemon>(id))?;
 
     // Validate daemon belongs to the authenticated daemon's network
     if daemon.base.network_id != daemon_network_id {
-        return Err(ApiError::daemon_access_denied(id));
+        return Err(ApiError::entity_access_denied::<Daemon>(id));
     }
 
     daemon.base.version = Some(request.daemon_version.clone());
@@ -657,11 +657,11 @@ async fn update_capabilities(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
-        .ok_or_else(|| ApiError::daemon_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Daemon>(id))?;
 
     // Validate daemon belongs to the authenticated daemon's network
     if daemon.base.network_id != daemon_network_id {
-        return Err(ApiError::daemon_access_denied(id));
+        return Err(ApiError::entity_access_denied::<Daemon>(id));
     }
 
     daemon.base.capabilities = updated_capabilities;
@@ -700,11 +700,11 @@ async fn receive_heartbeat(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
-        .ok_or_else(|| ApiError::daemon_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Daemon>(id))?;
 
     // Validate daemon belongs to the authenticated daemon's network
     if daemon.base.network_id != daemon_network_id {
-        return Err(ApiError::daemon_access_denied(id));
+        return Err(ApiError::entity_access_denied::<Daemon>(id));
     }
 
     daemon.base.last_seen = Utc::now();
@@ -750,11 +750,11 @@ async fn receive_work_request(
         .get_by_id(&daemon_id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
-        .ok_or_else(|| ApiError::daemon_not_found(daemon_id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Daemon>(daemon_id))?;
 
     // Validate daemon belongs to the authenticated daemon's network
     if daemon.base.network_id != daemon_network_id {
-        return Err(ApiError::daemon_access_denied(daemon_id));
+        return Err(ApiError::entity_access_denied::<Daemon>(daemon_id));
     }
 
     daemon.base.last_seen = Utc::now();

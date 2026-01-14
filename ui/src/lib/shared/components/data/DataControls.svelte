@@ -998,7 +998,7 @@
 			<!-- Bulk Tagging -->
 			{#if hasBulkTagging}
 				<div class="flex items-center gap-3 border-t border-gray-700 pt-3">
-					<span class="text-secondary text-sm">{m.common_tags()}</span>
+					<span class="text-secondary text-sm">{m.common_tags()}:</span>
 					<TagPickerInline
 						selectedTagIds={commonTags}
 						onAdd={handleBulkTagAdd}

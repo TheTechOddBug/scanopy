@@ -145,7 +145,7 @@ pub async fn update_daemon_api_key(
     let existing = DaemonApiKey::get_service(&state)
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::api_key_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<DaemonApiKey>(id))?;
 
     // Validate user has access to this key's network
     validate_network_access(Some(existing.base.network_id), &network_ids, "update")?;

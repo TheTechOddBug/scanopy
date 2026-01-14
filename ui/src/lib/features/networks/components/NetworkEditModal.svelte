@@ -39,9 +39,9 @@
 
 	let isEditing = $derived(network !== null);
 	let title = $derived(
-		isEditing ? m.networks_editNetwork({ name: network?.name ?? '' }) : m.networks_createNetwork()
+		isEditing ? m.common_editName({ name: network?.name ?? '' }) : m.networks_createNetwork()
 	);
-	let saveLabel = $derived(isEditing ? m.networks_updateNetwork() : m.networks_createNetwork());
+	let saveLabel = $derived(isEditing ? m.common_update() : m.common_create());
 
 	function getDefaultValues() {
 		return network
@@ -54,7 +54,7 @@
 		defaultValues: { ...createEmptyNetworkFormData(), seedData: true },
 		onSubmit: async ({ value }) => {
 			if (!organization) {
-				pushError('Could not load ID for current user');
+				pushError(m.common_couldNotLoadUser());
 				onClose();
 				return;
 			}
@@ -119,7 +119,7 @@
 			<div class="space-y-8">
 				<!-- Network Details Section -->
 				<div class="space-y-4">
-					<h3 class="text-primary text-lg font-medium">{m.networks_networkDetails()}</h3>
+					<h3 class="text-primary text-lg font-medium">{m.common_details()}</h3>
 
 					<form.Field
 						name="name"
@@ -129,7 +129,7 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label={m.networks_networkName()}
+								label={m.common_name()}
 								id="name"
 								{field}
 								placeholder={m.networks_networkNamePlaceholder()}
@@ -165,7 +165,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? m.hosts_editor_deleting() : m.common_delete()}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -179,7 +179,7 @@
 						{m.common_cancel()}
 					</button>
 					<button type="submit" disabled={loading || deleting} class="btn-primary">
-						{loading ? m.hosts_editor_saving() : saveLabel}
+						{loading ? m.common_saving() : saveLabel}
 					</button>
 				</div>
 			</div>

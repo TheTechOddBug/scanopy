@@ -56,7 +56,7 @@ pub async fn get_user_by_id(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::user_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<User>(id))?;
 
     // Validate user is in the same organization
     if user.base.organization_id != auth_org_id {
@@ -254,7 +254,7 @@ pub async fn update_user(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::user_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<User>(id))?;
 
     if request.base.organization_id != existing.base.organization_id {
         return Err(ApiError::permission_denied());
@@ -320,7 +320,7 @@ async fn admin_update_user(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::user_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<User>(id))?;
 
     // Cannot edit yourself through this endpoint
     if admin_user_id == id {

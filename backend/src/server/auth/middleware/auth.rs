@@ -455,6 +455,7 @@ impl AuthenticatedEntity {
                         .and_then(|s| Uuid::parse_str(s).ok())
                         .ok_or_else(|| AuthError(ApiError::daemon_required()))?;
 
+                    // Check if key exists
                     let api_key_filter = StorableFilter::<DaemonApiKey>::new().api_key(hashed_key);
                     if let Ok(Some(mut api_key)) = app_state
                         .services
@@ -538,7 +539,7 @@ impl AuthenticatedEntity {
                     if daemon_exists {
                         return Err(AuthError(ApiError::not_authenticated()));
                     }
-                    return Err(AuthError(ApiError::not_authenticated()));
+                    return Err(AuthError(ApiError::daemon_key_not_yet_active()));
                 }
             }
         }
@@ -650,13 +651,10 @@ async fn publish_api_key_auth_failed(
     reason: &str,
     key_prefix: Option<&str>,
 ) {
-    let key_type_str = match key_type {
-        ApiKeyType::User => "user",
-        ApiKeyType::Daemon => "daemon",
-    };
+    let key_type_str: &str = key_type.into();
 
     let metadata = serde_json::json!({
-        "key_type": key_type_str,
+        "key_type": key_type_str.to_lowercase(),
         "reason": reason,
         "key_prefix": key_prefix,
     });

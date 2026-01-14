@@ -197,11 +197,11 @@ pub async fn update_user_api_key(
     let existing = service
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::api_key_not_found(id))?;
+        .ok_or_else(|| ApiError::entity_not_found::<UserApiKey>(id))?;
 
     // Verify the user owns this key
     if existing.base.user_id != user_id {
-        return Err(ApiError::entity_access_denied("API key", id));
+        return Err(ApiError::entity_access_denied::<UserApiKey>(id));
     }
 
     // Validate permissions don't exceed user's permissions
@@ -304,7 +304,7 @@ pub async fn get_by_id(
         .map(|k| k.base.user_id != user_id)
         .unwrap_or(true)
     {
-        return Err(ApiError::api_key_not_found(id));
+        return Err(ApiError::entity_not_found::<UserApiKey>(id));
     }
     Ok(result)
 }
@@ -338,7 +338,7 @@ pub async fn delete(
         .map(|k| k.base.user_id != user_id)
         .unwrap_or(true)
     {
-        return Err(ApiError::api_key_not_found(id));
+        return Err(ApiError::entity_not_found::<UserApiKey>(id));
     }
 
     delete_handler::<UserApiKey>(state, auth.into_permission::<Member>(), Path(id)).await

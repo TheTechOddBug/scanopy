@@ -262,9 +262,7 @@
 							onclick={handleConsolidate}
 							class="btn-danger"
 						>
-							{loading
-								? m.hosts_consolidateModal_consolidating()
-								: m.hosts_consolidateModal_consolidateHosts()}
+							{loading ? m.common_consolidating() : m.hosts_consolidateModal_title()}
 						</button>
 					{/if}
 				</div>

@@ -100,12 +100,12 @@
 					}
 					onClose();
 				} catch (error) {
-					pushError(error instanceof Error ? error.message : 'Failed to save discovery');
+					pushError(error instanceof Error ? error.message : m.discovery_failedToSave());
 				} finally {
 					loading = false;
 				}
 			} else {
-				pushError('Could not get network ID from selected daemon. Please try a different daemon.');
+				pushError(m.discovery_couldNotGetNetworkId());
 			}
 		}
 	}));
@@ -151,7 +151,7 @@
 				await onDelete(discovery.id);
 				onClose();
 			} catch (error) {
-				pushError(error instanceof Error ? error.message : 'Failed to delete discovery');
+				pushError(error instanceof Error ? error.message : m.discovery_failedToDelete());
 			} finally {
 				deleting = false;
 			}
@@ -215,7 +215,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? m.discovery_deleting() : m.common_delete()}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -230,7 +230,7 @@
 					</button>
 					{#if showSave}
 						<button type="submit" disabled={loading || deleting} class="btn-primary">
-							{loading ? m.discovery_saving() : saveLabel}
+							{loading ? m.common_saving() : saveLabel}
 						</button>
 					{/if}
 				</div>

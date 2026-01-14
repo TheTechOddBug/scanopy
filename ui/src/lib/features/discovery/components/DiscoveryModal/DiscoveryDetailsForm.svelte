@@ -44,7 +44,7 @@
 	<!-- Daemon Selection -->
 	<div class="space-y-2">
 		<RichSelect
-			label={m.discovery_daemon()}
+			label={m.common_daemon()}
 			required={true}
 			placeholder={m.discovery_daemonSelect()}
 			disabled={readOnly}

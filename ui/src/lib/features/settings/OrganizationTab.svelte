@@ -126,12 +126,12 @@
 					<InfoCard title={m.settings_org_info()}>
 						<InfoRow label={m.common_name()}>{org.name}</InfoRow>
 						{#if org.plan}
-							<InfoRow label={m.settings_org_plan()}>{org.plan.type}</InfoRow>
+							<InfoRow label={m.common_plan()}>{org.plan.type}</InfoRow>
 						{/if}
-						<InfoRow label={m.settings_org_created()}>
+						<InfoRow label={m.common_created()}>
 							{formatTimestamp(org.created_at)}
 						</InfoRow>
-						<InfoRow label={m.settings_org_id()} mono={true}>{org.id}</InfoRow>
+						<InfoRow label={m.common_id()} mono={true}>{org.id}</InfoRow>
 					</InfoCard>
 
 					<!-- Actions -->
@@ -180,7 +180,7 @@
 										</p>
 									</div>
 									<button onclick={handlePopulateDemo} disabled={populating} class="btn-primary">
-										{populating ? m.settings_org_populating() : m.settings_org_populate()}
+										{populating ? m.common_populating() : m.common_populate()}
 									</button>
 								</div>
 							</InfoCard>
@@ -215,7 +215,7 @@
 		<div class="flex-1 overflow-auto p-6">
 			<div class="text-secondary py-8 text-center">
 				<p>{m.settings_org_unableToLoad()}</p>
-				<p class="text-tertiary mt-2 text-sm">{m.settings_org_tryAgainLater()}</p>
+				<p class="text-tertiary mt-2 text-sm">{m.common_tryAgainLater()}</p>
 			</div>
 		</div>
 	{/if}
@@ -233,7 +233,7 @@
 					disabled={saving}
 					class="btn-primary"
 				>
-					{saving ? m.settings_account_saving() : m.settings_account_saveChanges()}
+					{saving ? m.common_saving() : m.common_saveChanges()}
 				</button>
 			{/if}
 		</div>

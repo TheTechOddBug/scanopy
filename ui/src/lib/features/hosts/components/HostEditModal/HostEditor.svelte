@@ -59,7 +59,7 @@
 
 	let isEditing = $derived(host !== null);
 	let title = $derived(
-		isEditing ? m.hosts_editHost({ name: host?.name ?? '' }) : m.hosts_createHost()
+		isEditing ? m.common_editName({ name: host?.name ?? '' }) : m.hosts_createHost()
 	);
 
 	// formData holds structural data (ids, network_id, tags, etc.)
@@ -145,7 +145,7 @@
 				handleClose();
 			}
 		} catch (error) {
-			pushError(error instanceof Error ? error.message : 'Failed to save host');
+			pushError(error instanceof Error ? error.message : m.hosts_failedToSave());
 		} finally {
 			loading = false;
 		}
@@ -232,27 +232,27 @@
 		},
 		{
 			id: 'interfaces',
-			label: m.hosts_interfaces(),
+			label: m.common_interfaces(),
 			icon: entities.getIconComponent('Interface'),
 			description: m.hosts_editor_interfacesDesc()
 		},
 		{
 			id: 'ports',
-			label: m.hosts_ports_title(),
+			label: m.common_ports(),
 			icon: entities.getIconComponent('Port'),
-			description: m.hosts_editor_portsDesc()
+			description: m.common_serviceConfiguration()
 		},
 		{
 			id: 'services',
-			label: m.hosts_services(),
+			label: m.common_services(),
 			icon: entities.getIconComponent('Service'),
-			description: m.hosts_editor_servicesDesc()
+			description: m.common_serviceConfiguration()
 		},
 		...(vmManagerServices && vmManagerServices.length > 0
 			? [
 					{
 						id: 'virtualization',
-						label: m.hosts_virtualization_title(),
+						label: m.common_virtualization(),
 						icon: concepts.getIconComponent('Virtualization'),
 						description: m.hosts_editor_virtualizationDesc()
 					}
@@ -311,7 +311,7 @@
 				await onDelete(host.id);
 				handleClose();
 			} catch (error) {
-				pushError(error instanceof Error ? error.message : 'Failed to delete host');
+				pushError(error instanceof Error ? error.message : m.hosts_failedToDelete());
 			} finally {
 				deleting = false;
 			}
@@ -455,7 +455,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? m.hosts_editor_deleting() : m.common_delete()}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -471,7 +471,7 @@
 						</button>
 					{/if}
 					<button type="submit" disabled={loading || deleting} class="btn-primary">
-						{loading ? m.hosts_editor_saving() : saveLabel}
+						{loading ? m.common_saving() : saveLabel}
 					</button>
 				</div>
 			</div>

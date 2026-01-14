@@ -118,13 +118,13 @@
 	const networkFields: FieldConfig<Network>[] = [
 		{
 			key: 'name',
-			label: m.networks_fields_name(),
+			label: m.common_name(),
 			type: 'string',
 			searchable: true
 		},
 		{
 			key: 'tags',
-			label: m.networks_fields_tags(),
+			label: m.common_tags(),
 			type: 'array',
 			searchable: true,
 			filterable: true,
@@ -140,11 +140,11 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title={m.networks_title()}>
+	<TabHeader title={m.common_networks()}>
 		<svelte:fragment slot="actions">
 			{#if canManageNetworks}
 				<button class="btn-primary flex items-center" onclick={handleCreateNetwork}
-					><Plus class="h-5 w-5" />{m.networks_createNetwork()}</button
+					><Plus class="h-5 w-5" />{m.common_create()}</button
 				>
 			{/if}
 		</svelte:fragment>
@@ -159,7 +159,7 @@
 			title={m.networks_noNetworksYet()}
 			subtitle=""
 			onClick={handleCreateNetwork}
-			cta={m.networks_createFirstNetwork()}
+			cta={m.common_create()}
 		/>
 	{:else}
 		<DataControls

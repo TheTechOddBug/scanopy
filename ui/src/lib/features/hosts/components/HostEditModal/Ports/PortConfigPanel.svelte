@@ -73,7 +73,7 @@
 		>
 			{#snippet children(field: AnyFieldApi)}
 				<SelectInput
-					label={m.hosts_ports_protocol()}
+					label={m.common_protocol()}
 					id="port_{port.id}_protocol"
 					options={protocolOptions}
 					{field}

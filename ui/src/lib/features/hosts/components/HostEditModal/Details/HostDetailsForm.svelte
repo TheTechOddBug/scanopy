@@ -53,9 +53,9 @@
 		>
 			{#snippet children(field: AnyFieldApi)}
 				<TextInput
-					label={m.hosts_details_hostname()}
+					label={m.common_hostname()}
 					id="hostname"
-					placeholder={m.hosts_details_hostnamePlaceholder()}
+					placeholder={m.common_placeholderHostname()}
 					{field}
 				/>
 			{/snippet}

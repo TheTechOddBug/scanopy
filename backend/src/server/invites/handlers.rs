@@ -152,7 +152,7 @@ async fn create_invite(
         && let Some(from_addr) = from_email
     {
         let url = format!(
-            "{}/api/invites/{}/accept",
+            "{}/api/v1/invites/{}/accept",
             invite.base.url.trim_end_matches('/'),
             invite.id
         );

@@ -3,7 +3,6 @@ use crate::daemon::shared::api_client::DaemonApiClient;
 use crate::daemon::shared::config::ConfigStore;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
-use crate::server::daemon_api_keys::r#impl::base::DaemonApiKey;
 use crate::server::daemons::r#impl::api::{
     DaemonCapabilities, DaemonHeartbeatPayload, DaemonRegistrationRequest,
     DaemonRegistrationResponse, DaemonStartupRequest, DiscoveryUpdatePayload, ServerCapabilities,
@@ -22,15 +21,6 @@ const HEALTH_LOG_INTERVAL: u64 = 10;
 
 /// Log target for consistent daemon logging output
 pub const LOG_TARGET: &str = "daemon";
-
-/// Error message for invalid API key when daemon is not registered (onboarding scenario).
-/// Used by server auth middleware and daemon error detection.
-pub const INVALID_API_KEY_ERROR: &str = "Invalid API key";
-
-/// Error message for invalid API key when daemon IS registered (key rotated/revoked).
-/// Used by server auth middleware and daemon error detection.
-pub const REGISTERED_INVALID_KEY_ERROR: &str = "Invalid API key: daemon is registered but key is invalid or revoked. \
-     Please reconfigure with a valid API key.";
 
 /// Format a duration as human-readable uptime (e.g., "1h 23m", "45m", "2d 5h")
 fn format_uptime(duration: Duration) -> String {
@@ -123,12 +113,8 @@ impl DaemonRuntimeService {
     /// Returns Some(error) if authorization failed and the daemon should stop, None otherwise.
     fn check_authorization_error(error: &anyhow::Error, daemon_id: &Uuid) -> Option<anyhow::Error> {
         let error_str = error.to_string().to_lowercase();
-        let expired_msg = ApiError::entity_expired::<DaemonApiKey>()
-            .message
-            .to_lowercase();
-        let disabled_msg = ApiError::entity_disabled::<DaemonApiKey>()
-            .message
-            .to_lowercase();
+        let expired_msg = ApiError::daemon_api_key_expired().message.to_lowercase();
+        let disabled_msg = ApiError::daemon_api_key_disabled().message.to_lowercase();
 
         if error_str.contains(&expired_msg) || error_str.contains(&disabled_msg) {
             tracing::error!(
@@ -368,8 +354,7 @@ impl DaemonRuntimeService {
                 return Ok(());
             }
             Err(e) if Self::is_daemon_not_found_error(&e, &daemon_id) => {
-                tracing::error!(target: LOG_TARGET, "  Status:          Existing Daemon config with ID '{}' found on host, but Daemon ID '{}' does not exist on the server. Please remove the config to register a new daemon on this host.", daemon_id, daemon_id);
-                return Err(e);
+                tracing::info!(target: LOG_TARGET, "  Status:          Daemon not yet registered; beginning registration");
             }
             Err(e) if Self::is_registered_daemon_auth_error(&e) => {
                 // Daemon exists but API key is invalid/revoked - fail immediately
@@ -382,7 +367,7 @@ impl DaemonRuntimeService {
             Err(e) if Self::is_unregistered_auth_error(&e) => {
                 // Unregistered daemon with invalid key - likely onboarding scenario
                 // Proceed to registration which has retry logic
-                tracing::info!(
+                tracing::warn!(
                     target: LOG_TARGET,
                     "  Status:          API key not yet active, attempting registration with retry"
                 );

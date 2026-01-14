@@ -399,6 +399,24 @@ impl ApiError {
         )
     }
 
+    /// Forbidden (403) - daemon API key has expired.
+    /// Uses "Invalid API key:" prefix for backward compatibility with daemons < v0.13.5.
+    pub fn daemon_api_key_expired() -> Self {
+        Self::new(
+            StatusCode::FORBIDDEN,
+            "Invalid API key: this Daemon API Key has expired".to_string(),
+        )
+    }
+
+    /// Forbidden (403) - daemon API key is disabled.
+    /// Uses "Invalid API key:" prefix for backward compatibility with daemons < v0.13.5.
+    pub fn daemon_api_key_disabled() -> Self {
+        Self::new(
+            StatusCode::FORBIDDEN,
+            "Invalid API key: this Daemon API Key is disabled".to_string(),
+        )
+    }
+
     /// Bad request (400) - at least one entity required
     pub fn entity_required<T: Entity>() -> Self {
         Self::coded(

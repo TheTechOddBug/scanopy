@@ -6524,14 +6524,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-01-15T18:16:42.426266Z",
-              "id": "525fadb8-2ece-42e9-8add-c7008932e4e1",
+              "created_at": "2026-01-16T05:39:29.565315Z",
+              "id": "59ee8306-9fbf-4710-8a99-8d6d0a40706b",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-01-15T18:16:42.426266Z"
+              "updated_at": "2026-01-16T05:39:29.565315Z"
             }
           },
           "error": {
@@ -7821,14 +7821,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-01-15T18:16:42.423406Z",
-                  "id": "88e6d8eb-5155-4f09-adac-2eadff8e913c",
+                  "created_at": "2026-01-16T05:39:29.561236Z",
+                  "id": "fe85fc43-8911-4510-8d15-323196867381",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-01-15T18:16:42.423406Z"
+                  "updated_at": "2026-01-16T05:39:29.561236Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -7837,7 +7837,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "SABnzbd",
+              "service_definition": "Dhcp Server",
               "source": {
                 "type": "Manual"
               },
@@ -8944,14 +8944,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-01-15T18:16:42.418490Z",
-          "id": "03d55a3f-93d2-4cca-b68d-cbe3b2b43a3e",
+          "created_at": "2026-01-16T05:39:29.554092Z",
+          "id": "cfaf65d3-6502-4fc7-aec5-0d48ac348867",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-01-15T18:16:42.418490Z"
+          "updated_at": "2026-01-16T05:39:29.554092Z"
         }
       },
       "BindingBase": {
@@ -9354,7 +9354,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "SABnzbd",
+              "service_definition": "Dhcp Server",
               "tags": [],
               "virtualization": null
             }
@@ -12018,14 +12018,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-01-15T18:16:42.422565Z",
-                    "id": "b94df5a2-e26c-435a-a357-ee11314739a2",
+                    "created_at": "2026-01-16T05:39:29.560379Z",
+                    "id": "e4367e72-df21-43cd-8a72-46b885fe8ba0",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-01-15T18:16:42.422565Z"
+                    "updated_at": "2026-01-16T05:39:29.560379Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -12034,7 +12034,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "SABnzbd",
+                "service_definition": "Dhcp Server",
                 "source": {
                   "type": "Manual"
                 },
@@ -12904,14 +12904,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-01-15T18:16:42.418441Z",
-              "id": "3959b8ae-f6a9-44a3-b6ed-1e5ed20a4bc8",
+              "created_at": "2026-01-16T05:39:29.554023Z",
+              "id": "1546838b-5eb6-493e-8a6e-731c4316679c",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-01-15T18:16:42.418441Z"
+              "updated_at": "2026-01-16T05:39:29.554023Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -12920,7 +12920,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "SABnzbd",
+          "service_definition": "Dhcp Server",
           "source": {
             "type": "Manual"
           },
@@ -13719,6 +13719,36 @@
           }
         }
       },
+      "TopologyEdgeHandleUpdate": {
+        "type": "object",
+        "description": "Lightweight request type for updating an edge's handles.\n\nUsed for edge reconnect operations - instead of sending the entire topology,\nonly sends the edge ID and new handle positions.\nFixes HTTP 413 errors on edge reconnect operations.",
+        "required": [
+          "network_id",
+          "edge_id",
+          "source_handle",
+          "target_handle"
+        ],
+        "properties": {
+          "edge_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the edge to update"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Network ID for authorization"
+          },
+          "source_handle": {
+            "$ref": "#/components/schemas/EdgeHandle",
+            "description": "New source handle position"
+          },
+          "target_handle": {
+            "$ref": "#/components/schemas/EdgeHandle",
+            "description": "New target handle position"
+          }
+        }
+      },
       "TopologyLocalOptions": {
         "type": "object",
         "required": [
@@ -13742,6 +13772,88 @@
           },
           "no_fade_edges": {
             "type": "boolean"
+          }
+        }
+      },
+      "TopologyMetadataUpdate": {
+        "type": "object",
+        "description": "Lightweight request type for updating topology metadata.\n\nUsed for editing topology name/parent - instead of sending the entire topology\n(which includes all hosts, interfaces, services, etc.), only sends the metadata fields.\nFixes HTTP 413 errors on metadata edit operations.",
+        "required": [
+          "network_id",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "New name for the topology"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Network ID for authorization"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "New parent topology ID (optional)"
+          }
+        }
+      },
+      "TopologyNodePositionUpdate": {
+        "type": "object",
+        "description": "Lightweight request type for updating a single node's position.\n\nUsed for drag operations - instead of sending the entire topology (which can be\nseveral megabytes for large networks), only sends the node ID and new position.\nFixes HTTP 413 errors on drag operations.",
+        "required": [
+          "network_id",
+          "node_id",
+          "position"
+        ],
+        "properties": {
+          "network_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Network ID for authorization"
+          },
+          "node_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the node to update"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Ixy",
+            "description": "New position for the node"
+          }
+        }
+      },
+      "TopologyNodeResizeUpdate": {
+        "type": "object",
+        "description": "Lightweight request type for updating a node's size and position.\n\nUsed for subnet resize operations - instead of sending the entire topology,\nonly sends the node ID, new size, and new position.\nFixes HTTP 413 errors on resize operations.",
+        "required": [
+          "network_id",
+          "node_id",
+          "size",
+          "position"
+        ],
+        "properties": {
+          "network_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Network ID for authorization"
+          },
+          "node_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the node to update"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Ixy",
+            "description": "New position for the node"
+          },
+          "size": {
+            "$ref": "#/components/schemas/Uxy",
+            "description": "New size for the node"
           }
         }
       },

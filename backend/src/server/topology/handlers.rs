@@ -17,7 +17,10 @@ use crate::server::{
     },
     topology::{
         service::main::BuildGraphParams,
-        types::base::{SetEntitiesParams, Topology, TopologyRebuildRequest},
+        types::base::{
+            SetEntitiesParams, Topology, TopologyEdgeHandleUpdate, TopologyMetadataUpdate,
+            TopologyNodePositionUpdate, TopologyNodeResizeUpdate, TopologyRebuildRequest,
+        },
     },
 };
 use axum::{
@@ -52,6 +55,10 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         ))
         .routes(routes!(refresh))
         .routes(routes!(rebuild))
+        .routes(routes!(update_node_position))
+        .routes(routes!(update_node_resize))
+        .routes(routes!(update_edge_handles))
+        .routes(routes!(update_metadata))
         .routes(routes!(lock))
         .routes(routes!(unlock))
         // SSE endpoint (not well-supported by OpenAPI)
@@ -398,6 +405,233 @@ async fn rebuild(
     }
 
     // Return will be handled through event subscriber which triggers SSE
+
+    Ok(Json(ApiResponse::success(())))
+}
+
+/// Update a single node's position
+///
+/// Lightweight endpoint for drag operations. Instead of sending the entire topology
+/// (which can be several megabytes), only sends the node ID and new position.
+/// Fixes HTTP 413 errors on drag operations for large topologies.
+#[utoipa::path(
+    post,
+    path = "/{id}/node-position",
+    tags = ["topology", "internal"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = TopologyNodePositionUpdate,
+    responses(
+        (status = 200, description = "Node position updated", body = EmptyApiResponse),
+        (status = 403, description = "Access denied", body = ApiErrorResponse),
+        (status = 404, description = "Topology or node not found", body = ApiErrorResponse),
+    ),
+     security(("user_api_key" = []), ("session" = []))
+)]
+async fn update_node_position(
+    State(state): State<Arc<AppState>>,
+    auth: Authorized<Member>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<TopologyNodePositionUpdate>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let network_ids = auth.network_ids();
+
+    // Validate user has access to this topology's network
+    if !network_ids.contains(&request.network_id) {
+        return Err(ApiError::forbidden(
+            "You don't have access to this topology's network",
+        ));
+    }
+
+    let service = Topology::get_service(&state);
+
+    // Fetch the existing topology
+    let mut topology = service
+        .get_by_id(&id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(format!("Topology {} not found", id)))?;
+
+    // Find and update the node's position
+    let node = topology
+        .base
+        .nodes
+        .iter_mut()
+        .find(|n| n.id == request.node_id)
+        .ok_or_else(|| {
+            ApiError::not_found(format!("Node {} not found in topology", request.node_id))
+        })?;
+
+    node.position = request.position;
+
+    service.update(&mut topology, auth.into_entity()).await?;
+
+    Ok(Json(ApiResponse::success(())))
+}
+
+/// Update an edge's handles
+///
+/// Lightweight endpoint for edge reconnect operations. Instead of sending the entire
+/// topology, only sends the edge ID and new handle positions.
+/// Fixes HTTP 413 errors on edge reconnect operations for large topologies.
+#[utoipa::path(
+    post,
+    path = "/{id}/edge-handles",
+    tags = ["topology", "internal"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = TopologyEdgeHandleUpdate,
+    responses(
+        (status = 200, description = "Edge handles updated", body = EmptyApiResponse),
+        (status = 403, description = "Access denied", body = ApiErrorResponse),
+        (status = 404, description = "Topology or edge not found", body = ApiErrorResponse),
+    ),
+     security(("user_api_key" = []), ("session" = []))
+)]
+async fn update_edge_handles(
+    State(state): State<Arc<AppState>>,
+    auth: Authorized<Member>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<TopologyEdgeHandleUpdate>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let network_ids = auth.network_ids();
+
+    // Validate user has access to this topology's network
+    if !network_ids.contains(&request.network_id) {
+        return Err(ApiError::forbidden(
+            "You don't have access to this topology's network",
+        ));
+    }
+
+    let service = Topology::get_service(&state);
+
+    // Fetch the existing topology
+    let mut topology = service
+        .get_by_id(&id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(format!("Topology {} not found", id)))?;
+
+    // Find and update the edge's handles
+    let edge = topology
+        .base
+        .edges
+        .iter_mut()
+        .find(|e| e.id == request.edge_id)
+        .ok_or_else(|| {
+            ApiError::not_found(format!("Edge {} not found in topology", request.edge_id))
+        })?;
+
+    edge.source_handle = request.source_handle;
+    edge.target_handle = request.target_handle;
+
+    service.update(&mut topology, auth.into_entity()).await?;
+
+    Ok(Json(ApiResponse::success(())))
+}
+
+/// Update a node's size and position
+///
+/// Lightweight endpoint for subnet resize operations. Instead of sending the entire
+/// topology, only sends the node ID, new size, and new position.
+/// Fixes HTTP 413 errors on resize operations for large topologies.
+#[utoipa::path(
+    post,
+    path = "/{id}/node-resize",
+    tags = ["topology", "internal"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = TopologyNodeResizeUpdate,
+    responses(
+        (status = 200, description = "Node resized", body = EmptyApiResponse),
+        (status = 403, description = "Access denied", body = ApiErrorResponse),
+        (status = 404, description = "Topology or node not found", body = ApiErrorResponse),
+    ),
+     security(("user_api_key" = []), ("session" = []))
+)]
+async fn update_node_resize(
+    State(state): State<Arc<AppState>>,
+    auth: Authorized<Member>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<TopologyNodeResizeUpdate>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let network_ids = auth.network_ids();
+
+    // Validate user has access to this topology's network
+    if !network_ids.contains(&request.network_id) {
+        return Err(ApiError::forbidden(
+            "You don't have access to this topology's network",
+        ));
+    }
+
+    let service = Topology::get_service(&state);
+
+    // Fetch the existing topology
+    let mut topology = service
+        .get_by_id(&id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(format!("Topology {} not found", id)))?;
+
+    // Find and update the node's size and position
+    let node = topology
+        .base
+        .nodes
+        .iter_mut()
+        .find(|n| n.id == request.node_id)
+        .ok_or_else(|| {
+            ApiError::not_found(format!("Node {} not found in topology", request.node_id))
+        })?;
+
+    node.size = request.size;
+    node.position = request.position;
+
+    service.update(&mut topology, auth.into_entity()).await?;
+
+    Ok(Json(ApiResponse::success(())))
+}
+
+/// Update topology metadata
+///
+/// Lightweight endpoint for editing topology name and parent. Instead of sending
+/// the entire topology (which includes all hosts, interfaces, services, etc.),
+/// only sends the metadata fields.
+/// Fixes HTTP 413 errors on metadata edit operations for large topologies.
+#[utoipa::path(
+    post,
+    path = "/{id}/metadata",
+    tags = ["topology", "internal"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = TopologyMetadataUpdate,
+    responses(
+        (status = 200, description = "Metadata updated", body = EmptyApiResponse),
+        (status = 403, description = "Access denied", body = ApiErrorResponse),
+        (status = 404, description = "Topology not found", body = ApiErrorResponse),
+    ),
+     security(("user_api_key" = []), ("session" = []))
+)]
+async fn update_metadata(
+    State(state): State<Arc<AppState>>,
+    auth: Authorized<Member>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<TopologyMetadataUpdate>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let network_ids = auth.network_ids();
+
+    // Validate user has access to this topology's network
+    if !network_ids.contains(&request.network_id) {
+        return Err(ApiError::forbidden(
+            "You don't have access to this topology's network",
+        ));
+    }
+
+    let service = Topology::get_service(&state);
+
+    // Fetch the existing topology
+    let mut topology = service
+        .get_by_id(&id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(format!("Topology {} not found", id)))?;
+
+    // Update metadata fields
+    topology.base.name = request.name;
+    topology.base.parent_id = request.parent_id;
+
+    service.update(&mut topology, auth.into_entity()).await?;
 
     Ok(Json(ApiResponse::success(())))
 }

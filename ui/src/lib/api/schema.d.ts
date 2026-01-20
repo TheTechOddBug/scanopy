@@ -1763,6 +1763,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topology/{id}/edge-handles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update an edge's handles
+         * @description Lightweight endpoint for edge reconnect operations. Instead of sending the entire
+         *     topology, only sends the edge ID and new handle positions.
+         *     Fixes HTTP 413 errors on edge reconnect operations for large topologies.
+         */
+        post: operations["update_edge_handles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topology/{id}/lock": {
         parameters: {
             query?: never;
@@ -1774,6 +1796,73 @@ export interface paths {
         put?: never;
         /** Lock a topology */
         post: operations["lock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topology/{id}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update topology metadata
+         * @description Lightweight endpoint for editing topology name and parent. Instead of sending
+         *     the entire topology (which includes all hosts, interfaces, services, etc.),
+         *     only sends the metadata fields.
+         *     Fixes HTTP 413 errors on metadata edit operations for large topologies.
+         */
+        post: operations["update_metadata"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topology/{id}/node-position": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update a single node's position
+         * @description Lightweight endpoint for drag operations. Instead of sending the entire topology
+         *     (which can be several megabytes), only sends the node ID and new position.
+         *     Fixes HTTP 413 errors on drag operations for large topologies.
+         */
+        post: operations["update_node_position"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topology/{id}/node-resize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update a node's size and position
+         * @description Lightweight endpoint for subnet resize operations. Instead of sending the entire
+         *     topology, only sends the node ID, new size, and new position.
+         *     Fixes HTTP 413 errors on resize operations for large topologies.
+         */
+        post: operations["update_node_resize"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1939,7 +2028,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.13.5"
+         *       "server_version": "0.13.6"
          *     }
          */
         ApiMeta: {
@@ -1950,7 +2039,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.13.5
+             * @example 0.13.6
              */
             server_version: string;
         };
@@ -1964,14 +2053,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-01-13T22:33:31.255874Z",
-             *       "id": "0af52bdb-4f50-4c41-a558-3f62c024af16",
+             *       "created_at": "2026-01-16T02:01:08.441628Z",
+             *       "id": "9861b3e9-e450-4c3c-8f81-4c7d71bd90d0",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-01-13T22:33:31.255874Z"
+             *       "updated_at": "2026-01-16T02:01:08.441628Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2374,14 +2463,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-01-13T22:33:31.251337Z",
-             *           "id": "2adaa4fc-d1a9-4b4b-ae39-c59e23107fab",
+             *           "created_at": "2026-01-16T02:01:08.437536Z",
+             *           "id": "f95decaa-9146-4d4f-b808-16d01afe11a7",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-01-13T22:33:31.251337Z"
+             *           "updated_at": "2026-01-16T02:01:08.437536Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -2390,7 +2479,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Veeam",
+             *       "service_definition": "Dhcp Server",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2673,14 +2762,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-01-13T22:33:31.241489Z",
-         *       "id": "e95ed47c-ed9d-4252-a7a3-e47f27d1c8fc",
+         *       "created_at": "2026-01-16T02:01:08.428826Z",
+         *       "id": "46a00c70-27f5-4efa-828c-79a3b7c624e7",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-01-13T22:33:31.241489Z"
+         *       "updated_at": "2026-01-16T02:01:08.428826Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -2844,7 +2933,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Veeam",
+         *           "service_definition": "Dhcp Server",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3579,7 +3668,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.13.5"
+         *       "server_version": "0.13.6"
          *     }
          */
         PaginatedApiMeta: {
@@ -3592,7 +3681,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.13.5
+             * @example 0.13.6
              */
             server_version: string;
         };
@@ -3930,14 +4019,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-01-13T22:33:31.241392Z",
-         *           "id": "276d1c1c-f8e2-452f-80b6-30703f2a043e",
+         *           "created_at": "2026-01-16T02:01:08.428739Z",
+         *           "id": "b4c64574-22ff-4f93-92d9-08199d3d3c3a",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-01-13T22:33:31.241392Z"
+         *           "updated_at": "2026-01-16T02:01:08.428739Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -3946,7 +4035,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Veeam",
+         *       "service_definition": "Dhcp Server",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -4188,11 +4277,99 @@ export interface components {
             subnets: components["schemas"]["Subnet"][];
             tags: string[];
         };
+        /**
+         * @description Lightweight request type for updating an edge's handles.
+         *
+         *     Used for edge reconnect operations - instead of sending the entire topology,
+         *     only sends the edge ID and new handle positions.
+         *     Fixes HTTP 413 errors on edge reconnect operations.
+         */
+        TopologyEdgeHandleUpdate: {
+            /**
+             * Format: uuid
+             * @description ID of the edge to update
+             */
+            edge_id: string;
+            /**
+             * Format: uuid
+             * @description Network ID for authorization
+             */
+            network_id: string;
+            /** @description New source handle position */
+            source_handle: components["schemas"]["EdgeHandle"];
+            /** @description New target handle position */
+            target_handle: components["schemas"]["EdgeHandle"];
+        };
         TopologyLocalOptions: {
             hide_edge_types: components["schemas"]["EdgeTypeDiscriminants"][];
             hide_resize_handles: boolean;
             left_zone_title: string;
             no_fade_edges: boolean;
+        };
+        /**
+         * @description Lightweight request type for updating topology metadata.
+         *
+         *     Used for editing topology name/parent - instead of sending the entire topology
+         *     (which includes all hosts, interfaces, services, etc.), only sends the metadata fields.
+         *     Fixes HTTP 413 errors on metadata edit operations.
+         */
+        TopologyMetadataUpdate: {
+            /** @description New name for the topology */
+            name: string;
+            /**
+             * Format: uuid
+             * @description Network ID for authorization
+             */
+            network_id: string;
+            /**
+             * Format: uuid
+             * @description New parent topology ID (optional)
+             */
+            parent_id?: string | null;
+        };
+        /**
+         * @description Lightweight request type for updating a single node's position.
+         *
+         *     Used for drag operations - instead of sending the entire topology (which can be
+         *     several megabytes for large networks), only sends the node ID and new position.
+         *     Fixes HTTP 413 errors on drag operations.
+         */
+        TopologyNodePositionUpdate: {
+            /**
+             * Format: uuid
+             * @description Network ID for authorization
+             */
+            network_id: string;
+            /**
+             * Format: uuid
+             * @description ID of the node to update
+             */
+            node_id: string;
+            /** @description New position for the node */
+            position: components["schemas"]["Ixy"];
+        };
+        /**
+         * @description Lightweight request type for updating a node's size and position.
+         *
+         *     Used for subnet resize operations - instead of sending the entire topology,
+         *     only sends the node ID, new size, and new position.
+         *     Fixes HTTP 413 errors on resize operations.
+         */
+        TopologyNodeResizeUpdate: {
+            /**
+             * Format: uuid
+             * @description Network ID for authorization
+             */
+            network_id: string;
+            /**
+             * Format: uuid
+             * @description ID of the node to update
+             */
+            node_id: string;
+            /** @description New position for the node */
+            position: components["schemas"]["Ixy"];
+            /** @description New size for the node */
+            size: components["schemas"]["Uxy"];
         };
         TopologyOptions: {
             local: components["schemas"]["TopologyLocalOptions"];
@@ -8889,6 +9066,51 @@ export interface operations {
             };
         };
     };
+    update_edge_handles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Topology ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopologyEdgeHandleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Edge handles updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Topology or edge not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     lock: {
         parameters: {
             query?: never;
@@ -8920,6 +9142,141 @@ export interface operations {
                 };
             };
             /** @description Topology not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    update_metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Topology ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopologyMetadataUpdate"];
+            };
+        };
+        responses: {
+            /** @description Metadata updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Topology not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    update_node_position: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Topology ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopologyNodePositionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Node position updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Topology or node not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    update_node_resize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Topology ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopologyNodeResizeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Node resized */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Topology or node not found */
             404: {
                 headers: {
                     [name: string]: unknown;

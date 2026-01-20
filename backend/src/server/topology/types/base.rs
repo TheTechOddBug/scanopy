@@ -7,8 +7,8 @@ use crate::server::services::r#impl::base::Service;
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::subnets::r#impl::base::Subnet;
-use crate::server::topology::types::edges::Edge;
-use crate::server::topology::types::edges::EdgeTypeDiscriminants;
+use crate::server::topology::types::edges::{Edge, EdgeHandle, EdgeTypeDiscriminants};
+use crate::server::topology::types::layout::{Ixy, Uxy};
 use crate::server::topology::types::nodes::Node;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -247,4 +247,68 @@ pub struct TopologyRebuildRequest {
     /// Existing edges for reference during rebuild
     #[serde(default)]
     pub edges: Vec<Edge>,
+}
+
+/// Lightweight request type for updating a single node's position.
+///
+/// Used for drag operations - instead of sending the entire topology (which can be
+/// several megabytes for large networks), only sends the node ID and new position.
+/// Fixes HTTP 413 errors on drag operations.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TopologyNodePositionUpdate {
+    /// Network ID for authorization
+    pub network_id: Uuid,
+    /// ID of the node to update
+    pub node_id: Uuid,
+    /// New position for the node
+    pub position: Ixy,
+}
+
+/// Lightweight request type for updating an edge's handles.
+///
+/// Used for edge reconnect operations - instead of sending the entire topology,
+/// only sends the edge ID and new handle positions.
+/// Fixes HTTP 413 errors on edge reconnect operations.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TopologyEdgeHandleUpdate {
+    /// Network ID for authorization
+    pub network_id: Uuid,
+    /// ID of the edge to update
+    pub edge_id: Uuid,
+    /// New source handle position
+    pub source_handle: EdgeHandle,
+    /// New target handle position
+    pub target_handle: EdgeHandle,
+}
+
+/// Lightweight request type for updating a node's size and position.
+///
+/// Used for subnet resize operations - instead of sending the entire topology,
+/// only sends the node ID, new size, and new position.
+/// Fixes HTTP 413 errors on resize operations.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TopologyNodeResizeUpdate {
+    /// Network ID for authorization
+    pub network_id: Uuid,
+    /// ID of the node to update
+    pub node_id: Uuid,
+    /// New size for the node
+    pub size: Uxy,
+    /// New position for the node
+    pub position: Ixy,
+}
+
+/// Lightweight request type for updating topology metadata.
+///
+/// Used for editing topology name/parent - instead of sending the entire topology
+/// (which includes all hosts, interfaces, services, etc.), only sends the metadata fields.
+/// Fixes HTTP 413 errors on metadata edit operations.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TopologyMetadataUpdate {
+    /// Network ID for authorization
+    pub network_id: Uuid,
+    /// New name for the topology
+    pub name: String,
+    /// New parent topology ID (optional)
+    pub parent_id: Option<Uuid>,
 }

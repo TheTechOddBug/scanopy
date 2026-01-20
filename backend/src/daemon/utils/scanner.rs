@@ -163,15 +163,15 @@ pub async fn probe_host_capacity(ip: IpAddr, timeout_ms: u64) -> HostCapacityPro
 
     // Common TCP ports to probe - mix of services found on different device types
     // Using PortType enum for named constants
-    let probe_ports = [                                                                                                                                                
-        PortType::Ssh,      // 22                                                                                                                                      
-        PortType::Telnet,   // 23                                                                                                                                      
-        PortType::Http,     // 80                                                                                                                                      
-        PortType::Https,    // 443                                                                                                                                     
-        PortType::Samba,    // 445 - Windows/NAS                                                                                                                       
-        PortType::Http8080, // 8080 - alternate web                                                                                                                    
-        PortType::Rdp,      // 3389                                                                                                                                    
-    ]; 
+    let probe_ports = [
+        PortType::Ssh,      // 22
+        PortType::Telnet,   // 23
+        PortType::Http,     // 80
+        PortType::Https,    // 443
+        PortType::Samba,    // 445 - Windows/NAS
+        PortType::Http8080, // 8080 - alternate web
+        PortType::Rdp,      // 3389
+    ];
 
     let probe_timeout = Duration::from_millis(timeout_ms);
     let mut response_times: Vec<Duration> = Vec::new();
@@ -210,19 +210,20 @@ pub async fn probe_host_capacity(ip: IpAddr, timeout_ms: u64) -> HostCapacityPro
     };
 
     // Determine host capacity based on probe results
-    let recommended_batch_size = if responsive_count >= 3 && avg_response_time < Duration::from_millis(100) {                                                          
-        // Multiple services + very fast = robust server                                                                                                               
-        PORT_SCAN_BATCH_MAX                                                                                                                                            
-    } else if responsive_count >= 2 && avg_response_time < Duration::from_millis(200) {                                                                                
-        // Good responsiveness                                                                                                                                         
-        PORT_SCAN_BATCH_HIGH                                                                                                                                           
-    } else if responsive_count >= 1 && avg_response_time < Duration::from_millis(500) {                                                                                
-        // Some response, moderate speed                                                                                                                               
-        PORT_SCAN_BATCH_MED                                                                                                                                            
-    } else {                                                                                                                                                           
-        // Slow, filtered, or no response - likely constrained device                                                                                                  
-        PORT_SCAN_BATCH_LOW                                                                                                                                            
-    }; 
+    let recommended_batch_size =
+        if responsive_count >= 3 && avg_response_time < Duration::from_millis(100) {
+            // Multiple services + very fast = robust server
+            PORT_SCAN_BATCH_MAX
+        } else if responsive_count >= 2 && avg_response_time < Duration::from_millis(200) {
+            // Good responsiveness
+            PORT_SCAN_BATCH_HIGH
+        } else if responsive_count >= 1 && avg_response_time < Duration::from_millis(500) {
+            // Some response, moderate speed
+            PORT_SCAN_BATCH_MED
+        } else {
+            // Slow, filtered, or no response - likely constrained device
+            PORT_SCAN_BATCH_LOW
+        };
 
     tracing::debug!(
         ip = %ip,

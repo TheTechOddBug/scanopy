@@ -5,7 +5,8 @@ use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySes
 use crate::daemon::utils::arp::{self, ArpScanResult};
 use crate::daemon::utils::base::ConcurrentPipelineOps;
 use crate::daemon::utils::scanner::{
-    PORT_SCAN_BATCH_MAX, can_arp_scan, probe_host_capacity, scan_endpoints, scan_tcp_ports, scan_udp_ports
+    PORT_SCAN_BATCH_MAX, can_arp_scan, probe_host_capacity, scan_endpoints, scan_tcp_ports,
+    scan_udp_ports,
 };
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
 use crate::server::interfaces::r#impl::base::{Interface, InterfaceBase};

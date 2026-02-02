@@ -129,8 +129,14 @@ async fn integration_tests() {
     println!("Phase 5: Full Integration Verification");
     println!("============================================================\n");
 
-    // Clear and run ServerPoll discovery
+    // Clear DB data and in-memory session state
     clear_discovery_data().expect("Failed to clear discovery data");
+
+    // Cancel any stale sessions from compat tests that may still be in memory.
+    // This prevents the daemon from processing old fixture sessions instead of the new one.
+    compat::cancel_server_discovery_sessions(&client)
+        .await
+        .expect("Failed to clear stale discovery sessions");
 
     // Trigger discovery for the ServerPoll daemon and get the session_id
     let session_id = discovery::trigger_discovery(&client, serverpoll_daemon_id, network.id)

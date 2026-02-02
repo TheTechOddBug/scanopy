@@ -256,6 +256,98 @@ pub async fn populate_demo_data(
         all_created_services.extend(host_response.services);
     }
 
+    // 4.5 Apply deferred neighbor updates now that all if_entries exist
+    // Build a lookup map: (host_name, if_index) -> if_entry
+    use crate::server::if_entries::r#impl::base::Neighbor;
+    use std::collections::HashMap;
+
+    let mut if_entry_lookup: HashMap<
+        (String, i32),
+        crate::server::if_entries::r#impl::base::IfEntry,
+    > = HashMap::new();
+
+    // Get all hosts to map host_id -> host_name
+    // Filter by network_ids since hosts belong to networks, not directly to organizations
+    let network_ids: Vec<Uuid> = created_networks.iter().map(|n| n.id).collect();
+    let all_hosts = state
+        .services
+        .host_service
+        .get_all(crate::server::shared::storage::filter::StorableFilter::<
+            crate::server::hosts::r#impl::base::Host,
+        >::new_from_network_ids(&network_ids))
+        .await?;
+    let host_id_to_name: HashMap<Uuid, String> = all_hosts
+        .iter()
+        .map(|h| (h.id, h.base.name.clone()))
+        .collect();
+
+    // Get all if_entries and index by (host_name, if_index)
+    for host in &all_hosts {
+        let entries = state
+            .services
+            .if_entry_service
+            .get_for_host(&host.id)
+            .await?;
+        for entry in entries {
+            if let Some(host_name) = host_id_to_name.get(&entry.base.host_id) {
+                if_entry_lookup.insert((host_name.clone(), entry.base.if_index), entry);
+            }
+        }
+    }
+
+    // Apply neighbor updates using the lookup
+    tracing::info!(
+        lookup_size = if_entry_lookup.len(),
+        "Built if_entry lookup for neighbor updates"
+    );
+    for (key, entry) in &if_entry_lookup {
+        tracing::debug!(
+            host_name = %key.0,
+            if_index = key.1,
+            if_entry_id = %entry.id,
+            "Lookup entry"
+        );
+    }
+
+    for neighbor_update in demo_data.neighbor_updates {
+        let source_key = (
+            neighbor_update.source_host_name.clone(),
+            neighbor_update.source_if_index,
+        );
+        let target_key = (
+            neighbor_update.target_host_name.clone(),
+            neighbor_update.target_if_index,
+        );
+
+        let source_entry = if_entry_lookup.get(&source_key);
+        let target_entry = if_entry_lookup.get(&target_key);
+
+        tracing::info!(
+            source_host = %neighbor_update.source_host_name,
+            source_if_index = neighbor_update.source_if_index,
+            target_host = %neighbor_update.target_host_name,
+            target_if_index = neighbor_update.target_if_index,
+            source_found = source_entry.is_some(),
+            target_found = target_entry.is_some(),
+            "Processing neighbor update"
+        );
+
+        if let (Some(source_entry), Some(target_entry)) = (source_entry, target_entry) {
+            let mut updated_entry = source_entry.clone();
+            updated_entry.base.neighbor = Some(Neighbor::IfEntry(target_entry.id));
+            state
+                .services
+                .if_entry_service
+                .update(&mut updated_entry, entity.clone())
+                .await?;
+            tracing::info!(
+                source_id = %source_entry.id,
+                target_id = %target_entry.id,
+                "Applied neighbor update"
+            );
+        }
+    }
+
     // 5. Daemons (depends on hosts, networks, subnets)
     for daemon in demo_data.daemons {
         state

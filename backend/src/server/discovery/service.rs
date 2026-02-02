@@ -31,6 +31,7 @@ pub struct DiscoveryService {
     session_last_updated: RwLock<HashMap<Uuid, chrono::DateTime<Utc>>>,
     update_tx: broadcast::Sender<DiscoveryUpdatePayload>,
     scheduler: Option<Arc<RwLock<JobScheduler>>>,
+    job_ids: RwLock<HashMap<Uuid, Uuid>>, // discovery_id -> scheduler job_id mapping
     event_bus: Arc<EventBus>,
     entity_tag_service: Arc<EntityTagService>,
     snmp_credential_service: Arc<SnmpCredentialService>,
@@ -78,6 +79,7 @@ impl DiscoveryService {
             session_last_updated: RwLock::new(HashMap::new()),
             update_tx: tx,
             scheduler: Some(Arc::new(RwLock::new(scheduler))),
+            job_ids: RwLock::new(HashMap::new()),
             event_bus,
             entity_tag_service,
             snmp_credential_service,
@@ -255,9 +257,20 @@ impl DiscoveryService {
             } = &current.base.run_type
             && current_cron != new_cron
         {
-            // Remove old schedule first
+            // Remove old schedule first using the actual job_id
             if let Some(scheduler) = &self.scheduler {
-                let _ = scheduler.write().await.remove(&discovery.id).await;
+                if let Some(job_id) = self.job_ids.read().await.get(&discovery.id).copied() {
+                    if let Err(e) = scheduler.write().await.remove(&job_id).await {
+                        tracing::warn!(
+                            discovery_id = %discovery.id,
+                            job_id = %job_id,
+                            error = ?e,
+                            "Failed to remove old scheduled job"
+                        );
+                    } else {
+                        self.job_ids.write().await.remove(&discovery.id);
+                    }
+                }
             }
 
             // Update in DB first
@@ -329,11 +342,22 @@ impl DiscoveryService {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Discovery not found"))?;
 
-        // If it's scheduled, remove from scheduler first
+        // If it's scheduled, remove from scheduler first using the actual job_id
         if matches!(discovery.base.run_type, RunType::Scheduled { .. })
             && let Some(scheduler) = &self.scheduler
         {
-            let _ = scheduler.write().await.remove(id).await;
+            if let Some(job_id) = self.job_ids.read().await.get(id).copied() {
+                if let Err(e) = scheduler.write().await.remove(&job_id).await {
+                    tracing::warn!(
+                        discovery_id = %id,
+                        job_id = %job_id,
+                        error = ?e,
+                        "Failed to remove scheduled job during deletion"
+                    );
+                } else {
+                    self.job_ids.write().await.remove(id);
+                }
+            }
             tracing::debug!("Removed scheduled job for discovery {}", id);
         }
 
@@ -373,6 +397,9 @@ impl DiscoveryService {
             .scheduler
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Scheduler not initialized"))?;
+
+        // Clear any stale job_id mappings from previous runs
+        self.job_ids.write().await.clear();
 
         let filter = StorableFilter::<Discovery>::new_for_scheduled_discoveries();
 
@@ -481,9 +508,13 @@ impl DiscoveryService {
 
         let job_id = scheduler.write().await.add(job).await?;
 
+        // Store the mapping so we can remove the job later when the schedule is updated
+        service.job_ids.write().await.insert(discovery_id, job_id);
+
         tracing::debug!(
-            "Scheduled discovery {} with cron: {}",
+            "Scheduled discovery {} with job_id {} and cron: {}",
             discovery_id,
+            job_id,
             cron_schedule
         );
         Ok(job_id)

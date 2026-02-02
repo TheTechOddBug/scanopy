@@ -124,6 +124,29 @@ impl DiscoveryService {
             .collect()
     }
 
+    /// Clear all sessions for a daemon from in-memory state.
+    /// Used by tests to ensure clean state between phases.
+    pub async fn clear_sessions_for_daemon(&self, daemon_id: &Uuid) {
+        let mut sessions = self.sessions.write().await;
+        let mut daemon_sessions = self.daemon_sessions.write().await;
+        let mut session_last_updated = self.session_last_updated.write().await;
+        let mut daemon_pull_cancellations = self.daemon_pull_cancellations.write().await;
+
+        if let Some(session_ids) = daemon_sessions.remove(daemon_id) {
+            for session_id in &session_ids {
+                sessions.remove(session_id);
+                session_last_updated.remove(session_id);
+            }
+            tracing::debug!(
+                daemon_id = %daemon_id,
+                session_count = session_ids.len(),
+                "Cleared all sessions for daemon"
+            );
+        }
+
+        daemon_pull_cancellations.remove(daemon_id);
+    }
+
     /// Check if daemon has an active (non-terminal, non-pending) discovery session.
     /// This is used to prevent dispatching new work while a session is in progress.
     pub async fn has_active_session_for_daemon(&self, daemon_id: &Uuid) -> bool {

@@ -94,13 +94,13 @@ impl CrudService<Subnet> for SubnetService {
                             if let Some(metadata) = metadata.first() {
                                 existing_metadata.iter().any(|other_m| {
                                     match (&metadata.discovery_type, &other_m.discovery_type) {
-                                        // For Docker bridge networks, only return existing if they originate from the same host.
-                                        // Docker defaults to the same subnet range for bridge networks, so different hosts
-                                        // can have the same CIDR without being considered a collision.
+                                        // Docker bridge networks need same-host deduplication because Docker
+                                        // defaults to the same CIDR (e.g., 172.17.0.0/16) on different hosts,
+                                        // so matching CIDRs don't indicate the same network.
                                         //
-                                        // However, MacVLAN and IpVLAN networks operate at L2 and appear as real hosts
-                                        // on the physical network, so they should be deduplicated by CIDR like regular
-                                        // LAN subnets regardless of which host discovered them.
+                                        // All other subnet types discovered through Docker (Lan, MacVlan, IpVlan, etc.)
+                                        // represent real network subnets and should deduplicate by CIDR regardless
+                                        // of which host discovered them.
                                         (
                                             DiscoveryType::Docker { host_id, .. },
                                             DiscoveryType::Docker {
@@ -108,13 +108,17 @@ impl CrudService<Subnet> for SubnetService {
                                                 ..
                                             },
                                         ) => {
-                                            // Always deduplicate MacVLAN/IpVLAN by CIDR
-                                            // Only deduplicate DockerBridge from same host
-                                            subnet.base.subnet_type.is_vlan_network()
-                                                || existing_subnet
+                                            // Only DockerBridge subnets need same-host deduplication
+                                            // (Docker defaults to same CIDR like 172.17.0.0/16 on different hosts)
+                                            //
+                                            // All other types (Lan, MacVlan, IpVlan, etc.) represent real
+                                            // network subnets and should deduplicate by CIDR regardless
+                                            // of which host discovered them
+                                            !subnet.base.subnet_type.is_docker_bridge()
+                                                || !existing_subnet
                                                     .base
                                                     .subnet_type
-                                                    .is_vlan_network()
+                                                    .is_docker_bridge()
                                                 || host_id == other_host_id
                                         }
                                         // Always return existing for other types

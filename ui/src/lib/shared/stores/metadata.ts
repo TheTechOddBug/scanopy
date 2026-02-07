@@ -49,6 +49,7 @@ export interface ServicedDefinitionMetadata {
 	manages_virtualization: 'vms' | 'containers';
 	has_logo: boolean;
 	logo_url: string;
+	has_raw_socket_endpoint: boolean;
 }
 
 export interface PermissionsMetadata {

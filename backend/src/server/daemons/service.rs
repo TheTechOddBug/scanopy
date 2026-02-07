@@ -915,6 +915,7 @@ impl DaemonService {
             subnet_ids: None,
             host_naming_fallback: HostNamingFallback::BestService,
             snmp_credentials: SnmpCredentialMapping::default(),
+            probe_raw_socket_ports: false,
         };
 
         let network_discovery = self

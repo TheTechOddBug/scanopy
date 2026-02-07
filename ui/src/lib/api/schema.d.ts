@@ -2662,14 +2662,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-04T00:43:18.244861Z",
-             *       "id": "d3b7aac5-4eb0-4819-b266-2d98d0bff490",
+             *       "created_at": "2026-02-07T20:10:22.568997Z",
+             *       "id": "a793eea5-4ee3-423e-9d70-c672cb9ba401",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-04T00:43:18.244861Z"
+             *       "updated_at": "2026-02-07T20:10:22.568997Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2900,14 +2900,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-04T00:43:18.229742Z",
-             *               "id": "36a5ea72-5869-4593-bae1-27ea182774e8",
+             *               "created_at": "2026-02-07T20:10:22.555467Z",
+             *               "id": "21c04cdf-2f28-4138-9d69-f85e2646cd43",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-04T00:43:18.229742Z"
+             *               "updated_at": "2026-02-07T20:10:22.555467Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -2916,7 +2916,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "NextCloud",
+             *           "service_definition": "Splunk",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3190,14 +3190,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-04T00:43:18.240132Z",
-             *           "id": "2b978448-db5a-4cd1-bf4c-bd507cf83e2f",
+             *           "created_at": "2026-02-07T20:10:22.564867Z",
+             *           "id": "816c7ce0-0928-4983-9757-d83603a8398c",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-04T00:43:18.240132Z"
+             *           "updated_at": "2026-02-07T20:10:22.564867Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3206,7 +3206,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "NextCloud",
+             *       "service_definition": "Splunk",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3502,14 +3502,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-04T00:43:18.229976Z",
-         *       "id": "96ac1253-fdba-4ab5-a63c-291b118954e2",
+         *       "created_at": "2026-02-07T20:10:22.555654Z",
+         *       "id": "57968e5c-cf88-487c-9e29-7e7a7306b80e",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-04T00:43:18.229976Z"
+         *       "updated_at": "2026-02-07T20:10:22.555654Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3674,7 +3674,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "NextCloud",
+         *           "service_definition": "Splunk",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3978,6 +3978,11 @@ export interface components {
             type: "SelfReport";
         } | {
             host_naming_fallback: components["schemas"]["HostNamingFallback"];
+            /**
+             * @description Whether to probe raw-socket ports (9100-9107) during endpoint scanning.
+             *     Disabled by default to prevent ghost printing on JetDirect printers.
+             */
+            probe_raw_socket_ports?: boolean;
             /**
              * @description SNMP credentials for querying devices during discovery
              *     Server builds this mapping before initiating discovery
@@ -4315,14 +4320,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-04T00:43:18.229404Z",
-         *               "id": "dd65e20e-1d69-466f-ba69-2a5afc4e5f3f",
+         *               "created_at": "2026-02-07T20:10:22.555202Z",
+         *               "id": "709697c2-3546-4a25-98d1-76c5722ef827",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-04T00:43:18.229404Z"
+         *               "updated_at": "2026-02-07T20:10:22.555202Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4331,7 +4336,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "NextCloud",
+         *           "service_definition": "Splunk",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5272,14 +5277,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-04T00:43:18.229895Z",
-         *           "id": "18da2340-86a9-4bbf-a408-855bdc20dea9",
+         *           "created_at": "2026-02-07T20:10:22.555588Z",
+         *           "id": "5c264bae-ec09-4276-9f1d-c69d46ff16b4",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-04T00:43:18.229895Z"
+         *           "updated_at": "2026-02-07T20:10:22.555588Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5288,7 +5293,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "NextCloud",
+         *       "service_definition": "Splunk",
          *       "source": {
          *         "type": "Manual"
          *       },

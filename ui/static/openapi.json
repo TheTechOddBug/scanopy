@@ -11814,14 +11814,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-04T00:49:07.097718Z",
-              "id": "2077a117-c39f-48b4-ad24-fce63e10ad13",
+              "created_at": "2026-02-07T20:10:22.568997Z",
+              "id": "a793eea5-4ee3-423e-9d70-c672cb9ba401",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-04T00:49:07.097718Z"
+              "updated_at": "2026-02-07T20:10:22.568997Z"
             }
           },
           "error": {
@@ -12553,14 +12553,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-04T00:49:07.083101Z",
-                      "id": "88785e7e-493d-49f3-9f54-cd1ac086304b",
+                      "created_at": "2026-02-07T20:10:22.555467Z",
+                      "id": "21c04cdf-2f28-4138-9d69-f85e2646cd43",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-04T00:49:07.083101Z"
+                      "updated_at": "2026-02-07T20:10:22.555467Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -12569,7 +12569,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Caddy",
+                  "service_definition": "Splunk",
                   "source": {
                     "type": "Manual"
                   },
@@ -13385,14 +13385,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-04T00:49:07.092547Z",
-                  "id": "9251f957-e077-4ffa-a13e-b4cd7dfdf9fd",
+                  "created_at": "2026-02-07T20:10:22.564867Z",
+                  "id": "816c7ce0-0928-4983-9757-d83603a8398c",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-04T00:49:07.092547Z"
+                  "updated_at": "2026-02-07T20:10:22.564867Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -13401,7 +13401,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Caddy",
+              "service_definition": "Splunk",
               "source": {
                 "type": "Manual"
               },
@@ -14561,14 +14561,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-04T00:49:07.083347Z",
-          "id": "942b08f5-a494-4126-b099-ef71daef46a3",
+          "created_at": "2026-02-07T20:10:22.555654Z",
+          "id": "57968e5c-cf88-487c-9e29-7e7a7306b80e",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-04T00:49:07.083347Z"
+          "updated_at": "2026-02-07T20:10:22.555654Z"
         }
       },
       "BindingBase": {
@@ -15022,7 +15022,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Caddy",
+              "service_definition": "Splunk",
               "tags": [],
               "virtualization": null
             }
@@ -15828,6 +15828,10 @@
             "properties": {
               "host_naming_fallback": {
                 "$ref": "#/components/schemas/HostNamingFallback"
+              },
+              "probe_raw_socket_ports": {
+                "type": "boolean",
+                "description": "Whether to probe raw-socket ports (9100-9107) during endpoint scanning.\nDisabled by default to prevent ghost printing on JetDirect printers."
               },
               "snmp_credentials": {
                 "$ref": "#/components/schemas/SnmpCredentialMapping",
@@ -16908,14 +16912,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-04T00:49:07.082662Z",
-                  "id": "b3c6e59f-6b93-4a43-aca9-784840a9578a",
+                  "created_at": "2026-02-07T20:10:22.555202Z",
+                  "id": "709697c2-3546-4a25-98d1-76c5722ef827",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-04T00:49:07.082662Z"
+                  "updated_at": "2026-02-07T20:10:22.555202Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16924,7 +16928,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Caddy",
+              "service_definition": "Splunk",
               "source": {
                 "type": "Manual"
               },
@@ -18810,14 +18814,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-04T00:49:07.072866Z",
-                        "id": "e9b9331b-68a8-4268-a134-39b58da29b32",
+                        "created_at": "2026-02-07T20:10:22.545800Z",
+                        "id": "d88e1042-b42b-4400-aeff-a92b90db30df",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-04T00:49:07.072866Z"
+                        "updated_at": "2026-02-07T20:10:22.545800Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18826,7 +18830,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Caddy",
+                    "service_definition": "Splunk",
                     "source": {
                       "type": "Manual"
                     },
@@ -18903,14 +18907,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-04T00:49:07.091213Z",
-                    "id": "1dae3f4e-fac6-47b3-be31-f1e37c02953a",
+                    "created_at": "2026-02-07T20:10:22.563924Z",
+                    "id": "552abaec-672c-4965-a92c-19e72e026e08",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-04T00:49:07.091213Z"
+                    "updated_at": "2026-02-07T20:10:22.563924Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18919,7 +18923,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Caddy",
+                "service_definition": "Splunk",
                 "source": {
                   "type": "Manual"
                 },
@@ -19892,14 +19896,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-04T00:49:07.083263Z",
-              "id": "36cea2fe-30ee-4e1c-8193-67e29e412764",
+              "created_at": "2026-02-07T20:10:22.555588Z",
+              "id": "5c264bae-ec09-4276-9f1d-c69d46ff16b4",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-04T00:49:07.083263Z"
+              "updated_at": "2026-02-07T20:10:22.555588Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19908,7 +19912,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Caddy",
+          "service_definition": "Splunk",
           "source": {
             "type": "Manual"
           },

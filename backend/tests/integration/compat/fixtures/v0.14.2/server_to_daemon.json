@@ -5,8 +5,8 @@
       "method": "POST",
       "path": "/api/initialize",
       "request_body": {
-        "api_key": "scp_d_bItJzFJ3lgyEW93rG6hFmkBLwO2HZVDu",
-        "network_id": "5b88b0d6-9901-4457-a9c7-49fd4e15075a"
+        "api_key": "scp_d_n9wDeq21AgyxKpQuXUWZIjXtV957hQT6",
+        "network_id": "c8bf374b-90b9-4478-b0d4-21d2028616da"
       },
       "response_status": 200,
       "response_body": {
@@ -22,7 +22,7 @@
       "method": "POST",
       "path": "/api/first-contact",
       "request_body": {
-        "daemon_id": "ddf89cc1-7bae-462f-82f8-51cdcdaddd37",
+        "daemon_id": "5b29ce0d-0100-47c2-a6c0-f172d2b070d9",
         "server_capabilities": {
           "minimum_daemon_version": "0.12.0",
           "server_version": "0.14.2"
@@ -72,6 +72,7 @@
       "request_body": {
         "discovery_type": {
           "host_naming_fallback": "BestService",
+          "probe_raw_socket_ports": false,
           "snmp_credentials": {
             "default_credential": null,
             "ip_overrides": []
@@ -79,12 +80,12 @@
           "subnet_ids": null,
           "type": "Network"
         },
-        "session_id": "02188995-189c-4ab6-9b24-379862941fe4"
+        "session_id": "d90c48ac-28d9-4788-93aa-2f3ae4dea0a9"
       },
       "response_status": 200,
       "response_body": {
         "data": {
-          "session_id": "02188995-189c-4ab6-9b24-379862941fe4"
+          "session_id": "d90c48ac-28d9-4788-93aa-2f3ae4dea0a9"
         },
         "meta": {
           "api_version": 1,
@@ -122,20 +123,21 @@
         "hosts": [],
         "subnets": [
           [
-            "42c196e9-f071-45ef-86e1-3f1f4320b58c",
+            "07fb9512-db8b-4d3b-a2b2-93bb2e926107",
             {
               "cidr": "172.25.0.0/28",
-              "created_at": "2026-02-03T00:51:52.697981986Z",
+              "created_at": "2026-02-07T05:30:27.053433468Z",
               "description": null,
-              "id": "42c196e9-f071-45ef-86e1-3f1f4320b58c",
+              "id": "07fb9512-db8b-4d3b-a2b2-93bb2e926107",
               "name": "172.25.0.0/28",
-              "network_id": "5b88b0d6-9901-4457-a9c7-49fd4e15075a",
+              "network_id": "c8bf374b-90b9-4478-b0d4-21d2028616da",
               "source": {
                 "metadata": [
                   {
-                    "daemon_id": "ddf89cc1-7bae-462f-82f8-51cdcdaddd37",
-                    "date": "2026-02-03T00:51:52.697956569Z",
+                    "daemon_id": "5b29ce0d-0100-47c2-a6c0-f172d2b070d9",
+                    "date": "2026-02-07T05:30:27.053417593Z",
                     "host_naming_fallback": "BestService",
+                    "probe_raw_socket_ports": false,
                     "snmp_credentials": {
                       "default_credential": null,
                       "ip_overrides": []
@@ -148,7 +150,7 @@
               },
               "subnet_type": "Lan",
               "tags": [],
-              "updated_at": "2026-02-03T00:51:52.697981986Z"
+              "updated_at": "2026-02-07T05:30:27.053433468Z"
             }
           ]
         ]

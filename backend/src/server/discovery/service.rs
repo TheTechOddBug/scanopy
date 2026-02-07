@@ -555,6 +555,7 @@ impl DiscoveryService {
         let discovery_type = if let DiscoveryType::Network {
             host_naming_fallback,
             subnet_ids,
+            probe_raw_socket_ports,
             ..
         } = discovery.base.discovery_type
         {
@@ -565,6 +566,7 @@ impl DiscoveryService {
                     .snmp_credential_service
                     .build_credentials_for_discovery(discovery.base.network_id)
                     .await?,
+                probe_raw_socket_ports,
             }
         } else {
             discovery.base.discovery_type

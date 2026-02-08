@@ -5,28 +5,26 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct PrometheusNodeExporter;
+pub struct JetDirect;
 
-impl ServiceDefinition for PrometheusNodeExporter {
+impl ServiceDefinition for JetDirect {
     fn name(&self) -> &'static str {
-        "Prometheus Node Exporter"
+        "JetDirect"
     }
     fn description(&self) -> &'static str {
-        "Prometheus exporter for hardware and OS metrics"
+        "HP JetDirect RAW printing protocol"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Monitoring
+        ServiceCategory::Printer
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortType::JetDirect, "/metrics", "node_exporter", None)
+        Pattern::Port(PortType::JetDirect)
     }
 
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/prometheus.svg"
+    fn is_generic(&self) -> bool {
+        true
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(
-    create_service::<PrometheusNodeExporter>
-));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<JetDirect>));

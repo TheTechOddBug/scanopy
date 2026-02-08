@@ -8,9 +8,11 @@
 	import { billingPlans, discoveryTypes, subnetTypes } from '$lib/shared/stores/metadata';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import UpgradeBadge from '$lib/shared/components/UpgradeBadge.svelte';
+	import { serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { generateCronSchedule } from '../../queries';
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
+	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import {
 		common_days,
@@ -118,7 +120,8 @@
 			formData.discovery_type = {
 				type: 'Network',
 				subnet_ids: daemon.capabilities.interfaced_subnet_ids,
-				host_naming_fallback: 'BestService'
+				host_naming_fallback: 'BestService',
+				probe_raw_socket_ports: false
 			} as NetworkDiscovery;
 		} else if (value === 'Docker' && formData.discovery_type.type !== 'Docker') {
 			formData.discovery_type = {
@@ -203,6 +206,24 @@
 			formData.discovery_type = {
 				...formData.discovery_type,
 				subnet_ids: formData.discovery_type.subnet_ids.filter((_, i) => i !== index)
+			};
+		}
+	}
+
+	// Services affected by raw socket port filtering
+	let rawSocketServiceNames = $derived(
+		(serviceDefinitions.getItems() ?? [])
+			.filter((s) => s.metadata?.has_raw_socket_endpoint)
+			.map((s) => s.name)
+			.join(', ')
+	);
+
+	// Handle probe_raw_socket_ports toggle
+	function handleProbeRawSocketPortsChange(value: boolean) {
+		if (formData.discovery_type.type === 'Network') {
+			formData.discovery_type = {
+				...formData.discovery_type,
+				probe_raw_socket_ports: value
 			};
 		}
 	}
@@ -337,6 +358,24 @@
 						})}
 					/>
 				{/if}
+				<form.Field
+					name="probe_raw_socket_ports"
+					listeners={{
+						onChange: ({ value }: { value: boolean }) => handleProbeRawSocketPortsChange(value)
+					}}
+				>
+					{#snippet children(field: AnyFieldApi)}
+						<Checkbox
+							label="Probe raw socket ports (9100-9107)"
+							id="probe_raw_socket_ports"
+							{field}
+							disabled={readOnly}
+							helpText={rawSocketServiceNames
+								? `May cause ghost printing on JetDirect printers. Required to detect: ${rawSocketServiceNames}`
+								: 'May cause ghost printing on JetDirect printers'}
+						/>
+					{/snippet}
+				</form.Field>
 			{/if}
 		</div>
 	</div>

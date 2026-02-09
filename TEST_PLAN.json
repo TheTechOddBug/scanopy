@@ -2,44 +2,17 @@
   "branch": "fix-ghost-printing",
   "tests": [
     {
-      "id": "default-scan-no-ghost-print",
-      "category": "Ghost Print Prevention",
-      "description": "Default network discovery does not send HTTP requests to port 9100 (JetDirect range)",
-      "steps": [
-        "Create a new Network discovery with default settings",
-        "Verify the 'Probe raw socket ports (9100-9107)' checkbox is unchecked by default",
-        "Run the discovery against a subnet containing a printer on port 9100",
-        "Check the printer — no ghost/garbage pages should print"
-      ],
-      "expected": "Discovery completes without triggering any print jobs on JetDirect printers. Port 9100 is detected as open but no HTTP probe is sent.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "opt-in-node-exporter-detection",
-      "category": "Ghost Print Prevention",
-      "description": "Prometheus Node Exporter is detected when raw socket port probing is enabled",
-      "steps": [
-        "Create a new Network discovery",
-        "Check the 'Probe raw socket ports (9100-9107)' checkbox",
-        "Run the discovery against a host running Prometheus Node Exporter on port 9100",
-        "Check the discovered host's services"
-      ],
-      "expected": "Prometheus Node Exporter is detected and listed as a service on the host.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "toggle-help-text-shows-affected-services",
+      "id": "toggle-persists-on-save",
       "category": "UI Toggle",
-      "description": "The raw socket ports checkbox dynamically lists affected services in its help text",
+      "description": "The probe_raw_socket_ports setting persists after saving and reloading the discovery",
+      "setup": "Create a Network discovery via the API on the default daemon with probe_raw_socket_ports set to true. Note the discovery name.",
       "steps": [
-        "Open the create/edit discovery modal",
-        "Select 'Network' as the discovery type",
-        "Locate the 'Probe raw socket ports (9100-9107)' checkbox",
-        "Read the help text below the checkbox"
+        "Navigate to the Discoveries page",
+        "Open the discovery created by setup for editing",
+        "Verify the 'Probe raw socket ports (9100-9107)' checkbox is checked",
+        "Uncheck the checkbox, save, then reopen — verify it is now unchecked"
       ],
-      "expected": "Help text says 'May cause ghost printing on JetDirect printers. Required to detect: Prometheus Node Exporter' (or similar, listing all services with raw socket endpoints).",
+      "expected": "Checkbox state matches what was saved, both when set to true via API and after toggling to false in the UI.",
       "status": null,
       "feedback": null
     },
@@ -49,104 +22,68 @@
       "description": "The raw socket ports checkbox only appears for Network discovery type",
       "steps": [
         "Open the create discovery modal",
-        "Select 'Network' as the discovery type — verify checkbox is visible",
-        "Switch to 'Docker' discovery type — verify checkbox disappears",
-        "Switch to 'Self Report' discovery type — verify checkbox is not shown",
-        "Switch back to 'Network' — verify checkbox reappears"
+        "Select 'Network' as the discovery type — verify the 'Probe raw socket ports (9100-9107)' checkbox is visible",
+        "Switch to 'Docker' discovery type — verify the checkbox disappears",
+        "Switch to 'Self Report' discovery type — verify the checkbox is not shown",
+        "Switch back to 'Network' — verify the checkbox reappears"
       ],
       "expected": "The 'Probe raw socket ports' checkbox is only visible when Network discovery type is selected.",
       "status": null,
       "feedback": null
     },
     {
-      "id": "toggle-persists-on-save",
+      "id": "toggle-help-text-shows-affected-services",
       "category": "UI Toggle",
-      "description": "The probe_raw_socket_ports setting persists after saving and reloading the discovery",
+      "description": "The raw socket ports checkbox shows dynamic help text listing affected services",
       "steps": [
-        "Create a new Network discovery with 'Probe raw socket ports' checked",
-        "Save the discovery",
-        "Reopen the discovery for editing",
-        "Check the state of the checkbox"
+        "Open the create discovery modal with Network type selected",
+        "Locate the 'Probe raw socket ports (9100-9107)' checkbox",
+        "Read the help text below it"
       ],
-      "expected": "The checkbox is still checked after saving and reopening.",
+      "expected": "Help text includes 'May cause ghost printing on JetDirect printers' and 'Required to detect: Prometheus Node Exporter'.",
       "status": null,
       "feedback": null
     },
     {
-      "id": "toggle-default-false-on-save",
-      "category": "UI Toggle",
-      "description": "The probe_raw_socket_ports defaults to false and persists as unchecked",
+      "id": "default-scan-skips-raw-socket-probes",
+      "category": "Ghost Print Prevention",
+      "description": "Default network discovery does not send HTTP probes to port 9100",
+      "setup": "Create an ad-hoc Network discovery via the API with default settings (probe_raw_socket_ports=false). Run it via the API. After it completes, note the discovery ID.",
       "steps": [
-        "Create a new Network discovery without touching the raw socket ports checkbox",
-        "Save the discovery",
-        "Reopen the discovery for editing",
-        "Check the state of the checkbox"
+        "Navigate to the Discoveries page and open the completed discovery",
+        "Find any hosts that had port 9100 open",
+        "Verify that no Prometheus Node Exporter service was detected on those hosts (since probing was off)",
+        "Verify that JetDirect service IS listed (detected by port only, no HTTP probe needed)"
       ],
-      "expected": "The checkbox remains unchecked (default false).",
+      "expected": "Hosts with port 9100 show JetDirect service but not Prometheus Node Exporter. No HTTP probe was sent to port 9100.",
       "status": null,
       "feedback": null
     },
     {
-      "id": "jetdirect-service-detected",
-      "category": "Service Detection",
-      "description": "JetDirect printers are identified as a JetDirect service via port-only detection",
+      "id": "opt-in-enables-node-exporter-detection",
+      "category": "Ghost Print Prevention",
+      "description": "Enabling raw socket port probing detects Prometheus Node Exporter",
+      "setup": "Create an ad-hoc Network discovery via the API with probe_raw_socket_ports=true. Run it via the API. After it completes, note the discovery ID.",
       "steps": [
-        "Run a default Network discovery (raw socket probing OFF) against a subnet with a JetDirect printer on port 9100",
-        "Check the discovered host's services"
+        "Navigate to the Discoveries page and open the completed discovery",
+        "Find any hosts running Prometheus Node Exporter on port 9100",
+        "Check the host's services list"
       ],
-      "expected": "The printer host shows a 'JetDirect' service detected via port 9100, without any HTTP probe being sent.",
+      "expected": "Prometheus Node Exporter is detected and listed as a service on the host.",
       "status": null,
       "feedback": null
     },
     {
-      "id": "non-raw-socket-services-unaffected",
-      "category": "Regression",
-      "description": "Services on non-raw-socket ports are still detected normally regardless of toggle state",
-      "steps": [
-        "Run a Network discovery with 'Probe raw socket ports' unchecked",
-        "Verify that HTTP-based services on standard ports (e.g., port 80, 443, 8080) are still detected",
-        "Check that services like Nginx, Apache, Grafana, etc. appear on discovered hosts"
-      ],
-      "expected": "All non-raw-socket-port services are detected normally. The filter only affects ports 9100-9107.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "docker-discovery-probes-raw-socket-ports",
+      "id": "docker-discovery-detects-raw-socket-services",
       "category": "Regression",
       "description": "Docker discovery always probes raw socket ports (containers are never printers)",
+      "setup": "Create a Docker discovery via the API on a daemon that has Docker socket access and a container exposing port 9100 with Prometheus Node Exporter. Run it via the API.",
       "steps": [
-        "Create a Docker discovery",
-        "Run it against a Docker host that has a container exposing port 9100 with Prometheus Node Exporter",
-        "Check discovered services"
+        "Navigate to the Discoveries page and open the completed Docker discovery",
+        "Check services on the discovered container host",
+        "Verify the Docker discovery edit modal does NOT show a 'Probe raw socket ports' checkbox"
       ],
-      "expected": "Docker discovery detects Prometheus Node Exporter on port 9100. No raw socket toggle is shown in Docker discovery settings since it always probes.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "existing-discovery-backward-compat",
-      "category": "Regression",
-      "description": "Existing Network discoveries without probe_raw_socket_ports field still work (serde default)",
-      "steps": [
-        "If there are pre-existing Network discoveries created before this change, open them for editing",
-        "Verify they load without errors",
-        "Check that the raw socket ports checkbox defaults to unchecked"
-      ],
-      "expected": "Pre-existing discoveries deserialize correctly with probe_raw_socket_ports defaulting to false. No errors or data loss.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "metadata-api-includes-raw-socket-flag",
-      "category": "API",
-      "description": "The /api/metadata endpoint returns has_raw_socket_endpoint for service definitions",
-      "steps": [
-        "Call GET /api/metadata",
-        "Inspect the service_definitions array",
-        "Find Prometheus Node Exporter and JetDirect entries"
-      ],
-      "expected": "Prometheus Node Exporter has has_raw_socket_endpoint: true. JetDirect has has_raw_socket_endpoint: false (it uses Pattern::Port, not Pattern::Endpoint). Other services on non-raw-socket ports have has_raw_socket_endpoint: false.",
+      "expected": "Prometheus Node Exporter is detected on the container. No raw socket toggle exists for Docker discoveries.",
       "status": null,
       "feedback": null
     }

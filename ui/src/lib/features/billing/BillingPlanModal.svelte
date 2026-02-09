@@ -67,10 +67,13 @@
 	const organizationQuery = useOrganizationQuery();
 	let organization = $derived(organizationQuery.data);
 
-	// Only show trial offers to orgs that have never trialed a paid plan.
+	// Only show trial offers to orgs that have never had a non-Free paid plan and never trialed.
 	// trial_end_date is set by Stripe webhook only for subscriptions with trial periods
 	// (Free plan has trial_days=0, so it never sets trial_end_date).
-	let isReturningCustomer = $derived(!!organization?.trial_end_date);
+	let isReturningCustomer = $derived(
+		(organization?.plan != null && organization.plan.type !== 'Free') ||
+			!!organization?.trial_end_date
+	);
 
 	// Mutations
 	const checkoutMutation = useCheckoutMutation();
@@ -124,7 +127,7 @@
 	preventCloseOnClickOutside={!dismissible}
 	showCloseButton={dismissible}
 >
-	<div class="p-2">
+	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto p-2">
 		<BillingPlanForm
 			plans={plansData}
 			{billingPlanHelpers}

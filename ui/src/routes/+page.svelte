@@ -54,9 +54,10 @@
 	});
 
 	// Set initial tab based on daemons (only if no hash was specified in URL)
+	// Suppress when billing modal is showing — user must pick a plan first
 	let initialTabSet = $state(false);
 	$effect(() => {
-		if (!hadInitialHash && !initialTabSet && daemonsQuery.isSuccess) {
+		if (!hadInitialHash && !initialTabSet && daemonsQuery.isSuccess && !showBillingModal) {
 			const hasDaemons = (daemonsQuery.data?.length ?? 0) > 0;
 			activeTab = hasDaemons ? 'topology' : 'daemons';
 			initialTabSet = true;

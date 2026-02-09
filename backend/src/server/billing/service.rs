@@ -358,13 +358,19 @@ impl BillingService {
         // Clone authentication for event publishing later
         let auth_for_event = authentication.clone();
 
-        // Check if this is a returning customer (already has a Stripe customer ID)
+        // Check if this is a returning customer (has had a non-Free paid plan or has trialed before)
         let is_returning_customer = if let Some(organization) = self
             .organization_service
             .get_by_id(&organization_id)
             .await?
         {
-            Ok(organization.base.plan_status.is_some())
+            let has_non_free_plan = organization
+                .base
+                .plan
+                .as_ref()
+                .is_some_and(|p| !p.is_free());
+            let has_trialed = organization.base.trial_end_date.is_some();
+            Ok(has_non_free_plan || has_trialed)
         } else {
             Err(anyhow!(
                 "Could not find an organization with id {}",

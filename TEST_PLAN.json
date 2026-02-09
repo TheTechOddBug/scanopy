@@ -4,36 +4,35 @@
     {
       "id": "change-plan-via-billing-modal",
       "category": "Billing",
-      "description": "Plan changes route correctly: Free users without payment go through Stripe Checkout; returning customers with payment get instant switch; no double-billing on upcoming invoice",
+      "description": "Plan changes route correctly: payment method persists across paid-to-paid switches, no duplicate billing",
       "steps": [
-        "As a Free user with no payment method, open Settings > Billing > View Plans and select a paid plan (e.g., Team)",
-        "Verify you are redirected to Stripe Checkout (not an instant switch)",
-        "Complete checkout and verify the plan is active with a clean upcoming invoice (single charge, no proration artifacts)",
-        "Now switch to a different paid plan (e.g., Team to Starter)",
-        "Verify the switch is instant (no Stripe Checkout redirect) since you now have a payment method",
-        "Check the Stripe dashboard — verify the upcoming invoice shows only the new plan price, not double-billing",
-        "Verify there is only ONE active subscription in Stripe at all times"
+        "Open Settings > Billing > View Plans and select a paid plan (e.g., Team)",
+        "Complete Stripe Checkout if redirected (Free users without payment are routed to Checkout)",
+        "Open Settings > Billing — verify the plan is active and no 'Add Payment Method' warning appears",
+        "Switch to a different paid plan (e.g., Team to Starter) via View Plans",
+        "Verify the switch is instant (no Stripe Checkout redirect)",
+        "Open Settings > Billing — verify 'Add Payment Method' warning does NOT reappear after the switch",
+        "Check Stripe dashboard — verify the upcoming invoice shows only the new plan price, not double the amount"
       ],
       "setup": "Org should be on Free plan with no payment method and no prior trial (trial_end_date is null). Verify in Stripe dashboard that the org's customer has no active subscriptions before testing.",
-      "expected": "Free user without payment → Stripe Checkout. Returning customer with payment → instant switch. Upcoming invoice shows single plan charge. Only one subscription exists in Stripe.",
+      "expected": "Free user without payment → Stripe Checkout. Paid-to-paid switch → instant, payment method flag stays true, upcoming invoice shows single plan charge only.",
       "status": null,
       "feedback": null
     },
     {
       "id": "downgrade-to-free",
       "category": "Billing",
-      "description": "Downgrading to Free schedules cancellation at end of billing cycle — no proration, no rounding artifacts",
+      "description": "Downgrading to Free schedules end-of-cycle cancellation without 402 errors",
       "steps": [
         "From a paid plan (e.g., Team), open Settings > Billing > View Plans and select Free",
-        "Verify a success message mentioning end-of-cycle downgrade appears",
-        "Open Settings > Billing — verify status shows 'Downgrading' in amber",
-        "Verify the amber banner appears: 'Your plan will change to Free at the end of your current billing cycle...'",
+        "Verify a success toast appears mentioning end-of-cycle downgrade",
+        "Navigate around the app (hosts, daemons, discovery, etc.) — verify NO 402 errors or 'plan required' messages",
+        "Open Settings > Billing — verify status shows 'Downgrading' in amber with the pending cancellation banner",
         "Verify you still have full access to paid features (DaemonPoll, scheduled discovery, etc.)",
-        "Check Stripe dashboard — verify the subscription shows 'Cancels at period end' with NO proration line items or $0.01 charges",
-        "Optionally: upgrade to a paid plan again — verify the pending cancellation is cleared and features remain"
+        "Check Stripe dashboard — verify the subscription shows 'Cancels at period end' with no proration artifacts"
       ],
-      "setup": "Org should be on a paid plan with an active Stripe subscription.",
-      "expected": "Downgrade schedules end-of-cycle cancellation. Status shows 'Downgrading'. User keeps features until period ends. No proration artifacts in Stripe. Upgrading again clears the pending cancellation.",
+      "setup": "Org should be on a paid plan (e.g., Team) with an active Stripe subscription and at least one DaemonPoll daemon.",
+      "expected": "Downgrade schedules end-of-cycle cancellation. No 402 errors anywhere in the app. Status shows 'Downgrading'. User keeps full paid features until period ends. No proration line items in Stripe.",
       "status": null,
       "feedback": null
     },
@@ -42,12 +41,12 @@
       "category": "Billing",
       "description": "Payment method status syncs from Stripe on subscription updates",
       "steps": [
-        "Open Stripe dashboard and remove the default payment method from the subscription",
-        "Trigger a subscription update (e.g., switch plans or wait for webhook)",
-        "Open Settings > Billing — verify the 'Add Payment Method' card reappears (has_payment_method = false)"
+        "Open Stripe dashboard and remove the default payment method from the customer",
+        "Trigger a subscription update (e.g., switch plans via the billing portal)",
+        "Open Settings > Billing — verify the 'Add Payment Method' card reappears"
       ],
       "setup": "Org should be on a paid plan with has_payment_method = true and a payment method in Stripe.",
-      "expected": "Removing payment method in Stripe syncs to frontend state via webhook",
+      "expected": "Removing payment method in Stripe syncs to frontend state via webhook or portal action",
       "status": null,
       "feedback": null
     }

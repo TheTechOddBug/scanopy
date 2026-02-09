@@ -258,8 +258,9 @@ export interface paths {
         put?: never;
         /**
          * Submit enterprise plan inquiry
-         * @description Dual submission: Form API (for notifications) + CRM API (for Company properties).
-         *     Requires authentication to link the inquiry to an organization.
+         * @description Updates Brevo contact/company with inquiry data, creates a deal, and
+         *     tracks an event for automation triggers. Requires authentication to
+         *     link the inquiry to an organization.
          */
         post: operations["submit_enterprise_inquiry"];
         delete?: never;
@@ -2662,14 +2663,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-04T00:43:18.244861Z",
-             *       "id": "d3b7aac5-4eb0-4819-b266-2d98d0bff490",
+             *       "created_at": "2026-02-09T05:32:56.158162Z",
+             *       "id": "5e691d33-b463-4b75-8ff3-00c5530e106e",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-04T00:43:18.244861Z"
+             *       "updated_at": "2026-02-09T05:32:56.158162Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2900,14 +2901,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-04T00:43:18.229742Z",
-             *               "id": "36a5ea72-5869-4593-bae1-27ea182774e8",
+             *               "created_at": "2026-02-09T05:32:56.146278Z",
+             *               "id": "0cd96397-eb03-4461-b1f0-fe9c02191316",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-04T00:43:18.229742Z"
+             *               "updated_at": "2026-02-09T05:32:56.146278Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -2916,7 +2917,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "NextCloud",
+             *           "service_definition": "Spinnaker",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3148,7 +3149,6 @@ export interface components {
                 has_integrated_daemon: boolean;
                 needs_cookie_consent: boolean;
                 oidc_providers: components["schemas"]["OidcProviderMetadata"][];
-                plunk_key?: string | null;
                 posthog_key?: string | null;
                 public_url: string;
                 /** Format: int32 */
@@ -3190,14 +3190,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-04T00:43:18.240132Z",
-             *           "id": "2b978448-db5a-4cd1-bf4c-bd507cf83e2f",
+             *           "created_at": "2026-02-09T05:32:56.154398Z",
+             *           "id": "b2c43071-1f3c-4998-9818-489e6e34f3f7",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-04T00:43:18.240132Z"
+             *           "updated_at": "2026-02-09T05:32:56.154398Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3206,7 +3206,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "NextCloud",
+             *       "service_definition": "Spinnaker",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3502,14 +3502,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-04T00:43:18.229976Z",
-         *       "id": "96ac1253-fdba-4ab5-a63c-291b118954e2",
+         *       "created_at": "2026-02-09T05:32:56.146498Z",
+         *       "id": "0095c655-7c5b-451c-8676-10247ffbf8d5",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-04T00:43:18.229976Z"
+         *       "updated_at": "2026-02-09T05:32:56.146498Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3674,7 +3674,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "NextCloud",
+         *           "service_definition": "Spinnaker",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4313,14 +4313,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-04T00:43:18.229404Z",
-         *               "id": "dd65e20e-1d69-466f-ba69-2a5afc4e5f3f",
+         *               "created_at": "2026-02-09T05:32:56.145985Z",
+         *               "id": "23b13bde-32f4-427b-af45-a8cbf47c84ce",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-04T00:43:18.229404Z"
+         *               "updated_at": "2026-02-09T05:32:56.145985Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4329,7 +4329,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "NextCloud",
+         *           "service_definition": "Spinnaker",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5209,7 +5209,6 @@ export interface components {
             has_integrated_daemon: boolean;
             needs_cookie_consent: boolean;
             oidc_providers: components["schemas"]["OidcProviderMetadata"][];
-            plunk_key?: string | null;
             posthog_key?: string | null;
             public_url: string;
             /** Format: int32 */
@@ -5270,14 +5269,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-04T00:43:18.229895Z",
-         *           "id": "18da2340-86a9-4bbf-a408-855bdc20dea9",
+         *           "created_at": "2026-02-09T05:32:56.146418Z",
+         *           "id": "af2bd418-3583-49c2-b635-0964de15a75c",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-04T00:43:18.229895Z"
+         *           "updated_at": "2026-02-09T05:32:56.146418Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5286,7 +5285,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "NextCloud",
+         *       "service_definition": "Spinnaker",
          *       "source": {
          *         "type": "Manual"
          *       },

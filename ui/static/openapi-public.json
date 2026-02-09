@@ -9282,14 +9282,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-09T04:24:13.295360Z",
-              "id": "9107f580-5717-4bd8-b105-70b7f67d781c",
+              "created_at": "2026-02-09T05:32:56.158060Z",
+              "id": "68ff8f9c-d1f1-4fd0-b3e1-9633224049e7",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-09T04:24:13.295360Z"
+              "updated_at": "2026-02-09T05:32:56.158060Z"
             }
           },
           "error": {
@@ -10021,14 +10021,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-09T04:24:13.282878Z",
-                      "id": "34f8e9e1-fde4-40d0-b9aa-fa8ec0907a51",
+                      "created_at": "2026-02-09T05:32:56.146256Z",
+                      "id": "ceebf923-c67a-4d52-83f1-174595ea796f",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-09T04:24:13.282878Z"
+                      "updated_at": "2026-02-09T05:32:56.146256Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10037,7 +10037,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "CUPS",
+                  "service_definition": "Spinnaker",
                   "source": {
                     "type": "Manual"
                   },
@@ -10684,12 +10684,6 @@
                   "$ref": "#/components/schemas/OidcProviderMetadata"
                 }
               },
-              "plunk_key": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
               "posthog_key": {
                 "type": [
                   "string",
@@ -10853,14 +10847,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-09T04:24:13.291686Z",
-                  "id": "06cc1b71-7ad1-46ec-b3b5-d1bb022f8765",
+                  "created_at": "2026-02-09T05:32:56.154367Z",
+                  "id": "607d4ed5-b2f5-4d7a-b7ec-c87790a9b4dd",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-09T04:24:13.291686Z"
+                  "updated_at": "2026-02-09T05:32:56.154367Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -10869,7 +10863,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "CUPS",
+              "service_definition": "Spinnaker",
               "source": {
                 "type": "Manual"
               },
@@ -12029,14 +12023,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-09T04:24:13.283132Z",
-          "id": "8f791bf7-2a63-47cf-845c-1c4374c13d7d",
+          "created_at": "2026-02-09T05:32:56.146461Z",
+          "id": "138f2797-d0e7-45d5-b2cc-95dc3ce80cc4",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-09T04:24:13.283132Z"
+          "updated_at": "2026-02-09T05:32:56.146461Z"
         }
       },
       "BindingBase": {
@@ -12490,7 +12484,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "CUPS",
+              "service_definition": "Spinnaker",
               "tags": [],
               "virtualization": null
             }
@@ -14369,14 +14363,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-09T04:24:13.282485Z",
-                  "id": "956ba3cf-9c55-4e90-9032-fe139e55ab14",
+                  "created_at": "2026-02-09T05:32:56.145971Z",
+                  "id": "daf792d6-c816-4c52-90c1-6b642175b193",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-09T04:24:13.282485Z"
+                  "updated_at": "2026-02-09T05:32:56.145971Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14385,7 +14379,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "CUPS",
+              "service_definition": "Spinnaker",
               "source": {
                 "type": "Manual"
               },
@@ -16271,14 +16265,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-09T04:24:13.270736Z",
-                        "id": "004937ec-b95f-4e49-b460-ce422eecc107",
+                        "created_at": "2026-02-09T05:32:56.139729Z",
+                        "id": "73a40cf1-2cf4-4880-9dc6-ee3857bcff07",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-09T04:24:13.270736Z"
+                        "updated_at": "2026-02-09T05:32:56.139729Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16287,7 +16281,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "CUPS",
+                    "service_definition": "Spinnaker",
                     "source": {
                       "type": "Manual"
                     },
@@ -16364,14 +16358,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-09T04:24:13.290621Z",
-                    "id": "8a5c9a3c-0a3f-42f2-a96b-1d5b0129c55e",
+                    "created_at": "2026-02-09T05:32:56.153385Z",
+                    "id": "da65e323-41e3-4139-8132-948035433194",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-09T04:24:13.290621Z"
+                    "updated_at": "2026-02-09T05:32:56.153385Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16380,7 +16374,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "CUPS",
+                "service_definition": "Spinnaker",
                 "source": {
                   "type": "Manual"
                 },
@@ -17117,12 +17111,6 @@
               "$ref": "#/components/schemas/OidcProviderMetadata"
             }
           },
-          "plunk_key": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "posthog_key": {
             "type": [
               "string",
@@ -17353,14 +17341,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-09T04:24:13.283040Z",
-              "id": "c6867672-b348-4d49-afe3-da3166a19c0a",
+              "created_at": "2026-02-09T05:32:56.146391Z",
+              "id": "02c6bb4f-a893-4dbe-a04c-becabc3f550d",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-09T04:24:13.283040Z"
+              "updated_at": "2026-02-09T05:32:56.146391Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17369,7 +17357,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "CUPS",
+          "service_definition": "Spinnaker",
           "source": {
             "type": "Manual"
           },

@@ -22,7 +22,7 @@
 	import { resolve } from '$app/paths';
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { setPreferredNetwork } from '$lib/features/topology/queries';
-	import { trackEvent, trackPlunkEvent } from '$lib/shared/utils/analytics';
+	import { trackEvent } from '$lib/shared/utils/analytics';
 
 	// TanStack Query mutations and queries
 	const setupMutation = useSetupMutation();
@@ -232,9 +232,6 @@
 			trackEvent('org_created', {
 				org_id: user.organization_id
 			});
-
-			// Track registration in Plunk for email marketing
-			trackPlunkEvent('register', user.email, subscribed);
 
 			// Check if email verification is required
 			if (!user.email_verified) {

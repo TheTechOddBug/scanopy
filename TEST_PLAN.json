@@ -1,0 +1,39 @@
+{
+  "branch": "discovery-poll-bug",
+  "tests": [
+    {
+      "id": "server-poll-no-repeated-auto-create",
+      "category": "Discovery",
+      "description": "After a ServerPoll daemon completes Network Discovery, the server should NOT repeatedly log 'Auto-creating session from daemon update' on subsequent poll cycles",
+      "steps": [
+        "Start a Network Discovery scan on a ServerPoll daemon",
+        "Wait for discovery to complete",
+        "Watch the server logs for 30-60 seconds after completion",
+        "Verify 'Auto-creating session from daemon update' does NOT appear repeatedly"
+      ],
+      "setup": "Ensure a ServerPoll daemon is connected and reachable. The daemon must be on the updated version with the terminal payload clearing fix.",
+      "expected": "Server logs show the terminal completion once. No repeated 'Auto-creating session' entries. No duplicate historical Discovery records appear in the Discoveries list.",
+      "flow": null,
+      "sequence": null,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "server-restart-recovery",
+      "category": "Discovery",
+      "description": "If the server restarts while a discovery is running, it should still correctly process the terminal completion when it comes in via the next poll",
+      "steps": [
+        "Start a Network Discovery scan on a ServerPoll daemon",
+        "While discovery is still running (Scanning phase), restart the server",
+        "Wait for discovery to complete",
+        "Verify the discovery completes normally in the UI with a historical record"
+      ],
+      "setup": "Ensure a ServerPoll daemon is connected and reachable. The daemon must be on the updated version.",
+      "expected": "After server restart, the terminal completion is auto-created and processed correctly. Exactly one historical Discovery record is created. No repeated auto-create log entries.",
+      "flow": null,
+      "sequence": null,
+      "status": null,
+      "feedback": null
+    }
+  ]
+}

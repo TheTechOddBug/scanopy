@@ -34,6 +34,7 @@
 	} from '$lib/paraglide/messages';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
+	import { showBillingPlanModal } from '$lib/features/billing/stores';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -153,7 +154,7 @@
 				dismissableKey="share-integration"
 				body="Creating an integration that you think others might benefit from? Scanopy will be adding an integration library in an upcoming release. Go to the <a class='underline hover:no-underline' target='_blank' href='https://github.com/scanopy/integrations'>Scanopy integrations GitHub</a> and create a PR to get started."
 			></InlineSuccess>
-			{#if !isReadOnly}
+			{#if !isReadOnly && hasApiAccess}
 				<button class="btn-primary flex items-center" onclick={handleCreate}>
 					<Plus class="h-5 w-5" />{common_create()}
 				</button>
@@ -165,6 +166,8 @@
 		<EmptyState
 			title="API Access Not Available"
 			subtitle="Your current plan does not include API access. Upgrade to a plan with API access to create and manage API keys."
+			cta="View Plans"
+			onClick={() => showBillingPlanModal.set(true)}
 		/>
 	{:else if isLoading}
 		<Loading />

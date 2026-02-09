@@ -232,6 +232,11 @@
 		return '';
 	}
 
+	function formatHostAddonPricing(plan: BillingPlan): string {
+		if (plan.host_cents) return `+$${plan.host_cents / 100} / host / ${plan.rate.toLowerCase()}`;
+		return '';
+	}
+
 	function isComingSoon(featureKey: string): boolean {
 		return featureHelpers.getMetadata(featureKey)?.is_coming_soon === true;
 	}
@@ -437,6 +442,25 @@
 				{/each}
 			</div>
 
+			<!-- Hosts Row -->
+			<div class="grid-row" style="grid-template-columns: {gridColumns}">
+				<div class="grid-cell label-cell">
+					<div class="text-xs font-medium lg:text-sm">Hosts</div>
+				</div>
+				{#each filteredPlans as plan (plan.type)}
+					<div class="grid-cell plan-cell text-center">
+						<div class="flex flex-col">
+							<span class="text-secondary text-xs lg:text-base"
+								>{plan.included_hosts == null ? 'Unlimited' : plan.included_hosts}</span
+							>
+							{#if plan.host_cents}
+								<span class="text-tertiary text-xs">{formatHostAddonPricing(plan)}</span>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+
 			<!-- Hosting Row -->
 			{#if showHosting}
 				<div class="grid-row" style="grid-template-columns: {gridColumns}">
@@ -621,7 +645,7 @@
 
 	/* Scrollable content area */
 	.content-scroll {
-		overflow-x: auto;
+		overflow: auto;
 	}
 
 	/* Sticky footer - sticks to bottom of viewport */

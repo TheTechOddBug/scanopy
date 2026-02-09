@@ -4,17 +4,19 @@
     {
       "id": "billing-modal-opens-no-plan",
       "category": "Billing Modal",
-      "description": "New user sees non-dismissible billing modal after onboarding (no header, Free leftmost, scrollable, shows hosts)",
+      "description": "New user sees non-dismissible borderless billing modal after onboarding (no daemon modal behind it)",
       "steps": [
-        "After onboarding completes, verify the billing plan modal opens automatically (full-screen, no header/title bar)",
+        "After onboarding completes, verify the billing plan modal opens automatically",
+        "Verify the modal has no blue bounding box / border (borderless presentation)",
         "Verify clicking outside does NOT close the modal and no close (X) button is shown",
-        "Verify the daemon setup tab does NOT appear behind the billing modal",
+        "Verify the URL hash is NOT set to #daemons — daemon setup is suppressed until plan is selected",
+        "Verify no daemon creation modal appears on top of or behind the billing modal",
         "Verify the Free plan is the leftmost column",
         "Toggle between Personal and Commercial — verify Free plan appears on both",
         "Scroll down in the billing plan grid — verify all feature rows are accessible",
         "Verify each plan shows its included Hosts count (row between Networks and features)"
       ],
-      "expected": "Full-screen billing modal without header, Free plan leftmost on both toggles, cannot be dismissed, no daemon modal behind it, scrollable content, Hosts row visible",
+      "expected": "Borderless billing modal, no daemon modal interference, Free plan leftmost, scrollable, Hosts row visible",
       "flow": "setup",
       "sequence": 1,
       "status": null,
@@ -34,22 +36,6 @@
       "expected": "Stripe checkout completes without payment method, user returns to app with Free plan active, modal dismissed",
       "flow": "setup",
       "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "trial-offers-first-time",
-      "category": "Billing Modal",
-      "description": "Trial badges shown for Free plan orgs and reflected during checkout",
-      "steps": [
-        "Open Settings > Billing tab",
-        "Click 'View Plans'",
-        "Verify paid plans show trial day badges (e.g., '7-day free trial')",
-        "Click 'Start Free Trial' on a paid plan (e.g., Starter)",
-        "On the Stripe checkout page, verify the trial is reflected (e.g., '$0.00 due today' or trial language)"
-      ],
-      "setup": "Org should be on the Free plan with no trial_end_date set (the default state after the setup flow).",
-      "expected": "Trial badges visible on paid plans, and Stripe checkout shows trial pricing",
       "status": null,
       "feedback": null
     },
@@ -85,79 +71,79 @@
     {
       "id": "settings-billing-notification-dot",
       "category": "Settings",
-      "description": "Billing tab shows amber notification dot when trialing without payment method",
+      "description": "Billing notification dot shown only when trialing without payment, with payment card above current plan",
       "steps": [
+        "Verify the sidebar Settings icon has an amber/yellow notification dot",
         "Open the Settings modal",
-        "Verify the Billing tab label has an amber/yellow notification dot (matching the sidebar dot color)"
+        "Verify the Billing tab label has an amber notification dot",
+        "Verify the 'Add Payment Method' card appears ABOVE the Current Plan card",
+        "Verify the 'Add Payment Method' card has a notification dot icon"
       ],
-      "setup": "Set org to trialing status without a payment method: UPDATE organizations SET plan_status = 'trialing', has_payment_method = false WHERE id = '<org_id>'. Refresh the browser before testing.",
-      "expected": "Amber notification dot visible on Billing tab, matching sidebar dot color",
+      "setup": "Set org to trialing status without a payment method: UPDATE organizations SET plan = '{\"type\":\"Starter\",\"base_cents\":1500,\"rate\":\"Month\",\"trial_days\":7,\"seat_cents\":null,\"network_cents\":null,\"host_cents\":null,\"included_seats\":1,\"included_networks\":1,\"included_hosts\":100}', plan_status = 'trialing', has_payment_method = false, trial_end_date = NOW() + INTERVAL '5 days' WHERE id = '<org_id>'. Refresh the browser before testing.",
+      "expected": "Amber notification dot on sidebar and billing tab, payment card above current plan with dot indicator",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "notification-dot-not-shown-free",
+      "category": "Settings",
+      "description": "No notification dot shown for Free plan users (no action needed)",
+      "steps": [
+        "Verify the sidebar Settings icon does NOT have an amber notification dot",
+        "Open the Settings modal",
+        "Verify the Billing tab label does NOT have a notification dot"
+      ],
+      "setup": "Org should be on the Free plan with plan_status = 'active' (default state after setup flow).",
+      "expected": "No notification dot — Free plan users have no pending action",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "notification-dot-clears-after-downgrade",
+      "category": "Settings",
+      "description": "Notification dot clears when downgrading from trial to Free plan",
+      "steps": [
+        "Verify the sidebar Settings icon has an amber notification dot (from trialing state)",
+        "Downgrade to Free plan via View Plans > Get Started on Free",
+        "Complete Stripe checkout for Free plan",
+        "After returning to the app, verify the notification dot is gone"
+      ],
+      "setup": "Set org to trialing without payment: UPDATE organizations SET plan = '{\"type\":\"Starter\",\"base_cents\":1500,\"rate\":\"Month\",\"trial_days\":7,\"seat_cents\":null,\"network_cents\":null,\"host_cents\":null,\"included_seats\":1,\"included_networks\":1,\"included_hosts\":100}', plan_status = 'trialing', has_payment_method = false, trial_end_date = NOW() + INTERVAL '5 days' WHERE id = '<org_id>'. Refresh the browser.",
+      "expected": "Notification dot disappears after downgrading to Free (no longer trialing)",
       "status": null,
       "feedback": null
     },
     {
       "id": "daemon-mode-richselect-upgrade",
       "category": "Daemon Creation",
-      "description": "Daemon mode dropdown shows clickable Upgrade tag on DaemonPoll for Free plan with descriptions",
+      "description": "Daemon mode dropdown: DaemonPoll upgrade tag is visually clickable, opens billing modal on top",
       "steps": [
         "Open the daemon creation modal",
-        "Open the Mode dropdown — it should be a rich dropdown, not a native select",
-        "Verify ServerPoll is selectable and shows description text underneath the label",
-        "Verify DaemonPoll shows a yellow 'Upgrade' tag with an arrow icon and description text",
-        "Click on the DaemonPoll option (even though it's grayed out) — verify the billing plan modal opens",
+        "Open the Mode dropdown",
+        "Verify ServerPoll shows description text underneath the label",
+        "Verify DaemonPoll shows a yellow 'Upgrade' tag and description text",
+        "Verify DaemonPoll option is NOT heavily grayed out — it should look clickable (slight dim only)",
+        "Click on the DaemonPoll option — verify the billing plan modal opens ON TOP of the daemon modal",
         "Close the billing plan modal and verify you're back on the daemon creation form"
       ],
       "setup": "Org should be on the Free plan. Ensure at least one network exists.",
-      "expected": "RichSelect dropdown with descriptions on both options, yellow Upgrade tag on DaemonPoll, clicking DaemonPoll opens billing modal",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "api-keys-tab-free-plan",
-      "category": "Settings",
-      "description": "API Keys tab shows upgrade message with clickable View Plans button, no Create button",
-      "steps": [
-        "Navigate to the API Keys tab",
-        "Verify no 'Create' button is shown in the upper right corner",
-        "Verify it shows an empty state message about API access not being available",
-        "Click the 'View Plans' button in the empty state — verify the billing plan modal opens"
-      ],
-      "setup": "Org should be on the Free plan.",
-      "expected": "No Create button, empty state with 'View Plans' CTA that opens billing modal",
+      "expected": "DaemonPoll has clickable appearance, billing modal opens on top of daemon modal, descriptions shown",
       "status": null,
       "feedback": null
     },
     {
       "id": "discovery-upgrade-tag-clickable",
       "category": "Discovery",
-      "description": "Scheduled discovery upgrade tag is clickable and opens billing modal",
+      "description": "Scheduled discovery upgrade tag is visually clickable, opens billing modal on top",
       "steps": [
         "Open the discovery creation modal",
         "Open the Run Type dropdown",
-        "Click on the Scheduled option (which shows Upgrade tag) — verify the billing plan modal opens",
+        "Verify the Scheduled option is NOT heavily grayed out — it should look clickable",
+        "Click on the Scheduled option — verify the billing plan modal opens ON TOP of the discovery modal",
         "Close the billing plan modal and verify you're back on the discovery form"
       ],
       "setup": "Org should be on the Free plan. Ensure at least one daemon exists.",
-      "expected": "Clicking disabled Scheduled option opens billing plan modal",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "upgrade-from-free-to-paid",
-      "category": "Billing",
-      "description": "Upgrade from Free plan to a paid plan via View Plans",
-      "steps": [
-        "Open Settings > Billing tab",
-        "Verify current plan shows 'Free'",
-        "Click 'View Plans'",
-        "Select a paid plan (e.g., Starter) and click 'Start Free Trial' or 'Get Started'",
-        "Complete Stripe checkout",
-        "Verify redirect back to app",
-        "Open Settings > Billing tab — verify the new plan name and 'Active' status are shown",
-        "Verify 'Manage Subscription' button is now visible"
-      ],
-      "setup": "Org should be on the Free plan (default state after setup flow).",
-      "expected": "Plan upgrades to paid plan, billing tab shows new plan name and Active status, Manage Subscription appears",
+      "expected": "Scheduled option has clickable appearance, billing modal opens on top",
       "status": null,
       "feedback": null
     },

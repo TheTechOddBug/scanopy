@@ -74,6 +74,20 @@ impl EmailProvider for BrevoEmailProvider {
         .await
     }
 
+    async fn send_billing_email(
+        &self,
+        to: EmailAddress,
+        subject: String,
+        body: String,
+    ) -> Result<(), Error> {
+        self.send_transactional_email(
+            to,
+            subject,
+            body,
+        )
+        .await
+    }
+
     async fn send_invite(
         &self,
         to: EmailAddress,

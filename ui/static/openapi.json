@@ -11814,14 +11814,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-09T00:38:02.295575Z",
-              "id": "c3067e67-a5f2-4a27-9dae-5848cf055311",
+              "created_at": "2026-02-09T04:24:13.295338Z",
+              "id": "af81b10d-e90a-482f-9fb6-3e198a5849c3",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-09T00:38:02.295575Z"
+              "updated_at": "2026-02-09T04:24:13.295338Z"
             }
           },
           "error": {
@@ -12553,14 +12553,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-09T00:38:02.282286Z",
-                      "id": "4534d267-ddbf-4659-9256-0e7a1d787cc2",
+                      "created_at": "2026-02-09T04:24:13.283111Z",
+                      "id": "63869293-ef20-4746-b876-6d43aaa28d6d",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-09T00:38:02.282286Z"
+                      "updated_at": "2026-02-09T04:24:13.283111Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -12569,7 +12569,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "MySQL",
+                  "service_definition": "CUPS",
                   "source": {
                     "type": "Manual"
                   },
@@ -13385,14 +13385,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-09T00:38:02.291234Z",
-                  "id": "357e604f-0caf-409d-bad4-1176eda1a5dc",
+                  "created_at": "2026-02-09T04:24:13.291744Z",
+                  "id": "77143068-dbfd-4b93-a431-f64adae4e801",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-09T00:38:02.291234Z"
+                  "updated_at": "2026-02-09T04:24:13.291744Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -13401,7 +13401,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "MySQL",
+              "service_definition": "CUPS",
               "source": {
                 "type": "Manual"
               },
@@ -14561,14 +14561,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-09T00:38:02.282515Z",
-          "id": "75bc04c5-58f2-4cdb-aad5-8bfac77425e8",
+          "created_at": "2026-02-09T04:24:13.283318Z",
+          "id": "66b010ff-a897-4c34-906a-8c6f24d21694",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-09T00:38:02.282515Z"
+          "updated_at": "2026-02-09T04:24:13.283318Z"
         }
       },
       "BindingBase": {
@@ -15022,7 +15022,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "MySQL",
+              "service_definition": "CUPS",
               "tags": [],
               "virtualization": null
             }
@@ -16901,14 +16901,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-09T00:38:02.281960Z",
-                  "id": "aff090a8-fcf8-4f3a-8b21-e6ebed9dfda2",
+                  "created_at": "2026-02-09T04:24:13.282750Z",
+                  "id": "edbcf234-034d-4ff2-a403-be5dcd31421a",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-09T00:38:02.281960Z"
+                  "updated_at": "2026-02-09T04:24:13.282750Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16917,7 +16917,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "MySQL",
+              "service_definition": "CUPS",
               "source": {
                 "type": "Manual"
               },
@@ -18803,14 +18803,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-09T00:38:02.273006Z",
-                        "id": "28a159c0-17ec-495e-8907-851e51aac7bf",
+                        "created_at": "2026-02-09T04:24:13.270736Z",
+                        "id": "a6d6417f-cf18-44c7-8ae8-0799690e1822",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-09T00:38:02.273006Z"
+                        "updated_at": "2026-02-09T04:24:13.270736Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18819,7 +18819,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "MySQL",
+                    "service_definition": "CUPS",
                     "source": {
                       "type": "Manual"
                     },
@@ -18896,14 +18896,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-09T00:38:02.290129Z",
-                    "id": "9c1a86ae-7dec-4a1b-84a4-7e5c44177579",
+                    "created_at": "2026-02-09T04:24:13.290629Z",
+                    "id": "b853cd0b-24f1-427e-b29e-6dd3583458f5",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-09T00:38:02.290129Z"
+                    "updated_at": "2026-02-09T04:24:13.290629Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18912,7 +18912,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "MySQL",
+                "service_definition": "CUPS",
                 "source": {
                   "type": "Manual"
                 },
@@ -19885,14 +19885,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-09T00:38:02.282437Z",
-              "id": "930e0943-1472-4793-9902-76a8f8fa0777",
+              "created_at": "2026-02-09T04:24:13.283247Z",
+              "id": "53af0afc-1903-4c80-a51a-a5fab4d1008f",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-09T00:38:02.282437Z"
+              "updated_at": "2026-02-09T04:24:13.283247Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19901,7 +19901,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "MySQL",
+          "service_definition": "CUPS",
           "source": {
             "type": "Manual"
           },

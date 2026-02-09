@@ -16,51 +16,20 @@
       "feedback": null
     },
     {
-      "id": "brevo-login-updates-last-login",
-      "category": "Event Handling",
-      "description": "Login event updates contact's last login date in Brevo",
-      "setup": "Verify the test user's org has a non-NULL brevo_company_id in the database.",
-      "steps": [
-        "Log in to Scanopy as the test user",
-        "In Brevo dashboard, check the contact's SCANOPY_LAST_LOGIN_DATE attribute"
-      ],
-      "expected": "Contact's SCANOPY_LAST_LOGIN_DATE is updated to approximately the current login timestamp.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "brevo-entity-metrics-sync",
-      "category": "Event Handling",
-      "description": "Creating/deleting entities updates company metrics in Brevo",
-      "setup": "Verify the test org has a non-NULL brevo_company_id in the database. Note the current scanopy_network_count and scanopy_host_count on the company in Brevo.",
-      "steps": [
-        "In Scanopy, create a new network",
-        "In Brevo, verify the company's scanopy_network_count increased by 1",
-        "In Scanopy, create a host on the new network",
-        "In Brevo, verify scanopy_host_count increased by 1",
-        "In Scanopy, delete the host",
-        "In Brevo, verify scanopy_host_count decreased by 1"
-      ],
-      "expected": "Company attributes (scanopy_network_count, scanopy_host_count) reflect current DB counts after each change. Updates may be debounced by up to 5 seconds.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "brevo-enterprise-inquiry-happy-path",
+      "id": "brevo-enterprise-inquiry-form-updated",
       "category": "Enterprise Inquiry",
-      "description": "Submitting enterprise inquiry creates a deal in Brevo and tracks event",
+      "description": "Inquiry form hides email/company, shows required indicators, and creates deal",
       "setup": "Verify the test user's org has a non-NULL brevo_company_id in the database.",
       "steps": [
         "In Scanopy, navigate to Settings > Billing",
         "Open the enterprise inquiry modal",
-        "Fill in all fields (company name, team size, use case, message, urgency, network count)",
-        "Submit the form",
-        "In Brevo, go to Deals and verify a new deal named 'Enterprise Inquiry - <company>' was created in the Sales pipeline",
-        "Click the deal and verify it has the correct attributes (team_size, message, plan_type, urgency, network_count)",
-        "Verify the deal is linked to the org's company",
-        "In Brevo, check for an enterprise_inquiry event on the contact"
+        "Verify the form does NOT show email or company fields",
+        "Verify Company Size and urgency fields show a required indicator (asterisk)",
+        "Try submitting with Company Size and urgency left unselected — verify validation errors appear",
+        "Fill in all fields (name, company size, urgency, network count, message) and submit",
+        "In Brevo, go to Deals and verify a new deal was created with correct attributes"
       ],
-      "expected": "Form submits successfully with no errors. A new deal is created in the Sales pipeline with all inquiry fields as deal attributes, linked to the org's Brevo company. enterprise_inquiry event tracked with full details.",
+      "expected": "Email and company fields are hidden. Company Size and urgency show required indicators. Form validates required fields before submit. Successful submission creates a deal in Brevo linked to the org's company.",
       "status": null,
       "feedback": null
     },

@@ -161,7 +161,6 @@ pub struct BillingPlanFeatures {
     pub webhooks: bool,
     pub api_access: bool,
     pub onboarding_call: bool,
-    pub commercial_license: bool,
     pub custom_sso: bool,
     pub managed_deployment: bool,
     pub whitelabeling: bool,
@@ -301,7 +300,6 @@ impl BillingPlan {
                 onboarding_call: false,
                 webhooks: false,
                 audit_logs: false,
-                commercial_license: false,
                 remove_created_with: false,
                 api_access: true,
                 custom_sso: false,
@@ -320,9 +318,8 @@ impl BillingPlan {
                 snmp_integration: true,
             },
             BillingPlan::Free { .. } => BillingPlanFeatures {
-                share_views: true,
+                share_views: false,
                 onboarding_call: false,
-                commercial_license: false,
                 webhooks: false,
                 audit_logs: false,
                 remove_created_with: false,
@@ -345,7 +342,6 @@ impl BillingPlan {
             BillingPlan::Starter { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: false,
-                commercial_license: false,
                 webhooks: false,
                 audit_logs: false,
                 remove_created_with: true,
@@ -368,7 +364,6 @@ impl BillingPlan {
             BillingPlan::Pro { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: false,
-                commercial_license: false,
                 webhooks: false,
                 audit_logs: false,
                 remove_created_with: true,
@@ -391,7 +386,6 @@ impl BillingPlan {
             BillingPlan::Team { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                commercial_license: true,
                 webhooks: false,
                 audit_logs: false,
                 remove_created_with: true,
@@ -414,7 +408,6 @@ impl BillingPlan {
             BillingPlan::Business { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                commercial_license: true,
                 webhooks: true,
                 audit_logs: true,
                 remove_created_with: true,
@@ -437,7 +430,6 @@ impl BillingPlan {
             BillingPlan::Enterprise { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                commercial_license: true,
                 webhooks: true,
                 audit_logs: true,
                 remove_created_with: true,
@@ -460,7 +452,6 @@ impl BillingPlan {
             BillingPlan::Demo { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                commercial_license: true,
                 webhooks: true,
                 audit_logs: true,
                 remove_created_with: true,
@@ -483,7 +474,6 @@ impl BillingPlan {
             BillingPlan::CommercialSelfHosted { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                commercial_license: true,
                 webhooks: true,
                 audit_logs: true,
                 remove_created_with: true,
@@ -515,7 +505,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
         let BillingPlanFeatures {
             share_views,
             onboarding_call,
-            commercial_license,
             webhooks,
             audit_logs,
             remove_created_with,
@@ -578,10 +567,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
 
         if onboarding_call {
             features.push(Feature::OnboardingCall)
-        }
-
-        if commercial_license {
-            features.push(Feature::CommercialLicense)
         }
 
         if webhooks {

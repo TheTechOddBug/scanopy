@@ -13,7 +13,6 @@ pub enum Feature {
     #[default]
     ShareViews,
     OnboardingCall,
-    CommercialLicense,
     AuditLogs,
     Webhooks,
     RemoveCreatedWith,
@@ -42,7 +41,6 @@ impl HasId for Feature {
             Feature::AuditLogs => "audit_logs",
             Feature::ShareViews => "share_views",
             Feature::OnboardingCall => "onboarding_call",
-            Feature::CommercialLicense => "commercial_license",
             Feature::RemoveCreatedWith => "remove_created_with",
             Feature::CustomSso => "custom_sso",
             Feature::ManagedDeployment => "managed_deployment",
@@ -95,8 +93,6 @@ impl TypeMetadataProvider for Feature {
             | Feature::PrioritySupport
             | Feature::OnboardingCall => "Support",
 
-            Feature::CommercialLicense => "Licensing",
-
             Feature::CustomSso
             | Feature::ManagedDeployment
             | Feature::Whitelabeling
@@ -114,7 +110,6 @@ impl TypeMetadataProvider for Feature {
             Feature::Webhooks => "Webhooks",
             Feature::ShareViews => "Share Views",
             Feature::OnboardingCall => "Onboarding Call",
-            Feature::CommercialLicense => "Commercial License",
             Feature::RemoveCreatedWith => "Remove Watermark",
             Feature::CustomSso => "Custom SSO",
             Feature::ManagedDeployment => "Managed Deployment",
@@ -146,7 +141,6 @@ impl TypeMetadataProvider for Feature {
             Feature::OnboardingCall => {
                 "30 minute onboarding call to ensure you're getting the most out of Scanopy"
             }
-            Feature::CommercialLicense => "Use Scanopy under a commercial license",
             Feature::RemoveCreatedWith => {
                 "Remove 'Created using scanopy.net' in bottom right corner of exported images"
             }

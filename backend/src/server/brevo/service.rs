@@ -224,9 +224,6 @@ impl BrevoService {
         if let Some(size) = company_size {
             company_attrs = company_attrs.with_company_size(size);
         }
-        if let Some(source) = formatted_referral_source {
-            company_attrs = company_attrs.with_referral_source(source);
-        }
 
         let (_contact_id, company_id) = self
             .client

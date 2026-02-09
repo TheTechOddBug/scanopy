@@ -378,11 +378,6 @@ impl CompanyAttributes {
         }
         attrs
     }
-
-    pub fn with_referral_source(mut self, source: impl Into<String>) -> Self {
-        self.scanopy_referral_source = Some(source.into());
-        self
-    }
 }
 
 // ============================================================================

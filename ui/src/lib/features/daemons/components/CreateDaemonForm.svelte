@@ -19,6 +19,7 @@
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
+	import { showBillingPlanModal } from '$lib/features/billing/stores';
 	import { fieldDefs } from '../config';
 	import type { Daemon } from '../types/base';
 	import {
@@ -421,6 +422,10 @@
 									return {
 										value: opt.value,
 										label: opt.label(),
+										description:
+											opt.value === 'daemon_poll'
+												? 'Daemon connects to server; works behind NAT/firewall without opening ports'
+												: 'Server connects to daemon; requires providing Daemon URL',
 										disabled: needsUpgrade,
 										tags: needsUpgrade
 											? [
@@ -434,12 +439,10 @@
 									};
 								})}
 								onSelect={(value) => field.handleChange(value)}
+								onDisabledClick={() => showBillingPlanModal.set(true)}
 								displayComponent={SimpleOptionDisplay}
 								disabled={def.disabled?.(isNewDaemon) ?? false}
 							/>
-							{#if def.helpText()}
-								<p class="text-tertiary mt-1 text-xs">{def.helpText()}</p>
-							{/if}
 						{:else}
 							<SelectInput
 								label={def.label()}

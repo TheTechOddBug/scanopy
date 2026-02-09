@@ -19,6 +19,7 @@
 	export let disabled: boolean = false;
 	export let error: string | null = null;
 	export let onSelect: (value: string) => void;
+	export let onDisabledClick: ((value: string) => void) | null = null;
 	export let showSearch: boolean = false;
 	export let displayComponent: EntityDisplayComponent<V, C>;
 	export let getOptionContext: (option: V, index: number) => C = () => new Object() as C;
@@ -295,11 +296,14 @@
 							{@const isDisabled = displayComponent.getDisabled?.(option, context) ?? false}
 							<button
 								type="button"
-								disabled={isDisabled}
 								on:click={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
-									if (!isDisabled) handleSelect(displayComponent.getId(option));
+									if (isDisabled) {
+										onDisabledClick?.(displayComponent.getId(option));
+									} else {
+										handleSelect(displayComponent.getId(option));
+									}
 								}}
 								class="w-full px-3 py-3 text-left transition-colors
                        {isDisabled ? 'cursor-not-allowed opacity-60' : 'hover:bg-gray-600'}

@@ -96,6 +96,18 @@ async fn merge_daemon_fixtures() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    // Fix permissions on fixture files written by Docker containers (which run as root)
+    let _ = std::process::Command::new("docker")
+        .args([
+            "exec",
+            "scanopy-server-1",
+            "chmod",
+            "-R",
+            "a+rw",
+            "/app/tests/integration/compat/fixtures",
+        ])
+        .output();
+
     // Find all version directories
     for entry in std::fs::read_dir(&fixtures_dir)? {
         let entry = entry?;

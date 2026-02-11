@@ -88,6 +88,7 @@ impl EventSubscriber for PosthogService {
             entity_operations: Some(entity_ops),
             auth_operations: Some(vec![AuthOperation::LoginSuccess]),
             telemetry_operations: Some(vec![
+                // Billing lifecycle
                 TelemetryOperation::CheckoutStarted,
                 TelemetryOperation::CheckoutCompleted,
                 TelemetryOperation::TrialStarted,
@@ -98,6 +99,21 @@ impl EventSubscriber for PosthogService {
                 TelemetryOperation::PaymentFailed,
                 TelemetryOperation::PaymentActionRequired,
                 TelemetryOperation::PaymentRecovered,
+                // Onboarding & activation milestones
+                TelemetryOperation::OrgCreated,
+                TelemetryOperation::OnboardingModalCompleted,
+                TelemetryOperation::PlanSelected,
+                // Engagement milestones (fire once per org)
+                TelemetryOperation::FirstDaemonRegistered,
+                TelemetryOperation::FirstTopologyRebuild,
+                TelemetryOperation::FirstDiscoveryCompleted,
+                TelemetryOperation::FirstHostDiscovered,
+                TelemetryOperation::SecondNetworkCreated,
+                TelemetryOperation::FirstTagCreated,
+                TelemetryOperation::FirstUserApiKeyCreated,
+                TelemetryOperation::FirstSnmpCredentialCreated,
+                TelemetryOperation::InviteSent,
+                TelemetryOperation::InviteAccepted,
             ]),
             discovery_phases: Some(vec![
                 DiscoveryPhase::Pending,

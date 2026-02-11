@@ -1465,14 +1465,14 @@ async fn handle_register_flow(
             }
 
             // Only apply pending setup for new users in new orgs
-            if is_new_user && is_new_org {
-                if let Some(setup) = pending_setup
-                    && let Err(e) = apply_pending_setup(&state, &user, setup).await
-                {
-                    tracing::error!("Failed to apply pending setup: {:?}", e);
-                    // Don't fail registration, just log the error
-                    // The user can complete onboarding manually
-                }
+            if is_new_user
+                && is_new_org
+                && let Some(setup) = pending_setup
+                && let Err(e) = apply_pending_setup(&state, &user, setup).await
+            {
+                tracing::error!("Failed to apply pending setup: {:?}", e);
+                // Don't fail registration, just log the error
+                // The user can complete onboarding manually
             }
 
             // Clear pending setup data from session

@@ -184,7 +184,7 @@ dev-down:
 	docker compose -f docker-compose.test.yml down --volumes --rmi local
 
 test:
-	cd ui && npx vite-node scripts/export-daemon-field-defs.ts 2>/dev/null | grep -v 'paraglide-js' > ../backend/src/tests/daemon-config-frontend-fields.json
+	cd ui && npx vite-node scripts/export-daemon-field-defs.ts --output=../backend/src/tests/daemon-config-frontend-fields.json 2>/dev/null
 	@echo "Running frontend tests..."
 	cd ui && npm test
 	@echo "Running backend tests..."

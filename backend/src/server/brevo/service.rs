@@ -27,6 +27,8 @@ use uuid::Uuid;
 const BREVO_PRODUCT_UPDATES_LIST_ID: i64 = 9;
 /// Brevo list ID for "App Users - Marketing" (explicit opt-in only)
 const BREVO_MARKETING_LIST_ID: i64 = 10;
+/// Brevo list ID for "App Users - Onboarding" (all app signups)
+const BREVO_ONBOARDING_LIST_ID: i64 = 12;
 
 /// Service for syncing data to Brevo CRM
 pub struct BrevoService {
@@ -302,13 +304,20 @@ impl BrevoService {
             .sync_contact_and_company(email.as_ref(), contact_attrs, org_name, company_attrs)
             .await?;
 
-        // Add to "Product Updates" list (all signups)
+        // Add to "Product Updates" and "Onboarding" lists (all signups)
         if let Err(e) = self
             .client
             .add_contacts_to_list(BREVO_PRODUCT_UPDATES_LIST_ID, vec![email.to_string()])
             .await
         {
             tracing::warn!(error = %e, "Failed to add contact to Product Updates list");
+        }
+        if let Err(e) = self
+            .client
+            .add_contacts_to_list(BREVO_ONBOARDING_LIST_ID, vec![email.to_string()])
+            .await
+        {
+            tracing::warn!(error = %e, "Failed to add contact to Onboarding list");
         }
 
         // Add to "Marketing" list only if opted in

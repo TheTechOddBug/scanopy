@@ -106,7 +106,7 @@ impl OidcProvider {
     /// Generate authorization URL for user to visit
     pub async fn authorize_url(&self, flow: OidcFlow) -> Result<(String, OidcPendingAuth)> {
         let http_client = ReqwestClient::builder()
-            .redirect(reqwest::redirect::Policy::none())
+            .redirect(reqwest::redirect::Policy::limited(10))
             .build()?;
 
         let provider_metadata = CoreProviderMetadata::discover_async(
@@ -153,7 +153,7 @@ impl OidcProvider {
         pending_auth: &OidcPendingAuth,
     ) -> Result<OidcUserInfo> {
         let http_client = ReqwestClient::builder()
-            .redirect(reqwest::redirect::Policy::none())
+            .redirect(reqwest::redirect::Policy::limited(10))
             .build()?;
 
         let provider_metadata = CoreProviderMetadata::discover_async(

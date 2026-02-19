@@ -1013,7 +1013,7 @@ async fn oidc_authorize(
     let (auth_url, pending_auth) = provider
         .authorize_url(flow)
         .await
-        .map_err(|e| ApiError::internal_error(&format!("Failed to generate auth URL: {}", e)))?;
+        .map_err(|e| ApiError::internal_error(&format!("Failed to generate auth URL for '{}': {}. Check that the issuer URL is reachable from the server.", slug, e)))?;
 
     // Store OIDC flow state in session
     session
@@ -1504,12 +1504,7 @@ async fn handle_register_flow(
             let _ = session.remove::<bool>("oidc_terms_accepted").await;
             let _ = session.remove::<bool>("oidc_marketing_opt_in").await;
 
-            if is_new_user {
-                Ok(Redirect::to("/"))
-            } else {
-                // Existing user auto-logged in — send to app root, not onboarding
-                Ok(Redirect::to("/"))
-            }
+            Ok(Redirect::to(return_url.as_str()))
         }
         Err(e) => {
             tracing::error!("Failed to register via OIDC: {}", e);

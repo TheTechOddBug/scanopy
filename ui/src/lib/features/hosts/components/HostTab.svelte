@@ -51,7 +51,7 @@
 	import { useServicesByIds } from '$lib/features/services/queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
-	import { modalState, closeModal } from '$lib/shared/stores/modal-registry';
+	import { modalState } from '$lib/shared/stores/modal-registry';
 	import type { components } from '$lib/api/schema';
 
 	type HostOrderField = components['schemas']['HostOrderField'];
@@ -161,7 +161,7 @@
 
 	// Deep-link: open host editor from URL
 	$effect(() => {
-		if ($modalState.name === 'host-editor') {
+		if ($modalState.name === 'host-editor' && !showHostEditor) {
 			if ($modalState.id) {
 				const host = hostsData.find((h) => h.id === $modalState.id);
 				if (host) {
@@ -172,7 +172,6 @@
 				editingHost = null;
 				showHostEditor = true;
 			}
-			closeModal();
 		}
 	});
 

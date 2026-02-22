@@ -23,15 +23,6 @@
 	// Read hash immediately during script initialization, before onMount
 	const initialHash = typeof window !== 'undefined' ? window.location.hash.substring(1) : '';
 
-	// After first billing checkout, set flag so we open daemon setup after billing resolves
-	let pendingDaemonSetup = false;
-	if (typeof window !== 'undefined') {
-		const params = new URLSearchParams(window.location.search);
-		if (params.get('billing_flow') === 'checkout') {
-			pendingDaemonSetup = true;
-		}
-	}
-
 	// TanStack Query for current user
 	const currentUserQuery = useCurrentUserQuery();
 	let isAuthenticated = $derived(currentUserQuery.data != null);
@@ -73,12 +64,8 @@
 	$effect(() => {
 		if (!initialHash && !initialTabSet && daemonsQuery.isSuccess && !showBillingModal) {
 			const hasDaemons = (daemonsQuery.data?.length ?? 0) > 0;
-			const wantsDaemonSetup = pendingDaemonSetup || $modalState.name === 'create-daemon';
+			const wantsDaemonSetup = $modalState.name === 'create-daemon';
 			activeTab = hasDaemons && !wantsDaemonSetup ? 'topology' : 'daemons';
-			if (pendingDaemonSetup) {
-				openModal('create-daemon');
-				pendingDaemonSetup = false;
-			}
 			initialTabSet = true;
 		}
 	});

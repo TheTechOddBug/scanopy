@@ -704,14 +704,14 @@ impl BillingService {
         );
 
         match event.type_ {
-            EventType::CustomerSubscriptionCreated | EventType::CustomerSubscriptionUpdated => {
-                let sub = match event.data.object {
-                    EventObject::CustomerSubscriptionCreated(sub) => Some(sub),
-                    EventObject::CustomerSubscriptionUpdated(sub) => Some(sub),
-                    _ => None,
-                };
-
-                if let Some(sub) = sub {
+            EventType::CustomerSubscriptionCreated => {
+                tracing::info!(
+                    event_id = %event.id,
+                    "Ignoring subscription.created webhook (handled via subscription.updated)"
+                );
+            }
+            EventType::CustomerSubscriptionUpdated => {
+                if let EventObject::CustomerSubscriptionUpdated(sub) = event.data.object {
                     self.handle_subscription_update(sub).await?;
                 }
             }
@@ -1013,10 +1013,6 @@ impl BillingService {
                 .collect();
 
             for old_sub in old_subs {
-                UpdateSubscription::new(&old_sub.id)
-                    .metadata([("cancel_reason".to_string(), "upgrade".to_string())])
-                    .send(&self.stripe)
-                    .await?;
                 CancelSubscription::new(&old_sub.id)
                     .send(&self.stripe)
                     .await?;

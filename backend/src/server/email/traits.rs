@@ -15,9 +15,10 @@ use crate::server::{
         PAYMENT_METHOD_ADDED_TITLE, PLAN_CHANGED_BODY, PLAN_CHANGED_TITLE,
         PLAN_LIMIT_APPROACHING_BODY, PLAN_LIMIT_APPROACHING_TITLE, PLAN_LIMIT_REACHED_BODY,
         PLAN_LIMIT_REACHED_TITLE, SUBSCRIPTION_CANCELLED_BODY, SUBSCRIPTION_CANCELLED_TITLE,
-        TOPOLOGY_READY_BODY, TOPOLOGY_READY_TITLE, TRIAL_ENDING_BODY_HAS_PAYMENT,
-        TRIAL_ENDING_BODY_NO_PAYMENT, TRIAL_ENDING_TITLE, TRIAL_EXPIRED_BODY, TRIAL_EXPIRED_TITLE,
-        TRIAL_STARTED_BODY, TRIAL_STARTED_TITLE,
+        TOPOLOGY_READY_BODY, TOPOLOGY_READY_TITLE, TRIAL_CONVERTED_BODY, TRIAL_CONVERTED_TITLE,
+        TRIAL_ENDING_BODY_HAS_PAYMENT, TRIAL_ENDING_BODY_NO_PAYMENT, TRIAL_ENDING_TITLE,
+        TRIAL_EXPIRED_BODY, TRIAL_EXPIRED_TITLE, TRIAL_STARTED_BODY, TRIAL_STARTED_TITLE,
+        USAGE_SUMMARY_BODY, USAGE_SUMMARY_TITLE,
     },
     hosts::{r#impl::base::Host, service::HostService},
     networks::{r#impl::Network, service::NetworkService},
@@ -181,6 +182,29 @@ pub trait EmailProvider: Send + Sync {
     fn build_payment_method_added_email(&self) -> (String, String) {
         let body = self.build_email(PAYMENT_METHOD_ADDED_BODY.to_string());
         (PAYMENT_METHOD_ADDED_TITLE.to_string(), body)
+    }
+
+    fn build_trial_converted_email(&self, plan_name: &str) -> (String, String) {
+        let body = self.build_email(TRIAL_CONVERTED_BODY.replace("{plan_name}", plan_name));
+        (TRIAL_CONVERTED_TITLE.to_string(), body)
+    }
+
+    fn build_usage_summary_email(
+        &self,
+        period: &str,
+        invoice_date: &str,
+        line_items_html: &str,
+        total: &str,
+    ) -> (String, String) {
+        let body = self.build_email(
+            USAGE_SUMMARY_BODY
+                .replace("{period}", period)
+                .replace("{invoice_date}", invoice_date)
+                .replace("{line_items_html}", line_items_html)
+                .replace("{total}", total),
+        );
+        let subject = USAGE_SUMMARY_TITLE.replace("{period}", period);
+        (subject, body)
     }
 
     // ========================================================================
@@ -461,9 +485,11 @@ impl EmailService {
         plan_name: &str,
         trial_days: u32,
     ) -> Result<()> {
-        self.provider
-            .send_trial_started_email(to, plan_name, trial_days)
-            .await
+        let (subject, body) = self
+            .provider
+            .build_trial_started_email(plan_name, trial_days);
+        let body = body.replace("{base_url}", &self.public_url);
+        self.provider.send_billing_email(to, subject, body).await
     }
 
     pub async fn send_trial_ending_email(
@@ -472,21 +498,80 @@ impl EmailService {
         plan_name: &str,
         has_payment: bool,
     ) -> Result<()> {
-        self.provider
-            .send_trial_ending_email(to, plan_name, has_payment)
-            .await
+        let (subject, body) = if has_payment {
+            self.provider
+                .build_trial_ending_email_has_payment(plan_name)
+        } else {
+            self.provider.build_trial_ending_email_no_payment(plan_name)
+        };
+        let body = body.replace("{base_url}", &self.public_url);
+        self.provider.send_billing_email(to, subject, body).await
     }
 
     pub async fn send_trial_expired_email(&self, to: EmailAddress, plan_name: &str) -> Result<()> {
-        self.provider.send_trial_expired_email(to, plan_name).await
+        let (subject, body) = self.provider.build_trial_expired_email(plan_name);
+        let body = body.replace("{base_url}", &self.public_url);
+        self.provider.send_billing_email(to, subject, body).await
     }
 
     pub async fn send_plan_changed_email(&self, to: EmailAddress, plan_name: &str) -> Result<()> {
-        self.provider.send_plan_changed_email(to, plan_name).await
+        let (subject, body) = self.provider.build_plan_changed_email(plan_name);
+        let body = body.replace("{base_url}", &self.public_url);
+        self.provider.send_billing_email(to, subject, body).await
     }
 
     pub async fn send_subscription_cancelled_email(&self, to: EmailAddress) -> Result<()> {
-        self.provider.send_subscription_cancelled_email(to).await
+        let (subject, body) = self.provider.build_subscription_cancelled_email();
+        let body = body.replace("{base_url}", &self.public_url);
+        self.provider.send_billing_email(to, subject, body).await
+    }
+
+    pub async fn send_trial_converted_email(
+        &self,
+        to: EmailAddress,
+        plan_name: &str,
+    ) -> Result<()> {
+        let (subject, body) = self.provider.build_trial_converted_email(plan_name);
+        let body = body.replace("{base_url}", &self.public_url);
+        self.provider.send_billing_email(to, subject, body).await
+    }
+
+    pub async fn send_usage_summary_email(
+        &self,
+        to: EmailAddress,
+        invoice: &stripe_billing::Invoice,
+    ) -> Result<()> {
+        // Use line item period (actual service dates), not invoice-level period
+        // (which is when items were added to the invoice)
+        let period = invoice
+            .lines
+            .data
+            .first()
+            .map(|item| format_invoice_period(item.period.start, item.period.end))
+            .unwrap_or_else(|| format_invoice_period(invoice.period_start, invoice.period_end));
+        let invoice_date = format_timestamp(invoice.created);
+        let currency_str = invoice.currency.to_string();
+
+        let mut line_items_html = String::new();
+        for item in &invoice.lines.data {
+            let description = item.description.as_deref().unwrap_or("Subscription");
+            let amount = format_cents(item.amount, &currency_str);
+            line_items_html.push_str(&format!(
+                r#"<tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #4a4a4a;">{}</td><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #4a4a4a; text-align: right;">{}</td></tr>"#,
+                description, amount
+            ));
+        }
+
+        let total = format_cents(invoice.amount_paid, &currency_str);
+
+        let (subject, body) = self.provider.build_usage_summary_email(
+            &period,
+            &invoice_date,
+            &line_items_html,
+            &total,
+        );
+        let body = body.replace("{base_url}", &self.public_url);
+        self.provider.send_billing_email(to, subject, body).await
     }
 
     // ========================================================================
@@ -769,12 +854,39 @@ impl EmailService {
     }
 
     /// Get the owner email for an organization
-    async fn get_owner_email(&self, org_id: &Uuid) -> Result<EmailAddress> {
+    pub async fn get_owner_email(&self, org_id: &Uuid) -> Result<EmailAddress> {
         let owners = self.user_service.get_organization_owners(org_id).await?;
         let owner = owners
             .first()
             .ok_or_else(|| anyhow::anyhow!("No owner found for organization {}", org_id))?;
         Ok(owner.base.email.clone())
+    }
+}
+
+/// Format an amount in cents to a display string (e.g. 2999 → "$29.99")
+pub fn format_cents(amount: i64, currency: &str) -> String {
+    let dollars = amount as f64 / 100.0;
+    match currency {
+        "usd" => format!("${:.2}", dollars),
+        _ => format!("{:.2} {}", dollars, currency.to_uppercase()),
+    }
+}
+
+/// Format a Unix timestamp into "February 22, 2026"
+fn format_timestamp(ts: i64) -> String {
+    chrono::DateTime::from_timestamp(ts, 0)
+        .map(|dt| dt.format("%B %-d, %Y").to_string())
+        .unwrap_or_else(|| "Unknown date".to_string())
+}
+
+/// Format invoice period timestamps into a human-readable range
+fn format_invoice_period(start: i64, end: i64) -> String {
+    match (
+        chrono::DateTime::from_timestamp(start, 0),
+        chrono::DateTime::from_timestamp(end, 0),
+    ) {
+        (Some(s), Some(e)) => format!("{} – {}", s.format("%b %-d"), e.format("%b %-d, %Y")),
+        _ => "Recent billing period".to_string(),
     }
 }
 

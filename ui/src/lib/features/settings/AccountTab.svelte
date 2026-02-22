@@ -46,6 +46,7 @@
 		settings_account_notLinked,
 		settings_account_oidcLinkHelp,
 		settings_account_oidcUnlinked,
+		settings_account_setPassword,
 		settings_account_signOut,
 		settings_account_unlinkFirst,
 		settings_account_updateCredentials,
@@ -118,17 +119,17 @@
 
 	// Create form for email change
 	const emailChangeForm = createForm(() => ({
-		defaultValues: { newEmail: '' },
+		defaultValues: { currentPassword: '', newEmail: '' },
 		onSubmit: async ({ value }) => {
 			if (!value.newEmail) return;
 			emailChangeLoading = true;
 			try {
 				const { data } = await apiClient.POST('/api/auth/request-email-change', {
-					body: { new_email: value.newEmail }
+					body: { current_password: value.currentPassword, new_email: value.newEmail }
 				});
 				if (data?.success) {
 					pushSuccess('Verification email sent to ' + value.newEmail);
-					emailChangeForm.reset({ newEmail: '' });
+					emailChangeForm.reset({ currentPassword: '', newEmail: '' });
 					subView = 'main';
 				} else {
 					pushError(data?.error || 'Failed to request email change');
@@ -143,7 +144,7 @@
 	export function resetForm() {
 		linkingProviderSlug = null;
 		form.reset({ currentPassword: '', password: '', confirmPassword: '' });
-		emailChangeForm.reset({ newEmail: '' });
+		emailChangeForm.reset({ currentPassword: '', newEmail: '' });
 	}
 
 	// Find which provider (if any) is linked to this user
@@ -182,7 +183,7 @@
 		if (subView === 'credentials' || subView === 'email-change') {
 			subView = 'main';
 			form.reset({ currentPassword: '', password: '', confirmPassword: '' });
-			emailChangeForm.reset({ newEmail: '' });
+			emailChangeForm.reset({ currentPassword: '', newEmail: '' });
 		} else {
 			onClose();
 		}
@@ -221,16 +222,18 @@
 						<InfoRow label={common_email()}>
 							<div class="flex items-center gap-2">
 								<span>{user.email}</span>
-								<button
-									type="button"
-									onclick={() => {
-										emailChangeForm.reset({ newEmail: '' });
-										subView = 'email-change';
-									}}
-									class="text-xs text-blue-500 hover:text-blue-700"
-								>
-									Change
-								</button>
+								{#if !hasLinkedOidc}
+									<button
+										type="button"
+										onclick={() => {
+											emailChangeForm.reset({ currentPassword: '', newEmail: '' });
+											subView = 'email-change';
+										}}
+										class="text-xs text-blue-500 hover:text-blue-700"
+									>
+										Change
+									</button>
+								{/if}
 							</div>
 						</InfoRow>
 						<InfoRow label={common_permissions()} mono={true}>{user.permissions}</InfoRow>
@@ -359,24 +362,30 @@
 			{/if}
 		{:else if subView === 'credentials'}
 			<div class="space-y-2">
-				<p class="text-secondary mb-2 text-sm">{settings_account_updateCredentials()}</p>
+				<p class="text-secondary mb-2 text-sm">
+					{user?.has_password
+						? settings_account_updateCredentials()
+						: settings_account_setPassword()}
+				</p>
 				<div class="space-y-6">
-					<form.Field
-						name="currentPassword"
-						validators={{
-							onBlur: ({ value }) => required(value)
-						}}
-					>
-						{#snippet children(field)}
-							<TextInput
-								label="Current Password"
-								id="currentPassword"
-								type="password"
-								{field}
-								placeholder="Enter your current password"
-							/>
-						{/snippet}
-					</form.Field>
+					{#if user?.has_password}
+						<form.Field
+							name="currentPassword"
+							validators={{
+								onBlur: ({ value }) => required(value)
+							}}
+						>
+							{#snippet children(field)}
+								<TextInput
+									label="Current Password"
+									id="currentPassword"
+									type="password"
+									{field}
+									placeholder="Enter your current password"
+								/>
+							{/snippet}
+						</form.Field>
+					{/if}
 
 					<form.Field
 						name="password"
@@ -406,6 +415,23 @@
 					Enter your new email address. We'll send a verification link to confirm the change.
 				</p>
 				<div class="space-y-6">
+					<emailChangeForm.Field
+						name="currentPassword"
+						validators={{
+							onBlur: ({ value }) => required(value)
+						}}
+					>
+						{#snippet children(field)}
+							<TextInput
+								label="Current Password"
+								id="emailChangeCurrentPassword"
+								type="password"
+								{field}
+								placeholder="Enter your current password"
+							/>
+						{/snippet}
+					</emailChangeForm.Field>
+
 					<emailChangeForm.Field
 						name="newEmail"
 						validators={{

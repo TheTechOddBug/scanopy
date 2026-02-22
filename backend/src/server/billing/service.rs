@@ -39,7 +39,7 @@ use stripe_billing::subscription::ListSubscription;
 use stripe_billing::subscription::UpdateSubscription;
 use stripe_billing::subscription::UpdateSubscriptionItems;
 use stripe_billing::subscription::UpdateSubscriptionProrationBehavior;
-use stripe_billing::{Subscription, SubscriptionStatus};
+use stripe_billing::{InvoiceBillingReason, Subscription, SubscriptionStatus};
 use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdate;
 use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdateAddress;
 use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdateName;
@@ -956,6 +956,14 @@ impl BillingService {
                             }),
                         ))
                         .await?;
+
+                    if let Some(ref email_service) = self.email_service
+                        && let Err(e) = email_service
+                            .send_trial_converted_email(owner.base.email.clone(), plan.name())
+                            .await
+                    {
+                        tracing::warn!(error = %e, "Failed to send trial_converted email");
+                    }
                 }
             }
         }
@@ -1751,6 +1759,23 @@ impl BillingService {
             tracing::debug!("No org found for invoice.paid — ignoring");
             return Ok(());
         };
+
+        // Send usage summary for recurring billing cycles
+        if invoice.billing_reason == Some(InvoiceBillingReason::SubscriptionCycle)
+            && let Some(ref email_service) = self.email_service
+        {
+            let owners = self
+                .user_service
+                .get_organization_owners(&organization.id)
+                .await?;
+            if let Some(owner) = owners.first()
+                && let Err(e) = email_service
+                    .send_usage_summary_email(owner.base.email.clone(), &invoice)
+                    .await
+            {
+                tracing::warn!(error = %e, "Failed to send usage summary email");
+            }
+        }
 
         let was_past_due = organization
             .base

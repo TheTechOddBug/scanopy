@@ -471,7 +471,7 @@ impl AuthService {
             .base
             .password_hash
             .as_ref()
-            .ok_or_else(|| anyhow!("User has no password set. Please register first."))?;
+            .ok_or_else(|| anyhow!("Invalid email or password"))?;
 
         // Verify password
         verify_password(&request.password, password_hash)?;
@@ -717,6 +717,7 @@ impl AuthService {
     pub async fn request_email_change(
         &self,
         user_id: Uuid,
+        current_password: Option<String>,
         new_email: EmailAddress,
         ip: IpAddr,
         user_agent: Option<String>,
@@ -731,6 +732,17 @@ impl AuthService {
             .get_by_id(&user_id)
             .await?
             .ok_or_else(|| anyhow!("User not found"))?;
+
+        if user.base.oidc_provider.is_some() {
+            return Err(anyhow!(
+                "Cannot change email for accounts linked to an identity provider"
+            ));
+        }
+
+        // Verify current password
+        let current = current_password
+            .ok_or_else(|| anyhow!("Current password is required to change your email"))?;
+        verify_password(&current, user.base.password_hash.as_ref().unwrap())?;
 
         // Verify new email differs from current
         if new_email

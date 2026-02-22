@@ -308,6 +308,7 @@ pub fn user() -> User {
             organization_id: ids::ORGANIZATION,
             permissions: UserOrgPermissions::Admin,
             password_hash: None,
+            has_password: false,
             oidc_provider: None,
             oidc_subject: None,
             oidc_linked_at: None,

@@ -582,8 +582,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Bulk delete Daemon API Keys */
-        post: operations["bulk_delete_Daemon API Keys"];
+        /**
+         * Bulk delete daemon_api_keys
+         * @description Returns 409 Conflict if any key is currently assigned to a daemon.
+         */
+        post: operations["bulk_delete_daemon_api_keys"];
         delete?: never;
         options?: never;
         head?: never;
@@ -622,8 +625,11 @@ export interface paths {
         /** Update a Daemon API Key */
         put: operations["update_daemon_api_key"];
         post?: never;
-        /** Delete Daemon API Key */
-        delete: operations["delete_Daemon API Key"];
+        /**
+         * Delete daemon_api_key
+         * @description Returns 409 Conflict if the key is currently assigned to a daemon.
+         */
+        delete: operations["delete_daemon_api_key"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2729,14 +2735,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-22T08:16:45.461938Z",
-             *       "id": "a9beb781-db93-45a5-9352-35e5393e058a",
+             *       "created_at": "2026-02-22T21:56:44.860524Z",
+             *       "id": "1a4513bb-0271-49ba-83ec-3003a97c3dba",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-22T08:16:45.461938Z"
+             *       "updated_at": "2026-02-22T21:56:44.860524Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2971,14 +2977,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-22T08:16:45.445607Z",
-             *               "id": "eb938946-dc6f-4411-ba7a-a32da81b7e67",
+             *               "created_at": "2026-02-22T21:56:44.843689Z",
+             *               "id": "ca82e256-78ef-44b1-bcf3-bf2c58f7a4d2",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-22T08:16:45.445607Z"
+             *               "updated_at": "2026-02-22T21:56:44.843689Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -2987,7 +2993,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Nginx Proxy Manager",
+             *           "service_definition": "Lidarr",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3260,14 +3266,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-22T08:16:45.457281Z",
-             *           "id": "cff9e999-24c1-445a-82f9-7f5eed8e79ca",
+             *           "created_at": "2026-02-22T21:56:44.855620Z",
+             *           "id": "5fa8d56d-5d47-4084-b09e-3ee859c636ac",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-22T08:16:45.457281Z"
+             *           "updated_at": "2026-02-22T21:56:44.855620Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3276,7 +3282,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Nginx Proxy Manager",
+             *       "service_definition": "Lidarr",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3579,14 +3585,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-22T08:16:45.445939Z",
-         *       "id": "eea73053-4ed8-4be3-b77a-115d5c4b8959",
+         *       "created_at": "2026-02-22T21:56:44.844034Z",
+         *       "id": "18828852-6a1a-43a8-a457-aff082597365",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-22T08:16:45.445939Z"
+         *       "updated_at": "2026-02-22T21:56:44.844034Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3768,7 +3774,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Nginx Proxy Manager",
+         *           "service_definition": "Lidarr",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4403,14 +4409,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-22T08:16:45.445149Z",
-         *               "id": "e858c024-69e9-4b83-84c3-165b911fff83",
+         *               "created_at": "2026-02-22T21:56:44.843229Z",
+         *               "id": "8a2ff77f-100e-43f1-8054-b15573f28823",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-22T08:16:45.445149Z"
+         *               "updated_at": "2026-02-22T21:56:44.843229Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4419,7 +4425,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Nginx Proxy Manager",
+         *           "service_definition": "Lidarr",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5324,6 +5330,11 @@ export interface components {
             terms_accepted: boolean;
         };
         RequestEmailChangeRequest: {
+            /**
+             * @description Current password — required if the user already has a password set.
+             *     Not required for OIDC-only users.
+             */
+            current_password?: string | null;
             /** Format: email */
             new_email: string;
         };
@@ -5366,14 +5377,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-22T08:16:45.445822Z",
-         *           "id": "f3c39934-7934-49e5-894b-cb53a2efe7c6",
+         *           "created_at": "2026-02-22T21:56:44.843911Z",
+         *           "id": "4de63b37-1492-4956-b112-4c3b7a5da9de",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-22T08:16:45.445822Z"
+         *           "updated_at": "2026-02-22T21:56:44.843911Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5382,7 +5393,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Nginx Proxy Manager",
+         *       "service_definition": "Lidarr",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5927,6 +5938,8 @@ export interface components {
             email: string;
             /** @description Whether the user has verified their email address */
             email_verified?: boolean;
+            /** @description Whether the user has a password set — computed from password_hash, never stored in DB */
+            readonly has_password?: boolean;
             network_ids: string[];
             /** Format: date-time */
             oidc_linked_at?: string | null;
@@ -7079,27 +7092,36 @@ export interface operations {
             };
         };
     };
-    "bulk_delete_Daemon API Keys": {
+    bulk_delete_daemon_api_keys: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description Array of Daemon API Key IDs to delete */
+        /** @description Array of daemon_api_key IDs to delete */
         requestBody: {
             content: {
                 "application/json": string[];
             };
         };
         responses: {
-            /** @description Daemon API Keys deleted */
+            /** @description daemon_api_keys deleted */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_BulkDeleteResponse"];
+                };
+            };
+            /** @description One or more API keys are in use by daemons */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -7201,19 +7223,19 @@ export interface operations {
             };
         };
     };
-    "delete_Daemon API Key": {
+    delete_daemon_api_key: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Daemon API Key ID */
+                /** @description daemon_api_key ID */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Daemon API Key deleted */
+            /** @description daemon_api_key deleted */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7222,8 +7244,17 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponse"];
                 };
             };
-            /** @description Daemon API Key not found */
+            /** @description daemon_api_key not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description API key is in use by a daemon */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -132,6 +132,13 @@ pub const TRIAL_STARTED_BODY: &str = r#"                    <!-- Main Content --
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">No credit card is required during the trial. Add a payment method anytime from your Settings page to continue after the trial ends.</p>
                         </td>
                     </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}/?modal=settings&tab=billing" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Add Payment Method</a>
+                        </td>
+                    </tr>
 "#;
 
 pub const TRIAL_ENDING_TITLE: &str = "Your Scanopy Trial Ends in 3 Days";
@@ -145,6 +152,13 @@ pub const TRIAL_ENDING_BODY_NO_PAYMENT: &str = r#"                    <!-- Main 
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">If no payment method is added, your account will be downgraded to the Free plan, which includes up to 25 hosts with manual discovery only.</p>
                         </td>
                     </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}/?modal=settings&tab=billing" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Add Payment Method</a>
+                        </td>
+                    </tr>
 "#;
 
 pub const TRIAL_ENDING_BODY_HAS_PAYMENT: &str = r#"                    <!-- Main Content -->
@@ -153,6 +167,13 @@ pub const TRIAL_ENDING_BODY_HAS_PAYMENT: &str = r#"                    <!-- Main
                             <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Your Trial Ends Soon</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your {plan_name} trial ends in 3 days. The payment method you've added will be automatically billed at the end of the trial period.</p>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}/?modal=settings&tab=billing" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">View Billing</a>
                         </td>
                     </tr>
 "#;
@@ -168,6 +189,13 @@ pub const TRIAL_EXPIRED_BODY: &str = r#"                    <!-- Main Content --
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">You can still use Scanopy with up to 25 hosts and manual discovery. Upgrade anytime to restore scheduled discovery, DaemonPoll mode, and higher limits.</p>
                         </td>
                     </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}/?modal=billing-plan" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Upgrade Plan</a>
+                        </td>
+                    </tr>
 "#;
 
 pub const PLAN_CHANGED_TITLE: &str = "Your Scanopy Plan Has Changed";
@@ -178,6 +206,13 @@ pub const PLAN_CHANGED_BODY: &str = r#"                    <!-- Main Content -->
                             <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Plan Updated</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your Scanopy plan has been changed to {plan_name}. The change takes effect immediately.</p>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Open Scanopy</a>
                         </td>
                     </tr>
 "#;
@@ -193,6 +228,13 @@ pub const SUBSCRIPTION_CANCELLED_BODY: &str = r#"                    <!-- Main C
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">You can continue using Scanopy with up to 25 hosts and manual discovery. Resubscribe anytime from your Settings page.</p>
                         </td>
                     </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}/?modal=billing-plan" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Resubscribe</a>
+                        </td>
+                    </tr>
 "#;
 
 pub const PAYMENT_METHOD_ADDED_TITLE: &str = "Payment Method Added - Scanopy";
@@ -203,6 +245,59 @@ pub const PAYMENT_METHOD_ADDED_BODY: &str = r#"                    <!-- Main Con
                             <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Payment Method Added</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">A payment method has been added to your Scanopy account. Your subscription will continue automatically when the trial ends.</p>
+                        </td>
+                    </tr>
+"#;
+
+pub const TRIAL_CONVERTED_TITLE: &str = "Your Scanopy Subscription is Now Active";
+
+pub const TRIAL_CONVERTED_BODY: &str = r#"                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 0 40px 20px 40px;">
+                            <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Your Subscription is Active!</h1>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your {plan_name} trial has ended and your subscription is now active. You'll be billed automatically going forward.</p>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Open Scanopy</a>
+                        </td>
+                    </tr>
+"#;
+
+pub const USAGE_SUMMARY_TITLE: &str = "Your Scanopy Invoice — {period}";
+
+pub const USAGE_SUMMARY_BODY: &str = r#"                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 0 40px 20px 40px;">
+                            <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Monthly Billing Summary</h1>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Here's a summary of your Scanopy billing for {period}.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 20px; color: #6b7280;">Invoice date: {invoice_date}</p>
+
+                            <!-- Line Items Table -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 20px 0;">
+                                <tr>
+                                    <td style="padding: 8px 0; border-bottom: 2px solid #1a1a1a; font-size: 14px; font-weight: 600; color: #1a1a1a;">Description</td>
+                                    <td style="padding: 8px 0; border-bottom: 2px solid #1a1a1a; font-size: 14px; font-weight: 600; color: #1a1a1a; text-align: right;">Amount</td>
+                                </tr>
+                                {line_items_html}
+                                <tr>
+                                    <td style="padding: 12px 0 0 0; font-size: 16px; font-weight: 600; color: #1a1a1a;">Total</td>
+                                    <td style="padding: 12px 0 0 0; font-size: 16px; font-weight: 600; color: #1a1a1a; text-align: right;">{total}</td>
+                                </tr>
+                            </table>
+                            <p style="margin: 0; font-size: 14px; line-height: 20px; color: #6b7280;">Questions? Please reach out to <a href="mailto:billing@scanopy.net" style="color: #2563eb; text-decoration: none;">billing@scanopy.net</a></p>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}/?modal=settings&tab=billing" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">View Billing</a>
                         </td>
                     </tr>
 "#;
@@ -255,6 +350,13 @@ pub const DISCOVERY_GUIDE_PAID_BODY: &str = r#"                    <!-- Main Con
                                 <li><strong>Scheduled discovery:</strong> Your plan includes daily scheduled discovery — your network documentation stays up to date automatically.</li>
                                 <li><strong>Docker discovery:</strong> If your daemon has access to the Docker socket, it'll also discover all your containers — images, ports, networks, and labels — automatically.</li>
                             </ul>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Open Scanopy</a>
                         </td>
                     </tr>
 "#;

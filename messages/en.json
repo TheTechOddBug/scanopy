@@ -741,6 +741,7 @@
 	"settings_account_notLinked": "Not linked",
 	"settings_account_oidcLinkHelp": "Link your account with an identity provider for faster sign-in. You can only link one provider at a time.",
 	"settings_account_oidcUnlinked": "OIDC account unlinked successfully",
+	"settings_account_setPassword": "Set a password to enable email and password login",
 	"settings_account_signOut": "Sign out of your account",
 	"settings_account_unlinkFirst": "Unlink {provider} first to link this provider",
 	"settings_account_updateCredentials": "Update your password",

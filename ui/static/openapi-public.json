@@ -9304,23 +9304,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-<<<<<<< .merge_file_tjfpxG
-              "created_at": "2026-02-22T07:40:28.131949Z",
-              "id": "20f1c73e-f036-425e-9e20-ea29d8d32783",
-=======
-              "created_at": "2026-02-22T08:16:45.461939Z",
-              "id": "c9377f89-8dd3-479b-9426-39f71cf7f173",
->>>>>>> .merge_file_UONjzM
+              "created_at": "2026-02-22T21:57:35.916988Z",
+              "id": "79749bf5-505a-4013-8b0b-f76714490161",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-              "updated_at": "2026-02-22T07:40:28.131949Z"
-=======
-              "updated_at": "2026-02-22T08:16:45.461939Z"
->>>>>>> .merge_file_UONjzM
+              "updated_at": "2026-02-22T21:57:35.916988Z"
             }
           },
           "error": {
@@ -10065,23 +10056,14 @@
                 {
                   "bindings": [
                     {
-<<<<<<< .merge_file_tjfpxG
-                      "created_at": "2026-02-22T07:40:28.119566Z",
-                      "id": "73a1b8a2-fe50-4afd-9b74-cf92eeb686bc",
-=======
-                      "created_at": "2026-02-22T08:16:45.445588Z",
-                      "id": "da5af7ea-09ad-481e-b93f-9b2bde670ea4",
->>>>>>> .merge_file_UONjzM
+                      "created_at": "2026-02-22T21:57:35.893462Z",
+                      "id": "af3b902c-13a5-466f-963f-0dc3c4b9ddc3",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-                      "updated_at": "2026-02-22T07:40:28.119566Z"
-=======
-                      "updated_at": "2026-02-22T08:16:45.445588Z"
->>>>>>> .merge_file_UONjzM
+                      "updated_at": "2026-02-22T21:57:35.893462Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10090,11 +10072,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-<<<<<<< .merge_file_tjfpxG
-                  "service_definition": "Frigate",
-=======
-                  "service_definition": "Nginx Proxy Manager",
->>>>>>> .merge_file_UONjzM
+                  "service_definition": "Lidarr",
                   "source": {
                     "type": "Manual"
                   },
@@ -10897,23 +10875,14 @@
             "example": {
               "bindings": [
                 {
-<<<<<<< .merge_file_tjfpxG
-                  "created_at": "2026-02-22T07:40:28.128227Z",
-                  "id": "076a573d-5f5d-45ac-8790-af08600aeaf8",
-=======
-                  "created_at": "2026-02-22T08:16:45.457299Z",
-                  "id": "8d9499d7-27e8-4c00-a9c9-e2086a747cf2",
->>>>>>> .merge_file_UONjzM
+                  "created_at": "2026-02-22T21:57:35.909610Z",
+                  "id": "2b78474a-7275-4222-8bd0-54384a738841",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-                  "updated_at": "2026-02-22T07:40:28.128227Z"
-=======
-                  "updated_at": "2026-02-22T08:16:45.457299Z"
->>>>>>> .merge_file_UONjzM
+                  "updated_at": "2026-02-22T21:57:35.909610Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -10922,11 +10891,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-<<<<<<< .merge_file_tjfpxG
-              "service_definition": "Frigate",
-=======
-              "service_definition": "Nginx Proxy Manager",
->>>>>>> .merge_file_UONjzM
+              "service_definition": "Lidarr",
               "source": {
                 "type": "Manual"
               },
@@ -12125,23 +12090,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-<<<<<<< .merge_file_tjfpxG
-          "created_at": "2026-02-22T07:40:28.119771Z",
-          "id": "39a21803-c98f-41b7-b44d-92231ac4592c",
-=======
-          "created_at": "2026-02-22T08:16:45.445909Z",
-          "id": "97ebf065-b75a-4712-a153-ba17b8f50a85",
->>>>>>> .merge_file_UONjzM
+          "created_at": "2026-02-22T21:57:35.893690Z",
+          "id": "f041a8a0-e646-4f7c-9641-002e4e8ecbb4",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-          "updated_at": "2026-02-22T07:40:28.119771Z"
-=======
-          "updated_at": "2026-02-22T08:16:45.445909Z"
->>>>>>> .merge_file_UONjzM
+          "updated_at": "2026-02-22T21:57:35.893690Z"
         }
       },
       "BindingBase": {
@@ -12648,11 +12604,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-<<<<<<< .merge_file_tjfpxG
-              "service_definition": "Frigate",
-=======
-              "service_definition": "Nginx Proxy Manager",
->>>>>>> .merge_file_UONjzM
+              "service_definition": "Lidarr",
               "tags": [],
               "virtualization": null
             }
@@ -14508,23 +14460,14 @@
             {
               "bindings": [
                 {
-<<<<<<< .merge_file_tjfpxG
-                  "created_at": "2026-02-22T07:40:28.119280Z",
-                  "id": "29e80b64-6978-426e-a4f8-7387f19349d6",
-=======
-                  "created_at": "2026-02-22T08:16:45.445138Z",
-                  "id": "7881ecb8-e8f8-43af-8998-a4abd3d9975b",
->>>>>>> .merge_file_UONjzM
+                  "created_at": "2026-02-22T21:57:35.893183Z",
+                  "id": "53239015-a078-44b5-bf64-7be345a96607",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-                  "updated_at": "2026-02-22T07:40:28.119280Z"
-=======
-                  "updated_at": "2026-02-22T08:16:45.445138Z"
->>>>>>> .merge_file_UONjzM
+                  "updated_at": "2026-02-22T21:57:35.893183Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14533,11 +14476,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-<<<<<<< .merge_file_tjfpxG
-              "service_definition": "Frigate",
-=======
-              "service_definition": "Nginx Proxy Manager",
->>>>>>> .merge_file_UONjzM
+              "service_definition": "Lidarr",
               "source": {
                 "type": "Manual"
               },
@@ -16430,23 +16369,14 @@
                   {
                     "bindings": [
                       {
-<<<<<<< .merge_file_tjfpxG
-                        "created_at": "2026-02-22T07:40:28.112927Z",
-                        "id": "f8e47bf8-5802-4d3f-934b-e9c71b83907a",
-=======
-                        "created_at": "2026-02-22T08:16:45.433956Z",
-                        "id": "85c8942a-16f1-425c-8231-e51e8871286b",
->>>>>>> .merge_file_UONjzM
+                        "created_at": "2026-02-22T21:57:35.882504Z",
+                        "id": "d4ba2c66-5f51-4718-a334-7eee13dfce74",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-                        "updated_at": "2026-02-22T07:40:28.112927Z"
-=======
-                        "updated_at": "2026-02-22T08:16:45.433956Z"
->>>>>>> .merge_file_UONjzM
+                        "updated_at": "2026-02-22T21:57:35.882504Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16455,11 +16385,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-<<<<<<< .merge_file_tjfpxG
-                    "service_definition": "Frigate",
-=======
-                    "service_definition": "Nginx Proxy Manager",
->>>>>>> .merge_file_UONjzM
+                    "service_definition": "Lidarr",
                     "source": {
                       "type": "Manual"
                     },
@@ -16536,23 +16462,14 @@
               "example": {
                 "bindings": [
                   {
-<<<<<<< .merge_file_tjfpxG
-                    "created_at": "2026-02-22T07:40:28.127179Z",
-                    "id": "6ea58b5d-a6bf-4d52-b489-908a702a5a4f",
-=======
-                    "created_at": "2026-02-22T08:16:45.455970Z",
-                    "id": "db099681-8ccd-42eb-9afe-cf4034ebf363",
->>>>>>> .merge_file_UONjzM
+                    "created_at": "2026-02-22T21:57:35.906292Z",
+                    "id": "df190f5b-6af9-410d-84fe-db360c725dd0",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-                    "updated_at": "2026-02-22T07:40:28.127179Z"
-=======
-                    "updated_at": "2026-02-22T08:16:45.455970Z"
->>>>>>> .merge_file_UONjzM
+                    "updated_at": "2026-02-22T21:57:35.906292Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16561,11 +16478,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-<<<<<<< .merge_file_tjfpxG
-                "service_definition": "Frigate",
-=======
-                "service_definition": "Nginx Proxy Manager",
->>>>>>> .merge_file_UONjzM
+                "service_definition": "Lidarr",
                 "source": {
                   "type": "Manual"
                 },
@@ -17388,6 +17301,13 @@
           "new_email"
         ],
         "properties": {
+          "current_password": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Current password — required if the user already has a password set.\nNot required for OIDC-only users."
+          },
           "new_email": {
             "type": "string",
             "format": "email"
@@ -17559,23 +17479,14 @@
         "example": {
           "bindings": [
             {
-<<<<<<< .merge_file_tjfpxG
-              "created_at": "2026-02-22T07:40:28.119699Z",
-              "id": "360940c4-1729-4144-b817-52f12ee5c419",
-=======
-              "created_at": "2026-02-22T08:16:45.445797Z",
-              "id": "d690454f-9a13-4d1c-a749-f725ecbd4e27",
->>>>>>> .merge_file_UONjzM
+              "created_at": "2026-02-22T21:57:35.893586Z",
+              "id": "6dae97f8-2c1b-48e4-96be-298f258a6bad",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-<<<<<<< .merge_file_tjfpxG
-              "updated_at": "2026-02-22T07:40:28.119699Z"
-=======
-              "updated_at": "2026-02-22T08:16:45.445797Z"
->>>>>>> .merge_file_UONjzM
+              "updated_at": "2026-02-22T21:57:35.893586Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17584,11 +17495,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-<<<<<<< .merge_file_tjfpxG
-          "service_definition": "Frigate",
-=======
-          "service_definition": "Nginx Proxy Manager",
->>>>>>> .merge_file_UONjzM
+          "service_definition": "Lidarr",
           "source": {
             "type": "Manual"
           },
@@ -19146,6 +19053,11 @@
           "email_verified": {
             "type": "boolean",
             "description": "Whether the user has verified their email address"
+          },
+          "has_password": {
+            "type": "boolean",
+            "description": "Whether the user has a password set — computed from password_hash, never stored in DB",
+            "readOnly": true
           },
           "network_ids": {
             "type": "array",

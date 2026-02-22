@@ -562,6 +562,7 @@ let expandedInitialized = false;
 let autoRebuildInitialized = false;
 
 if (browser) {
+	let optionsRebuildTimeout: ReturnType<typeof setTimeout>;
 	topologyOptions.subscribe((options) => {
 		if (optionsInitialized) {
 			console.log('[topology:options] Store updated:', {
@@ -569,6 +570,30 @@ if (browser) {
 				group_docker_bridges: options.request.group_docker_bridges_by_host
 			});
 			saveOptionsToStorage(options);
+
+			// Trigger a rebuild when request options change (replaces the old
+			// debounced PUT that was lost in the TanStack migration)
+			clearTimeout(optionsRebuildTimeout);
+			optionsRebuildTimeout = setTimeout(() => {
+				if (!get(autoRebuild)) return;
+				const topologyId = get(selectedTopologyId);
+				if (!topologyId) return;
+
+				const topologies = queryClient.getQueryData<Topology[]>(queryKeys.topology.all);
+				const topology = topologies?.find((t) => t.id === topologyId);
+				if (!topology) return;
+
+				console.log('[topology:options] Triggering rebuild with new options');
+				apiClient.POST('/api/v1/topology/{id}/rebuild', {
+					params: { path: { id: topologyId } },
+					body: {
+						network_id: topology.network_id,
+						options: options,
+						nodes: topology.nodes,
+						edges: topology.edges
+					}
+				});
+			}, 500);
 		}
 		optionsInitialized = true;
 	});

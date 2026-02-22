@@ -1511,10 +1511,11 @@
         "tags": [
           "Daemon API Keys"
         ],
-        "summary": "Bulk delete Daemon API Keys",
-        "operationId": "bulk_delete_Daemon API Keys",
+        "summary": "Bulk delete daemon_api_keys",
+        "description": "Returns 409 Conflict if any key is currently assigned to a daemon.",
+        "operationId": "bulk_delete_daemon_api_keys",
         "requestBody": {
-          "description": "Array of Daemon API Key IDs to delete",
+          "description": "Array of daemon_api_key IDs to delete",
           "content": {
             "application/json": {
               "schema": {
@@ -1530,11 +1531,21 @@
         },
         "responses": {
           "200": {
-            "description": "Daemon API Keys deleted",
+            "description": "daemon_api_keys deleted",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_BulkDeleteResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "One or more API keys are in use by daemons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
                 }
               }
             }
@@ -1749,13 +1760,14 @@
         "tags": [
           "Daemon API Keys"
         ],
-        "summary": "Delete Daemon API Key",
-        "operationId": "delete_Daemon API Key",
+        "summary": "Delete daemon_api_key",
+        "description": "Returns 409 Conflict if the key is currently assigned to a daemon.",
+        "operationId": "delete_daemon_api_key",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Daemon API Key ID",
+            "description": "daemon_api_key ID",
             "required": true,
             "schema": {
               "type": "string",
@@ -1765,7 +1777,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Daemon API Key deleted",
+            "description": "daemon_api_key deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -1775,7 +1787,17 @@
             }
           },
           "404": {
-            "description": "Daemon API Key not found",
+            "description": "daemon_api_key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "API key is in use by a daemon",
             "content": {
               "application/json": {
                 "schema": {
@@ -11965,14 +11987,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-21T20:49:13.126193Z",
-              "id": "67d8e247-7940-4ac8-a523-20218f4075a6",
+              "created_at": "2026-02-22T07:40:28.132029Z",
+              "id": "ce9f0f62-1404-47b1-a178-5dc861e8ef36",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-21T20:49:13.126193Z"
+              "updated_at": "2026-02-22T07:40:28.132029Z"
             }
           },
           "error": {
@@ -12717,14 +12739,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-21T20:49:13.114641Z",
-                      "id": "33231add-d67a-4184-8005-e420e5f92bd9",
+                      "created_at": "2026-02-22T07:40:28.119542Z",
+                      "id": "27475949-1490-4d26-bf0c-5b576bf48621",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-21T20:49:13.114641Z"
+                      "updated_at": "2026-02-22T07:40:28.119542Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -12733,7 +12755,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Workstation",
+                  "service_definition": "Frigate",
                   "source": {
                     "type": "Manual"
                   },
@@ -13536,14 +13558,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-21T20:49:13.122529Z",
-                  "id": "303d5a2a-ba25-4bef-b7e1-a73ea4db3e26",
+                  "created_at": "2026-02-22T07:40:28.127854Z",
+                  "id": "46541e7f-a26d-4fda-a2e1-ad6005ba670d",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-21T20:49:13.122529Z"
+                  "updated_at": "2026-02-22T07:40:28.127854Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -13552,7 +13574,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Workstation",
+              "service_definition": "Frigate",
               "source": {
                 "type": "Manual"
               },
@@ -14751,14 +14773,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-21T20:49:13.114850Z",
-          "id": "404f8885-c96c-4ccc-a4a2-c2dddfa664c9",
+          "created_at": "2026-02-22T07:40:28.119746Z",
+          "id": "24ef8936-60af-4b02-9cc5-ae0af7cf450d",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-21T20:49:13.114850Z"
+          "updated_at": "2026-02-22T07:40:28.119746Z"
         }
       },
       "BindingBase": {
@@ -15265,7 +15287,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Workstation",
+              "service_definition": "Frigate",
               "tags": [],
               "virtualization": null
             }
@@ -17121,14 +17143,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-21T20:49:13.114344Z",
-                  "id": "4a1d21e7-2810-4bae-bb13-efbbea0b46c8",
+                  "created_at": "2026-02-22T07:40:28.119255Z",
+                  "id": "30d7a193-ffe1-4279-9d59-62c9e48c59f8",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-21T20:49:13.114344Z"
+                  "updated_at": "2026-02-22T07:40:28.119255Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -17137,7 +17159,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Workstation",
+              "service_definition": "Frigate",
               "source": {
                 "type": "Manual"
               },
@@ -19030,14 +19052,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-21T20:49:13.107862Z",
-                        "id": "b2a6c4c8-6c78-4cf1-92de-0381d55c1f2a",
+                        "created_at": "2026-02-22T07:40:28.112908Z",
+                        "id": "aca90a12-a5c4-4f83-bcaa-12e5b3f3e671",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-21T20:49:13.107862Z"
+                        "updated_at": "2026-02-22T07:40:28.112908Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -19046,7 +19068,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Workstation",
+                    "service_definition": "Frigate",
                     "source": {
                       "type": "Manual"
                     },
@@ -19123,14 +19145,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-21T20:49:13.121548Z",
-                    "id": "dc984f87-2200-4a2c-a0a6-b5bfc7192cc7",
+                    "created_at": "2026-02-22T07:40:28.126774Z",
+                    "id": "6c796c95-f07e-45dc-8080-565a644ba511",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-21T20:49:13.121548Z"
+                    "updated_at": "2026-02-22T07:40:28.126774Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -19139,7 +19161,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Workstation",
+                "service_definition": "Frigate",
                 "source": {
                   "type": "Manual"
                 },
@@ -20121,14 +20143,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-21T20:49:13.114777Z",
-              "id": "e55b1d16-2da6-4404-ba2b-e30a9c13b2f9",
+              "created_at": "2026-02-22T07:40:28.119673Z",
+              "id": "d77b1d86-f543-4768-90d1-08d7d954e735",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-21T20:49:13.114777Z"
+              "updated_at": "2026-02-22T07:40:28.119673Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20137,7 +20159,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Workstation",
+          "service_definition": "Frigate",
           "source": {
             "type": "Manual"
           },

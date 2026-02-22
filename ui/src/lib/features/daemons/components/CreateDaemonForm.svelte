@@ -724,12 +724,12 @@
 						<b>{common_optionNumber({ number: '1' })}</b>
 						{daemons_option1Text()}
 					</div>
-					<div class="text-secondary">
+					<div class="text-tertiary ml-2 text-sm">
 						<b>{common_stepNumber({ number: '1' })}</b>
 						{daemons_downloadDaemon()}
 					</div>
 					<CodeContainer language="bash" expandable={false} code={installScript} />
-					<div class="text-secondary">
+					<div class="text-tertiary ml-2 text-sm">
 						<b>{common_stepNumber({ number: '2' })}</b>
 						{daemons_runDaemon()}
 					</div>

@@ -116,8 +116,9 @@
 			if (name) {
 				openModal(name, { id: entityId, tab: activeTab || undefined });
 			}
-		} else if (!isOpen && wasOpen && name) {
+		} else if (!isOpen && wasOpen && name && get(modalState).name === name) {
 			// Modal closed (by parent, form submit, etc.) — clear URL params
+			// Only clear if the registry still refers to this modal (another modal may have opened)
 			closeModal();
 		}
 		wasOpen = isOpen;

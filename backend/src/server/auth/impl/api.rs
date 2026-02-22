@@ -74,6 +74,9 @@ pub struct UpdatePasswordRequest {
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct RequestEmailChangeRequest {
+    /// Current password — required if the user already has a password set.
+    /// Not required for OIDC-only users.
+    pub current_password: Option<String>,
     #[schema(value_type = String, format = "email")]
     pub new_email: EmailAddress,
 }

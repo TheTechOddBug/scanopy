@@ -836,7 +836,13 @@ async fn request_email_change(
     state
         .services
         .auth_service
-        .request_email_change(user_id, request.new_email, ip, user_agent)
+        .request_email_change(
+            user_id,
+            request.current_password,
+            request.new_email,
+            ip,
+            user_agent,
+        )
         .await?;
 
     Ok(Json(ApiResponse::success(())))

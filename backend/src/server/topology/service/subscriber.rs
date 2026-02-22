@@ -94,10 +94,14 @@ impl EventSubscriber for TopologyService {
                 if let Entity::Topology(boxed_topology) = entity_event.entity_type.clone()
                     && entity_event.operation == EntityOperation::Updated
                 {
-                    let topology = *boxed_topology;
-                    // Don't override is_stale — the handler already set the correct
-                    // value (rebuild clears it, refresh marks it).
-                    // Services were already set by the handler — no need to re-fetch.
+                    let mut topology = *boxed_topology;
+                    if trigger_stale {
+                        topology.base.is_stale = true;
+                    }
+
+                    topology.base.services = self
+                        .get_service_data(network_id, &topology.base.options)
+                        .await?;
 
                     let _ = self.staleness_tx.send(topology).inspect_err(|e| {
                         tracing::debug!("Staleness notification skipped (no receivers): {}", e)
@@ -254,39 +258,15 @@ impl EventSubscriber for TopologyService {
                         topology.base.if_entries = if_entries.clone();
                     }
 
-                    // Only update topology in database if there were actual changes
-                    let has_changes = changes.should_mark_stale
-                        || changes.clear_stale
-                        || !changes.removed_hosts.is_empty()
-                        || !changes.removed_interfaces.is_empty()
-                        || !changes.removed_services.is_empty()
-                        || !changes.removed_subnets.is_empty()
-                        || !changes.removed_groups.is_empty()
-                        || !changes.removed_ports.is_empty()
-                        || !changes.removed_bindings.is_empty()
-                        || !changes.removed_if_entries.is_empty()
-                        || (changes.updated_hosts && changes.removed_hosts.is_empty())
-                        || (changes.updated_interfaces && changes.removed_interfaces.is_empty())
-                        || (changes.updated_services && changes.removed_services.is_empty())
-                        || (changes.updated_subnets && changes.removed_subnets.is_empty())
-                        || (changes.updated_groups && changes.removed_groups.is_empty())
-                        || (changes.updated_ports && changes.removed_ports.is_empty())
-                        || (changes.updated_bindings && changes.removed_bindings.is_empty())
-                        || (changes.updated_if_entries && changes.removed_if_entries.is_empty());
+                    // Update topology in database
+                    let updated = self
+                        .update(&mut topology, AuthenticatedEntity::System)
+                        .await?;
 
-                    if has_changes {
-                        let updated = self
-                            .update(&mut topology, AuthenticatedEntity::System)
-                            .await?;
-
-                        // Send the UPDATED topology to SSE
-                        let _ = self.staleness_tx.send(updated).inspect_err(|e| {
-                            tracing::debug!(
-                                "Staleness notification skipped (no receivers): {}",
-                                e
-                            )
-                        });
-                    }
+                    // Send the UPDATED topology to SSE
+                    let _ = self.staleness_tx.send(updated).inspect_err(|e| {
+                        tracing::debug!("Staleness notification skipped (no receivers): {}", e)
+                    });
                 }
             }
         }

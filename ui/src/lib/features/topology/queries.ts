@@ -50,8 +50,7 @@ export function useTopologiesQuery() {
 				throw new Error(data?.error || 'Failed to fetch topologies');
 			}
 			return data.data;
-		},
-		structuralSharing: false
+		}
 	}));
 }
 
@@ -153,7 +152,7 @@ export function useRefreshTopologyMutation() {
 				params: { path: { id: topology.id } },
 				body: {
 					network_id: topology.network_id,
-					options: get(topologyOptions),
+					options: topology.options,
 					nodes: [],
 					edges: []
 				}
@@ -176,7 +175,7 @@ export function useRebuildTopologyMutation() {
 				params: { path: { id: topology.id } },
 				body: {
 					network_id: topology.network_id,
-					options: get(topologyOptions),
+					options: topology.options,
 					nodes: topology.nodes,
 					edges: topology.edges
 				}
@@ -600,7 +599,7 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 							params: { path: { id: update.id } },
 							body: {
 								network_id: update.network_id,
-								options: get(topologyOptions),
+								options: update.options,
 								nodes: update.nodes,
 								edges: update.edges
 							}

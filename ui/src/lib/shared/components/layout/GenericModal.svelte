@@ -16,6 +16,13 @@
 	import type { Snippet } from 'svelte';
 	import { X } from 'lucide-svelte';
 	import { common_closeModal, common_modal } from '$lib/paraglide/messages';
+	import { get } from 'svelte/store';
+	import {
+		modalState,
+		openModal,
+		closeModal,
+		setModalTab
+	} from '$lib/shared/stores/modal-registry';
 
 	let {
 		title = common_modal(),
@@ -33,6 +40,8 @@
 		onTabChange = null,
 		onOpen = null,
 		instanceKey = $bindable(0),
+		name = undefined,
+		entityId = undefined,
 		headerIcon,
 		children,
 		footer
@@ -52,6 +61,8 @@
 		onTabChange?: ((tabId: string) => void) | null;
 		onOpen?: (() => void) | null;
 		instanceKey?: number;
+		name?: string;
+		entityId?: string;
 		headerIcon?: Snippet;
 		children?: Snippet<[number]>;
 		footer?: Snippet;
@@ -62,6 +73,9 @@
 
 	function handleTabClick(tabId: string) {
 		activeTab = tabId;
+		if (name) {
+			setModalTab(tabId);
+		}
 		onTabChange?.(tabId);
 	}
 
@@ -75,15 +89,37 @@
 		}
 	});
 
-	// Fire onOpen callback when modal transitions from closed to open
+	// Sync modal state with URL on open/close transitions
 	$effect(() => {
 		if (isOpen && !wasOpen) {
 			instanceKey++;
-			if (tabs.length > 0 && !tabs.some((t) => t.id === activeTab)) {
-				activeTab = tabs[0].id;
-				onTabChange?.(activeTab);
-			}
+
+			// Let the parent initialize first (e.g. reset form, set default tab)
 			onOpen?.();
+
+			// Check if modalState has a tab for this modal (from URL deep-link)
+			const state = get(modalState);
+			const urlTab = name && state.name === name ? state.tab : null;
+
+			if (tabs.length > 0) {
+				if (urlTab && tabs.some((t) => t.id === urlTab)) {
+					// URL specifies a valid tab — override the default
+					activeTab = urlTab;
+					onTabChange?.(activeTab);
+				} else if (!tabs.some((t) => t.id === activeTab)) {
+					// Current activeTab is invalid — reset to first tab
+					activeTab = tabs[0].id;
+					onTabChange?.(activeTab);
+				}
+			}
+
+			if (name) {
+				openModal(name, { id: entityId, tab: activeTab || undefined });
+			}
+		} else if (!isOpen && wasOpen && name && get(modalState).name === name) {
+			// Modal closed (by parent, form submit, etc.) — clear URL params
+			// Only clear if the registry still refers to this modal (another modal may have opened)
+			closeModal();
 		}
 		wasOpen = isOpen;
 	});
@@ -99,6 +135,9 @@
 
 	function handleClose() {
 		activeTab = tabs.length > 0 ? tabs[0].id : '';
+		if (name) {
+			closeModal();
+		}
 		onClose?.();
 	}
 

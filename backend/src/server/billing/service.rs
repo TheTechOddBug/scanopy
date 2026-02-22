@@ -1013,10 +1013,6 @@ impl BillingService {
                 .collect();
 
             for old_sub in old_subs {
-                UpdateSubscription::new(&old_sub.id)
-                    .metadata([("cancel_reason".to_string(), "upgrade".to_string())])
-                    .send(&self.stripe)
-                    .await?;
                 CancelSubscription::new(&old_sub.id)
                     .send(&self.stripe)
                     .await?;

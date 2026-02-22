@@ -877,8 +877,10 @@ impl BillingService {
             let is_trialing = sub.status == SubscriptionStatus::Trialing;
             let trial_end_date = sub.trial_end.map(|t| t.to_string());
 
-            // Checkout completed (first subscription creation)
-            if organization.base.plan.is_none() {
+            // Checkout completed (first subscription creation, or upgrade from Free)
+            if organization.base.plan.is_none()
+                || organization.base.plan.as_ref().is_some_and(|p| p.is_free())
+            {
                 let plan_config = plan.config();
                 self.event_bus
                     .publish_telemetry(TelemetryEvent::new(
@@ -1042,6 +1044,7 @@ impl BillingService {
                             "new_plan": new_name,
                             "is_downgrade": plan.is_free(),
                             "org_id": org_id.to_string(),
+                            "plan_status": if plan.is_free() { "active".to_string() } else { sub.status.to_string() },
                         }),
                     ))
                     .await?;
@@ -1313,14 +1316,16 @@ impl BillingService {
             .get_organization_owners(&organization.id)
             .await?;
 
+        let cancelled_plan_name = organization
+            .base
+            .plan
+            .as_ref()
+            .map(|p| p.name().to_string())
+            .unwrap_or_default();
+
         if let Some(owner) = owners.first() {
             let authentication: AuthenticatedEntity = owner.clone().into();
-            let plan_name = organization
-                .base
-                .plan
-                .as_ref()
-                .map(|p| p.name().to_string())
-                .unwrap_or_default();
+            let plan_name = &cancelled_plan_name;
             let was_trialing = organization
                 .base
                 .plan_status
@@ -1371,7 +1376,7 @@ impl BillingService {
 
                 if let Some(ref email_service) = self.email_service
                     && let Err(e) = email_service
-                        .send_trial_expired_email(owner.base.email.clone(), &plan_name)
+                        .send_trial_expired_email(owner.base.email.clone(), plan_name)
                         .await
                 {
                     tracing::warn!(error = %e, "Failed to send trial_expired email");
@@ -1396,6 +1401,25 @@ impl BillingService {
         self.organization_service
             .update(&mut organization, AuthenticatedEntity::System)
             .await?;
+
+        // Sync the Free plan to Brevo so plan_type and plan_status are up to date
+        if let Some(owner) = owners.first() {
+            self.event_bus
+                .publish_telemetry(TelemetryEvent::new(
+                    Uuid::new_v4(),
+                    organization.id,
+                    TelemetryOperation::PlanChanged,
+                    Utc::now(),
+                    owner.clone().into(),
+                    json!({
+                        "old_plan": cancelled_plan_name,
+                        "new_plan": free_plan.name(),
+                        "is_downgrade": true,
+                        "plan_status": "active",
+                    }),
+                ))
+                .await?;
+        }
 
         // Create a Free subscription in Stripe for billing record continuity
         let free_price = self

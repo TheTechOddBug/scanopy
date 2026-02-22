@@ -401,7 +401,9 @@ impl BrevoService {
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
 
-        let company_attrs = CompanyAttributes::new().with_plan_status("checkout_started");
+        let company_attrs = CompanyAttributes::new()
+            .with_plan_type(plan_name)
+            .with_plan_status("checkout_started");
         self.update_company_by_org(event.organization_id, company_attrs)
             .await?;
 
@@ -569,8 +571,12 @@ impl BrevoService {
             .get("new_plan")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
+        let plan_status = event.metadata.get("plan_status").and_then(|v| v.as_str());
 
-        let company_attrs = CompanyAttributes::new().with_plan_type(new_plan);
+        let mut company_attrs = CompanyAttributes::new().with_plan_type(new_plan);
+        if let Some(status) = plan_status {
+            company_attrs = company_attrs.with_plan_status(status);
+        }
         self.update_company_by_org(event.organization_id, company_attrs)
             .await?;
 

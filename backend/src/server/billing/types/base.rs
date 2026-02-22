@@ -53,32 +53,16 @@ impl Hash for BillingPlan {
 impl Default for BillingPlan {
     fn default() -> Self {
         #[cfg(feature = "commercial")]
-        {
-            BillingPlan::CommercialSelfHosted(PlanConfig {
-                base_cents: 0,
-                rate: BillingRate::Month,
-                trial_days: 0,
-                seat_cents: None,
-                network_cents: None,
-                host_cents: None,
-                included_networks: None,
-                included_seats: None,
-                included_hosts: None,
-            })
+        {   
+            use crate::server::billing::plans::get_commercial_self_hosted_plan;
+
+            get_commercial_self_hosted_plan()
         }
         #[cfg(not(feature = "commercial"))]
         {
-            BillingPlan::Community(PlanConfig {
-                base_cents: 0,
-                rate: BillingRate::Month,
-                trial_days: 0,
-                seat_cents: None,
-                network_cents: None,
-                host_cents: None,
-                included_networks: None,
-                included_seats: None,
-                included_hosts: None,
-            })
+            use crate::server::billing::plans::get_community_plan;
+
+            get_community_plan()
         }
     }
 }

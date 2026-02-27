@@ -4,8 +4,17 @@ use redact::Secret;
 use secrecy::ExposeSecret;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::Serializer;
 use std::net::IpAddr;
 use utoipa::ToSchema;
+
+/// Serializer that redacts a Secret<String> to "********"
+fn redact_secret<S: Serializer>(
+    _secret: &Secret<String>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.serialize_str("********")
+}
 
 /// Minimal SNMP credential for daemon queries (version + community only)
 /// Does not include organization_id, name, timestamps - just what's needed for SNMP queries
@@ -19,7 +28,7 @@ pub struct SnmpQueryCredential {
     #[serde(default)]
     pub version: SnmpVersion,
     /// SNMPv2c community string — redacted in serialization/debug by default
-    #[serde(serialize_with = "redact::serde::redact_secret")]
+    #[serde(serialize_with = "redact_secret")]
     #[schema(value_type = String)]
     pub community: Secret<String>,
 }

@@ -2731,7 +2731,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.14.7"
+         *       "server_version": "0.14.8"
          *     }
          */
         ApiMeta: {
@@ -2742,7 +2742,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.14.7
+             * @example 0.14.8
              */
             server_version: string;
         };
@@ -2756,14 +2756,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-24T16:12:04.136670Z",
-             *       "id": "151eabfb-6799-4bc3-abc6-e663f7fe27e6",
+             *       "created_at": "2026-02-27T20:34:55.543612Z",
+             *       "id": "0044a1d5-1a24-4351-b56b-e85863cf1fa8",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-24T16:12:04.136670Z"
+             *       "updated_at": "2026-02-27T20:34:55.543612Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3010,14 +3010,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-24T16:12:04.124760Z",
-             *               "id": "88e42363-5deb-4da0-8c9e-6e7bbfda94b8",
+             *               "created_at": "2026-02-27T20:34:55.528728Z",
+             *               "id": "cf47a9e1-93e3-4339-80f1-25f73ec7795c",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-24T16:12:04.124760Z"
+             *               "updated_at": "2026-02-27T20:34:55.528728Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3026,7 +3026,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Gitea",
+             *           "service_definition": "Sentry",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3299,14 +3299,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-24T16:12:04.133235Z",
-             *           "id": "756e3b2d-53aa-49b4-ae64-c2ef1c933c19",
+             *           "created_at": "2026-02-27T20:34:55.539346Z",
+             *           "id": "62640026-f0b1-43d3-8883-4c0b7d378d63",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-24T16:12:04.133235Z"
+             *           "updated_at": "2026-02-27T20:34:55.539346Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3315,7 +3315,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Gitea",
+             *       "service_definition": "Sentry",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3618,14 +3618,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-24T16:12:04.124970Z",
-         *       "id": "454169c6-a530-4b89-b768-192f194ec4b5",
+         *       "created_at": "2026-02-27T20:34:55.528926Z",
+         *       "id": "691179d2-5b1f-4c89-9a43-7c4930275ff0",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-24T16:12:04.124970Z"
+         *       "updated_at": "2026-02-27T20:34:55.528926Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3807,7 +3807,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Gitea",
+         *           "service_definition": "Sentry",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4449,14 +4449,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-24T16:12:04.124465Z",
-         *               "id": "86ea3061-7306-4c4c-a0b5-247015c46483",
+         *               "created_at": "2026-02-27T20:34:55.528450Z",
+         *               "id": "f75a0153-e477-4061-9bed-80435ba3b612",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-24T16:12:04.124465Z"
+         *               "updated_at": "2026-02-27T20:34:55.528450Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4465,7 +4465,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Gitea",
+         *           "service_definition": "Sentry",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -4954,6 +4954,8 @@ export interface components {
             /** @description SNMP version */
             snmp_version?: string | null;
         };
+        /** @enum {string} */
+        OnboardingOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstGroupCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted";
         /** @description Response from onboarding state endpoint */
         OnboardingStateResponse: {
             network?: null | components["schemas"]["OnboardingNetworkState"];
@@ -5015,7 +5017,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.14.7"
+         *       "server_version": "0.14.8"
          *     }
          */
         PaginatedApiMeta: {
@@ -5028,7 +5030,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.14.7
+             * @example 0.14.8
              */
             server_version: string;
         };
@@ -5397,6 +5399,8 @@ export interface components {
             marketing_opt_in?: boolean;
             password: string;
             terms_accepted: boolean;
+            /** @description Company website URL */
+            website?: string | null;
         };
         RequestEmailChangeRequest: {
             /**
@@ -5421,6 +5425,8 @@ export interface components {
             enabled: boolean;
             /** Format: date-time */
             readonly last_run?: string | null;
+            /** @description IANA timezone for cron evaluation, e.g. "America/New_York". None = UTC. */
+            timezone?: string | null;
             /** @enum {string} */
             type: "Scheduled";
         } | {
@@ -5446,14 +5452,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-24T16:12:04.124898Z",
-         *           "id": "e3cd224a-efdb-42de-af98-c092117468df",
+         *           "created_at": "2026-02-27T20:34:55.528856Z",
+         *           "id": "138aeabb-6ef2-4cdc-aac8-7efb52229aec",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-24T16:12:04.124898Z"
+         *           "updated_at": "2026-02-27T20:34:55.528856Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5462,7 +5468,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Gitea",
+         *       "service_definition": "Sentry",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5720,10 +5726,6 @@ export interface components {
          * @enum {string}
          */
         TagOrderField: "created_at" | "name" | "color" | "updated_at";
-        /** @enum {string} */
-        BillingOperation: "CheckoutStarted" | "CheckoutCompleted" | "TrialStarted" | "TrialEnded" | "TrialWillEnd" | "SubscriptionCancelled" | "PlanChanged" | "PaymentFailed" | "PaymentActionRequired" | "PaymentRecovered";
-        /** @enum {string} */
-        OnboardingOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstGroupCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted";
         Topology: components["schemas"]["TopologyBase"] & {
             /** Format: date-time */
             readonly created_at: string;
@@ -8339,6 +8341,15 @@ export interface operations {
             };
             /** @description Discovery not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description A session is already running for this discovery */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

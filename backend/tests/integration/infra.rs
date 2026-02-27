@@ -152,6 +152,7 @@ impl TestClient {
             password: password.to_string(),
             terms_accepted: false,
             marketing_opt_in: false,
+            website: None,
         };
 
         let response = self

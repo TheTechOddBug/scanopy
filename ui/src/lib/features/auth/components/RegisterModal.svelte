@@ -56,6 +56,7 @@
 	let emailValue = $state('');
 	let emailError = $state<'email_in_use' | null>(null);
 	let checkingEmail = $state(false);
+	let honeypotValue = $state('');
 
 	const configQuery = useConfigQuery();
 	let configData = $derived(configQuery.data);
@@ -83,7 +84,8 @@
 					{
 						email: value.email.trim(),
 						password: value.password,
-						terms_accepted: enableTermsCheckbox && value.terms_accepted
+						terms_accepted: enableTermsCheckbox && value.terms_accepted,
+						website: honeypotValue || undefined
 					},
 					value.subscribed
 				);
@@ -179,6 +181,16 @@
 		}}
 		class="flex min-h-0 flex-1 flex-col"
 	>
+		<div style="position: absolute; left: -9999px; top: -9999px;" aria-hidden="true">
+			<input
+				type="text"
+				name="website"
+				tabindex="-1"
+				autocomplete="off"
+				bind:value={honeypotValue}
+			/>
+		</div>
+
 		<div class="flex-1 overflow-auto p-4 sm:p-6">
 			{#if orgName && invitedBy}
 				<div class="mb-6">

@@ -2339,6 +2339,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "A session is already running for this discovery",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9531,14 +9541,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-26T00:40:06.942429Z",
-              "id": "1d6f1328-616b-43dc-a4da-b16027df99a2",
+              "created_at": "2026-02-27T20:34:55.543623Z",
+              "id": "8c7d40b6-387b-42b7-90f7-cfe7a6823281",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-26T00:40:06.942429Z"
+              "updated_at": "2026-02-27T20:34:55.543623Z"
             }
           },
           "error": {
@@ -10337,14 +10347,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-26T00:40:06.931575Z",
-                      "id": "2eccfc27-81c2-4799-a3e9-8198b229fcd9",
+                      "created_at": "2026-02-27T20:34:55.528733Z",
+                      "id": "9a84c42b-f630-49a7-a3e9-146b888b8dec",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-26T00:40:06.931575Z"
+                      "updated_at": "2026-02-27T20:34:55.528733Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10353,7 +10363,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Proxmox Datacenter Manager",
+                  "service_definition": "Sentry",
                   "source": {
                     "type": "Manual"
                   },
@@ -11156,14 +11166,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-26T00:40:06.938928Z",
-                  "id": "3bfd789d-1bf1-4e42-a677-1fcaab31f00a",
+                  "created_at": "2026-02-27T20:34:55.539508Z",
+                  "id": "b45348fa-bc72-4d7d-a3ab-c68c80227011",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-26T00:40:06.938928Z"
+                  "updated_at": "2026-02-27T20:34:55.539508Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11172,7 +11182,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Proxmox Datacenter Manager",
+              "service_definition": "Sentry",
               "source": {
                 "type": "Manual"
               },
@@ -12371,14 +12381,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-26T00:40:06.931780Z",
-          "id": "e52f01e0-8c0e-4e52-9be2-907fb5dd896d",
+          "created_at": "2026-02-27T20:34:55.528934Z",
+          "id": "ac663c5e-6f3d-457d-9c7a-53078cc52b53",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-26T00:40:06.931780Z"
+          "updated_at": "2026-02-27T20:34:55.528934Z"
         }
       },
       "BindingBase": {
@@ -12885,7 +12895,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Proxmox Datacenter Manager",
+              "service_definition": "Sentry",
               "tags": [],
               "virtualization": null
             }
@@ -14774,14 +14784,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-26T00:40:06.931304Z",
-                  "id": "25274906-83e2-4e74-a72d-1e44f1845bd5",
+                  "created_at": "2026-02-27T20:34:55.528455Z",
+                  "id": "dc84d760-48e4-4d38-96df-a13e48e2c0c5",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-26T00:40:06.931304Z"
+                  "updated_at": "2026-02-27T20:34:55.528455Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14790,7 +14800,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Proxmox Datacenter Manager",
+              "service_definition": "Sentry",
               "source": {
                 "type": "Manual"
               },
@@ -16743,14 +16753,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-26T00:40:06.926215Z",
-                        "id": "5c803f14-30d4-4221-bb0b-e4f0da95ad06",
+                        "created_at": "2026-02-27T20:34:55.518674Z",
+                        "id": "f0fc7ef2-3a17-4408-ae06-1de535cdf1dc",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-26T00:40:06.926215Z"
+                        "updated_at": "2026-02-27T20:34:55.518674Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16759,7 +16769,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Proxmox Datacenter Manager",
+                    "service_definition": "Sentry",
                     "source": {
                       "type": "Manual"
                     },
@@ -16836,14 +16846,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-26T00:40:06.937955Z",
-                    "id": "c28b7741-b380-4e98-8564-40f780e0de36",
+                    "created_at": "2026-02-27T20:34:55.538576Z",
+                    "id": "d181075b-5e68-426c-ae73-76f231fe1a9d",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-26T00:40:06.937955Z"
+                    "updated_at": "2026-02-27T20:34:55.538576Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16852,7 +16862,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Proxmox Datacenter Manager",
+                "service_definition": "Sentry",
                 "source": {
                   "type": "Manual"
                 },
@@ -17716,6 +17726,13 @@
           },
           "terms_accepted": {
             "type": "boolean"
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Company website URL"
           }
         }
       },
@@ -17790,6 +17807,13 @@
                 ],
                 "format": "date-time",
                 "readOnly": true
+              },
+              "timezone": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "IANA timezone for cron evaluation, e.g. \"America/New_York\". None = UTC."
               },
               "type": {
                 "type": "string",
@@ -17903,14 +17927,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-26T00:40:06.931712Z",
-              "id": "0fbc465d-f7c3-49fc-88e2-1952d7224ce4",
+              "created_at": "2026-02-27T20:34:55.528864Z",
+              "id": "4d130969-13d3-4996-be21-7cab4d4f3635",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-26T00:40:06.931712Z"
+              "updated_at": "2026-02-27T20:34:55.528864Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17919,7 +17943,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Proxmox Datacenter Manager",
+          "service_definition": "Sentry",
           "source": {
             "type": "Manual"
           },

@@ -26,6 +26,9 @@ pub struct RegisterRequest {
     pub terms_accepted: bool,
     #[serde(default)]
     pub marketing_opt_in: bool,
+    /// Company website URL
+    #[serde(default)]
+    pub website: Option<String>,
 }
 
 /// Validate password complexity requirements

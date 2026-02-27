@@ -299,7 +299,7 @@
 			label: common_ifEntries(),
 			icon: entities.getIconComponent('IfEntry'),
 			description: hosts_ifEntries_subtitle(),
-			disabled: !hasIfEntries
+			disabled: !isEditing && !hasIfEntries
 		},
 		{
 			id: 'interfaces',
@@ -374,10 +374,11 @@
 
 	// Wizard steps for progressive unlock in create mode
 	const wizardSteps = ['details', 'snmp', 'interfaces', 'ports', 'services'];
+	let isLastWizardStep = $derived(activeTab === wizardSteps[wizardSteps.length - 1]);
 
 	// Handle form-based submission for create flow with steps
 	async function handleFormSubmit() {
-		if (isEditing || currentEnabledIndex === enabledTabs.length - 1) {
+		if (isEditing || isLastWizardStep) {
 			await submitForm(form);
 		} else {
 			// Validate all fields before advancing to next tab
@@ -408,11 +409,7 @@
 
 	// Dynamic labels based on create/edit mode and tab position
 	let saveLabel = $derived(
-		isEditing
-			? hosts_editor_updateHost()
-			: currentEnabledIndex === enabledTabs.length - 1
-				? hosts_createHost()
-				: common_next()
+		isEditing ? hosts_editor_updateHost() : isLastWizardStep ? hosts_createHost() : common_next()
 	);
 	let cancelLabel = $derived(isEditing ? common_cancel() : common_back());
 	let showCancel = $derived(isEditing ? true : currentEnabledIndex !== 0);

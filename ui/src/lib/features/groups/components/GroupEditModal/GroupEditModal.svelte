@@ -147,11 +147,7 @@
 
 	// Dynamic labels based on create/edit mode and tab position
 	let saveLabel = $derived(
-		isEditing
-			? common_update()
-			: currentEnabledIndex === enabledTabs.length - 1
-				? common_create()
-				: common_next()
+		isEditing ? common_update() : isLastWizardStep ? common_create() : common_next()
 	);
 	let cancelLabel = $derived(isEditing ? common_cancel() : common_back());
 	let showCancel = $derived(isEditing ? true : currentEnabledIndex !== 0);
@@ -247,10 +243,11 @@
 
 	// Wizard steps for progressive unlock in create mode
 	const wizardSteps = ['details', 'bindings', 'edge-style'];
+	let isLastWizardStep = $derived(activeTab === wizardSteps[wizardSteps.length - 1]);
 
 	// Handle form-based submission for create flow with steps
 	async function handleFormSubmit() {
-		if (isEditing || currentEnabledIndex === enabledTabs.length - 1) {
+		if (isEditing || isLastWizardStep) {
 			handleSubmit();
 		} else {
 			const isValid = await validateForm(form);

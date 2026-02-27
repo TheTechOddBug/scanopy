@@ -66,14 +66,11 @@ pub fn scan_subnet(
                         error = %e,
                         "Npcap broadcast ARP failed, falling back to SendARP"
                     );
-                    // Fall through to sendarp - but sendarp doesn't support streaming yet
-                    // For now, return an error
-                    return Err(e);
+                    // Fall through to SendARP below
                 }
             }
         }
-        // SendARP doesn't support streaming - would need refactoring
-        return Err(anyhow::anyhow!("SendARP streaming not yet implemented"));
+        return sendarp::scan_subnet_streaming(targets);
     }
 
     #[cfg(not(target_family = "windows"))]

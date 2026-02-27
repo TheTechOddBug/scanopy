@@ -75,6 +75,41 @@ async fn send_arp_single(target_ip: Ipv4Addr) -> Option<ArpScanResult> {
     result.map(|mac| ArpScanResult { ip: target_ip, mac })
 }
 
+/// Scan targets using Windows SendARP API, returning results via a streaming channel.
+/// Matches the broadcast ARP interface so callers get results as they arrive.
+#[cfg(target_family = "windows")]
+pub fn scan_subnet_streaming(
+    targets: Vec<Ipv4Addr>,
+) -> Result<std::sync::mpsc::Receiver<ArpScanResult>> {
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+        rt.block_on(async {
+            let mut stream = stream::iter(targets)
+                .map(|ip| async move { send_arp_single(ip).await })
+                .buffer_unordered(SENDARP_CONCURRENCY)
+                .filter_map(|r| async { r });
+
+            while let Some(result) = stream.next().await {
+                if tx.send(result).is_err() {
+                    break; // receiver dropped
+                }
+            }
+        });
+    });
+
+    Ok(rx)
+}
+
+// Stub for non-Windows platforms
+#[cfg(not(target_family = "windows"))]
+pub fn scan_subnet_streaming(
+    _targets: Vec<std::net::Ipv4Addr>,
+) -> anyhow::Result<std::sync::mpsc::Receiver<super::types::ArpScanResult>> {
+    Err(anyhow::anyhow!("SendARP is only available on Windows"))
+}
+
 // Stub for non-Windows platforms
 #[cfg(not(target_family = "windows"))]
 pub async fn scan_subnet(

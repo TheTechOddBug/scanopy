@@ -570,6 +570,23 @@ fn create_host(
     (host, interface)
 }
 
+/// Wraps a `create_host()` result to add SNMP system information fields.
+fn with_snmp(
+    (mut host, interface): (Host, Interface),
+    sys_descr: Option<&str>,
+    sys_object_id: Option<&str>,
+    sys_location: Option<&str>,
+    sys_contact: Option<&str>,
+    chassis_id: Option<&str>,
+) -> (Host, Interface) {
+    host.base.sys_descr = sys_descr.map(String::from);
+    host.base.sys_object_id = sys_object_id.map(String::from);
+    host.base.sys_location = sys_location.map(String::from);
+    host.base.sys_contact = sys_contact.map(String::from);
+    host.base.chassis_id = chassis_id.map(String::from);
+    (host, interface)
+}
+
 /// Helper to create a service for a host.
 /// Returns (Service, Option<Port>) - the port must be added to the host's ports list.
 fn create_service(
@@ -787,17 +804,24 @@ fn generate_hosts_and_services(
 
     // 1. pfSense Firewall (Critical)
     result.push(host_with_services!(
-        create_host(
-            "pfsense-fw01",
-            Some("pfsense-fw01.acme.local"),
-            Some("Primary pfSense firewall"),
-            hq,
-            hq_mgmt,
-            Ipv4Addr::new(10, 0, 1, 1),
-            critical_tag.into_iter().collect(),
-            network_devices_cred,
+        with_snmp(
+            create_host(
+                "pfsense-fw01",
+                Some("pfsense-fw01.acme.local"),
+                Some("Primary pfSense firewall"),
+                hq,
+                hq_mgmt,
+                Ipv4Addr::new(10, 0, 1, 1),
+                critical_tag.into_iter().collect(),
+                network_devices_cred,
+                None,
+                now,
+            ),
+            Some("pfSense 2.7.0-RELEASE (amd64) built on FreeBSD 14.0-CURRENT"),
+            Some("1.3.6.1.4.1.12325.1.1"),
+            Some("HQ Server Room, Rack A1"),
+            Some("netops@acme-corp.com"),
             None,
-            now
         ),
         now,
         (
@@ -833,17 +857,24 @@ fn generate_hosts_and_services(
 
     // 3. Core switch (48 ports, SNMP/LLDP)
     result.push(host_with_services!(
-        create_host(
-            "unifi-usw-48",
-            Some("switch.acme.local"),
-            Some("UniFi Switch 48 PoE"),
-            hq,
-            hq_mgmt,
-            Ipv4Addr::new(10, 0, 1, 3),
-            vec![],
-            network_devices_cred,
-            None,
-            now
+        with_snmp(
+            create_host(
+                "unifi-usw-48",
+                Some("switch.acme.local"),
+                Some("UniFi Switch 48 PoE"),
+                hq,
+                hq_mgmt,
+                Ipv4Addr::new(10, 0, 1, 3),
+                vec![],
+                network_devices_cred,
+                None,
+                now,
+            ),
+            Some("UniFi USW-48-PoE, 6.6.65, Linux 5.4.0"),
+            Some("1.3.6.1.4.1.41112.1.6"),
+            Some("HQ Server Room, Rack A2"),
+            Some("netops@acme-corp.com"),
+            Some("78:45:c4:ab:cd:01"),
         ),
         now,
         ("SNMP", "SNMP", Some(PortType::Snmp), vec![]),
@@ -940,17 +971,24 @@ fn generate_hosts_and_services(
 
     // 8. Proxmox Hypervisor 1 (pre-generated Proxmox VE service ID)
     {
-        let (host, interface) = create_host(
-            "proxmox-hv01",
-            Some("proxmox-hv01.acme.local"),
-            Some("Proxmox hypervisor node 1"),
-            hq,
-            hq_servers,
-            Ipv4Addr::new(10, 0, 20, 5),
-            production_tag.into_iter().collect(),
+        let (host, interface) = with_snmp(
+            create_host(
+                "proxmox-hv01",
+                Some("proxmox-hv01.acme.local"),
+                Some("Proxmox hypervisor node 1"),
+                hq,
+                hq_servers,
+                Ipv4Addr::new(10, 0, 20, 5),
+                production_tag.into_iter().collect(),
+                None,
+                None,
+                now,
+            ),
+            Some("Linux proxmox-hv01 6.8.12-1-pve #1 SMP PVE 6.8.12-1 x86_64"),
+            Some("1.3.6.1.4.1.8072.3.2.10"),
+            Some("HQ Server Room, Rack B1"),
+            Some("sysadmin@acme-corp.com"),
             None,
-            None,
-            now,
         );
         let interfaces = vec![interface];
         let mut ports = Vec::new();
@@ -994,17 +1032,24 @@ fn generate_hosts_and_services(
 
     // 9. Proxmox Hypervisor 2 (pre-generated Proxmox VE service ID)
     {
-        let (host, interface) = create_host(
-            "proxmox-hv02",
-            Some("proxmox-hv02.acme.local"),
-            Some("Proxmox hypervisor node 2"),
-            hq,
-            hq_servers,
-            Ipv4Addr::new(10, 0, 20, 6),
-            production_tag.into_iter().collect(),
+        let (host, interface) = with_snmp(
+            create_host(
+                "proxmox-hv02",
+                Some("proxmox-hv02.acme.local"),
+                Some("Proxmox hypervisor node 2"),
+                hq,
+                hq_servers,
+                Ipv4Addr::new(10, 0, 20, 6),
+                production_tag.into_iter().collect(),
+                None,
+                None,
+                now,
+            ),
+            Some("Linux proxmox-hv02 6.8.12-1-pve #1 SMP PVE 6.8.12-1 x86_64"),
+            Some("1.3.6.1.4.1.8072.3.2.10"),
+            Some("HQ Server Room, Rack B2"),
+            Some("sysadmin@acme-corp.com"),
             None,
-            None,
-            now,
         );
         let interfaces = vec![interface];
         let mut ports = Vec::new();
@@ -1357,17 +1402,24 @@ fn generate_hosts_and_services(
 
     // 17. TrueNAS Primary
     result.push(host_with_services!(
-        create_host(
-            "truenas-primary",
-            Some("truenas.acme.local"),
-            Some("Primary NAS storage"),
-            hq,
-            hq_storage,
-            Ipv4Addr::new(10, 0, 40, 20),
-            critical_tag.into_iter().chain(backup_tag).collect(),
+        with_snmp(
+            create_host(
+                "truenas-primary",
+                Some("truenas.acme.local"),
+                Some("Primary NAS storage"),
+                hq,
+                hq_storage,
+                Ipv4Addr::new(10, 0, 40, 20),
+                critical_tag.into_iter().chain(backup_tag).collect(),
+                None,
+                None,
+                now,
+            ),
+            Some("TrueNAS SCALE 24.04 (Dragonfish) - Kernel 6.6.44-production+truenas"),
+            Some("1.3.6.1.4.1.50536.3"),
+            Some("HQ Server Room, Rack C1"),
+            Some("sysadmin@acme-corp.com"),
             None,
-            None,
-            now
         ),
         now,
         (
@@ -1381,17 +1433,24 @@ fn generate_hosts_and_services(
 
     // 18. Synology Backup
     result.push(host_with_services!(
-        create_host(
-            "synology-backup",
-            Some("synology.acme.local"),
-            Some("Synology backup NAS"),
-            hq,
-            hq_storage,
-            Ipv4Addr::new(10, 0, 40, 21),
-            backup_tag.into_iter().collect(),
+        with_snmp(
+            create_host(
+                "synology-backup",
+                Some("synology.acme.local"),
+                Some("Synology backup NAS"),
+                hq,
+                hq_storage,
+                Ipv4Addr::new(10, 0, 40, 21),
+                backup_tag.into_iter().collect(),
+                None,
+                None,
+                now,
+            ),
+            Some("Synology NAS DS1621+ DSM 7.2.1-69057 Update 5"),
+            Some("1.3.6.1.4.1.6574.1"),
+            Some("HQ Server Room, Rack C2"),
+            Some("sysadmin@acme-corp.com"),
             None,
-            None,
-            now
         ),
         now,
         (
@@ -1448,17 +1507,24 @@ fn generate_hosts_and_services(
 
     // 23. UniFi AP Lobby
     result.push(host_with_services!(
-        create_host(
-            "unifi-ap-lobby",
-            Some("ap-lobby.acme.local"),
-            Some("UniFi AP - Main Lobby"),
-            hq,
-            hq_iot,
-            Ipv4Addr::new(10, 0, 30, 100),
-            iot_tag.into_iter().collect(),
-            None,
-            None,
-            now
+        with_snmp(
+            create_host(
+                "unifi-ap-lobby",
+                Some("ap-lobby.acme.local"),
+                Some("UniFi AP - Main Lobby"),
+                hq,
+                hq_iot,
+                Ipv4Addr::new(10, 0, 30, 100),
+                iot_tag.into_iter().collect(),
+                network_devices_cred,
+                None,
+                now,
+            ),
+            Some("UniFi U6-Pro, 6.6.65, Linux 5.4.0"),
+            Some("1.3.6.1.4.1.41112.1.6"),
+            Some("HQ Main Lobby, Ceiling Mount"),
+            Some("netops@acme-corp.com"),
+            Some("fc:ec:da:aa:bb:01"),
         ),
         now,
         (
@@ -1471,17 +1537,24 @@ fn generate_hosts_and_services(
 
     // 24. UniFi AP Floor 2
     result.push(host_with_services!(
-        create_host(
-            "unifi-ap-floor2",
-            Some("ap-floor2.acme.local"),
-            Some("UniFi AP - Floor 2"),
-            hq,
-            hq_iot,
-            Ipv4Addr::new(10, 0, 30, 101),
-            iot_tag.into_iter().collect(),
-            None,
-            None,
-            now
+        with_snmp(
+            create_host(
+                "unifi-ap-floor2",
+                Some("ap-floor2.acme.local"),
+                Some("UniFi AP - Floor 2"),
+                hq,
+                hq_iot,
+                Ipv4Addr::new(10, 0, 30, 101),
+                iot_tag.into_iter().collect(),
+                network_devices_cred,
+                None,
+                now,
+            ),
+            Some("UniFi U6-LR, 6.6.65, Linux 5.4.0"),
+            Some("1.3.6.1.4.1.41112.1.6"),
+            Some("HQ Floor 2, Hallway Ceiling"),
+            Some("netops@acme-corp.com"),
+            Some("fc:ec:da:aa:bb:02"),
         ),
         now,
         (
@@ -1517,17 +1590,24 @@ fn generate_hosts_and_services(
 
     // 26. HP Printer
     result.push(host_with_services!(
-        create_host(
-            "printer-hp-main",
+        with_snmp(
+            create_host(
+                "printer-hp-main",
+                None,
+                Some("HP LaserJet Pro"),
+                hq,
+                hq_iot,
+                Ipv4Addr::new(10, 0, 30, 50),
+                iot_tag.into_iter().collect(),
+                None,
+                None,
+                now,
+            ),
+            Some("HP LaserJet Pro MFP M428fdw, Firmware 20230809"),
+            Some("1.3.6.1.4.1.11.2.3.9.1"),
+            Some("HQ Floor 1, Copy Room"),
+            Some("helpdesk@acme-corp.com"),
             None,
-            Some("HP LaserJet Pro"),
-            hq,
-            hq_iot,
-            Ipv4Addr::new(10, 0, 30, 50),
-            iot_tag.into_iter().collect(),
-            None,
-            None,
-            now
         ),
         now,
         (
@@ -1588,17 +1668,24 @@ fn generate_hosts_and_services(
 
     // 29. Guest AP
     result.push(host_with_services!(
-        create_host(
-            "guest-ap",
-            Some("guest-ap.acme.local"),
-            Some("Guest WiFi access point"),
-            hq,
-            hq_guest,
-            Ipv4Addr::new(10, 0, 100, 1),
-            iot_tag.into_iter().collect(),
-            None,
-            None,
-            now
+        with_snmp(
+            create_host(
+                "guest-ap",
+                Some("guest-ap.acme.local"),
+                Some("Guest WiFi access point"),
+                hq,
+                hq_guest,
+                Ipv4Addr::new(10, 0, 100, 1),
+                iot_tag.into_iter().collect(),
+                network_devices_cred,
+                None,
+                now,
+            ),
+            Some("UniFi U6-Lite, 6.6.65, Linux 5.4.0"),
+            Some("1.3.6.1.4.1.41112.1.6"),
+            Some("HQ Guest Lobby, Ceiling Mount"),
+            Some("netops@acme-corp.com"),
+            Some("fc:ec:da:aa:bb:03"),
         ),
         now,
         (
@@ -1642,17 +1729,24 @@ fn generate_hosts_and_services(
 
     // 1. DC Firewall
     result.push(host_with_services!(
-        create_host(
-            "dc-fw01",
-            Some("fw01.dc.acme.io"),
-            Some("Data center firewall"),
-            dc,
-            dc_mgmt,
-            Ipv4Addr::new(172, 16, 0, 1),
-            critical_tag.into_iter().collect(),
-            network_devices_cred,
+        with_snmp(
+            create_host(
+                "dc-fw01",
+                Some("fw01.dc.acme.io"),
+                Some("Data center firewall"),
+                dc,
+                dc_mgmt,
+                Ipv4Addr::new(172, 16, 0, 1),
+                critical_tag.into_iter().collect(),
+                network_devices_cred,
+                None,
+                now,
+            ),
+            Some("FortiGate-60F v7.4.3, build 2573, 240514 (GA.F)"),
+            Some("1.3.6.1.4.1.12356.101.1"),
+            Some("DC-East, Cage 4, Rack 1"),
+            Some("netops@acme-corp.com"),
             None,
-            now
         ),
         now,
         (
@@ -1665,17 +1759,24 @@ fn generate_hosts_and_services(
 
     // 2. DC Switch (24 ports, LLDP)
     result.push(host_with_services!(
-        create_host(
-            "dc-switch-01",
-            Some("switch-01.dc.acme.io"),
-            Some("Data center managed switch"),
-            dc,
-            dc_mgmt,
-            Ipv4Addr::new(172, 16, 0, 2),
-            vec![],
-            network_devices_cred,
-            None,
-            now
+        with_snmp(
+            create_host(
+                "dc-switch-01",
+                Some("switch-01.dc.acme.io"),
+                Some("Data center managed switch"),
+                dc,
+                dc_mgmt,
+                Ipv4Addr::new(172, 16, 0, 2),
+                vec![],
+                network_devices_cred,
+                None,
+                now,
+            ),
+            Some("Arista DCS-7050SX3-48YC12, EOS-4.32.0F"),
+            Some("1.3.6.1.4.1.30065.1.3011.7050.3735.48.3328.12"),
+            Some("DC-East, Cage 4, Rack 2"),
+            Some("netops@acme-corp.com"),
+            Some("78:45:c4:ab:cd:02"),
         ),
         now,
         ("SNMP", "SNMP", Some(PortType::Snmp), vec![]),
@@ -1786,17 +1887,24 @@ fn generate_hosts_and_services(
 
     // 7. DC Proxmox Hypervisor (pre-generated Proxmox VE service ID)
     {
-        let (host, interface) = create_host(
-            "dc-proxmox-hv01",
-            Some("proxmox-hv01.dc.acme.io"),
-            Some("Data center Proxmox hypervisor"),
-            dc,
-            dc_compute,
-            Ipv4Addr::new(172, 16, 10, 5),
-            production_tag.into_iter().collect(),
+        let (host, interface) = with_snmp(
+            create_host(
+                "dc-proxmox-hv01",
+                Some("proxmox-hv01.dc.acme.io"),
+                Some("Data center Proxmox hypervisor"),
+                dc,
+                dc_compute,
+                Ipv4Addr::new(172, 16, 10, 5),
+                production_tag.into_iter().collect(),
+                None,
+                None,
+                now,
+            ),
+            Some("Linux dc-proxmox-hv01 6.8.12-1-pve #1 SMP PVE 6.8.12-1 x86_64"),
+            Some("1.3.6.1.4.1.8072.3.2.10"),
+            Some("DC-East, Cage 4, Rack 3"),
+            Some("sysadmin@acme-corp.com"),
             None,
-            None,
-            now,
         );
         let interfaces = vec![interface];
         let mut ports = Vec::new();

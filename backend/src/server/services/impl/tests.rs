@@ -603,12 +603,7 @@ async fn test_service_definition_logo_urls_resolve() {
         .build()
         .expect("Failed to create HTTP client");
 
-    const ALLOWED_DOMAINS: &[&str] = &[
-        "cdn.jsdelivr.net",
-        "simpleicons.org",
-        "vectorlogo.zone",
-        "cdn.prod.website-files.com",
-    ];
+    use crate::server::services::definitions::ALLOWED_LOGO_DOMAINS;
 
     // Collect services with external logo URLs to validate
     let services_to_check: Vec<_> = registry
@@ -648,7 +643,7 @@ async fn test_service_definition_logo_urls_resolve() {
 
             // Check domain is in allowed list
             let domain = url.domain().unwrap_or("");
-            let is_allowed = ALLOWED_DOMAINS
+            let is_allowed = ALLOWED_LOGO_DOMAINS
                 .iter()
                 .any(|allowed| domain.ends_with(allowed));
 
@@ -659,7 +654,7 @@ async fn test_service_definition_logo_urls_resolve() {
                 ServiceDefinition::name(&service),
                 logo_url,
                 domain,
-                ALLOWED_DOMAINS.join(", ")
+                ALLOWED_LOGO_DOMAINS.join(", ")
             );
 
             Some((service.name().to_string(), logo_url.to_string()))

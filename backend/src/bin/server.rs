@@ -15,6 +15,7 @@ use scanopy::server::{
     },
     billing::plans::get_purchasable_plans,
     config::{AppState, ServerCli, ServerConfig, get_deployment_type},
+    services::definitions::ALLOWED_LOGO_DOMAINS,
     shared::handlers::{
         cache::AppCache,
         factory::{create_public_share_routes, create_router},
@@ -234,19 +235,26 @@ async fn main() -> anyhow::Result<()> {
 
     // CSP Report-Only: non-blocking header that logs violations to browser console.
     // Used to identify what a full CSP would break before enforcing it.
+    let img_src_domains: String = ALLOWED_LOGO_DOMAINS
+        .iter()
+        .map(|d| format!("https://{}", d))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let csp_value = format!(
+        "default-src 'self'; \
+         script-src 'self' 'unsafe-inline' https://ph.scanopy.net; \
+         style-src 'self' 'unsafe-inline'; \
+         img-src 'self' data: blob: {}; \
+         font-src 'self'; \
+         connect-src 'self' https://ph.scanopy.net; \
+         frame-ancestors 'self'; \
+         base-uri 'self'; \
+         form-action 'self'",
+        img_src_domains
+    );
     let csp_report_only = SetResponseHeaderLayer::if_not_present(
         HeaderName::from_static("content-security-policy-report-only"),
-        HeaderValue::from_static(
-            "default-src 'self'; \
-             script-src 'self'; \
-             style-src 'self' 'unsafe-inline'; \
-             img-src 'self' data: blob:; \
-             font-src 'self'; \
-             connect-src 'self'; \
-             frame-ancestors 'self'; \
-             base-uri 'self'; \
-             form-action 'self'",
-        ),
+        HeaderValue::try_from(csp_value).expect("Invalid CSP header value"),
     );
 
     let app_cache = Arc::new(AppCache::new());

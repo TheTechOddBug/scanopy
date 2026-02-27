@@ -177,7 +177,7 @@
 						}
 					]
 				: []),
-			...(hasUpdateAvailable
+			...(hasUpdateAvailable && daemon.is_unreachable !== true
 				? [
 						{
 							label: 'Update',

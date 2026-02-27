@@ -120,6 +120,9 @@ pub enum RunType {
         #[schema(read_only)]
         last_run: Option<DateTime<Utc>>,
         enabled: bool,
+        /// IANA timezone for cron evaluation, e.g. "America/New_York". None = UTC.
+        #[serde(default)]
+        timezone: Option<String>,
     },
     #[schema(title = "Historical")]
     /// Historical discovery runs are created by the server and cannot be submitted via API

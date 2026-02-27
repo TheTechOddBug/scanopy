@@ -2731,7 +2731,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.14.7"
+         *       "server_version": "0.14.8"
          *     }
          */
         ApiMeta: {
@@ -2742,7 +2742,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.14.7
+             * @example 0.14.8
              */
             server_version: string;
         };
@@ -2756,14 +2756,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-24T16:12:04.136670Z",
-             *       "id": "151eabfb-6799-4bc3-abc6-e663f7fe27e6",
+             *       "created_at": "2026-02-26T01:00:24.872008Z",
+             *       "id": "f3e9c5ec-94e7-4143-93d6-165bf9da2894",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-24T16:12:04.136670Z"
+             *       "updated_at": "2026-02-26T01:00:24.872008Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3010,14 +3010,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-24T16:12:04.124760Z",
-             *               "id": "88e42363-5deb-4da0-8c9e-6e7bbfda94b8",
+             *               "created_at": "2026-02-26T01:00:24.856711Z",
+             *               "id": "de982788-2d38-4845-8133-428926b581f0",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-24T16:12:04.124760Z"
+             *               "updated_at": "2026-02-26T01:00:24.856711Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3026,7 +3026,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Gitea",
+             *           "service_definition": "Jellyseerr",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3299,14 +3299,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-24T16:12:04.133235Z",
-             *           "id": "756e3b2d-53aa-49b4-ae64-c2ef1c933c19",
+             *           "created_at": "2026-02-26T01:00:24.867792Z",
+             *           "id": "c8aba7e3-0ada-4a5c-9836-4ee1b6478d01",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-24T16:12:04.133235Z"
+             *           "updated_at": "2026-02-26T01:00:24.867792Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3315,7 +3315,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Gitea",
+             *       "service_definition": "Jellyseerr",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3618,14 +3618,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-24T16:12:04.124970Z",
-         *       "id": "454169c6-a530-4b89-b768-192f194ec4b5",
+         *       "created_at": "2026-02-26T01:00:24.856908Z",
+         *       "id": "ca1ffe70-5e3e-4da1-87b3-605d1a453327",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-24T16:12:04.124970Z"
+         *       "updated_at": "2026-02-26T01:00:24.856908Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3807,7 +3807,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Gitea",
+         *           "service_definition": "Jellyseerr",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4449,14 +4449,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-24T16:12:04.124465Z",
-         *               "id": "86ea3061-7306-4c4c-a0b5-247015c46483",
+         *               "created_at": "2026-02-26T01:00:24.856434Z",
+         *               "id": "1b787ec3-4048-43f8-b3eb-f39e09ee2d58",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-24T16:12:04.124465Z"
+         *               "updated_at": "2026-02-26T01:00:24.856434Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4465,7 +4465,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Gitea",
+         *           "service_definition": "Jellyseerr",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5015,7 +5015,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.14.7"
+         *       "server_version": "0.14.8"
          *     }
          */
         PaginatedApiMeta: {
@@ -5028,7 +5028,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.14.7
+             * @example 0.14.8
              */
             server_version: string;
         };
@@ -5421,6 +5421,8 @@ export interface components {
             enabled: boolean;
             /** Format: date-time */
             readonly last_run?: string | null;
+            /** @description IANA timezone for cron evaluation, e.g. "America/New_York". None = UTC. */
+            timezone?: string | null;
             /** @enum {string} */
             type: "Scheduled";
         } | {
@@ -5446,14 +5448,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-24T16:12:04.124898Z",
-         *           "id": "e3cd224a-efdb-42de-af98-c092117468df",
+         *           "created_at": "2026-02-26T01:00:24.856837Z",
+         *           "id": "41bb97cd-599e-4548-b2ac-d70a6849cce2",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-24T16:12:04.124898Z"
+         *           "updated_at": "2026-02-26T01:00:24.856837Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5462,7 +5464,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Gitea",
+         *       "service_definition": "Jellyseerr",
          *       "source": {
          *         "type": "Manual"
          *       },

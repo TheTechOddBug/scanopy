@@ -4,7 +4,7 @@
 	import { Edit, Play, Trash2 } from 'lucide-svelte';
 	import type { Discovery } from '../../types/base';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
-	import { parseCronToHours } from '../../queries';
+	import { formatScheduleDisplay } from '../../queries';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 
@@ -49,7 +49,7 @@
 				label: 'Schedule',
 				value:
 					discovery.run_type.type == 'Scheduled'
-						? `Every ${parseCronToHours(discovery.run_type.cron_schedule) || 'Unknown'} Hours`
+						? formatScheduleDisplay(discovery.run_type.cron_schedule, discovery.run_type.timezone)
 						: 'Manual'
 			},
 			{

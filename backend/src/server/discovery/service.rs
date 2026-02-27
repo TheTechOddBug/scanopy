@@ -22,7 +22,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{RwLock, broadcast};
-use tokio_cron_scheduler::{Job, JobScheduler};
+use tokio_cron_scheduler::{JobBuilder, JobScheduler};
 use uuid::Uuid;
 
 /// Server-side session management for discovery
@@ -197,12 +197,29 @@ impl DiscoveryService {
             .unwrap_or((false, Uuid::nil()))
     }
 
+    /// Validate timezone string if present on a scheduled discovery
+    fn validate_timezone(run_type: &RunType) -> Result<()> {
+        if let RunType::Scheduled {
+            timezone: Some(tz), ..
+        } = run_type
+        {
+            tz.parse::<chrono_tz::Tz>().map_err(|_| {
+                anyhow!(
+                    "Invalid timezone '{}'. Use an IANA timezone like 'America/New_York'.",
+                    tz
+                )
+            })?;
+        }
+        Ok(())
+    }
+
     /// Create a new scheduled discovery
     pub async fn create_discovery(
         self: &Arc<Self>,
         discovery: Discovery,
         authentication: AuthenticatedEntity,
     ) -> Result<Discovery> {
+        Self::validate_timezone(&discovery.base.run_type)?;
         let mut created_discovery = if discovery.id == Uuid::nil() {
             self.discovery_storage
                 .create(&Discovery::new(discovery.base))
@@ -273,21 +290,32 @@ impl DiscoveryService {
         mut discovery: Discovery,
         authentication: AuthenticatedEntity,
     ) -> Result<Discovery, Error> {
+        Self::validate_timezone(&discovery.base.run_type)?;
+
         let current = self
             .get_by_id(&discovery.id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Could not find discovery {}", discovery))?;
 
-        // If it's a scheduled discovery and schedule has changed, need to reschedule
-        let updated = if let RunType::Scheduled {
+        // If it's a scheduled discovery and schedule or timezone has changed, need to reschedule
+        let schedule_changed = if let RunType::Scheduled {
             cron_schedule: new_cron,
+            timezone: new_tz,
             ..
         } = &discovery.base.run_type
             && let RunType::Scheduled {
                 cron_schedule: current_cron,
+                timezone: current_tz,
                 ..
             } = &current.base.run_type
-            && current_cron != new_cron
+        {
+            current_cron != new_cron || current_tz != new_tz
+        } else {
+            false
+        };
+
+        let updated = if schedule_changed
+            && matches!(discovery.base.run_type, RunType::Scheduled { .. })
         {
             // Remove old schedule first using the actual job_id
             if let Some(scheduler) = &self.scheduler
@@ -484,6 +512,7 @@ impl DiscoveryService {
         let RunType::Scheduled {
             cron_schedule,
             enabled,
+            timezone,
             ..
         } = &discovery.base.run_type
         else {
@@ -499,6 +528,12 @@ impl DiscoveryService {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Scheduler not initialized"))?;
 
+        let tz: chrono_tz::Tz = timezone
+            .as_deref()
+            .unwrap_or("UTC")
+            .parse()
+            .unwrap_or(chrono_tz::UTC);
+
         let discovery = discovery.clone();
         let discovery_id = discovery.id;
         let storage = service.discovery_storage.clone();
@@ -506,37 +541,42 @@ impl DiscoveryService {
         // Clone self to use start_session
         let service_clone = Arc::clone(service);
 
-        let job = Job::new_async(cron_schedule.as_str(), move |_uuid, _lock| {
-            let mut discovery = discovery.clone();
-            let storage = storage.clone();
-            let service = service_clone.clone();
+        let job = JobBuilder::new()
+            .with_timezone(tz)
+            .with_cron_job_type()
+            .with_schedule(cron_schedule.as_str())?
+            .with_run_async(Box::new(move |_uuid, _lock| {
+                let mut discovery = discovery.clone();
+                let storage = storage.clone();
+                let service = service_clone.clone();
 
-            Box::pin(async move {
-                tracing::info!("Running scheduled discovery {}", &discovery.id);
+                Box::pin(async move {
+                    tracing::info!("Running scheduled discovery {}", &discovery.id);
 
-                match service
-                    .start_session(discovery.clone(), AuthenticatedEntity::System)
-                    .await
-                {
-                    Ok(_) => {
-                        // Update last_run
-                        if let RunType::Scheduled {
-                            last_run: mut _last_run,
-                            ..
-                        } = discovery.base.run_type
-                        {
-                            _last_run = Some(Utc::now());
-                            if let Err(e) = storage.update(&mut discovery).await {
-                                tracing::error!("Failed to update schedule times: {}", e);
-                            }
-                        };
+                    match service
+                        .start_session(discovery.clone(), AuthenticatedEntity::System)
+                        .await
+                    {
+                        Ok(_) => {
+                            // Update last_run
+                            if let RunType::Scheduled {
+                                last_run: mut _last_run,
+                                ..
+                            } = discovery.base.run_type
+                            {
+                                _last_run = Some(Utc::now());
+                                if let Err(e) = storage.update(&mut discovery).await {
+                                    tracing::error!("Failed to update schedule times: {}", e);
+                                }
+                            };
+                        }
+                        Err(e) => {
+                            tracing::error!("Scheduled discovery {} failed: {}", discovery_id, e);
+                        }
                     }
-                    Err(e) => {
-                        tracing::error!("Scheduled discovery {} failed: {}", discovery_id, e);
-                    }
-                }
-            })
-        })?;
+                })
+            }))
+            .build()?;
 
         let job_id = scheduler.write().await.add(job).await?;
 

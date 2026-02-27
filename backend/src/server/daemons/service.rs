@@ -922,6 +922,7 @@ impl DaemonService {
                 cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
                 last_run: None,
                 enabled: true,
+                timezone: None,
             }
         };
 

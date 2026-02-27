@@ -154,7 +154,8 @@ export function createEmptyDiscoveryFormData(daemon: Daemon | null): Discovery {
 			type: 'Scheduled',
 			cron_schedule: '0 0 0 * * *',
 			last_run: null,
-			enabled: true
+			enabled: true,
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
 		},
 		name: '',
 		daemon_id: daemon ? daemon.id : uuidv4Sentinel,
@@ -217,6 +218,82 @@ export function generateCronSchedule(hours: number): string {
 	}
 	// Every N hours
 	return `0 0 */${hours} * * *`;
+}
+
+/**
+ * Generate a cron expression from day-of-week + hour + minute
+ * Format: "0 minute hour * * day1,day2,..." (second minute hour day month weekday)
+ */
+export function generateDayTimeCronSchedule(
+	daysOfWeek: number[],
+	hour: number,
+	minute: number
+): string {
+	const dayStr = daysOfWeek.length === 7 ? '*' : daysOfWeek.join(',');
+	return `0 ${minute} ${hour} * * ${dayStr}`;
+}
+
+/**
+ * Parse a day-of-week + time cron expression back to its components.
+ * Returns null for cron expressions that don't match this pattern (legacy interval crons).
+ * Expected format: "0 minute hour * * daySpec"
+ */
+export function parseDayTimeCronSchedule(
+	cron: string
+): { daysOfWeek: number[]; hour: number; minute: number } | null {
+	const parts = cron.split(' ');
+	if (parts.length !== 6) return null;
+
+	const [sec, min, hour, day, month, weekday] = parts;
+
+	// Must be: second=0, day=*, month=*
+	if (sec !== '0' || day !== '*' || month !== '*') return null;
+
+	// Minute and hour must be plain numbers
+	const minuteNum = parseInt(min);
+	const hourNum = parseInt(hour);
+	if (isNaN(minuteNum) || isNaN(hourNum)) return null;
+	if (String(minuteNum) !== min || String(hourNum) !== hour) return null;
+	if (minuteNum < 0 || minuteNum > 59 || hourNum < 0 || hourNum > 23) return null;
+
+	// Parse weekday field
+	let daysOfWeek: number[];
+	if (weekday === '*') {
+		daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
+	} else {
+		daysOfWeek = weekday.split(',').map((d) => parseInt(d));
+		if (daysOfWeek.some((d) => isNaN(d) || d < 0 || d > 6)) return null;
+	}
+
+	return { daysOfWeek, hour: hourNum, minute: minuteNum };
+}
+
+/**
+ * Format a schedule for display on cards.
+ * Returns a human-readable string like "Mon, Wed, Fri at 03:00 (America/New_York)"
+ */
+export function formatScheduleDisplay(cron: string, timezone: string | null | undefined): string {
+	const tz = timezone || 'UTC';
+	const parsed = parseDayTimeCronSchedule(cron);
+
+	if (parsed) {
+		const time = `${String(parsed.hour).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')}`;
+		if (parsed.daysOfWeek.length === 7) {
+			return `Daily at ${time} (${tz})`;
+		}
+		const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+		const days = parsed.daysOfWeek.map((d) => dayNames[d]).join(', ');
+		return `${days} at ${time} (${tz})`;
+	}
+
+	// Fallback: try legacy hours format
+	const hours = parseCronToHours(cron);
+	if (hours !== null) {
+		return `Every ${hours} Hours`;
+	}
+
+	// Raw cron fallback
+	return `${cron} (${tz})`;
 }
 
 /**

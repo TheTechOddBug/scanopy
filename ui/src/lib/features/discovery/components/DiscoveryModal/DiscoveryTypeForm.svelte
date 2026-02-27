@@ -17,14 +17,24 @@
 		type SimpleOption
 	} from '$lib/shared/components/forms/selection/display/SimpleOptionDisplay';
 	import type { Daemon } from '$lib/features/daemons/types/base';
-	import { generateCronSchedule } from '../../queries';
+	import { generateDayTimeCronSchedule } from '../../queries';
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
+	import TimeInput from '$lib/shared/components/forms/input/TimeInput.svelte';
+	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
+	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import {
-		common_days,
-		common_hours,
+		common_fri,
 		common_ipAddress,
+		common_mon,
+		common_sat,
+		common_sun,
+		common_thu,
+		common_time,
+		common_timezone,
+		common_tue,
+		common_wed,
 		discovery_adHoc,
 		discovery_adHocDescription,
 		discovery_allSubnetsScanned,
@@ -39,36 +49,45 @@
 		discovery_manualDiscovery,
 		discovery_manualDiscoveryHelp,
 		discovery_networkScan,
-		discovery_noDays,
-		discovery_noHours,
 		discovery_nonInterfacedSubnet,
 		discovery_nonInterfacedSubnetWarning,
-		discovery_oneDay,
-		discovery_oneHour,
 		discovery_runType,
+		discovery_scheduleCronExpression,
+		discovery_scheduleCronInfo,
 		discovery_scheduleConfiguration,
+		discovery_scheduleDaysOfWeek,
+		discovery_scheduleEditAsCron,
 		discovery_scheduleHelp,
+		discovery_scheduleResetToDayPicker,
+		discovery_scheduleTimezoneHelp,
 		discovery_scheduled,
 		discovery_scheduledDescription,
 		discovery_selectSubnet,
 		discovery_selfReport,
 		discovery_targetSubnets,
-		discovery_targetSubnetsHelp,
-		discovery_xDays,
-		discovery_xHours
+		discovery_targetSubnetsHelp
 	} from '$lib/paraglide/messages';
 
 	// Props
 	interface Props {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		form: { Field: any; state: { values: Record<string, any> } };
+		/* eslint-disable @typescript-eslint/no-explicit-any */
+		form: any;
+		/* eslint-enable @typescript-eslint/no-explicit-any */
 		formData: Discovery;
 		readOnly?: boolean;
 		daemonHostId: string | null;
 		daemon: Daemon;
+		rawCronMode?: boolean;
 	}
 
-	let { form, formData = $bindable(), readOnly = false, daemonHostId, daemon }: Props = $props();
+	let {
+		form,
+		formData = $bindable(),
+		readOnly = false,
+		daemonHostId,
+		daemon,
+		rawCronMode = $bindable(false)
+	}: Props = $props();
 
 	// Queries
 	const organizationQuery = useOrganizationQuery();
@@ -117,6 +136,26 @@
 		}
 	]);
 
+	// Day-of-week labels (index matches cron: 0=Sun, 1=Mon, ..., 6=Sat)
+	// Each entry is called as a function to resolve the i18n string
+	const dayLabels = [
+		() => common_sun(),
+		() => common_mon(),
+		() => common_tue(),
+		() => common_wed(),
+		() => common_thu(),
+		() => common_fri(),
+		() => common_sat()
+	];
+
+	// Timezone options from browser
+	let timezoneOptions = $derived(
+		Intl.supportedValuesOf('timeZone').map((tz) => ({
+			value: tz,
+			label: tz
+		}))
+	);
+
 	// Handle run type changes - update formData when form field changes
 	function handleRunTypeChange(value: string) {
 		if (value === 'AdHoc' && formData.run_type.type !== 'AdHoc') {
@@ -127,10 +166,12 @@
 		} else if (value === 'Scheduled' && formData.run_type.type !== 'Scheduled') {
 			formData.run_type = {
 				type: 'Scheduled',
-				cron_schedule: '0 0 */1 * * *', // Default: every hour
+				cron_schedule: '0 0 0 * * *',
 				last_run: null,
-				enabled: true
+				enabled: true,
+				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
 			};
+			rawCronMode = false;
 		}
 	}
 
@@ -169,14 +210,94 @@
 		}
 	}
 
-	// Handle schedule changes - update cron from days/hours
-	function handleScheduleChange(days: number, hours: number) {
+	// Update cron from day-of-week toggles + time
+	function updateCronFromDayTime() {
+		if (formData.run_type.type !== 'Scheduled') return;
+		const daysStr: string = form.state.values.schedule_days_of_week ?? '0,1,2,3,4,5,6';
+		const time: string = form.state.values.schedule_time ?? '00:00';
+		const days = daysStr
+			.split(',')
+			.filter(Boolean)
+			.map((d) => parseInt(d));
+		const [hour, minute] = time.split(':').map((n) => parseInt(n));
+		formData.run_type = {
+			...formData.run_type,
+			cron_schedule: generateDayTimeCronSchedule(
+				days.length > 0 ? days : [0, 1, 2, 3, 4, 5, 6],
+				hour || 0,
+				minute || 0
+			)
+		};
+	}
+
+	// Handle timezone change
+	function handleTimezoneChange(value: string) {
 		if (formData.run_type.type === 'Scheduled') {
-			const totalHours = days * 24 + hours;
 			formData.run_type = {
 				...formData.run_type,
-				cron_schedule: generateCronSchedule(totalHours)
+				timezone: value
 			};
+		}
+	}
+
+	// Handle raw cron change
+	function handleRawCronChange(value: string) {
+		if (formData.run_type.type === 'Scheduled') {
+			formData.run_type = {
+				...formData.run_type,
+				cron_schedule: value
+			};
+		}
+	}
+
+	// Toggle day-of-week selection
+	function toggleDay(dayIndex: number) {
+		if (readOnly) return;
+		const currentStr: string = form.state.values.schedule_days_of_week ?? '0,1,2,3,4,5,6';
+		const current = currentStr
+			.split(',')
+			.filter(Boolean)
+			.map((d) => parseInt(d));
+		let updated: number[];
+		if (current.includes(dayIndex)) {
+			// Don't allow deselecting all days
+			if (current.length <= 1) return;
+			updated = current.filter((d) => d !== dayIndex);
+		} else {
+			updated = [...current, dayIndex].sort((a, b) => a - b);
+		}
+		const newValue = updated.join(',');
+		// Update form field programmatically — find the field and update
+		form.setFieldValue('schedule_days_of_week', newValue);
+		// Also update cron immediately
+		if (formData.run_type.type !== 'Scheduled') return;
+		const time: string = form.state.values.schedule_time ?? '00:00';
+		const [hour, minute] = time.split(':').map((n) => parseInt(n));
+		formData.run_type = {
+			...formData.run_type,
+			cron_schedule: generateDayTimeCronSchedule(updated, hour || 0, minute || 0)
+		};
+	}
+
+	// Switch to raw cron mode
+	function switchToRawCron() {
+		rawCronMode = true;
+	}
+
+	// Reset to day picker mode
+	function resetToDayPicker() {
+		rawCronMode = false;
+		// Reset to a standard day+time cron
+		const time: string = form.state.values.schedule_time ?? '00:00';
+		const [hour, minute] = time.split(':').map((n) => parseInt(n));
+		const cron = generateDayTimeCronSchedule([0, 1, 2, 3, 4, 5, 6], hour || 0, minute || 0);
+		form.setFieldValue('schedule_days_of_week', '0,1,2,3,4,5,6');
+		if (formData.run_type.type === 'Scheduled') {
+			formData.run_type = {
+				...formData.run_type,
+				cron_schedule: cron
+			};
+			form.setFieldValue('schedule_cron', cron);
 		}
 	}
 
@@ -248,26 +369,16 @@
 		}
 	}
 
-	// Day and hour options for schedule
-	let dayOptions = $derived(
-		Array.from({ length: 31 }, (_, i) => ({
-			value: String(i),
-			label:
-				i === 0 ? discovery_noDays() : i === 1 ? discovery_oneDay() : discovery_xDays({ count: i })
-		}))
-	);
-
-	let hourOptions = $derived(
-		Array.from({ length: 24 }, (_, i) => ({
-			value: String(i),
-			label:
-				i === 0
-					? discovery_noHours()
-					: i === 1
-						? discovery_oneHour()
-						: discovery_xHours({ count: i })
-		}))
-	);
+	// Selected days as a set for UI rendering
+	let selectedDays = $derived.by(() => {
+		const daysStr: string = form.state.values.schedule_days_of_week ?? '0,1,2,3,4,5,6';
+		return new Set(
+			daysStr
+				.split(',')
+				.filter(Boolean)
+				.map((d) => parseInt(d))
+		);
+	});
 </script>
 
 <div class="space-y-6">
@@ -397,7 +508,7 @@
 		</div>
 	</div>
 
-	<!-- Frequency Configuration (only for scheduled runs) -->
+	<!-- Schedule Configuration (only for scheduled runs) -->
 	{#if formData.run_type.type === 'Scheduled'}
 		<div class="border-t border-gray-700 pt-6">
 			<h3 class="text-primary mb-4 text-lg font-medium">{discovery_scheduleConfiguration()}</h3>
@@ -407,47 +518,99 @@
 					{discovery_scheduleHelp()}
 				</p>
 
-				<div class="grid grid-cols-2 gap-4">
+				{#if rawCronMode}
+					<!-- Raw Cron Mode -->
 					<form.Field
-						name="schedule_days"
+						name="schedule_cron"
 						listeners={{
-							onChange: ({ value }: { value: string }) => {
-								const hours = form.state.values.schedule_hours || '0';
-								handleScheduleChange(parseInt(value), parseInt(hours));
-							}
+							onChange: ({ value }: { value: string }) => handleRawCronChange(value)
 						}}
 					>
 						{#snippet children(field: AnyFieldApi)}
-							<SelectInput
-								label={common_days()}
-								id="frequency_days"
-								options={dayOptions}
+							<TextInput
+								label={discovery_scheduleCronExpression()}
+								id="schedule_cron"
 								{field}
 								disabled={readOnly}
+								placeholder="0 0 0 * * *"
 							/>
 						{/snippet}
 					</form.Field>
 
+					<InlineInfo
+						title={discovery_scheduleCronExpression()}
+						body={discovery_scheduleCronInfo()}
+					/>
+
+					<button
+						type="button"
+						class="text-sm text-blue-400 hover:text-blue-300"
+						onclick={resetToDayPicker}
+						disabled={readOnly}
+					>
+						{discovery_scheduleResetToDayPicker()}
+					</button>
+				{:else}
+					<!-- Day Picker Mode -->
+					<div>
+						<label class="text-secondary mb-2 block text-sm font-medium">
+							{discovery_scheduleDaysOfWeek()}
+						</label>
+						<div class="flex gap-1">
+							{#each [1, 2, 3, 4, 5, 6, 0] as dayIndex (dayIndex)}
+								<button
+									type="button"
+									class="{selectedDays.has(dayIndex)
+										? 'btn-info'
+										: 'btn-secondary'} px-3 py-1.5 text-sm"
+									disabled={readOnly}
+									onclick={() => toggleDay(dayIndex)}
+								>
+									{dayLabels[dayIndex]()}
+								</button>
+							{/each}
+						</div>
+					</div>
+
 					<form.Field
-						name="schedule_hours"
+						name="schedule_time"
 						listeners={{
-							onChange: ({ value }: { value: string }) => {
-								const days = form.state.values.schedule_days || '1';
-								handleScheduleChange(parseInt(days), parseInt(value));
-							}
+							onChange: () => updateCronFromDayTime()
 						}}
 					>
 						{#snippet children(field: AnyFieldApi)}
-							<SelectInput
-								label={common_hours()}
-								id="frequency_hours"
-								options={hourOptions}
-								{field}
-								disabled={readOnly}
-							/>
+							<TimeInput label={common_time()} id="schedule_time" {field} disabled={readOnly} />
 						{/snippet}
 					</form.Field>
-				</div>
+
+					<button
+						type="button"
+						class="text-sm text-blue-400 hover:text-blue-300"
+						onclick={switchToRawCron}
+						disabled={readOnly}
+					>
+						{discovery_scheduleEditAsCron()}
+					</button>
+				{/if}
+
+				<!-- Timezone (shown in both modes) -->
+				<form.Field
+					name="schedule_timezone"
+					listeners={{
+						onChange: ({ value }: { value: string }) => handleTimezoneChange(value)
+					}}
+				>
+					{#snippet children(field: AnyFieldApi)}
+						<SelectInput
+							label={common_timezone()}
+							id="schedule_timezone"
+							options={timezoneOptions}
+							{field}
+							disabled={readOnly}
+							helpText={discovery_scheduleTimezoneHelp()}
+						/>
+					{/snippet}
+				</form.Field>
 			</div>
 		</div>
 	{:else if formData.run_type.type === 'AdHoc'}

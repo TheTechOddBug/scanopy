@@ -13,6 +13,7 @@
 	import OsSelector from './OsSelector.svelte';
 	import {
 		common_close,
+		common_docsLink,
 		common_stepNumber,
 		daemons_currentVersion,
 		daemons_dockerApplyChanges,
@@ -20,13 +21,12 @@
 		daemons_dockerLinuxOnly,
 		daemons_dockerLinuxOnlyBody,
 		daemons_dockerPinnedVersion,
+		daemons_docsMultipleDaemonsLinkText,
 		daemons_latestVersion,
 		daemons_updateAvailable,
 		daemons_upgradeConfigPreserved,
 		daemons_upgradeDownload,
 		daemons_upgradeDaemon,
-		daemons_docsMultipleDaemons,
-		daemons_docsMultipleDaemonsLinkText,
 		daemons_upgradeMultipleDaemons,
 		daemons_upgradeMultipleDaemonsBody,
 		daemons_upgradeStartProcess,
@@ -131,7 +131,7 @@ docker compose up -d`;
 											code={linuxConfigListCommand}
 										/>
 										<DocsHint
-											text={daemons_docsMultipleDaemons()}
+											text={common_docsLink()}
 											href="https://scanopy.net/docs/multiple-daemons/"
 											linkText={daemons_docsMultipleDaemonsLinkText()}
 										/>
@@ -190,7 +190,7 @@ docker compose up -d`;
 									<p>{daemons_upgradeMultipleDaemonsBody()}</p>
 									<CodeContainer language="bash" expandable={false} code={macosConfigListCommand} />
 									<DocsHint
-										text={daemons_docsMultipleDaemons()}
+										text={common_docsLink()}
 										href="https://scanopy.net/docs/multiple-daemons/"
 										linkText={daemons_docsMultipleDaemonsLinkText()}
 									/>
@@ -233,7 +233,7 @@ docker compose up -d`;
 										code={windowsConfigListCommand}
 									/>
 									<DocsHint
-										text={daemons_docsMultipleDaemons()}
+										text={common_docsLink()}
 										href="https://scanopy.net/docs/multiple-daemons/"
 										linkText={daemons_docsMultipleDaemonsLinkText()}
 									/>

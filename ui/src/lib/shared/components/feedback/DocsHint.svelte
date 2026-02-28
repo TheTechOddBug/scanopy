@@ -10,7 +10,7 @@
 
 	let { text, href, linkText, class: className = '' }: Props = $props();
 
-	let parts = $derived(text.split('{link}'));
+	let parts = $derived(text.split('%link%'));
 </script>
 
 <p class="text-tertiary text-xs {className}">

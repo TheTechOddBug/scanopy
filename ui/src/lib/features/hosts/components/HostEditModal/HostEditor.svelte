@@ -276,6 +276,7 @@
 
 	// Tab management
 	let activeTab = $state('details');
+	let furthestReached = $state(0);
 	// Get network for passing to SNMP form
 	let currentNetwork = $derived(networksData.find((n) => n.id === formData.network_id) ?? null);
 
@@ -286,21 +287,21 @@
 			icon: Info,
 			description: hosts_editor_basicInfo()
 		},
-		// SNMP tab - always shown (users can set credential before discovery)
 		{
 			id: 'snmp',
 			label: hosts_editor_snmpTab(),
 			icon: concepts.getIconComponent('SNMP'),
-			description: hosts_editor_snmpTabDesc()
+			description: hosts_editor_snmpTabDesc(),
+			disabled: !isEditing && furthestReached < 1
 		},
-		// IfEntries tab - only show when data exists (populated by discovery)
-		...(hasIfEntries
+		...(isEditing
 			? [
 					{
 						id: 'if-entries',
 						label: common_ifEntries(),
 						icon: entities.getIconComponent('IfEntry'),
-						description: hosts_ifEntries_subtitle()
+						description: hosts_ifEntries_subtitle(),
+						disabled: !hasIfEntries
 					}
 				]
 			: []),
@@ -308,21 +309,24 @@
 			id: 'interfaces',
 			label: common_interfaces(),
 			icon: entities.getIconComponent('Interface'),
-			description: hosts_editor_interfacesDesc()
+			description: hosts_editor_interfacesDesc(),
+			disabled: !isEditing && furthestReached < 2
 		},
 		{
 			id: 'ports',
 			label: common_ports(),
 			icon: entities.getIconComponent('Port'),
-			description: common_serviceConfiguration()
+			description: common_serviceConfiguration(),
+			disabled: !isEditing && furthestReached < 3
 		},
 		{
 			id: 'services',
 			label: common_services(),
 			icon: entities.getIconComponent('Service'),
-			description: common_serviceConfiguration()
+			description: common_serviceConfiguration(),
+			disabled: !isEditing && furthestReached < 4
 		},
-		...(vmManagerServices && vmManagerServices.length > 0
+		...(isEditing && vmManagerServices.length > 0
 			? [
 					{
 						id: 'virtualization',
@@ -334,17 +338,18 @@
 			: [])
 	]);
 
-	let currentTabIndex = $derived(tabs.findIndex((t) => t.id === activeTab) || 0);
+	let enabledTabs = $derived(tabs.filter((t) => !t.disabled));
+	let currentEnabledIndex = $derived(enabledTabs.findIndex((t) => t.id === activeTab));
 
 	function nextTab() {
-		if (currentTabIndex < tabs.length - 1) {
-			activeTab = tabs[currentTabIndex + 1].id;
+		if (currentEnabledIndex < enabledTabs.length - 1) {
+			activeTab = enabledTabs[currentEnabledIndex + 1].id;
 		}
 	}
 
 	function previousTab() {
-		if (currentTabIndex > 0) {
-			activeTab = tabs[currentTabIndex - 1].id;
+		if (currentEnabledIndex > 0) {
+			activeTab = enabledTabs[currentEnabledIndex - 1].id;
 		}
 	}
 
@@ -371,16 +376,25 @@
 		});
 
 		activeTab = 'details'; // Reset to first tab
+		furthestReached = 0;
 	}
+
+	// Wizard steps for progressive unlock in create mode
+	const wizardSteps = ['details', 'snmp', 'interfaces', 'ports', 'services'];
+	let isLastWizardStep = $derived(activeTab === wizardSteps[wizardSteps.length - 1]);
 
 	// Handle form-based submission for create flow with steps
 	async function handleFormSubmit() {
-		if (isEditing || currentTabIndex === tabs.length - 1) {
+		if (isEditing || isLastWizardStep) {
 			await submitForm(form);
 		} else {
 			// Validate all fields before advancing to next tab
 			const isValid = await validateForm(form);
 			if (isValid) {
+				const wizardIndex = wizardSteps.indexOf(activeTab);
+				if (wizardIndex >= 0 && wizardIndex + 1 > furthestReached) {
+					furthestReached = wizardIndex + 1;
+				}
 				nextTab();
 			}
 		}
@@ -388,11 +402,12 @@
 
 	function handleClose() {
 		activeTab = 'details';
+		furthestReached = 0;
 		onClose();
 	}
 
 	function handleFormCancel() {
-		if (isEditing || currentTabIndex == 0) {
+		if (isEditing || currentEnabledIndex === 0) {
 			handleClose();
 		} else {
 			previousTab();
@@ -401,14 +416,10 @@
 
 	// Dynamic labels based on create/edit mode and tab position
 	let saveLabel = $derived(
-		isEditing
-			? hosts_editor_updateHost()
-			: currentTabIndex === tabs.length - 1
-				? hosts_createHost()
-				: common_next()
+		isEditing ? hosts_editor_updateHost() : isLastWizardStep ? hosts_createHost() : common_next()
 	);
 	let cancelLabel = $derived(isEditing ? common_cancel() : common_back());
-	let showCancel = $derived(isEditing ? true : currentTabIndex !== 0);
+	let showCancel = $derived(isEditing ? true : currentEnabledIndex !== 0);
 </script>
 
 <GenericModal
@@ -420,7 +431,7 @@
 	onOpen={handleOpen}
 	size="full"
 	showCloseButton={true}
-	tabs={isEditing ? tabs : []}
+	{tabs}
 	{activeTab}
 	onTabChange={(tabId) => (activeTab = tabId)}
 >

@@ -15,6 +15,7 @@ use scanopy::server::{
     },
     billing::plans::get_purchasable_plans,
     config::{AppState, ServerCli, ServerConfig, get_deployment_type},
+    services::definitions::ALLOWED_LOGO_DOMAINS,
     shared::handlers::{
         cache::AppCache,
         factory::{create_public_share_routes, create_router},
@@ -22,7 +23,7 @@ use scanopy::server::{
 };
 use tower::ServiceBuilder;
 use tower_http::{
-    cors::CorsLayer,
+    cors::{AllowCredentials, AllowOrigin, CorsLayer},
     services::{ServeDir, ServeFile},
     set_header::SetResponseHeaderLayer,
     trace::TraceLayer,
@@ -179,14 +180,17 @@ async fn main() -> anyhow::Result<()> {
             .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
             .allow_credentials(true)
     } else {
-        // Production: Restrict to public_url origin
+        // Production: Reflect any origin, but only send credentials for app origins.
+        // - Session users from app/demo origins: credentials=true → cookies work
+        // - API key users from any domain: origin reflected, no credentials → Bearer works
         let parsed_url = url::Url::parse(&public_url).expect("Invalid public_url");
         let origin_str = format!("{}://{}", parsed_url.scheme(), parsed_url.authority());
         let public_origin: HeaderValue =
             origin_str.parse().expect("Invalid origin from public_url");
+        let demo_origin: HeaderValue = "https://demo.scanopy.net".parse().unwrap();
 
         CorsLayer::new()
-            .allow_origin(public_origin)
+            .allow_origin(AllowOrigin::mirror_request())
             .allow_methods([
                 Method::GET,
                 Method::POST,
@@ -195,7 +199,11 @@ async fn main() -> anyhow::Result<()> {
                 Method::OPTIONS,
             ])
             .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
-            .allow_credentials(true)
+            .allow_credentials(AllowCredentials::predicate(
+                move |origin: &HeaderValue, _parts: &_| {
+                    origin == public_origin || origin == demo_origin
+                },
+            ))
     };
 
     // Permissive CORS for public share routes (used by embeds on customer domains)
@@ -234,19 +242,26 @@ async fn main() -> anyhow::Result<()> {
 
     // CSP Report-Only: non-blocking header that logs violations to browser console.
     // Used to identify what a full CSP would break before enforcing it.
+    let img_src_domains: String = ALLOWED_LOGO_DOMAINS
+        .iter()
+        .map(|d| format!("https://{}", d))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let csp_value = format!(
+        "default-src 'self'; \
+         script-src 'self' 'unsafe-inline' https://ph.scanopy.net; \
+         style-src 'self' 'unsafe-inline'; \
+         img-src 'self' data: blob: {}; \
+         font-src 'self'; \
+         connect-src 'self' https://ph.scanopy.net; \
+         frame-ancestors 'self'; \
+         base-uri 'self'; \
+         form-action 'self'",
+        img_src_domains
+    );
     let csp_report_only = SetResponseHeaderLayer::if_not_present(
         HeaderName::from_static("content-security-policy-report-only"),
-        HeaderValue::from_static(
-            "default-src 'self'; \
-             script-src 'self'; \
-             style-src 'self' 'unsafe-inline'; \
-             img-src 'self' data: blob:; \
-             font-src 'self'; \
-             connect-src 'self'; \
-             frame-ancestors 'self'; \
-             base-uri 'self'; \
-             form-action 'self'",
-        ),
+        HeaderValue::try_from(csp_value).expect("Invalid CSP header value"),
     );
 
     let app_cache = Arc::new(AppCache::new());
@@ -256,7 +271,7 @@ async fn main() -> anyhow::Result<()> {
         ServiceBuilder::new()
             .layer(client_ip_source.into_extension())
             .layer(TraceLayer::new_for_http())
-            .layer(cors.clone())
+            .layer(cors)
             .layer(session_store)
             .layer(middleware::from_fn_with_state(
                 state.clone(),
@@ -290,10 +305,27 @@ async fn main() -> anyhow::Result<()> {
 
     // Public share routes with permissive CORS (embeds on customer domains)
     let (public_share_router, _) = create_public_share_routes().split_for_parts();
-    let public_share_app = Router::new()
+    let mut public_share_app = Router::new()
         .merge(public_share_router)
-        .with_state(state.clone())
-        .layer(public_cors);
+        .with_state(state.clone());
+
+    // Only serve the /embed route without frame-ancestors CSP so it can be embedded in iframes.
+    // Regular /share/{id} pages fall through to protected_app which has frame-ancestors 'self',
+    // preventing unauthorized iframe embedding that would bypass domain validation.
+    if let Some(static_path) = &web_external_path {
+        public_share_app = public_share_app.route_service(
+            "/share/{id}/embed",
+            ServeFile::new(format!("{}/index.html", static_path.display())),
+        );
+    }
+
+    let public_share_app = public_share_app.layer(public_cors);
+
+    // Permissive CORS for health check (marketing site, uptime monitors, etc.)
+    let health_cors = CorsLayer::new()
+        .allow_origin(tower_http::cors::Any)
+        .allow_methods([Method::GET, Method::OPTIONS])
+        .allow_headers([header::CONTENT_TYPE]);
 
     // Health check endpoint without middleware (for kamal-proxy health checks)
     // Metrics endpoint is now at /api/metrics with external service auth (see factory.rs)
@@ -309,7 +341,7 @@ async fn main() -> anyhow::Result<()> {
             }),
         )
         .with_state(state.clone())
-        .layer(cors)
+        .layer(health_cors)
         .merge(public_share_app)
         .merge(protected_app);
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;

@@ -83,6 +83,8 @@ docker compose up -d`;
 					{daemons_latestVersion()} <span class="font-mono">{VERSION}.</span>
 				</p>
 
+				<InlineInfo title="" body={daemons_upgradeConfigPreserved()} />
+
 				<OsSelector
 					{selectedOS}
 					onOsSelect={handleOsSelect}
@@ -108,8 +110,6 @@ docker compose up -d`;
 									{daemons_upgradeStartProcess()}
 								</div>
 								<CodeContainer language="bash" expandable={false} code={startCommand} />
-
-								<InlineInfo title="" body={daemons_upgradeConfigPreserved()} />
 							</div>
 						{:else if linuxMethod === 'docker'}
 							<!-- Linux Docker Compose -->
@@ -156,7 +156,6 @@ docker compose up -d`;
 							</div>
 							<CodeContainer language="bash" expandable={false} code={startCommand} />
 
-							<InlineInfo title="" body={daemons_upgradeConfigPreserved()} />
 							<InlineInfo title={daemons_dockerLinuxOnly()} body={daemons_dockerLinuxOnlyBody()} />
 						</div>
 					{:else if selectedOS === 'windows'}
@@ -182,7 +181,6 @@ docker compose up -d`;
 							</div>
 							<CodeContainer language="powershell" expandable={false} code={windowsStartCommand} />
 
-							<InlineInfo title="" body={daemons_upgradeConfigPreserved()} />
 							<InlineInfo title={daemons_dockerLinuxOnly()} body={daemons_dockerLinuxOnlyBody()} />
 						</div>
 					{/if}

@@ -42,26 +42,17 @@
 	type LinuxMethod = 'binary' | 'docker';
 	let linuxMethod: LinuxMethod = $state('binary');
 
-	// Whether daemon has a custom name (non-default needs --name flag on restart)
-	let hasCustomName = $derived(daemon.name !== 'scanopy-daemon');
-
 	// Commands for upgrading — all platforms use stop/download/start flow
 	const binaryUpgradeCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/scanopy/scanopy/refs/heads/main/install.sh)"`;
 
 	const stopCommand = 'sudo pkill scanopy-daemon';
-	let startCommand = $derived(
-		hasCustomName ? `sudo scanopy-daemon --name ${daemon.name}` : 'sudo scanopy-daemon'
-	);
+	let startCommand = $derived(`sudo scanopy-daemon --name ${daemon.name}`);
 
 	const windowsDownloadUrl =
 		'https://github.com/scanopy/scanopy/releases/latest/download/scanopy-daemon-windows-amd64.exe';
 	const windowsDownloadCommand = `Invoke-WebRequest -Uri "${windowsDownloadUrl}" -OutFile "scanopy-daemon-windows-amd64.exe"`;
 	const windowsStopCommand = 'Stop-Process -Name "scanopy-daemon-windows-amd64"';
-	let windowsStartCommand = $derived(
-		hasCustomName
-			? `.\\scanopy-daemon-windows-amd64.exe --name ${daemon.name}`
-			: '.\\scanopy-daemon-windows-amd64.exe'
-	);
+	let windowsStartCommand = $derived(`.\\scanopy-daemon-windows-amd64.exe --name ${daemon.name}`);
 
 	const dockerComposeLatestPull = `docker compose pull
 docker compose up -d`;

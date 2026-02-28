@@ -24,7 +24,6 @@
 		daemons_upgradeConfigPreserved,
 		daemons_upgradeDownload,
 		daemons_upgradeDaemon,
-		daemons_upgradeRestartSystemd,
 		daemons_upgradeStartProcess,
 		daemons_upgradeStopProcess
 	} from '$lib/paraglide/messages';
@@ -46,12 +45,11 @@
 	// Whether daemon has a custom name (non-default needs --name flag on restart)
 	let hasCustomName = $derived(daemon.name !== 'scanopy-daemon');
 
-	// Commands for upgrading
+	// Commands for upgrading — all platforms use stop/download/start flow
 	const binaryUpgradeCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/scanopy/scanopy/refs/heads/main/install.sh)"`;
-	const systemdRestart = 'sudo systemctl restart scanopy-daemon';
 
-	const macosStopCommand = 'sudo pkill scanopy-daemon';
-	let macosStartCommand = $derived(
+	const stopCommand = 'sudo pkill scanopy-daemon';
+	let startCommand = $derived(
 		hasCustomName ? `sudo scanopy-daemon --name ${daemon.name}` : 'sudo scanopy-daemon'
 	);
 
@@ -102,18 +100,25 @@ docker compose up -d`;
 				>
 					{#if selectedOS === 'linux'}
 						{#if linuxMethod === 'binary'}
-							<!-- Linux Binary: download + systemd restart -->
+							<!-- Linux Binary: stop, download, start -->
 							<div class="space-y-3">
 								<div class="text-secondary">
 									<b>{common_stepNumber({ number: '1' })}</b>
+									{daemons_upgradeStopProcess()}
+								</div>
+								<CodeContainer language="bash" expandable={false} code={stopCommand} />
+								<div class="text-secondary">
+									<b>{common_stepNumber({ number: '2' })}</b>
 									{daemons_upgradeDownload()}
 								</div>
 								<CodeContainer language="bash" expandable={false} code={binaryUpgradeCommand} />
 								<div class="text-secondary">
-									<b>{common_stepNumber({ number: '2' })}</b>
-									{daemons_upgradeRestartSystemd()}
+									<b>{common_stepNumber({ number: '3' })}</b>
+									{daemons_upgradeStartProcess()}
 								</div>
-								<CodeContainer language="bash" expandable={false} code={systemdRestart} />
+								<CodeContainer language="bash" expandable={false} code={startCommand} />
+
+								<InlineInfo title="" body={daemons_upgradeConfigPreserved()} />
 							</div>
 						{:else if linuxMethod === 'docker'}
 							<!-- Linux Docker Compose -->
@@ -148,7 +153,7 @@ docker compose up -d`;
 								<b>{common_stepNumber({ number: '1' })}</b>
 								{daemons_upgradeStopProcess()}
 							</div>
-							<CodeContainer language="bash" expandable={false} code={macosStopCommand} />
+							<CodeContainer language="bash" expandable={false} code={stopCommand} />
 							<div class="text-secondary">
 								<b>{common_stepNumber({ number: '2' })}</b>
 								{daemons_upgradeDownload()}
@@ -158,7 +163,7 @@ docker compose up -d`;
 								<b>{common_stepNumber({ number: '3' })}</b>
 								{daemons_upgradeStartProcess()}
 							</div>
-							<CodeContainer language="bash" expandable={false} code={macosStartCommand} />
+							<CodeContainer language="bash" expandable={false} code={startCommand} />
 
 							<InlineInfo title="" body={daemons_upgradeConfigPreserved()} />
 							<InlineInfo title={daemons_dockerLinuxOnly()} body={daemons_dockerLinuxOnlyBody()} />

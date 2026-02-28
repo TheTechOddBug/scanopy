@@ -371,7 +371,6 @@
     "daemons_upgradeDaemon": "",
     "daemons_upgradeConfigPreserved": "",
     "daemons_upgradeDownload": "",
-    "daemons_upgradeRestartSystemd": "",
     "daemons_upgradeStartProcess": "",
     "daemons_upgradeStopProcess": "",
     "daemons_useExistingKey": "",

@@ -7,8 +7,6 @@ use std::net::Ipv4Addr;
 #[cfg(target_family = "windows")]
 use anyhow::Result;
 #[cfg(target_family = "windows")]
-use futures::stream::{self, StreamExt};
-#[cfg(target_family = "windows")]
 use mac_address::MacAddress;
 
 #[cfg(target_family = "windows")]
@@ -17,66 +15,9 @@ use super::types::ArpScanResult;
 #[cfg(target_family = "windows")]
 const SENDARP_CONCURRENCY: usize = 50;
 
-/// Scan targets using Windows SendARP API.
-/// Uses high concurrency since each call is independent.
-#[cfg(target_family = "windows")]
-pub async fn scan_subnet(targets: Vec<Ipv4Addr>) -> Result<Vec<ArpScanResult>> {
-    tracing::debug!(
-        targets = targets.len(),
-        concurrency = SENDARP_CONCURRENCY,
-        "Starting SendARP scan"
-    );
-
-    let results: Vec<ArpScanResult> = stream::iter(targets)
-        .map(|ip| async move { send_arp_single(ip).await })
-        .buffer_unordered(SENDARP_CONCURRENCY)
-        .filter_map(|r| async { r })
-        .collect()
-        .await;
-
-    tracing::debug!(responsive = results.len(), "SendARP scan complete");
-
-    Ok(results)
-}
-
-#[cfg(target_family = "windows")]
-async fn send_arp_single(target_ip: Ipv4Addr) -> Option<ArpScanResult> {
-    use windows::Win32::NetworkManagement::IpHelper::SendARP;
-
-    let result = tokio::task::spawn_blocking(move || {
-        // Convert IP to the format expected by SendARP (network byte order u32)
-        let dest_ip = u32::from_ne_bytes(target_ip.octets());
-        let mut mac_addr: [u8; 8] = [0; 8];
-        let mut mac_len: u32 = 6;
-
-        // SAFETY: SendARP is a well-defined Windows API function.
-        // We pass valid pointers and sizes.
-        let result = unsafe { SendARP(dest_ip, 0, mac_addr.as_mut_ptr() as *mut _, &mut mac_len) };
-
-        if result == 0 && mac_len >= 6 {
-            tracing::trace!(ip = %target_ip, "SendARP success");
-            Some(MacAddress::new([
-                mac_addr[0],
-                mac_addr[1],
-                mac_addr[2],
-                mac_addr[3],
-                mac_addr[4],
-                mac_addr[5],
-            ]))
-        } else {
-            tracing::trace!(ip = %target_ip, result = result, "SendARP failed or no response");
-            None
-        }
-    })
-    .await
-    .ok()
-    .flatten();
-
-    result.map(|mac| ArpScanResult { ip: target_ip, mac })
-}
-
 /// Scan targets using Windows SendARP API, returning results via a streaming channel.
 /// Matches the broadcast ARP interface so callers get results as they arrive.
+/// Uses scoped threads in chunks for concurrency without requiring a tokio runtime.
 #[cfg(target_family = "windows")]
 pub fn scan_subnet_streaming(
     targets: Vec<Ipv4Addr>,
@@ -84,22 +25,51 @@ pub fn scan_subnet_streaming(
     let (tx, rx) = std::sync::mpsc::channel();
 
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
-        rt.block_on(async {
-            let mut stream = stream::iter(targets)
-                .map(|ip| async move { send_arp_single(ip).await })
-                .buffer_unordered(SENDARP_CONCURRENCY)
-                .filter_map(|r| async { r });
-
-            while let Some(result) = stream.next().await {
-                if tx.send(result).is_err() {
-                    break; // receiver dropped
+        for chunk in targets.chunks(SENDARP_CONCURRENCY) {
+            std::thread::scope(|s| {
+                for &ip in chunk {
+                    let tx = tx.clone();
+                    s.spawn(move || {
+                        if let Some(result) = send_arp_single(ip) {
+                            let _ = tx.send(result);
+                        }
+                    });
                 }
-            }
-        });
+            });
+        }
     });
 
     Ok(rx)
+}
+
+#[cfg(target_family = "windows")]
+fn send_arp_single(target_ip: Ipv4Addr) -> Option<ArpScanResult> {
+    use windows::Win32::NetworkManagement::IpHelper::SendARP;
+
+    // Convert IP to the format expected by SendARP (network byte order u32)
+    let dest_ip = u32::from_ne_bytes(target_ip.octets());
+    let mut mac_addr: [u8; 8] = [0; 8];
+    let mut mac_len: u32 = 6;
+
+    // SAFETY: SendARP is a well-defined Windows API function.
+    // We pass valid pointers and sizes.
+    let result = unsafe { SendARP(dest_ip, 0, mac_addr.as_mut_ptr() as *mut _, &mut mac_len) };
+
+    if result == 0 && mac_len >= 6 {
+        tracing::trace!(ip = %target_ip, "SendARP success");
+        let mac = MacAddress::new([
+            mac_addr[0],
+            mac_addr[1],
+            mac_addr[2],
+            mac_addr[3],
+            mac_addr[4],
+            mac_addr[5],
+        ]);
+        Some(ArpScanResult { ip: target_ip, mac })
+    } else {
+        tracing::trace!(ip = %target_ip, result = result, "SendARP failed or no response");
+        None
+    }
 }
 
 // Stub for non-Windows platforms
@@ -107,13 +77,5 @@ pub fn scan_subnet_streaming(
 pub fn scan_subnet_streaming(
     _targets: Vec<std::net::Ipv4Addr>,
 ) -> anyhow::Result<std::sync::mpsc::Receiver<super::types::ArpScanResult>> {
-    Err(anyhow::anyhow!("SendARP is only available on Windows"))
-}
-
-// Stub for non-Windows platforms
-#[cfg(not(target_family = "windows"))]
-pub async fn scan_subnet(
-    _targets: Vec<std::net::Ipv4Addr>,
-) -> anyhow::Result<Vec<super::types::ArpScanResult>> {
     Err(anyhow::anyhow!("SendARP is only available on Windows"))
 }

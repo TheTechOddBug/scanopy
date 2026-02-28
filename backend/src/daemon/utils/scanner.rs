@@ -16,6 +16,7 @@ use rand::{Rng, SeedableRng};
 use rsntp::AsyncSntpClient;
 use snmp2::{AsyncSession, Oid};
 use std::collections::HashMap;
+#[cfg(any(unix, test))]
 use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;

@@ -145,6 +145,10 @@
 		}
 	}
 
+	// Wizard steps for progressive unlock in create mode
+	const wizardSteps = ['details', 'bindings', 'edge-style'];
+	let isLastWizardStep = $derived(activeTab === wizardSteps[wizardSteps.length - 1]);
+
 	// Dynamic labels based on create/edit mode and tab position
 	let saveLabel = $derived(
 		isEditing ? common_update() : isLastWizardStep ? common_create() : common_next()
@@ -240,10 +244,6 @@
 	async function handleSubmit() {
 		await submitForm(form);
 	}
-
-	// Wizard steps for progressive unlock in create mode
-	const wizardSteps = ['details', 'bindings', 'edge-style'];
-	let isLastWizardStep = $derived(activeTab === wizardSteps[wizardSteps.length - 1]);
 
 	// Handle form-based submission for create flow with steps
 	async function handleFormSubmit() {

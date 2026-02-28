@@ -23,8 +23,9 @@
 		daemons_updateAvailable,
 		daemons_upgradeDownload,
 		daemons_upgradeDaemon,
-		daemons_upgradeRestartProcess,
-		daemons_upgradeRestartSystemd
+		daemons_upgradeRestartSystemd,
+		daemons_upgradeStartProcess,
+		daemons_upgradeStopProcess
 	} from '$lib/paraglide/messages';
 
 	interface Props {
@@ -126,25 +127,33 @@ docker compose up -d`;
 							</div>
 						{/if}
 					{:else if selectedOS === 'macos'}
-						<!-- macOS: download + restart info -->
+						<!-- macOS: stop, download, start -->
 						<div class="space-y-3">
 							<div class="text-secondary">
 								<b>{common_stepNumber({ number: '1' })}</b>
+								{daemons_upgradeStopProcess()}
+							</div>
+							<div class="text-secondary">
+								<b>{common_stepNumber({ number: '2' })}</b>
 								{daemons_upgradeDownload()}
 							</div>
 							<CodeContainer language="bash" expandable={false} code={binaryUpgradeCommand} />
 							<div class="text-secondary">
-								<b>{common_stepNumber({ number: '2' })}</b>
-								{daemons_upgradeRestartProcess()}
+								<b>{common_stepNumber({ number: '3' })}</b>
+								{daemons_upgradeStartProcess()}
 							</div>
 
 							<InlineInfo title={daemons_dockerLinuxOnly()} body={daemons_dockerLinuxOnlyBody()} />
 						</div>
 					{:else if selectedOS === 'windows'}
-						<!-- Windows: PowerShell download + restart info -->
+						<!-- Windows: stop, download, start -->
 						<div class="space-y-3">
 							<div class="text-secondary">
 								<b>{common_stepNumber({ number: '1' })}</b>
+								{daemons_upgradeStopProcess()}
+							</div>
+							<div class="text-secondary">
+								<b>{common_stepNumber({ number: '2' })}</b>
 								{daemons_upgradeDownload()}
 							</div>
 							<CodeContainer
@@ -153,8 +162,8 @@ docker compose up -d`;
 								code={windowsDownloadCommand}
 							/>
 							<div class="text-secondary">
-								<b>{common_stepNumber({ number: '2' })}</b>
-								{daemons_upgradeRestartProcess()}
+								<b>{common_stepNumber({ number: '3' })}</b>
+								{daemons_upgradeStartProcess()}
 							</div>
 
 							<InlineInfo title={daemons_dockerLinuxOnly()} body={daemons_dockerLinuxOnlyBody()} />

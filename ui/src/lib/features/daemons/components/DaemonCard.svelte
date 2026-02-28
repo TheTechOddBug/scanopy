@@ -18,9 +18,31 @@
 	import type { TagProps } from '$lib/shared/components/data/types';
 	import DaemonUpgradeModal from './DaemonUpgradeModal.svelte';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
+	import { modalState, openModal, closeModal } from '$lib/shared/stores/modal-registry';
 
-	// Modal state
+	// Modal state — supports deep linking via ?modal=upgrade-daemon&id=<daemon-id>
 	let upgradeModalOpen = $state(false);
+
+	// Auto-open when deep-linked
+	$effect(() => {
+		if (
+			$modalState.name === 'upgrade-daemon' &&
+			$modalState.id === daemon.id &&
+			!upgradeModalOpen
+		) {
+			upgradeModalOpen = true;
+		}
+	});
+
+	function handleOpenUpgrade() {
+		upgradeModalOpen = true;
+		openModal('upgrade-daemon', { id: daemon.id });
+	}
+
+	function handleCloseUpgrade() {
+		upgradeModalOpen = false;
+		closeModal();
+	}
 
 	// Queries
 	const networksQuery = useNetworksQuery();
@@ -177,13 +199,13 @@
 						}
 					]
 				: []),
-			...(hasUpdateAvailable
+			...(hasUpdateAvailable && daemon.is_unreachable !== true
 				? [
 						{
 							label: 'Update',
 							icon: ArrowBigUp,
 							class: upgradeButtonClass,
-							onClick: () => (upgradeModalOpen = true),
+							onClick: handleOpenUpgrade,
 							disabled: false,
 							forceLabel: true
 						}
@@ -215,4 +237,4 @@
 
 <GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />
 
-<DaemonUpgradeModal isOpen={upgradeModalOpen} onClose={() => (upgradeModalOpen = false)} {daemon} />
+<DaemonUpgradeModal isOpen={upgradeModalOpen} onClose={handleCloseUpgrade} {daemon} />

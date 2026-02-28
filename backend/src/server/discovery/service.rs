@@ -1,3 +1,4 @@
+use crate::bail_validation;
 use crate::daemon::discovery::types::base::DiscoveryPhase;
 use crate::daemon::runtime::service::LOG_TARGET;
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
@@ -9,11 +10,12 @@ use crate::server::organizations::service::OrganizationService;
 use crate::server::shared::entities::{ChangeTriggersTopologyStaleness, EntityDiscriminants};
 use crate::server::shared::events::bus::EventBus;
 use crate::server::shared::events::types::{EntityEvent, EntityOperation};
-use crate::server::shared::events::types::{TelemetryEvent, TelemetryOperation};
+use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
 use crate::server::shared::storage::traits::{Storable, Storage};
+use crate::server::shared::types::api::ApiError;
 use crate::server::snmp_credentials::service::SnmpCredentialService;
 use crate::server::tags::entity_tags::EntityTagService;
 use anyhow::anyhow;
@@ -22,7 +24,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{RwLock, broadcast};
-use tokio_cron_scheduler::{Job, JobScheduler};
+use tokio_cron_scheduler::{JobBuilder, JobScheduler};
 use uuid::Uuid;
 
 /// Server-side session management for discovery
@@ -30,6 +32,7 @@ pub struct DiscoveryService {
     discovery_storage: Arc<GenericPostgresStorage<Discovery>>,
     sessions: RwLock<HashMap<Uuid, DiscoveryUpdatePayload>>, // session_id -> session state mapping
     daemon_sessions: RwLock<HashMap<Uuid, Vec<Uuid>>>,       // daemon_id -> session_id mapping
+    discovery_sessions: RwLock<HashMap<Uuid, Uuid>>, // discovery_id -> session_id mapping (enforces one active session per discovery)
     daemon_pull_cancellations: RwLock<HashMap<Uuid, (bool, Uuid)>>, // daemon_id -> (boolean, session_id) mapping for pull mode cancellations of current session on daemon
     session_last_updated: RwLock<HashMap<Uuid, chrono::DateTime<Utc>>>,
     update_tx: broadcast::Sender<DiscoveryUpdatePayload>,
@@ -82,6 +85,7 @@ impl DiscoveryService {
             discovery_storage,
             sessions: RwLock::new(HashMap::new()),
             daemon_sessions: RwLock::new(HashMap::new()),
+            discovery_sessions: RwLock::new(HashMap::new()),
             daemon_pull_cancellations: RwLock::new(HashMap::new()),
             session_last_updated: RwLock::new(HashMap::new()),
             update_tx: tx,
@@ -140,11 +144,13 @@ impl DiscoveryService {
         let mut daemon_sessions = self.daemon_sessions.write().await;
         let mut session_last_updated = self.session_last_updated.write().await;
         let mut daemon_pull_cancellations = self.daemon_pull_cancellations.write().await;
+        let mut discovery_sessions = self.discovery_sessions.write().await;
 
         if let Some(session_ids) = daemon_sessions.remove(daemon_id) {
             for session_id in &session_ids {
                 sessions.remove(session_id);
                 session_last_updated.remove(session_id);
+                discovery_sessions.retain(|_, sid| sid != session_id);
             }
             tracing::debug!(
                 daemon_id = %daemon_id,
@@ -197,12 +203,28 @@ impl DiscoveryService {
             .unwrap_or((false, Uuid::nil()))
     }
 
+    /// Validate timezone string if present on a scheduled discovery
+    fn validate_timezone(run_type: &RunType) -> Result<()> {
+        if let RunType::Scheduled {
+            timezone: Some(tz), ..
+        } = run_type
+            && tz.parse::<chrono_tz::Tz>().is_err()
+        {
+            bail_validation!(
+                "Invalid timezone '{}'. Use an IANA timezone like 'America/New_York'.",
+                tz
+            );
+        }
+        Ok(())
+    }
+
     /// Create a new scheduled discovery
     pub async fn create_discovery(
         self: &Arc<Self>,
         discovery: Discovery,
         authentication: AuthenticatedEntity,
     ) -> Result<Discovery> {
+        Self::validate_timezone(&discovery.base.run_type)?;
         let mut created_discovery = if discovery.id == Uuid::nil() {
             self.discovery_storage
                 .create(&Discovery::new(discovery.base))
@@ -273,21 +295,32 @@ impl DiscoveryService {
         mut discovery: Discovery,
         authentication: AuthenticatedEntity,
     ) -> Result<Discovery, Error> {
+        Self::validate_timezone(&discovery.base.run_type)?;
+
         let current = self
             .get_by_id(&discovery.id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Could not find discovery {}", discovery))?;
 
-        // If it's a scheduled discovery and schedule has changed, need to reschedule
-        let updated = if let RunType::Scheduled {
+        // If it's a scheduled discovery and schedule or timezone has changed, need to reschedule
+        let schedule_changed = if let RunType::Scheduled {
             cron_schedule: new_cron,
+            timezone: new_tz,
             ..
         } = &discovery.base.run_type
             && let RunType::Scheduled {
                 cron_schedule: current_cron,
+                timezone: current_tz,
                 ..
             } = &current.base.run_type
-            && current_cron != new_cron
+        {
+            current_cron != new_cron || current_tz != new_tz
+        } else {
+            false
+        };
+
+        let updated = if schedule_changed
+            && matches!(discovery.base.run_type, RunType::Scheduled { .. })
         {
             // Remove old schedule first using the actual job_id
             if let Some(scheduler) = &self.scheduler
@@ -484,6 +517,7 @@ impl DiscoveryService {
         let RunType::Scheduled {
             cron_schedule,
             enabled,
+            timezone,
             ..
         } = &discovery.base.run_type
         else {
@@ -499,6 +533,12 @@ impl DiscoveryService {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Scheduler not initialized"))?;
 
+        let tz: chrono_tz::Tz = timezone
+            .as_deref()
+            .unwrap_or("UTC")
+            .parse()
+            .unwrap_or(chrono_tz::UTC);
+
         let discovery = discovery.clone();
         let discovery_id = discovery.id;
         let storage = service.discovery_storage.clone();
@@ -506,37 +546,42 @@ impl DiscoveryService {
         // Clone self to use start_session
         let service_clone = Arc::clone(service);
 
-        let job = Job::new_async(cron_schedule.as_str(), move |_uuid, _lock| {
-            let mut discovery = discovery.clone();
-            let storage = storage.clone();
-            let service = service_clone.clone();
+        let job = JobBuilder::new()
+            .with_timezone(tz)
+            .with_cron_job_type()
+            .with_schedule(cron_schedule.as_str())?
+            .with_run_async(Box::new(move |_uuid, _lock| {
+                let mut discovery = discovery.clone();
+                let storage = storage.clone();
+                let service = service_clone.clone();
 
-            Box::pin(async move {
-                tracing::info!("Running scheduled discovery {}", &discovery.id);
+                Box::pin(async move {
+                    tracing::info!("Running scheduled discovery {}", &discovery.id);
 
-                match service
-                    .start_session(discovery.clone(), AuthenticatedEntity::System)
-                    .await
-                {
-                    Ok(_) => {
-                        // Update last_run
-                        if let RunType::Scheduled {
-                            last_run: mut _last_run,
-                            ..
-                        } = discovery.base.run_type
-                        {
-                            _last_run = Some(Utc::now());
-                            if let Err(e) = storage.update(&mut discovery).await {
-                                tracing::error!("Failed to update schedule times: {}", e);
-                            }
-                        };
+                    match service
+                        .start_session(discovery.clone(), AuthenticatedEntity::System)
+                        .await
+                    {
+                        Ok(_) => {
+                            // Update last_run
+                            if let RunType::Scheduled {
+                                last_run: mut _last_run,
+                                ..
+                            } = discovery.base.run_type
+                            {
+                                _last_run = Some(Utc::now());
+                                if let Err(e) = storage.update(&mut discovery).await {
+                                    tracing::error!("Failed to update schedule times: {}", e);
+                                }
+                            };
+                        }
+                        Err(e) => {
+                            tracing::error!("Scheduled discovery {} failed: {:?}", discovery_id, e);
+                        }
                     }
-                    Err(e) => {
-                        tracing::error!("Scheduled discovery {} failed: {}", discovery_id, e);
-                    }
-                }
-            })
-        })?;
+                })
+            }))
+            .build()?;
 
         let job_id = scheduler.write().await.add(job).await?;
 
@@ -557,7 +602,19 @@ impl DiscoveryService {
         &self,
         discovery: Discovery,
         authentication: AuthenticatedEntity,
-    ) -> Result<DiscoveryUpdatePayload, anyhow::Error> {
+    ) -> Result<DiscoveryUpdatePayload, ApiError> {
+        // Enforce one active session per discovery configuration
+        if self
+            .discovery_sessions
+            .read()
+            .await
+            .contains_key(&discovery.id)
+        {
+            return Err(ApiError::conflict(
+                "A session is already running for this discovery",
+            ));
+        }
+
         let session_id = Uuid::new_v4();
 
         // Hydrate SNMP credentials
@@ -574,7 +631,8 @@ impl DiscoveryService {
                 snmp_credentials: self
                     .snmp_credential_service
                     .build_credentials_for_discovery(discovery.base.network_id)
-                    .await?,
+                    .await
+                    .map_err(|e| ApiError::internal_error(&e.to_string()))?,
                 probe_raw_socket_ports,
             }
         } else {
@@ -593,6 +651,12 @@ impl DiscoveryService {
             .write()
             .await
             .insert(session_id, session_payload.clone());
+
+        // Track discovery -> session mapping
+        self.discovery_sessions
+            .write()
+            .await
+            .insert(discovery.id, session_id);
 
         // Check if daemon has any sessions running
         let daemon_is_running_discovery = if let Some(daemon_sessions) = self
@@ -619,7 +683,8 @@ impl DiscoveryService {
         if !daemon_is_running_discovery {
             self.event_bus()
                 .publish_discovery(session_payload.into_discovery_event_with_auth(authentication))
-                .await?;
+                .await
+                .map_err(|e| ApiError::internal_error(&e.to_string()))?;
         }
 
         let _ = self.update_tx.send(session_payload.clone());
@@ -703,14 +768,14 @@ impl DiscoveryService {
                     .organization_service
                     .get_by_id(&network.base.organization_id)
                     .await
-                && org.not_onboarded(&TelemetryOperation::FirstDiscoveryCompleted)
+                && org.not_onboarded(&OnboardingOperation::FirstDiscoveryCompleted)
             {
                 let _ = self
                     .event_bus
-                    .publish_telemetry(TelemetryEvent::new(
+                    .publish_onboarding(OnboardingEvent::new(
                         Uuid::new_v4(),
                         org.id,
-                        TelemetryOperation::FirstDiscoveryCompleted,
+                        OnboardingOperation::FirstDiscoveryCompleted,
                         Utc::now(),
                         AuthenticatedEntity::System,
                         serde_json::json!({
@@ -787,6 +852,12 @@ impl DiscoveryService {
             // Remove the completed session
             sessions.remove(&update.session_id);
 
+            // Remove from discovery_sessions map (find by session_id value)
+            self.discovery_sessions
+                .write()
+                .await
+                .retain(|_, sid| *sid != update.session_id);
+
             // Drop the sessions lock before sending the request
             drop(sessions);
 
@@ -849,6 +920,12 @@ impl DiscoveryService {
                     queue.retain(|id| *id != session_id);
                 }
 
+                // Remove from discovery_sessions map
+                self.discovery_sessions
+                    .write()
+                    .await
+                    .retain(|_, sid| *sid != session_id);
+
                 drop(sessions);
                 drop(daemon_sessions);
 
@@ -907,6 +984,7 @@ impl DiscoveryService {
         let mut sessions = self.sessions.write().await;
         let mut daemon_sessions = self.daemon_sessions.write().await;
         let mut daemon_pull_cancellations = self.daemon_pull_cancellations.write().await;
+        let mut discovery_sessions = self.discovery_sessions.write().await;
 
         let mut to_remove = Vec::new();
         for (session_id, session) in sessions.iter() {
@@ -924,6 +1002,8 @@ impl DiscoveryService {
                 if let Some(daemon_sessions) = daemon_sessions.get_mut(&session.daemon_id) {
                     daemon_sessions.retain(|s| *s != session.session_id);
                 }
+
+                discovery_sessions.retain(|_, sid| *sid != session_id);
 
                 tracing::debug!("Cleaned up old discovery session {}", session_id);
             }
@@ -1027,6 +1107,7 @@ impl DiscoveryService {
         let mut last_updated = self.session_last_updated.write().await;
         let mut daemon_sessions = self.daemon_sessions.write().await;
         let mut daemon_pull_cancellations = self.daemon_pull_cancellations.write().await;
+        let mut discovery_sessions = self.discovery_sessions.write().await;
 
         let mut stalled_count = 0;
 
@@ -1054,6 +1135,9 @@ impl DiscoveryService {
                 if let Some(queue) = daemon_sessions.get_mut(&daemon_id) {
                     queue.retain(|id| *id != session_id);
                 }
+
+                // Remove from discovery_sessions map
+                discovery_sessions.retain(|_, sid| *sid != session_id);
 
                 // Remove from last_updated tracking
                 last_updated.remove(&session_id);

@@ -112,37 +112,49 @@
 
 	// Tab management
 	let activeTab = $state('details');
+	let furthestReached = $state(0);
 
 	let tabs = $derived([
 		{ id: 'details', label: groups_groupDetails(), icon: Info },
-		{ id: 'bindings', label: groups_serviceBindings(), icon: entities.getIconComponent('Binding') },
-		{ id: 'edge-style', label: groups_edgeAppearance(), icon: Palette }
+		{
+			id: 'bindings',
+			label: groups_serviceBindings(),
+			icon: entities.getIconComponent('Binding'),
+			disabled: !isEditing && furthestReached < 1
+		},
+		{
+			id: 'edge-style',
+			label: groups_edgeAppearance(),
+			icon: Palette,
+			disabled: !isEditing && furthestReached < 2
+		}
 	]);
 
-	let currentTabIndex = $derived(tabs.findIndex((t) => t.id === activeTab) || 0);
+	let enabledTabs = $derived(tabs.filter((t) => !t.disabled));
+	let currentEnabledIndex = $derived(enabledTabs.findIndex((t) => t.id === activeTab));
 
 	function nextTab() {
-		if (currentTabIndex < tabs.length - 1) {
-			activeTab = tabs[currentTabIndex + 1].id;
+		if (currentEnabledIndex < enabledTabs.length - 1) {
+			activeTab = enabledTabs[currentEnabledIndex + 1].id;
 		}
 	}
 
 	function previousTab() {
-		if (currentTabIndex > 0) {
-			activeTab = tabs[currentTabIndex - 1].id;
+		if (currentEnabledIndex > 0) {
+			activeTab = enabledTabs[currentEnabledIndex - 1].id;
 		}
 	}
 
+	// Wizard steps for progressive unlock in create mode
+	const wizardSteps = ['details', 'bindings', 'edge-style'];
+	let isLastWizardStep = $derived(activeTab === wizardSteps[wizardSteps.length - 1]);
+
 	// Dynamic labels based on create/edit mode and tab position
 	let saveLabel = $derived(
-		isEditing
-			? common_update()
-			: currentTabIndex === tabs.length - 1
-				? common_create()
-				: common_next()
+		isEditing ? common_update() : isLastWizardStep ? common_create() : common_next()
 	);
 	let cancelLabel = $derived(isEditing ? common_cancel() : common_back());
-	let showCancel = $derived(isEditing ? true : currentTabIndex !== 0);
+	let showCancel = $derived(isEditing ? true : currentEnabledIndex !== 0);
 
 	function getDefaultValues(): Group {
 		return group ? { ...group } : createEmptyGroupFormData(defaultNetworkId);
@@ -191,6 +203,7 @@
 		edgeColor = defaults.color || 'Blue';
 		edgeEdgeStyle = defaults.edge_style || 'SmoothStep';
 		activeTab = 'details';
+		furthestReached = 0;
 	}
 
 	// Available service bindings (exclude already selected ones and Unclaimed Open Ports)
@@ -234,18 +247,22 @@
 
 	// Handle form-based submission for create flow with steps
 	async function handleFormSubmit() {
-		if (isEditing || currentTabIndex === tabs.length - 1) {
+		if (isEditing || isLastWizardStep) {
 			handleSubmit();
 		} else {
 			const isValid = await validateForm(form);
 			if (isValid) {
+				const wizardIndex = wizardSteps.indexOf(activeTab);
+				if (wizardIndex >= 0 && wizardIndex + 1 > furthestReached) {
+					furthestReached = wizardIndex + 1;
+				}
 				nextTab();
 			}
 		}
 	}
 
 	function handleFormCancel() {
-		if (isEditing || currentTabIndex === 0) {
+		if (isEditing || currentEnabledIndex === 0) {
 			onClose();
 		} else {
 			previousTab();
@@ -289,7 +306,7 @@
 	{onClose}
 	onOpen={handleOpen}
 	showCloseButton={true}
-	tabs={isEditing ? tabs : []}
+	{tabs}
 	{activeTab}
 	onTabChange={(tabId) => (activeTab = tabId)}
 >

@@ -23,7 +23,7 @@ use crate::server::{
     networks::r#impl::{Network, NetworkBase},
     shared::api_key_common::{ApiKeyType, generate_api_key_for_storage},
     shared::{
-        events::types::{TelemetryEvent, TelemetryOperation},
+        events::types::{OnboardingEvent, OnboardingOperation},
         services::traits::CrudService,
         storage::filter::StorableFilter,
         storage::traits::Storable,
@@ -32,7 +32,7 @@ use crate::server::{
     },
     snmp_credentials::r#impl::base::{SnmpCredential, SnmpCredentialBase, SnmpVersion},
     topology::types::base::{Topology, TopologyBase},
-    users::r#impl::base::User,
+    users::r#impl::base::{User, UserBase},
 };
 use axum::{
     extract::{Path, Query, State},
@@ -154,6 +154,27 @@ async fn register(
 
     if state.config.disable_registration {
         return Err(ApiError::forbidden("User registration is disabled"));
+    }
+
+    // Honeypot: hidden "website" field filled = likely bot
+    if request.website.as_ref().is_some_and(|w| !w.is_empty()) {
+        tracing::warn!(
+            ip = %ip,
+            email = %request.email,
+            honeypot_value = %request.website.as_ref().unwrap(),
+            "Bot registration blocked by honeypot"
+        );
+        let fake_user = User::new(UserBase {
+            email: request.email.clone(),
+            has_password: true,
+            terms_accepted_at: if request.terms_accepted {
+                Some(Utc::now())
+            } else {
+                None
+            },
+            ..UserBase::default()
+        });
+        return Ok(Json(ApiResponse::success(fake_user)));
     }
 
     let billing_enabled = state.config.stripe_secret.is_some();
@@ -626,10 +647,10 @@ async fn apply_pending_setup(
     state
         .services
         .event_bus
-        .publish_telemetry(TelemetryEvent {
+        .publish_onboarding(OnboardingEvent {
             id: Uuid::new_v4(),
             organization_id,
-            operation: TelemetryOperation::OnboardingModalCompleted,
+            operation: OnboardingOperation::OnboardingModalCompleted,
             timestamp: Utc::now(),
             metadata: serde_json::json!({
                 "pre_registration_setup": true,

@@ -3,14 +3,15 @@
 	import { Check, Circle } from 'lucide-svelte';
 	import { openModal } from '$lib/shared/stores/modal-registry';
 	import { onMount } from 'svelte';
+	import { trackEvent } from '$lib/shared/utils/analytics';
 
-	type TelemetryOperation = components['schemas']['TelemetryOperation'];
+	type OnboardingOperation = components['schemas']['OnboardingOperation'];
 
 	let {
 		onboarding,
 		onNavigate
 	}: {
-		onboarding: TelemetryOperation[];
+		onboarding: OnboardingOperation[];
 		onNavigate: (tab: string) => void;
 	} = $props();
 
@@ -24,8 +25,8 @@
 
 	interface ChecklistStep {
 		id: string;
-		milestone: TelemetryOperation;
-		prerequisite: TelemetryOperation | null;
+		milestone: OnboardingOperation;
+		prerequisite: OnboardingOperation | null;
 		label: string;
 		description: string;
 		action: () => void;
@@ -75,32 +76,25 @@
 	}
 
 	function dismiss() {
+		trackEvent('checklist_dismissed', { completed_count: completedCount });
 		localStorage.setItem(DISMISS_KEY, 'true');
 		dismissed = true;
 	}
 </script>
 
-{#if !(allComplete && dismissed)}
+{#if !allComplete && !dismissed}
 	<section>
 		<div class="rounded-lg border border-blue-600/30 bg-blue-900/20 p-4">
 			<div class="mb-3 flex items-center justify-between">
-				<h3 class="text-primary text-base font-semibold">
-					{#if allComplete}
-						Setup complete
-					{:else}
-						Getting Started
-					{/if}
-				</h3>
+				<h3 class="text-primary text-base font-semibold">Getting Started</h3>
 				<div class="flex items-center gap-3">
 					<span class="text-tertiary text-sm">{completedCount} of {steps.length} complete</span>
-					{#if allComplete}
-						<button
-							onclick={dismiss}
-							class="text-tertiary hover:text-secondary text-sm transition-colors"
-						>
-							Dismiss
-						</button>
-					{/if}
+					<button
+						onclick={dismiss}
+						class="text-tertiary hover:text-secondary text-sm transition-colors"
+					>
+						Dismiss
+					</button>
 				</div>
 			</div>
 

@@ -10,7 +10,7 @@
 	import type { Discovery } from '../../types/base';
 	import DiscoveryHistoricalSummary from './DiscoveryHistoricalSummary.svelte';
 	import { uuidv4Sentinel } from '$lib/shared/utils/formatting';
-	import { createEmptyDiscoveryFormData, parseCronToHours } from '../../queries';
+	import { createEmptyDiscoveryFormData, parseDayTimeCronSchedule } from '../../queries';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import type { Daemon } from '$lib/features/daemons/types/base';
@@ -67,6 +67,7 @@
 
 	let loading = $state(false);
 	let deleting = $state(false);
+	let rawCronMode = $state(false);
 
 	// Mutable form data that sub-components can update
 	let formData = $state<Discovery>(createEmptyDiscoveryFormData(null));
@@ -114,8 +115,10 @@
 			discovery_type_type: 'Network' as 'Network' | 'Docker' | 'SelfReport',
 			host_naming_fallback: 'BestService' as 'BestService' | 'Ip',
 			probe_raw_socket_ports: false,
-			schedule_days: '1',
-			schedule_hours: '0'
+			schedule_days_of_week: '0,1,2,3,4,5,6',
+			schedule_time: '00:00',
+			schedule_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			schedule_cron: '0 0 0 * * *'
 		},
 		onSubmit: async ({ value }) => {
 			// Update formData with form values
@@ -144,14 +147,24 @@
 	function handleOpen() {
 		formData = getDefaultFormData();
 
-		// Compute schedule days/hours from cron
-		let scheduleDays = '1';
-		let scheduleHours = '0';
-		if (formData.run_type.type === 'Scheduled' && formData.run_type.cron_schedule) {
-			const totalHours = parseCronToHours(formData.run_type.cron_schedule);
-			if (totalHours !== null) {
-				scheduleDays = String(Math.floor(totalHours / 24));
-				scheduleHours = String(totalHours % 24);
+		// Parse schedule fields from cron
+		let scheduleDaysOfWeek = '0,1,2,3,4,5,6';
+		let scheduleTime = '00:00';
+		let scheduleCron = '0 0 0 * * *';
+		let scheduleTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+		if (formData.run_type.type === 'Scheduled') {
+			scheduleCron = formData.run_type.cron_schedule;
+			scheduleTimezone = formData.run_type.timezone || scheduleTimezone;
+
+			const parsed = parseDayTimeCronSchedule(formData.run_type.cron_schedule);
+			if (parsed) {
+				scheduleDaysOfWeek = parsed.daysOfWeek.join(',');
+				scheduleTime = `${String(parsed.hour).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')}`;
+				rawCronMode = false;
+			} else {
+				// Unmappable cron — open in raw cron mode
+				rawCronMode = true;
 			}
 		}
 
@@ -172,8 +185,10 @@
 			discovery_type_type: formData.discovery_type.type,
 			host_naming_fallback: hostNamingFallback,
 			probe_raw_socket_ports: probeRawSocketPorts,
-			schedule_days: scheduleDays,
-			schedule_hours: scheduleHours
+			schedule_days_of_week: scheduleDaysOfWeek,
+			schedule_time: scheduleTime,
+			schedule_timezone: scheduleTimezone,
+			schedule_cron: scheduleCron
 		});
 	}
 
@@ -238,7 +253,14 @@
 				{#if isHistoricalRun && discovery?.run_type.type === 'Historical'}
 					<DiscoveryHistoricalSummary payload={discovery.run_type.results} />
 				{:else if daemon}
-					<DiscoveryTypeForm {form} bind:formData {readOnly} {daemonHostId} {daemon} />
+					<DiscoveryTypeForm
+						{form}
+						bind:formData
+						{readOnly}
+						{daemonHostId}
+						{daemon}
+						bind:rawCronMode
+					/>
 				{:else}
 					<InlineWarning body={discovery_noDaemonSelected()} />
 				{/if}

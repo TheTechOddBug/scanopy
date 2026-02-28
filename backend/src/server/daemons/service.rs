@@ -41,7 +41,7 @@ use crate::server::networks::r#impl::Network;
 use crate::server::networks::service::NetworkService;
 use crate::server::organizations::service::OrganizationService;
 use crate::server::shared::events::bus::EventBus;
-use crate::server::shared::events::types::{TelemetryEvent, TelemetryOperation};
+use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
@@ -376,8 +376,11 @@ impl DaemonService {
             "Sending discovery request to daemon"
         );
 
+        // Use to_daemon_value() to serialize with SNMP credentials exposed.
+        // The default Serialize impl redacts credentials via Secret<String>.
+        let payload = request.to_daemon_value();
         let _: Option<serde_json::Value> = self
-            .post_to_daemon(daemon, api_key, "/api/discovery/initiate", &request)
+            .post_to_daemon(daemon, api_key, "/api/discovery/initiate", &payload)
             .await?;
 
         tracing::info!(
@@ -802,14 +805,14 @@ impl DaemonService {
                 .organization_service
                 .get_by_id(&network.base.organization_id)
                 .await
-            && org.not_onboarded(&TelemetryOperation::FirstHostDiscovered)
+            && org.not_onboarded(&OnboardingOperation::FirstHostDiscovered)
         {
             let _ = self
                 .event_bus
-                .publish_telemetry(TelemetryEvent::new(
+                .publish_onboarding(OnboardingEvent::new(
                     Uuid::new_v4(),
                     org.id,
-                    TelemetryOperation::FirstHostDiscovered,
+                    OnboardingOperation::FirstHostDiscovered,
                     Utc::now(),
                     AuthenticatedEntity::System,
                     serde_json::json!({}),
@@ -922,6 +925,7 @@ impl DaemonService {
                 cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
                 last_run: None,
                 enabled: true,
+                timezone: None,
             }
         };
 
@@ -1022,7 +1026,7 @@ impl DaemonService {
             .await?
             .ok_or_else(|| ApiError::not_found("Organization not found".to_string()))?;
 
-        if org.not_onboarded(&TelemetryOperation::FirstDaemonRegistered) {
+        if org.not_onboarded(&OnboardingOperation::FirstDaemonRegistered) {
             let daemon_name = self
                 .get_by_id(&daemon_id)
                 .await?
@@ -1036,10 +1040,10 @@ impl DaemonService {
             );
 
             self.event_bus
-                .publish_telemetry(TelemetryEvent {
+                .publish_onboarding(OnboardingEvent {
                     id: Uuid::new_v4(),
                     organization_id: org.id,
-                    operation: TelemetryOperation::FirstDaemonRegistered,
+                    operation: OnboardingOperation::FirstDaemonRegistered,
                     timestamp: Utc::now(),
                     metadata: serde_json::json!({
                         "mode": "server_poll",

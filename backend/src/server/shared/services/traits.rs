@@ -181,8 +181,9 @@ where
         }
     }
 
-    /// Create entity
-    async fn create(
+    /// Base create implementation. Services that override `create()` should
+    /// delegate to this method for the standard storage + event logic.
+    async fn create_base(
         &self,
         entity: T,
         authentication: AuthenticatedEntity,
@@ -224,6 +225,16 @@ where
             .await?;
 
         Ok(created)
+    }
+
+    /// Create entity. Override this to add post-creation logic (e.g. onboarding
+    /// events), delegating to `create_base()` for the standard behavior.
+    async fn create(
+        &self,
+        entity: T,
+        authentication: AuthenticatedEntity,
+    ) -> Result<T, anyhow::Error> {
+        self.create_base(entity, authentication).await
     }
 
     /// Update entity

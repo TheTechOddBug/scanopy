@@ -1,5 +1,4 @@
 use crate::server::auth::middleware::permissions::{Admin, Authorized, Viewer};
-use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
 use crate::server::shared::handlers::ordering::OrderField;
 use crate::server::shared::handlers::query::{
     FilterQueryExtractor, OrderDirection, PaginationParams,
@@ -8,7 +7,7 @@ use crate::server::shared::handlers::traits::{
     BulkDeleteResponse, CrudHandlers, bulk_delete_handler, create_handler, delete_handler,
     update_handler,
 };
-use crate::server::shared::services::traits::{CrudService, EventBusService};
+use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::traits::{Entity, Storable};
 use crate::server::shared::types::api::{
@@ -21,7 +20,6 @@ use crate::server::{
     shared::types::api::{ApiResponse, ApiResult},
 };
 use axum::{extract::State, response::Json};
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::IntoParams;
@@ -294,7 +292,6 @@ pub async fn create_snmp_credential(
     let organization_id = auth
         .organization_id()
         .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
-    let entity = auth.entity.clone();
 
     // Check for duplicate name
     let name_filter = StorableFilter::<SnmpCredential>::new_from_org_id(&organization_id)
@@ -312,39 +309,10 @@ pub async fn create_snmp_credential(
         )));
     }
 
-    let response = create_handler::<SnmpCredential>(
-        State(state.clone()),
+    create_handler::<SnmpCredential>(
+        State(state),
         auth.into_permission::<crate::server::auth::middleware::permissions::Member>(),
         Json(credential),
     )
-    .await?;
-
-    // Emit FirstSnmpCredentialCreated telemetry event if this is the first SNMP credential
-    if response.data.is_some() {
-        let organization = state
-            .services
-            .organization_service
-            .get_by_id(&organization_id)
-            .await?;
-
-        if let Some(organization) = organization
-            && organization.not_onboarded(&OnboardingOperation::FirstSnmpCredentialCreated)
-        {
-            state
-                .services
-                .snmp_credential_service
-                .event_bus()
-                .publish_onboarding(OnboardingEvent {
-                    id: Uuid::new_v4(),
-                    organization_id,
-                    operation: OnboardingOperation::FirstSnmpCredentialCreated,
-                    timestamp: Utc::now(),
-                    metadata: serde_json::json!({}),
-                    authentication: entity,
-                })
-                .await?;
-        }
-    }
-
-    Ok(response)
+    .await
 }

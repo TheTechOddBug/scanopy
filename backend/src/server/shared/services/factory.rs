@@ -185,6 +185,7 @@ impl ServiceFactory {
             entity_tag_service.clone(),
             network_service.clone(),
             interface_service.clone(),
+            organization_service.clone(),
         ));
 
         // Already implements Arc internally due to scheduler + sessions

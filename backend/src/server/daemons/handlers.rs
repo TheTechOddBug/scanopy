@@ -2,8 +2,7 @@ use crate::daemon::runtime::state::DaemonStatus;
 use crate::server::auth::middleware::permissions::{Authorized, IsDaemon, Member, Viewer};
 use crate::server::daemon_api_keys::r#impl::base::{DaemonApiKey, DaemonApiKeyBase};
 use crate::server::daemons::r#impl::api::{
-    DaemonDiscoveryRequest, DaemonHeartbeatPayload, DaemonStatusPayload, ProvisionDaemonRequest,
-    ProvisionDaemonResponse,
+    DaemonHeartbeatPayload, DaemonStatusPayload, ProvisionDaemonRequest, ProvisionDaemonResponse,
 };
 use crate::server::openapi::SERVER_VERSION;
 use crate::server::shared::api_key_common::{ApiKeyType, generate_api_key_for_storage};
@@ -501,10 +500,9 @@ async fn receive_work_request(
         );
     }
 
-    // Convert to DaemonDiscoveryRequest and serialize with exposed SNMP credentials.
-    // The daemon needs session_id + discovery_type with plaintext credentials.
-    let next_session_value =
-        next_session.map(|payload| DaemonDiscoveryRequest::from(payload).with_exposed_snmp());
+    // Serialize with SNMP credentials exposed as plaintext.
+    // The daemon deserializes this as DiscoveryUpdatePayload, so we must preserve all fields.
+    let next_session_value = next_session.map(|payload| payload.with_exposed_snmp());
 
     Ok(Json(ApiResponse::success((
         next_session_value,

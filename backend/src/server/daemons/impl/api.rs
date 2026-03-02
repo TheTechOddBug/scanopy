@@ -152,6 +152,20 @@ impl DiscoveryUpdatePayload {
             finished_at: update.finished_at,
         }
     }
+
+    /// Serialize with SNMP credentials exposed as plaintext for daemon transmission.
+    /// Patches the `discovery_type` field to use plaintext community strings while
+    /// preserving all other fields the daemon expects.
+    pub fn with_exposed_snmp(&self) -> serde_json::Value {
+        let mut value = serde_json::to_value(self).unwrap_or_default();
+        if let serde_json::Value::Object(ref mut map) = value {
+            map.insert(
+                "discovery_type".to_string(),
+                self.discovery_type.with_exposed_snmp(),
+            );
+        }
+        value
+    }
 }
 
 /// Legacy heartbeat payload for backwards compatibility with pre-v0.14.0 daemons.

@@ -152,7 +152,7 @@ export function createEmptyDiscoveryFormData(daemon: Daemon | null): Discovery {
 		},
 		run_type: {
 			type: 'Scheduled',
-			cron_schedule: '0 0 0 * * *',
+			cron_schedule: '0 0 0 * * 0',
 			last_run: null,
 			enabled: true,
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone

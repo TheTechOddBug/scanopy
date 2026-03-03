@@ -78,11 +78,10 @@ pub struct DaemonDiscoveryRequest {
 
 impl DaemonDiscoveryRequest {
     /// Serialize with SNMP credentials exposed as plaintext for daemon transmission.
-    /// The default Serialize impl redacts credentials via Secret<String>.
-    pub fn to_daemon_value(&self) -> serde_json::Value {
+    pub fn with_exposed_snmp(&self) -> serde_json::Value {
         serde_json::json!({
             "session_id": self.session_id,
-            "discovery_type": self.discovery_type.to_daemon_value()
+            "discovery_type": self.discovery_type.with_exposed_snmp()
         })
     }
 }
@@ -152,6 +151,20 @@ impl DiscoveryUpdatePayload {
             started_at: info.started_at,
             finished_at: update.finished_at,
         }
+    }
+
+    /// Serialize with SNMP credentials exposed as plaintext for daemon transmission.
+    /// Patches the `discovery_type` field to use plaintext community strings while
+    /// preserving all other fields the daemon expects.
+    pub fn with_exposed_snmp(&self) -> serde_json::Value {
+        let mut value = serde_json::to_value(self).unwrap_or_default();
+        if let serde_json::Value::Object(ref mut map) = value {
+            map.insert(
+                "discovery_type".to_string(),
+                self.discovery_type.with_exposed_snmp(),
+            );
+        }
+        value
     }
 }
 

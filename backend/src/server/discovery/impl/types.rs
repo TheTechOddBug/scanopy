@@ -7,7 +7,9 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::shared::entities::EntityDiscriminants;
-use crate::server::snmp_credentials::r#impl::discovery::SnmpCredentialMapping;
+use crate::server::snmp_credentials::r#impl::discovery::{
+    SnmpCredentialMapping, SnmpCredentialMappingExposed,
+};
 use crate::server::{
     daemons::r#impl::api::DiscoveryUpdatePayload,
     shared::types::{
@@ -72,8 +74,11 @@ impl Default for DiscoveryType {
 
 impl DiscoveryType {
     /// Serialize with SNMP credentials exposed as plaintext.
-    /// Used ONLY for daemon transmission where the daemon needs actual credentials.
-    pub fn to_daemon_value(&self) -> serde_json::Value {
+    /// Used only for daemon transmission where the daemon needs actual credentials.
+    ///
+    /// We patch the serde_json::Value rather than duplicating the entire internally-tagged
+    /// enum, since DiscoveryType has multiple variants and #[serde(tag = "type")] flattening.
+    pub fn with_exposed_snmp(&self) -> serde_json::Value {
         let mut value = serde_json::to_value(self).unwrap_or_default();
         if let DiscoveryType::Network {
             snmp_credentials, ..
@@ -82,7 +87,8 @@ impl DiscoveryType {
         {
             map.insert(
                 "snmp_credentials".to_string(),
-                snmp_credentials.to_exposed_value(),
+                serde_json::to_value(SnmpCredentialMappingExposed::from(snmp_credentials))
+                    .unwrap_or_default(),
             );
         }
         value

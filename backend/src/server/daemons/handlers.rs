@@ -23,7 +23,7 @@ use crate::server::{
     daemons::r#impl::{
         api::{
             DaemonCapabilities, DaemonRegistrationRequest, DaemonRegistrationResponse,
-            DaemonResponse, DaemonStartupRequest, DiscoveryUpdatePayload, ServerCapabilities,
+            DaemonResponse, DaemonStartupRequest, ServerCapabilities,
         },
         base::{Daemon, DaemonBase, DaemonMode},
         version::DaemonVersionPolicy,
@@ -428,7 +428,7 @@ async fn update_capabilities(
     params(("id" = Uuid, Path, description = "Daemon ID")),
     request_body = DaemonStatusPayload,
     responses(
-        (status = 200, description = "Work request processed - returns (Option<DiscoveryUpdatePayload>, bool)"),
+        (status = 200, description = "Work request processed - returns (Option<Value>, bool)"),
         (status = 404, description = "Daemon not found", body = ApiErrorResponse),
     ),
     security(("daemon_api_key" = []))
@@ -438,7 +438,7 @@ async fn receive_work_request(
     auth: Authorized<IsDaemon>,
     Path(daemon_id): Path<Uuid>,
     Json(request): Json<DaemonStatusPayload>,
-) -> ApiResult<Json<ApiResponse<(Option<DiscoveryUpdatePayload>, bool)>>> {
+) -> ApiResult<Json<ApiResponse<(Option<serde_json::Value>, bool)>>> {
     let daemon_network_id = auth.network_ids()[0];
 
     // Validate daemon exists and belongs to the authenticated daemon's network
@@ -500,7 +500,14 @@ async fn receive_work_request(
         );
     }
 
-    Ok(Json(ApiResponse::success((next_session, has_cancellation))))
+    // Serialize with SNMP credentials exposed as plaintext.
+    // The daemon deserializes this as DiscoveryUpdatePayload, so we must preserve all fields.
+    let next_session_value = next_session.map(|payload| payload.with_exposed_snmp());
+
+    Ok(Json(ApiResponse::success((
+        next_session_value,
+        has_cancellation,
+    ))))
 }
 
 /// Receive daemon heartbeat (DEPRECATED - for backwards compatibility with pre-v0.14.0 daemons)

@@ -53,6 +53,7 @@ impl DaemonApiClient {
         Ok(client
             .request(method, &url)
             .header("X-Daemon-ID", daemon_id.to_string())
+            .header("X-Daemon-Version", env!("CARGO_PKG_VERSION"))
             .header("Authorization", format!("Bearer {}", api_key)))
     }
 

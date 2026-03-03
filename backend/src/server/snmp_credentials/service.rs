@@ -1,9 +1,14 @@
 use crate::server::{
+    auth::middleware::auth::AuthenticatedEntity,
     hosts::{r#impl::base::Host, service::HostService},
     interfaces::{r#impl::base::Interface, service::InterfaceService},
     networks::service::NetworkService,
+    organizations::service::OrganizationService,
     shared::{
-        events::bus::EventBus,
+        events::{
+            bus::EventBus,
+            types::{OnboardingEvent, OnboardingOperation},
+        },
         services::traits::{CrudService, EventBusService},
         storage::{filter::StorableFilter, generic::GenericPostgresStorage},
     },
@@ -14,6 +19,8 @@ use crate::server::{
     tags::entity_tags::EntityTagService,
 };
 use anyhow::Error;
+use async_trait::async_trait;
+use chrono::Utc;
 use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 
@@ -23,6 +30,7 @@ pub struct SnmpCredentialService {
     entity_tag_service: Arc<EntityTagService>,
     network_service: Arc<NetworkService>,
     interface_service: Arc<InterfaceService>,
+    organization_service: Arc<OrganizationService>,
     host_service: OnceLock<Arc<HostService>>,
 }
 
@@ -40,6 +48,7 @@ impl EventBusService<SnmpCredential> for SnmpCredentialService {
     }
 }
 
+#[async_trait]
 impl CrudService<SnmpCredential> for SnmpCredentialService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<SnmpCredential>> {
         &self.storage
@@ -47,6 +56,36 @@ impl CrudService<SnmpCredential> for SnmpCredentialService {
 
     fn entity_tag_service(&self) -> Option<&Arc<EntityTagService>> {
         Some(&self.entity_tag_service)
+    }
+
+    async fn create(
+        &self,
+        entity: SnmpCredential,
+        authentication: AuthenticatedEntity,
+    ) -> Result<SnmpCredential, Error> {
+        let created = self.create_base(entity, authentication.clone()).await?;
+
+        // Emit FirstSnmpCredentialCreated onboarding event if applicable
+        let organization_id = created.base.organization_id;
+        if let Some(organization) = self
+            .organization_service
+            .get_by_id(&organization_id)
+            .await?
+            && organization.not_onboarded(&OnboardingOperation::FirstSnmpCredentialCreated)
+        {
+            self.event_bus
+                .publish_onboarding(OnboardingEvent {
+                    id: Uuid::new_v4(),
+                    organization_id,
+                    operation: OnboardingOperation::FirstSnmpCredentialCreated,
+                    timestamp: Utc::now(),
+                    metadata: serde_json::json!({}),
+                    authentication,
+                })
+                .await?;
+        }
+
+        Ok(created)
     }
 }
 
@@ -57,6 +96,7 @@ impl SnmpCredentialService {
         entity_tag_service: Arc<EntityTagService>,
         network_service: Arc<NetworkService>,
         interface_service: Arc<InterfaceService>,
+        organization_service: Arc<OrganizationService>,
     ) -> Self {
         Self {
             storage,
@@ -64,6 +104,7 @@ impl SnmpCredentialService {
             entity_tag_service,
             network_service,
             interface_service,
+            organization_service,
             host_service: OnceLock::new(),
         }
     }

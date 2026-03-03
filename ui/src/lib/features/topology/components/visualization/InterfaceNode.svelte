@@ -55,7 +55,7 @@
 
 	// Try to get topology from context (for share/embed pages), fallback to TanStack query
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
-	const topologiesQuery = useTopologiesQuery();
+	const topologiesQuery = useTopologiesQuery(() => !topologyContext);
 	let topologiesData = $derived(topologiesQuery.data ?? []);
 	let topology = $derived(
 		topologyContext ? $topologyContext : topologiesData.find((t) => t.id === $selectedTopologyId)

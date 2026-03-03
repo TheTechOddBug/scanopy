@@ -39,7 +39,7 @@ export const defaultTopologyOptions: TopologyOptions = {
 /**
  * Query hook for fetching all topologies
  */
-export function useTopologiesQuery() {
+export function useTopologiesQuery(enabled?: () => boolean) {
 	return createQuery(() => ({
 		queryKey: queryKeys.topology.all,
 		queryFn: async () => {
@@ -50,7 +50,8 @@ export function useTopologiesQuery() {
 				throw new Error(data?.error || 'Failed to fetch topologies');
 			}
 			return data.data;
-		}
+		},
+		...(enabled ? { enabled } : {})
 	}));
 }
 

@@ -10,7 +10,10 @@ pub mod types;
 pub mod values;
 
 // Re-export commonly used items
-pub use queries::{query_cdp_neighbors, query_lldp_neighbors, query_system_info, walk_if_table};
+pub use queries::{
+    query_cdp_neighbors, query_ip_addr_table, query_lldp_neighbors, query_system_info,
+    walk_if_table,
+};
 pub use session::SNMP_WALK_TIMEOUT;
 pub use types::{CdpNeighbor, IfTableEntry, LldpNeighbor, SystemInfo};
 

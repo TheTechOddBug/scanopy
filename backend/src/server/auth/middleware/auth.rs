@@ -82,6 +82,8 @@ pub enum AuthenticatedEntity {
         network_id: Uuid,
         api_key_id: Uuid,
         daemon_id: Uuid,
+        /// Daemon version from `X-Daemon-Version` header (introduced in v0.14.10)
+        version: Option<String>,
     },
     /// User API key authentication - acts on behalf of a user with potentially restricted permissions
     ApiKey {
@@ -243,6 +245,14 @@ impl AuthenticatedEntity {
     pub fn daemon_id(&self) -> Option<Uuid> {
         match self {
             AuthenticatedEntity::Daemon { daemon_id, .. } => Some(*daemon_id),
+            _ => None,
+        }
+    }
+
+    /// Get daemon version if this is a Daemon that sent X-Daemon-Version, otherwise None
+    pub fn daemon_version(&self) -> Option<&str> {
+        match self {
+            AuthenticatedEntity::Daemon { version, .. } => version.as_deref(),
             _ => None,
         }
     }
@@ -528,6 +538,13 @@ impl AuthenticatedEntity {
                                 .await;
                         });
 
+                        // Extract daemon version from header (introduced in v0.14.10)
+                        let daemon_version = parts
+                            .headers
+                            .get("X-Daemon-Version")
+                            .and_then(|h| h.to_str().ok())
+                            .map(|s| s.to_string());
+
                         // Note: We don't validate that the daemon exists here because:
                         // 1. The daemon may be registering for the first time (doesn't exist yet)
                         // 2. The API key's network_id is the source of truth for authorization
@@ -536,6 +553,7 @@ impl AuthenticatedEntity {
                             network_id,
                             api_key_id,
                             daemon_id,
+                            version: daemon_version,
                         });
                     }
 

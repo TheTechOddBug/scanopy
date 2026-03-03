@@ -34,7 +34,7 @@
 			{/if}
 		</span>
 	</div>
-	<div class="grid gap-4 sm:grid-cols-2">
+	<div class="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-4">
 		{#each daemons as daemon (daemon.id)}
 			{@const clickable = hasIssue(daemon)}
 			<div

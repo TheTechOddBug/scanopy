@@ -37,7 +37,7 @@ impl std::fmt::Debug for SnmpQueryCredential {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SnmpQueryCredential")
             .field("version", &self.version)
-            .field("community", &"[REDACTED]")
+            .field("community", &"********")
             .finish()
     }
 }
@@ -87,22 +87,53 @@ impl SnmpCredentialMapping {
     pub fn is_enabled(&self) -> bool {
         self.default_credential.is_some() || !self.ip_overrides.is_empty()
     }
+}
 
-    /// Serialize with community strings exposed as plaintext.
-    /// Used ONLY for daemon transmission where the daemon needs actual credentials.
-    pub fn to_exposed_value(&self) -> serde_json::Value {
-        serde_json::json!({
-            "default_credential": self.default_credential.as_ref().map(|c| serde_json::json!({
-                "version": c.version,
-                "community": c.community.expose_secret()
-            })),
-            "ip_overrides": self.ip_overrides.iter().map(|o| serde_json::json!({
-                "ip": o.ip,
-                "credential": {
-                    "version": o.credential.version,
-                    "community": o.credential.community.expose_secret()
-                }
-            })).collect::<Vec<_>>()
-        })
+// --- Exposed types for daemon serialization (plaintext community) ---
+
+/// SNMP credential with community as plain String.
+/// Used only for daemon serialization where the daemon needs actual credentials.
+#[derive(Serialize)]
+pub struct SnmpQueryCredentialExposed {
+    pub version: SnmpVersion,
+    pub community: String,
+}
+
+impl From<&SnmpQueryCredential> for SnmpQueryCredentialExposed {
+    fn from(cred: &SnmpQueryCredential) -> Self {
+        Self {
+            version: cred.version,
+            community: cred.community.expose_secret().clone(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct SnmpIpOverrideExposed {
+    pub ip: IpAddr,
+    pub credential: SnmpQueryCredentialExposed,
+}
+
+impl From<&SnmpIpOverride> for SnmpIpOverrideExposed {
+    fn from(o: &SnmpIpOverride) -> Self {
+        Self {
+            ip: o.ip,
+            credential: SnmpQueryCredentialExposed::from(&o.credential),
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct SnmpCredentialMappingExposed {
+    pub default_credential: Option<SnmpQueryCredentialExposed>,
+    pub ip_overrides: Vec<SnmpIpOverrideExposed>,
+}
+
+impl From<&SnmpCredentialMapping> for SnmpCredentialMappingExposed {
+    fn from(mapping: &SnmpCredentialMapping) -> Self {
+        Self {
+            default_credential: mapping.default_credential.as_ref().map(Into::into),
+            ip_overrides: mapping.ip_overrides.iter().map(Into::into).collect(),
+        }
     }
 }

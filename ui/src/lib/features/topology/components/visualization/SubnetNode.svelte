@@ -59,7 +59,7 @@
 
 	// Try to get topology from context (for share/embed pages), fallback to TanStack query
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
-	const topologiesQuery = useTopologiesQuery();
+	const topologiesQuery = useTopologiesQuery(() => !topologyContext);
 	const updateNodeResizeMutation = useUpdateNodeResizeMutation();
 	let topologiesData = $derived(topologiesQuery.data ?? []);
 	let topology = $derived(

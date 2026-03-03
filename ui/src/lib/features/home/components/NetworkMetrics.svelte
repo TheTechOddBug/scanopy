@@ -13,7 +13,7 @@
 
 <section>
 	<h3 class="text-primary mb-3 text-base font-semibold">Networks</h3>
-	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+	<div class="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-4">
 		{#each networks as network (network.id)}
 			<NetworkCard {network} />
 		{/each}

@@ -219,8 +219,16 @@ pub async fn query_lldp_neighbors(
 
     let columns = [
         (
+            oids::lldp::remote::entry::LLDP_REM_CHASSIS_ID_SUBTYPE,
+            "remChassisIdSubtype",
+        ),
+        (
             oids::lldp::remote::entry::LLDP_REM_CHASSIS_ID,
             "remChassisId",
+        ),
+        (
+            oids::lldp::remote::entry::LLDP_REM_PORT_ID_SUBTYPE,
+            "remPortIdSubtype",
         ),
         (oids::lldp::remote::entry::LLDP_REM_PORT_ID, "remPortId"),
         (oids::lldp::remote::entry::LLDP_REM_PORT_DESC, "remPortDesc"),
@@ -273,8 +281,10 @@ pub async fn query_lldp_neighbors(
                                 neighbors.entry((local_port, rem_index)).or_insert_with(|| {
                                     LldpNeighbor {
                                         local_port_index: local_port,
-                                        remote_chassis_id: None,
-                                        remote_port_id: None,
+                                        remote_chassis_id_subtype: None,
+                                        remote_chassis_id_bytes: None,
+                                        remote_port_id_subtype: None,
+                                        remote_port_id_bytes: None,
                                         remote_port_desc: None,
                                         remote_sys_name: None,
                                         remote_sys_desc: None,
@@ -283,24 +293,24 @@ pub async fn query_lldp_neighbors(
                                 });
 
                             match column_name {
-                                "remChassisId" => {
-                                    neighbor.remote_chassis_id =
-                                        value_to_string(&value).or_else(|| {
-                                            // Try to format as hex if not printable
-                                            if let Value::OctetString(bytes) = &value {
-                                                Some(
-                                                    bytes
-                                                        .iter()
-                                                        .map(|b| format!("{:02x}", b))
-                                                        .collect::<Vec<_>>()
-                                                        .join(":"),
-                                                )
-                                            } else {
-                                                None
-                                            }
-                                        })
+                                "remChassisIdSubtype" => {
+                                    neighbor.remote_chassis_id_subtype =
+                                        value_to_i32(&value).map(|v| v as u8)
                                 }
-                                "remPortId" => neighbor.remote_port_id = value_to_string(&value),
+                                "remChassisId" => {
+                                    if let Value::OctetString(bytes) = &value {
+                                        neighbor.remote_chassis_id_bytes = Some(bytes.to_vec());
+                                    }
+                                }
+                                "remPortIdSubtype" => {
+                                    neighbor.remote_port_id_subtype =
+                                        value_to_i32(&value).map(|v| v as u8)
+                                }
+                                "remPortId" => {
+                                    if let Value::OctetString(bytes) = &value {
+                                        neighbor.remote_port_id_bytes = Some(bytes.to_vec());
+                                    }
+                                }
                                 "remPortDesc" => {
                                     neighbor.remote_port_desc = value_to_string(&value)
                                 }
@@ -330,6 +340,84 @@ pub async fn query_lldp_neighbors(
 
     let result: Vec<LldpNeighbor> = neighbors.into_values().collect();
     debug!("LLDP query from {} returned {} neighbors", ip, result.len());
+
+    Ok(result)
+}
+
+/// Query ipAddrTable for IP address to ifIndex mappings.
+/// Walks ipAdEntIfIndex (OID 1.3.6.1.2.1.4.20.1.2) where the OID suffix
+/// encodes the IP address as A.B.C.D and the value is the ifIndex.
+pub async fn query_ip_addr_table(
+    ip: IpAddr,
+    credential: &SnmpQueryCredential,
+) -> Result<HashMap<IpAddr, i32>> {
+    let mut session = create_session(ip, credential).await?;
+    let mut result: HashMap<IpAddr, i32> = HashMap::new();
+
+    let base_oid_str = oids::ip_mib::ip_addr_entry::IP_AD_ENT_IF_INDEX;
+    let base_oid = parse_oid(base_oid_str)?;
+    let base_parts: Vec<u64> = base_oid_str
+        .split('.')
+        .filter(|s| !s.is_empty())
+        .filter_map(|s| s.parse().ok())
+        .collect();
+
+    let mut current_oid = base_oid.clone();
+    let mut count = 0;
+
+    loop {
+        if count >= MAX_WALK_ENTRIES {
+            warn!("Walk limit reached for ipAddrTable on {}", ip);
+            break;
+        }
+
+        match timeout(SNMP_TIMEOUT, session.getnext(&current_oid)).await {
+            Ok(Ok(mut response)) => {
+                if let Some((resp_oid, value)) = response.varbinds.next() {
+                    let response_parts = oid_to_vec(&resp_oid);
+                    if response_parts.len() <= base_parts.len()
+                        || !response_parts.starts_with(&base_parts)
+                    {
+                        break;
+                    }
+
+                    // OID suffix is the IP address: base.A.B.C.D
+                    let suffix = &response_parts[base_parts.len()..];
+                    if suffix.len() == 4 {
+                        let addr = IpAddr::from([
+                            suffix[0] as u8,
+                            suffix[1] as u8,
+                            suffix[2] as u8,
+                            suffix[3] as u8,
+                        ]);
+                        if let Some(if_index) = value_to_i32(&value) {
+                            result.insert(addr, if_index);
+                        }
+                    }
+
+                    current_oid = Oid::from(response_parts.as_slice())
+                        .map_err(|e| anyhow!("Invalid response OID: {:?}", e))?;
+                    count += 1;
+                } else {
+                    break;
+                }
+            }
+            Ok(Err(e)) => {
+                debug!("ipAddrTable walk failed on {}: {:?}", ip, e);
+                break;
+            }
+            Err(_) => {
+                debug!("ipAddrTable walk timeout on {}", ip);
+                break;
+            }
+        }
+    }
+
+    debug!(
+        "ipAddrTable walk from {} returned {} entries",
+        ip,
+        result.len()
+    );
 
     Ok(result)
 }

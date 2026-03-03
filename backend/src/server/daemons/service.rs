@@ -55,8 +55,8 @@ use crate::server::tags::entity_tags::EntityTagService;
 use crate::server::users::service::UserService;
 use axum::http::StatusCode;
 
-/// Daily midnight cron schedule for default discovery jobs
-const DAILY_MIDNIGHT_CRON: &str = "0 0 0 * * *";
+/// Weekly Sunday midnight cron schedule for default discovery jobs
+const WEEKLY_SUNDAY_MIDNIGHT_CRON: &str = "0 0 0 * * 0";
 
 /// Default polling interval in seconds
 const DEFAULT_POLL_INTERVAL_SECS: u64 = 30;
@@ -376,9 +376,9 @@ impl DaemonService {
             "Sending discovery request to daemon"
         );
 
-        // Use to_daemon_value() to serialize with SNMP credentials exposed.
+        // Use with_exposed_snmp() to serialize with SNMP credentials exposed.
         // The default Serialize impl redacts credentials via Secret<String>.
-        let payload = request.to_daemon_value();
+        let payload = request.with_exposed_snmp();
         let _: Option<serde_json::Value> = self
             .post_to_daemon(daemon, api_key, "/api/discovery/initiate", &payload)
             .await?;
@@ -917,12 +917,17 @@ impl DaemonService {
             "Creating default discovery jobs for daemon"
         );
 
+        let network_name = match self.network_service.get_by_id(&network_id).await {
+            Ok(Some(network)) => network.base.name,
+            _ => "Unknown Network".to_string(),
+        };
+
         // Free plans use AdHoc (run once immediately), paid plans use Scheduled
         let default_run_type = if is_free_plan {
             RunType::AdHoc { last_run: None }
         } else {
             RunType::Scheduled {
-                cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
+                cron_schedule: WEEKLY_SUNDAY_MIDNIGHT_CRON.to_string(),
                 last_run: None,
                 enabled: true,
                 timezone: None,
@@ -938,7 +943,7 @@ impl DaemonService {
                 Discovery::new(DiscoveryBase {
                     run_type: default_run_type.clone(),
                     discovery_type: self_report_discovery_type.clone(),
-                    name: self_report_discovery_type.to_string(),
+                    name: format!("{} \u{2014} {}", self_report_discovery_type, network_name),
                     daemon_id,
                     network_id,
                     tags: Vec::new(),
@@ -964,7 +969,7 @@ impl DaemonService {
                     Discovery::new(DiscoveryBase {
                         run_type: default_run_type.clone(),
                         discovery_type: docker_discovery_type.clone(),
-                        name: docker_discovery_type.to_string(),
+                        name: format!("{} \u{2014} {}", docker_discovery_type, network_name),
                         daemon_id,
                         network_id,
                         tags: Vec::new(),
@@ -992,7 +997,7 @@ impl DaemonService {
                 Discovery::new(DiscoveryBase {
                     run_type: default_run_type.clone(),
                     discovery_type: network_discovery_type.clone(),
-                    name: network_discovery_type.to_string(),
+                    name: format!("{} \u{2014} {}", network_discovery_type, network_name),
                     daemon_id,
                     network_id,
                     tags: Vec::new(),

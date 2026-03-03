@@ -45,13 +45,13 @@
 		interactionWidth
 	}: EdgeProps = $props();
 
-	// TanStack Query for topology data
-	const topologiesQuery = useTopologiesQuery();
-	let topologiesData = $derived(topologiesQuery.data ?? []);
-	let globalTopology = $derived(topologiesData.find((t) => t.id === $selectedTopologyId));
-
 	// Use context topology if available (for share views), otherwise fall back to query data
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
+
+	// TanStack Query for topology data — disabled when topology context exists (share/embed views)
+	const topologiesQuery = useTopologiesQuery(() => !topologyContext);
+	let topologiesData = $derived(topologiesQuery.data ?? []);
+	let globalTopology = $derived(topologiesData.find((t) => t.id === $selectedTopologyId));
 	let topology = $derived(topologyContext ? $topologyContext : globalTopology);
 
 	// Try to get selection from context (for share/embed pages), fallback to global store

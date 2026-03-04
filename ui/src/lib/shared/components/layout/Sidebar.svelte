@@ -6,6 +6,7 @@
 	import SupportModal from '$lib/features/support/SupportModal.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { modalState, openModal } from '$lib/shared/stores/modal-registry';
+	import { upgradeContext } from '$lib/features/billing/stores';
 	import type { IconComponent } from '$lib/shared/utils/types';
 	import {
 		Menu,
@@ -619,6 +620,7 @@
 						title={collapsed ? 'Upgrade' : ''}
 						onclick={() => {
 							trackEvent('upgrade_button_clicked', { feature: 'sidebar' });
+							upgradeContext.set(null);
 							openModal('billing-plan');
 						}}
 					>

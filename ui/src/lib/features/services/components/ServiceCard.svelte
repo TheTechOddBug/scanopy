@@ -12,6 +12,7 @@
 	import { matchConfidenceColor, matchConfidenceLabel } from '$lib/shared/types';
 	import { SvelteMap } from 'svelte/reactivity';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
+	import { entityRef } from '$lib/shared/components/data/types';
 	import {
 		common_delete,
 		common_edit,
@@ -126,7 +127,8 @@
 				value: ifaces.map((iface: Interface) => ({
 					id: iface.id,
 					label: formatInterface(iface, isContainerSubnetFn),
-					color: entities.getColorHelper('Interface').color
+					color: entities.getColorHelper('Interface').color,
+					entityRef: entityRef('Interface', iface.id, iface, { subnets: subnetsData })
 				})),
 				emptyText: services_noInterfacesAssigned()
 			},

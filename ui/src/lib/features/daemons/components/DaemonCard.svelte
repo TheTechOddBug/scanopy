@@ -15,6 +15,7 @@
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
 	import { useApiKeysQuery } from '$lib/features/daemon_api_keys/queries';
 	import type { TagProps } from '$lib/shared/components/data/types';
+	import { entityRef } from '$lib/shared/components/data/types';
 	import DaemonUpgradeModal from './DaemonUpgradeModal.svelte';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { modalState, openModal, closeModal } from '$lib/shared/stores/modal-registry';
@@ -147,6 +148,7 @@
 			},
 			{
 				label: 'Interfaces With',
+<<<<<<< HEAD
 				value: daemon.capabilities.interfaced_subnet_ids
 					.map((s) => subnetsData.find((subnet) => subnet.id == s))
 					.filter((s) => s != undefined)
@@ -155,6 +157,17 @@
 						label: s.name,
 						color: entities.getColorHelper('Subnet').color
 					})),
+=======
+				value: daemon.capabilities.interfaced_subnet_ids
+								.map((s) => subnetsData.find((subnet) => subnet.id == s))
+								.filter((s) => s != undefined)
+								.map((s) => ({
+									id: s.id,
+									label: s.name,
+									color: entities.getColorHelper('Subnet').color,
+									entityRef: entityRef('Subnet', s.id, s)
+								})),
+>>>>>>> feat/actionable-entity-tags
 				emptyText: 'No subnet interfaces'
 			},
 			{ label: 'Tags', snippet: tagsSnippet }

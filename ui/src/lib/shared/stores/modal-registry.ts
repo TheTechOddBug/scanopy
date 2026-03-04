@@ -1,4 +1,6 @@
 import { writable } from 'svelte/store';
+import type { EntityDiscriminants } from '$lib/api/entities';
+import { entityUIConfig } from '$lib/shared/entity-ui-config';
 
 export interface ModalState {
 	name: string | null;
@@ -56,6 +58,31 @@ export function initModalFromUrl(): void {
 		tab: params.get('tab')
 	};
 	modalState.set(state);
+}
+
+/**
+ * Navigate to an entity's tab and open its edit modal.
+ * For sub-entities (Interface, IfEntry, etc.), opens the parent Host's modal on the relevant tab.
+ */
+export function navigateToEntity(
+	entityType: EntityDiscriminants,
+	entityId: string,
+	data?: Record<string, unknown>
+): void {
+	const config = entityUIConfig[entityType];
+	if (!config) return;
+
+	if (config.modalName) {
+		window.location.hash = config.tabId;
+		openModal(config.modalName, { id: entityId });
+	} else if (config.parentType && config.parentIdField && data) {
+		const parentConfig = entityUIConfig[config.parentType];
+		const parentId = data[config.parentIdField] as string | undefined;
+		if (parentConfig?.modalName && parentId) {
+			window.location.hash = parentConfig.tabId;
+			openModal(parentConfig.modalName, { id: parentId, tab: config.modalTab });
+		}
+	}
 }
 
 function syncToUrl(state: ModalState): void {

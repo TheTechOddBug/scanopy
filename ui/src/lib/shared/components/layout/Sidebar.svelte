@@ -6,6 +6,8 @@
 	import SupportModal from '$lib/features/support/SupportModal.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { modalState, openModal } from '$lib/shared/stores/modal-registry';
+	import { entityUIConfig } from '$lib/shared/entity-ui-config';
+	import type { EntityDiscriminants } from '$lib/api/entities';
 	import type { IconComponent } from '$lib/shared/utils/types';
 	import {
 		Menu,
@@ -103,6 +105,7 @@
 		id: string;
 		label: string;
 		icon: IconComponent;
+		entityType?: EntityDiscriminants; // Links this nav item to an entity type via entityUIConfig
 		component?: Component;
 		position?: 'main' | 'bottom';
 		onClick?: () => void | Promise<void>;
@@ -136,21 +139,24 @@
 			label: 'Visualize',
 			items: [
 				{
-					id: 'topology',
+					id: entityUIConfig.Topology!.tabId,
 					label: 'Topology',
 					icon: entities.getIconComponent('Topology'),
+					entityType: 'Topology',
 					component: TopologyTab
 				},
 				{
-					id: 'groups',
+					id: entityUIConfig.Group!.tabId,
 					label: 'Groups',
 					icon: entities.getIconComponent('Group'),
+					entityType: 'Group',
 					component: GroupTab
 				},
 				{
-					id: 'shares',
+					id: entityUIConfig.Share!.tabId,
 					label: 'Sharing',
 					icon: entities.getIconComponent('Share'),
+					entityType: 'Share',
 					component: ShareTab
 				}
 			]
@@ -166,9 +172,10 @@
 					component: DiscoverySessionTab
 				},
 				{
-					id: 'discovery-scheduled',
+					id: entityUIConfig.Discovery!.tabId,
 					label: 'Scheduled',
 					icon: Calendar as IconComponent,
+					entityType: 'Discovery',
 					component: DiscoveryScheduledTab
 				},
 				{
@@ -178,15 +185,17 @@
 					component: DiscoveryHistoryTab
 				},
 				{
-					id: 'daemons',
+					id: entityUIConfig.Daemon!.tabId,
 					label: 'Daemons',
 					icon: entities.getIconComponent('Daemon'),
+					entityType: 'Daemon',
 					component: DaemonTab,
 					children: [
 						{
-							id: 'daemon-api-keys',
+							id: entityUIConfig.DaemonApiKey!.tabId,
 							label: 'Api Keys',
 							icon: entities.getIconComponent('DaemonApiKey'),
+							entityType: 'DaemonApiKey',
 							component: ApiKeyTab,
 							requiredPermissions: ['Member', 'Admin', 'Owner']
 						}
@@ -199,27 +208,31 @@
 			label: 'Assets',
 			items: [
 				{
-					id: 'networks',
+					id: entityUIConfig.Network!.tabId,
 					label: 'Networks',
 					icon: entities.getIconComponent('Network'),
+					entityType: 'Network',
 					component: NetworksTab
 				},
 				{
-					id: 'subnets',
+					id: entityUIConfig.Subnet!.tabId,
 					label: 'Subnets',
 					icon: entities.getIconComponent('Subnet'),
+					entityType: 'Subnet',
 					component: SubnetTab
 				},
 				{
-					id: 'hosts',
+					id: entityUIConfig.Host!.tabId,
 					label: 'Hosts',
 					icon: entities.getIconComponent('Host'),
+					entityType: 'Host',
 					component: HostTab
 				},
 				{
-					id: 'services',
+					id: entityUIConfig.Service!.tabId,
 					label: 'Services',
 					icon: entities.getIconComponent('Service'),
+					entityType: 'Service',
 					component: ServiceTab
 				}
 			]
@@ -229,29 +242,33 @@
 			label: 'Platform',
 			items: [
 				{
-					id: 'tags',
+					id: entityUIConfig.Tag!.tabId,
 					label: 'Tags',
 					icon: entities.getIconComponent('Tag'),
+					entityType: 'Tag',
 					component: TagTab
 				},
 				{
-					id: 'users',
+					id: entityUIConfig.User!.tabId,
 					label: 'Users',
 					icon: entities.getIconComponent('User'),
+					entityType: 'User',
 					component: UserTab,
 					requiredPermissions: ['Admin', 'Owner']
 				},
 				{
-					id: 'api-keys',
+					id: entityUIConfig.UserApiKey!.tabId,
 					label: 'API Keys',
 					icon: entities.getIconComponent('UserApiKey'),
+					entityType: 'UserApiKey',
 					component: UserApiKeyTab,
 					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
-					id: 'snmp-credentials',
+					id: entityUIConfig.SnmpCredential!.tabId,
 					label: 'SNMP Credentials',
 					icon: entities.getIconComponent('SnmpCredential'),
+					entityType: 'SnmpCredential',
 					component: SnmpCredentialsTab
 				}
 			]

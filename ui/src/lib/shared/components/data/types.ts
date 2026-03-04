@@ -1,6 +1,7 @@
 import type { IconComponent } from '$lib/shared/utils/types';
 import type { Snippet } from 'svelte';
 import type { Color } from '$lib/shared/utils/styling';
+import type { EntityDiscriminants } from '$lib/api/entities';
 
 // ============================================================================
 // Page Size Configuration
@@ -28,6 +29,25 @@ export interface CardAction {
 	forceLabel?: boolean;
 }
 
+export interface EntityRef {
+	entityType: EntityDiscriminants;
+	entityId: string;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	data: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	context?: any;
+}
+
+/** Shorthand to build an EntityRef — avoids casting at every call site. */
+export function entityRef(
+	entityType: EntityDiscriminants,
+	entityId: string,
+	data: object,
+	context?: object
+): EntityRef {
+	return { entityType, entityId, data, context };
+}
+
 export interface CardFieldItem {
 	id: string;
 	label: string;
@@ -39,6 +59,7 @@ export interface CardFieldItem {
 	metadata?: Record<string, unknown>;
 	badge?: string; // For things like "5m", "Critical", etc.
 	badgeColor?: string;
+	entityRef?: EntityRef;
 }
 
 export interface CardField {

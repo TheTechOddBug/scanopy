@@ -38,7 +38,7 @@
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
 	import { useGroupsQuery } from '$lib/features/groups/queries';
 	import { downloadCsv } from '$lib/shared/utils/csvExport';
-	import { modalState } from '$lib/shared/stores/modal-registry';
+	import { modalState, resolveModalDeepLink } from '$lib/shared/stores/modal-registry';
 
 	// Queries
 	const currentUserQuery = useCurrentUserQuery();
@@ -78,19 +78,18 @@
 	let showCreateNetworkModal = $state(false);
 	let editingNetwork = $state<Network | null>(null);
 
-	// Deep-link: open network editor from URL
+	// Deep-link: open network editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'network-editor' && !showCreateNetworkModal) {
-			if ($modalState.id) {
-				const network = networksData.find((e) => e.id === $modalState.id);
-				if (network) {
-					editingNetwork = network;
-					showCreateNetworkModal = true;
-				}
-			} else {
-				editingNetwork = null;
-				showCreateNetworkModal = true;
-			}
+		const result = resolveModalDeepLink(
+			$modalState,
+			'network-editor',
+			networksData,
+			showCreateNetworkModal,
+			editingNetwork?.id
+		);
+		if (result !== undefined) {
+			editingNetwork = result;
+			showCreateNetworkModal = true;
 		}
 	});
 

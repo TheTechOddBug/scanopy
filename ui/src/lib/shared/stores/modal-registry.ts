@@ -82,7 +82,39 @@ export function navigateToEntity(
 			window.location.hash = parentConfig.tabId;
 			openModal(parentConfig.modalName, { id: parentId, tab: config.modalTab });
 		}
+	} else {
+		// Entity has no modal — just navigate to its tab
+		window.location.hash = config.tabId;
 	}
+}
+
+/**
+ * Pure helper for deep-link effects in Tab components.
+ * Returns the entity to edit (T), null for create mode, or undefined for no action.
+ */
+export function resolveModalDeepLink<T extends { id: string }>(
+	state: ModalState,
+	modalName: string,
+	data: T[],
+	isOpen: boolean,
+	editingId: string | null | undefined,
+	validate?: (entity: T) => boolean
+): T | null | undefined {
+	if (state.name !== modalName) return undefined;
+
+	if (!isOpen) {
+		if (state.id) {
+			const entity = data.find((e) => e.id === state.id);
+			if (entity && (!validate || validate(entity))) return entity;
+		} else {
+			return null; // Create mode
+		}
+	} else if (state.id && state.id !== editingId) {
+		const entity = data.find((e) => e.id === state.id);
+		if (entity && (!validate || validate(entity))) return entity;
+	}
+
+	return undefined;
 }
 
 function syncToUrl(state: ModalState): void {

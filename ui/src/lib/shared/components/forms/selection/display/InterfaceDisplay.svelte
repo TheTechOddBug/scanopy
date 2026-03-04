@@ -1,6 +1,7 @@
 <script lang="ts" module>
 	import { isContainerSubnet, getSubnetById } from '$lib/features/subnets/queries';
 	import type { Subnet } from '$lib/features/subnets/types/base';
+	import { entityRef } from '$lib/shared/components/data/types';
 
 	// Context for interface display - needs access to subnets for lookups
 	export interface InterfaceDisplayContext {
@@ -30,7 +31,8 @@
 			if (subnet && !isContainerSubnet(subnet)) {
 				tags.push({
 					label: subnet.cidr,
-					color: entities.getColorHelper('Subnet').color
+					color: entities.getColorHelper('Subnet').color,
+					entityRef: entityRef('Subnet', subnet.id, subnet)
 				});
 			}
 			return tags;

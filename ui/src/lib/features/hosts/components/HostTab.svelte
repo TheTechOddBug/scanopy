@@ -53,7 +53,7 @@
 	import { useServicesByIds, useServicesCacheQuery } from '$lib/features/services/queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
-	import { modalState } from '$lib/shared/stores/modal-registry';
+	import { modalState, resolveModalDeepLink } from '$lib/shared/stores/modal-registry';
 	import type { components } from '$lib/api/schema';
 
 	type HostOrderField = components['schemas']['HostOrderField'];
@@ -163,19 +163,18 @@
 	let otherHost = $state<Host | null>(null);
 	let showHostConsolidationModal = $state(false);
 
-	// Deep-link: open host editor from URL
+	// Deep-link: open host editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'host-editor' && !showHostEditor) {
-			if ($modalState.id) {
-				const host = hostsData.find((h) => h.id === $modalState.id);
-				if (host) {
-					editingHost = host;
-					showHostEditor = true;
-				}
-			} else {
-				editingHost = null;
-				showHostEditor = true;
-			}
+		const result = resolveModalDeepLink(
+			$modalState,
+			'host-editor',
+			hostsData,
+			showHostEditor,
+			editingHost?.id
+		);
+		if (result !== undefined) {
+			editingHost = result;
+			showHostEditor = true;
 		}
 	});
 

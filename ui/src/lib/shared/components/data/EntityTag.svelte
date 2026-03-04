@@ -14,7 +14,8 @@
 		icon = null,
 		color = 'Gray',
 		disabled = false,
-		badge = ''
+		badge = '',
+		disablePopover = false
 	}: {
 		entityRef: EntityRef;
 		label: string;
@@ -22,17 +23,21 @@
 		color?: Color;
 		disabled?: boolean;
 		badge?: string;
+		disablePopover?: boolean;
 	} = $props();
 
 	let triggerEl: HTMLDivElement | undefined = $state();
 	let isHovered = $state(false);
+	let popoverHovered = $state(false);
 	let hoverTimeout: ReturnType<typeof setTimeout> | undefined;
+	let leaveTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	let config = $derived(entityUIConfig[entityRef.entityType]);
 	let displayComponent = $derived(config?.displayComponent ?? null);
 
 	function handleMouseEnter() {
-		if (!displayComponent) return;
+		if (!displayComponent || disablePopover) return;
+		clearTimeout(leaveTimeout);
 		hoverTimeout = setTimeout(() => {
 			isHovered = true;
 		}, 300);
@@ -40,6 +45,20 @@
 
 	function handleMouseLeave() {
 		clearTimeout(hoverTimeout);
+		leaveTimeout = setTimeout(() => {
+			if (!popoverHovered) {
+				isHovered = false;
+			}
+		}, 150);
+	}
+
+	function handlePopoverEnter() {
+		clearTimeout(leaveTimeout);
+		popoverHovered = true;
+	}
+
+	function handlePopoverLeave() {
+		popoverHovered = false;
 		isHovered = false;
 	}
 
@@ -67,7 +86,16 @@
 </div>
 
 {#if displayComponent}
-	<Popover triggerElement={triggerEl} isOpen={isHovered} onClose={() => (isHovered = false)}>
+	<Popover
+		triggerElement={triggerEl}
+		isOpen={isHovered}
+		onClose={() => {
+			popoverHovered = false;
+			isHovered = false;
+		}}
+		onMouseEnter={handlePopoverEnter}
+		onMouseLeave={handlePopoverLeave}
+	>
 		<ListSelectItem item={entityRef.data} context={entityRef.context ?? {}} {displayComponent} />
 	</Popover>
 {/if}

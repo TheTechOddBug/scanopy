@@ -17,6 +17,7 @@ export interface TagProps {
 	color?: Color;
 	icon?: IconComponent;
 	href?: string;
+	entityRef?: EntityRef;
 }
 
 export interface CardAction {

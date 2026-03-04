@@ -62,18 +62,25 @@
 	let showSubnetEditor = $state(false);
 	let editingSubnet = $state<Subnet | null>(null);
 
-	// Deep-link: open subnet editor from URL
+	// Deep-link: open subnet editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'subnet-editor' && !showSubnetEditor) {
-			if ($modalState.id) {
+		if ($modalState.name === 'subnet-editor') {
+			if (!showSubnetEditor) {
+				if ($modalState.id) {
+					const subnet = subnetsData.find((e) => e.id === $modalState.id);
+					if (subnet) {
+						editingSubnet = subnet;
+						showSubnetEditor = true;
+					}
+				} else {
+					editingSubnet = null;
+					showSubnetEditor = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingSubnet?.id) {
 				const subnet = subnetsData.find((e) => e.id === $modalState.id);
 				if (subnet) {
 					editingSubnet = subnet;
-					showSubnetEditor = true;
 				}
-			} else {
-				editingSubnet = null;
-				showSubnetEditor = true;
 			}
 		}
 	});

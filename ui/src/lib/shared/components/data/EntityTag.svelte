@@ -14,7 +14,8 @@
 		icon = null,
 		color = 'Gray',
 		disabled = false,
-		badge = ''
+		badge = '',
+		disablePopover = false
 	}: {
 		entityRef: EntityRef;
 		label: string;
@@ -22,6 +23,7 @@
 		color?: Color;
 		disabled?: boolean;
 		badge?: string;
+		disablePopover?: boolean;
 	} = $props();
 
 	let triggerEl: HTMLDivElement | undefined = $state();
@@ -32,7 +34,7 @@
 	let displayComponent = $derived(config?.displayComponent ?? null);
 
 	function handleMouseEnter() {
-		if (!displayComponent) return;
+		if (!displayComponent || disablePopover) return;
 		hoverTimeout = setTimeout(() => {
 			isHovered = true;
 		}, 300);

@@ -71,18 +71,25 @@
 		}
 	});
 
-	// Deep-link: open user editor from URL
+	// Deep-link: open user editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'user-editor' && !showEditModal) {
-			if ($modalState.id) {
+		if ($modalState.name === 'user-editor') {
+			if (!showEditModal) {
+				if ($modalState.id) {
+					const entity = usersData.find((e) => e.id === $modalState.id);
+					if (entity) {
+						editingUser = entity;
+						showEditModal = true;
+					}
+				} else {
+					editingUser = null;
+					showEditModal = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingUser?.id) {
 				const entity = usersData.find((e) => e.id === $modalState.id);
 				if (entity) {
 					editingUser = entity;
-					showEditModal = true;
 				}
-			} else {
-				editingUser = null;
-				showEditModal = true;
 			}
 		}
 	});

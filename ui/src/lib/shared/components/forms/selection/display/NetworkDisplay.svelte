@@ -4,10 +4,15 @@
 	export const NetworkDisplay: EntityDisplayComponent<Network, object> = {
 		getId: (network: Network) => network.id,
 		getLabel: (network: Network) => network.name,
-		getDescription: () => '',
+		getDescription: (network: Network) => (network.snmp_credential_id ? 'SNMP Enabled' : ''),
 		getIcon: () => entities.getIconComponent('Network'),
 		getIconColor: () => entities.getColorHelper('Network').icon,
-		getTags: () => [],
+		getTags: (network: Network) => {
+			if (network.snmp_credential_id) {
+				return [{ label: 'SNMP', color: entities.getColorHelper('SnmpCredential').color }];
+			}
+			return [];
+		},
 		getCategory: () => null
 	};
 </script>

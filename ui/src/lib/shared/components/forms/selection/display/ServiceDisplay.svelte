@@ -14,6 +14,12 @@
 		getDescription: (service: Service, context) => {
 			let descriptionItems = [];
 
+			// Show service definition name if different from service name
+			const defName = serviceDefinitions.getName(service.service_definition);
+			if (defName && defName !== service.name) {
+				descriptionItems.push(defName);
+			}
+
 			// Filter bindings relevant to the interface(s)
 			let bindingsOnInterface = service.bindings.filter((b) =>
 				b.interface_id ? context.interfaceId == b.interface_id || context.interfaceId == null : true

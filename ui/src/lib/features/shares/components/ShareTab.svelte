@@ -59,18 +59,25 @@
 	let showEditor = $state(false);
 	let editingShare = $state<Share | null>(null);
 
-	// Deep-link: open share editor from URL
+	// Deep-link: open share editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'share-editor' && !showEditor) {
-			if ($modalState.id) {
+		if ($modalState.name === 'share-editor') {
+			if (!showEditor) {
+				if ($modalState.id) {
+					const share = sharesData.find((e) => e.id === $modalState.id);
+					if (share) {
+						editingShare = share;
+						showEditor = true;
+					}
+				} else {
+					editingShare = null;
+					showEditor = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingShare?.id) {
 				const share = sharesData.find((e) => e.id === $modalState.id);
 				if (share) {
 					editingShare = share;
-					showEditor = true;
 				}
-			} else {
-				editingShare = null;
-				showEditor = true;
 			}
 		}
 	});

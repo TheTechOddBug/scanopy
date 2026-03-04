@@ -121,16 +121,26 @@
 	let showServiceEditor = $state(false);
 	let editingService = $state<Service | null>(null);
 
-	// Deep-link: open service editor from URL
+	// Deep-link: open service editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'service-editor' && !showServiceEditor) {
-			if ($modalState.id) {
+		if ($modalState.name === 'service-editor') {
+			if (!showServiceEditor) {
+				if ($modalState.id) {
+					const service = servicesData.find((e) => e.id === $modalState.id);
+					if (service) {
+						const host = serviceHosts.get(service.id);
+						if (host) {
+							editingService = service;
+							showServiceEditor = true;
+						}
+					}
+				}
+			} else if ($modalState.id && $modalState.id !== editingService?.id) {
 				const service = servicesData.find((e) => e.id === $modalState.id);
 				if (service) {
 					const host = serviceHosts.get(service.id);
 					if (host) {
 						editingService = service;
-						showServiceEditor = true;
 					}
 				}
 			}

@@ -162,18 +162,25 @@
 	let otherHost = $state<Host | null>(null);
 	let showHostConsolidationModal = $state(false);
 
-	// Deep-link: open host editor from URL
+	// Deep-link: open host editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'host-editor' && !showHostEditor) {
-			if ($modalState.id) {
+		if ($modalState.name === 'host-editor') {
+			if (!showHostEditor) {
+				if ($modalState.id) {
+					const host = hostsData.find((h) => h.id === $modalState.id);
+					if (host) {
+						editingHost = host;
+						showHostEditor = true;
+					}
+				} else {
+					editingHost = null;
+					showHostEditor = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingHost?.id) {
 				const host = hostsData.find((h) => h.id === $modalState.id);
 				if (host) {
 					editingHost = host;
-					showHostEditor = true;
 				}
-			} else {
-				editingHost = null;
-				showHostEditor = true;
 			}
 		}
 	});

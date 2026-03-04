@@ -65,18 +65,25 @@
 	let showDiscoveryModal = $state(false);
 	let editingDiscovery: Discovery | null = $state(null);
 
-	// Deep-link: open discovery editor from URL
+	// Deep-link: open discovery editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'discovery-editor' && !showDiscoveryModal) {
-			if ($modalState.id) {
+		if ($modalState.name === 'discovery-editor') {
+			if (!showDiscoveryModal) {
+				if ($modalState.id) {
+					const entity = discoveriesData.find((e) => e.id === $modalState.id);
+					if (entity) {
+						editingDiscovery = entity;
+						showDiscoveryModal = true;
+					}
+				} else {
+					editingDiscovery = null;
+					showDiscoveryModal = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingDiscovery?.id) {
 				const entity = discoveriesData.find((e) => e.id === $modalState.id);
 				if (entity) {
 					editingDiscovery = entity;
-					showDiscoveryModal = true;
 				}
-			} else {
-				editingDiscovery = null;
-				showDiscoveryModal = true;
 			}
 		}
 	});

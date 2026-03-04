@@ -43,18 +43,25 @@
 	let showCredentialEditor = $state(false);
 	let editingCredential: SnmpCredential | null = $state(null);
 
-	// Deep-link: open SNMP credential editor from URL
+	// Deep-link: open SNMP credential editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'snmp-credential-editor' && !showCredentialEditor) {
-			if ($modalState.id) {
+		if ($modalState.name === 'snmp-credential-editor') {
+			if (!showCredentialEditor) {
+				if ($modalState.id) {
+					const entity = credentials.find((e) => e.id === $modalState.id);
+					if (entity) {
+						editingCredential = entity;
+						showCredentialEditor = true;
+					}
+				} else {
+					editingCredential = null;
+					showCredentialEditor = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingCredential?.id) {
 				const entity = credentials.find((e) => e.id === $modalState.id);
 				if (entity) {
 					editingCredential = entity;
-					showCredentialEditor = true;
 				}
-			} else {
-				editingCredential = null;
-				showCredentialEditor = true;
 			}
 		}
 	});

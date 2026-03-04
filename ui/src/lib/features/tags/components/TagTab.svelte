@@ -43,18 +43,25 @@
 	let showTagEditor = $state(false);
 	let editingTag: Tag | null = $state(null);
 
-	// Deep-link: open tag editor from URL
+	// Deep-link: open tag editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'tag-editor' && !showTagEditor) {
-			if ($modalState.id) {
+		if ($modalState.name === 'tag-editor') {
+			if (!showTagEditor) {
+				if ($modalState.id) {
+					const tag = tags.find((e) => e.id === $modalState.id);
+					if (tag) {
+						editingTag = tag;
+						showTagEditor = true;
+					}
+				} else {
+					editingTag = null;
+					showTagEditor = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingTag?.id) {
 				const tag = tags.find((e) => e.id === $modalState.id);
 				if (tag) {
 					editingTag = tag;
-					showTagEditor = true;
 				}
-			} else {
-				editingTag = null;
-				showTagEditor = true;
 			}
 		}
 	});

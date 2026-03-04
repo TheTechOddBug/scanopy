@@ -68,18 +68,25 @@
 	let showGroupEditor = $state(false);
 	let editingGroup = $state<Group | null>(null);
 
-	// Deep-link: open group editor from URL
+	// Deep-link: open group editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
-		if ($modalState.name === 'group-editor' && !showGroupEditor) {
-			if ($modalState.id) {
+		if ($modalState.name === 'group-editor') {
+			if (!showGroupEditor) {
+				if ($modalState.id) {
+					const group = groupsData.find((e) => e.id === $modalState.id);
+					if (group) {
+						editingGroup = group;
+						showGroupEditor = true;
+					}
+				} else {
+					editingGroup = null;
+					showGroupEditor = true;
+				}
+			} else if ($modalState.id && $modalState.id !== editingGroup?.id) {
 				const group = groupsData.find((e) => e.id === $modalState.id);
 				if (group) {
 					editingGroup = group;
-					showGroupEditor = true;
 				}
-			} else {
-				editingGroup = null;
-				showGroupEditor = true;
 			}
 		}
 	});

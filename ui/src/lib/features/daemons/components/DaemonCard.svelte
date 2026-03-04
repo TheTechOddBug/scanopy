@@ -148,16 +148,6 @@
 			},
 			{
 				label: 'Interfaces With',
-<<<<<<< HEAD
-				value: daemon.capabilities.interfaced_subnet_ids
-					.map((s) => subnetsData.find((subnet) => subnet.id == s))
-					.filter((s) => s != undefined)
-					.map((s) => ({
-						id: s.id,
-						label: s.name,
-						color: entities.getColorHelper('Subnet').color
-					})),
-=======
 				value: daemon.capabilities.interfaced_subnet_ids
 								.map((s) => subnetsData.find((subnet) => subnet.id == s))
 								.filter((s) => s != undefined)
@@ -167,7 +157,6 @@
 									color: entities.getColorHelper('Subnet').color,
 									entityRef: entityRef('Subnet', s.id, s)
 								})),
->>>>>>> feat/actionable-entity-tags
 				emptyText: 'No subnet interfaces'
 			},
 			{ label: 'Tags', snippet: tagsSnippet }

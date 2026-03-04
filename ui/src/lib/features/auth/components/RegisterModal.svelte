@@ -232,41 +232,45 @@
 						</div>
 					{/if}
 
-					{#if hasOidcProviders}
-						<div class="space-y-2">
-							{#each oidcProviders as provider (provider.slug)}
-								<button
-									onclick={() => handleOidcRegister(provider.slug)}
-									disabled={enableTermsCheckbox && !form.state.values.terms_accepted}
-									type="button"
-									class="btn-secondary flex w-full items-center justify-center gap-3"
-								>
-									{#if provider.logo}
-										<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
-									{/if}
-									{auth_createAccountWith({ provider: provider.name })}
-								</button>
-							{/each}
-						</div>
+					<form.Subscribe selector={(state) => state.values.terms_accepted}>
+						{#snippet children(termsAccepted)}
+							{#if hasOidcProviders}
+								<div class="space-y-2">
+									{#each oidcProviders as provider (provider.slug)}
+										<button
+											onclick={() => handleOidcRegister(provider.slug)}
+											disabled={enableTermsCheckbox && !termsAccepted}
+											type="button"
+											class="btn-secondary flex w-full items-center justify-center gap-3"
+										>
+											{#if provider.logo}
+												<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
+											{/if}
+											{auth_createAccountWith({ provider: provider.name })}
+										</button>
+									{/each}
+								</div>
 
-						<div class="relative">
-							<div class="absolute inset-0 flex items-center">
-								<div class="w-full border-t border-gray-600"></div>
-							</div>
-							<div class="relative flex justify-center text-sm">
-								<span class="bg-gray-900 px-2 text-gray-400">{common_or()}</span>
-							</div>
-						</div>
-					{/if}
+								<div class="relative">
+									<div class="absolute inset-0 flex items-center">
+										<div class="w-full border-t border-gray-600"></div>
+									</div>
+									<div class="relative flex justify-center text-sm">
+										<span class="bg-gray-900 px-2 text-gray-400">{common_or()}</span>
+									</div>
+								</div>
+							{/if}
 
-					<button
-						type="button"
-						onclick={() => (subStep = 'email')}
-						disabled={enableTermsCheckbox && !form.state.values.terms_accepted}
-						class="btn-secondary w-full"
-					>
-						{auth_continueWithEmail()}
-					</button>
+							<button
+								type="button"
+								onclick={() => (subStep = 'email')}
+								disabled={enableTermsCheckbox && !termsAccepted}
+								class="btn-secondary w-full"
+							>
+								{auth_continueWithEmail()}
+							</button>
+						{/snippet}
+					</form.Subscribe>
 				</div>
 			{:else if subStep === 'email'}
 				<!-- Sub-step: Email -->

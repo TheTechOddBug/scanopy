@@ -12,7 +12,6 @@
 	import PasswordGate from './PasswordGate.svelte';
 	import ReadOnlyTopologyViewer from './ReadOnlyTopologyViewer.svelte';
 	import { AlertTriangle } from 'lucide-svelte';
-	import { getMetadata } from '$lib/shared/stores/metadata';
 	interface Props {
 		shareId: string | undefined;
 		isEmbed?: boolean;
@@ -27,7 +26,6 @@
 	let passwordVerified = $state(false);
 
 	onMount(async () => {
-		await getMetadata();
 		await loadShare();
 	});
 

@@ -5,7 +5,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { discoverySSEManager } from '$lib/features/discovery/queries';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
-	import { getMetadata } from '$lib/shared/stores/metadata';
+
 	import { topologySSEManager } from '$lib/features/topology/queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import BillingPlanModal from '$lib/features/billing/BillingPlanModal.svelte';
@@ -96,9 +96,6 @@
 	async function initializeApp() {
 		if (dataLoadingStarted) return;
 		dataLoadingStarted = true;
-
-		// Load metadata (static config) - required before components render
-		await getMetadata();
 
 		// Connect SSE managers for real-time updates
 		topologySSEManager.connect();

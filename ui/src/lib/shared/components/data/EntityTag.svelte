@@ -65,6 +65,7 @@
 	function handleClick(e: MouseEvent) {
 		e.stopPropagation();
 		e.preventDefault();
+		if (disabled) return;
 		isHovered = false;
 		navigateToEntity(entityRef.entityType, entityRef.entityId, entityRef.data);
 	}

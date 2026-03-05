@@ -50,7 +50,7 @@
 <div class="space-y-6">
 	<DocsHint
 		text={common_documentation()}
-		href="https://scanopy.net/docs/daemon-configuration/"
+		href="https://scanopy.net/docs/reference/daemon-configuration/"
 		linkText={common_documentationLinkText()}
 	/>
 

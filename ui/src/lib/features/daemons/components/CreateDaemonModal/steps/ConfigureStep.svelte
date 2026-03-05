@@ -3,6 +3,7 @@
 	import type { FormValue } from '$lib/shared/components/forms/validators';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import DocsHint from '$lib/shared/components/feedback/DocsHint.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
@@ -25,6 +26,8 @@
 		daemons_config_portHelpServerPoll,
 		daemons_networkCannotChange,
 		daemons_portForwardingHint,
+		daemons_docsPollingMode,
+		daemons_docsPollingModeLinkText,
 		daemons_httpDaemonUrlWarning
 	} from '$lib/paraglide/messages';
 
@@ -142,6 +145,12 @@
 			/>
 		{/snippet}
 	</form.Field>
+
+	<DocsHint
+		text={daemons_docsPollingMode()}
+		href="https://scanopy.net/docs/setting-up-daemons/planning-daemon-deployment/#choosing-a-polling-mode"
+		linkText={daemons_docsPollingModeLinkText()}
+	/>
 
 	<!-- Server Poll: URL + Port side-by-side with port forwarding hint -->
 	{#if isServerPoll}

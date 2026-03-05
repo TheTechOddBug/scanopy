@@ -258,8 +258,7 @@
 	function formatSeatAddonPricing(plan: BillingPlan): string {
 		if (plan.seat_cents) {
 			const monthly = plan.rate === 'Year' ? plan.seat_cents / 12 : plan.seat_cents;
-			const included = plan.included_seats != null ? `${plan.included_seats} included, ` : '';
-			return `${included}+$${monthly / 100} / seat / mo`;
+			return `+$${monthly / 100} / seat / mo`;
 		}
 		return '';
 	}
@@ -267,8 +266,7 @@
 	function formatNetworkAddonPricing(plan: BillingPlan): string {
 		if (plan.network_cents) {
 			const monthly = plan.rate === 'Year' ? plan.network_cents / 12 : plan.network_cents;
-			const included = plan.included_networks != null ? `${plan.included_networks} included, ` : '';
-			return `${included}+$${monthly / 100} / network / mo`;
+			return `+$${monthly / 100} / network / mo`;
 		}
 		return '';
 	}
@@ -276,8 +274,7 @@
 	function formatHostAddonPricing(plan: BillingPlan): string {
 		if (plan.host_cents) {
 			const monthly = plan.rate === 'Year' ? plan.host_cents / 12 : plan.host_cents;
-			const included = plan.included_hosts != null ? `${plan.included_hosts} included, ` : '';
-			return `${included}+$${monthly / 100} / host / mo`;
+			return `+$${monthly / 100} / host / mo`;
 		}
 		return '';
 	}

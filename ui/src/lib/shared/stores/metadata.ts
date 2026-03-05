@@ -1,6 +1,16 @@
 import { writable, get } from 'svelte/store';
-import { apiClient } from '$lib/api/client';
 import type { components } from '$lib/api/schema';
+import serviceDefinitionsJson from '$lib/data/service-definitions.json';
+import subnetTypesJson from '$lib/data/subnet-types.json';
+import edgeTypesJson from '$lib/data/edge-types.json';
+import groupTypesJson from '$lib/data/group-types.json';
+import entitiesJson from '$lib/data/entities.json';
+import portsJson from '$lib/data/ports.json';
+import discoveryTypesJson from '$lib/data/discovery-types.json';
+import billingPlansJson from '$lib/data/billing-plans.json';
+import featuresJson from '$lib/data/features.json';
+import permissionsJson from '$lib/data/permissions.json';
+import conceptsJson from '$lib/data/concepts.json';
 import {
 	createColorHelper,
 	createIconComponent,
@@ -107,7 +117,19 @@ export interface PortTypeMetadata {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface DiscoveryTypeMetadata {}
 
-export const metadata = writable<MetadataRegistry>();
+export const metadata = writable<MetadataRegistry>({
+	service_definitions: serviceDefinitionsJson,
+	subnet_types: subnetTypesJson,
+	edge_types: edgeTypesJson,
+	group_types: groupTypesJson,
+	entities: entitiesJson,
+	ports: portsJson,
+	discovery_types: discoveryTypesJson,
+	billing_plans: billingPlansJson,
+	features: featuresJson,
+	permissions: permissionsJson,
+	concepts: conceptsJson
+} as unknown as MetadataRegistry);
 
 // Shared color helper functions that work for both TypeMetadata and EntityMetadata
 function createSharedHelpers<T extends keyof MetadataRegistry>(category: T) {
@@ -323,11 +345,4 @@ export function createStaticHelpers<M>(items: StaticMetadataItem[]) {
 			return createColorHelper((item?.color as Color) ?? null);
 		}
 	};
-}
-
-export async function getMetadata() {
-	const { data } = await apiClient.GET('/api/metadata', {});
-	if (data?.success && data.data) {
-		metadata.set(data.data as MetadataRegistry);
-	}
 }

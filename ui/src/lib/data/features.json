@@ -3,7 +3,7 @@
 		"id": "share_views",
 		"name": "Shareable Diagrams",
 		"description": "Share live network diagrams with others",
-		"category": "Sharing",
+		"category": "Visualization",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -51,7 +51,7 @@
 		"id": "remove_created_with",
 		"name": "Remove Watermark",
 		"description": "Remove 'Created using scanopy.net' in bottom right corner of exported images",
-		"category": "Sharing",
+		"category": "Visualization",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -159,7 +159,7 @@
 		"id": "embeds",
 		"name": "Embeddable Diagrams",
 		"description": "Embed live network diagrams in wikis, dashboards, or documentation",
-		"category": "Sharing",
+		"category": "Visualization",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -171,7 +171,7 @@
 		"id": "network_discovery",
 		"name": "Network Discovery",
 		"description": "Automatically discover hosts, services, and connections on your network",
-		"category": "Core",
+		"category": "Discovery",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -183,7 +183,7 @@
 		"id": "topology_visualization",
 		"name": "Topology Visualization",
 		"description": "Interactive network topology maps with automatic layout",
-		"category": "Core",
+		"category": "Visualization",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -195,7 +195,7 @@
 		"id": "diagram_export",
 		"name": "Diagram Export",
 		"description": "Export network diagrams as high-resolution PNG or SVG images",
-		"category": "Core",
+		"category": "Visualization",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -207,7 +207,7 @@
 		"id": "host_inventory",
 		"name": "Host Inventory",
 		"description": "Searchable inventory of all discovered hosts and their details",
-		"category": "Core",
+		"category": "Visualization",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -219,7 +219,7 @@
 		"id": "scheduled_discovery",
 		"name": "Scheduled Discovery",
 		"description": "Schedule automatic network discovery scans",
-		"category": "Core",
+		"category": "Discovery",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -231,7 +231,7 @@
 		"id": "daemon_poll",
 		"name": "No Port Forwarding",
 		"description": "Run network scans without opening inbound ports or configuring port forwarding",
-		"category": "Core",
+		"category": "Discovery",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -243,7 +243,7 @@
 		"id": "service_definitions",
 		"name": "200+ Service Definitions",
 		"description": "Auto-detect databases, containers, web servers, and more",
-		"category": "Core",
+		"category": "Discovery",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -253,9 +253,9 @@
 	},
 	{
 		"id": "docker_integration",
-		"name": "Docker Integration",
+		"name": "Docker Discovery",
 		"description": "Automatic discovery of containerized services",
-		"category": "Core",
+		"category": "Discovery",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {
@@ -265,9 +265,21 @@
 	},
 	{
 		"id": "snmp_integration",
-		"name": "SNMP Integration",
+		"name": "SNMP Discovery",
 		"description": "Query network devices for hardware, port, and performance details via SNMP",
-		"category": "Core",
+		"category": "Discovery",
+		"icon": "sparkle",
+		"color": "Gray",
+		"metadata": {
+			"is_coming_soon": false,
+			"minimum_plan": "Free"
+		}
+	},
+	{
+		"id": "csv_export",
+		"name": "CSV Export",
+		"description": "Download host, service, and network data as CSV for use in spreadsheets and other tools",
+		"category": "Integrations",
 		"icon": "sparkle",
 		"color": "Gray",
 		"metadata": {

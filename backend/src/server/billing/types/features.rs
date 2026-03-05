@@ -204,7 +204,7 @@ impl TypeMetadataProvider for Feature {
                 "Interactive network topology maps with automatic layout"
             }
             Feature::DiagramExport => {
-                "Export network diagrams as high-resolution PNG or SVG images"
+                "Export network diagrams as high-resolution PNG images"
             }
             Feature::HostInventory => {
                 "Searchable inventory of all discovered hosts and their details"

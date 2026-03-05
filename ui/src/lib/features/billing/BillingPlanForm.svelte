@@ -555,7 +555,9 @@
 					<div class="flex-1 py-4">
 						{#if prevTier}
 							<p class="text-secondary mb-4 text-xs font-medium">
-								Everything in <span class="text-primary">{billingPlanHelpers.getName(prevTier)}</span>, plus:
+								Everything in <span class="text-primary"
+									>{billingPlanHelpers.getName(prevTier)}</span
+								>, plus:
 							</p>
 						{:else if plan.type !== 'Free' && incrementalFeatures.length > 0}
 							<p class="text-tertiary mb-2 text-xs">Key features:</p>

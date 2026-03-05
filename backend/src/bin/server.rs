@@ -310,7 +310,9 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
-    let public_share_app = public_share_app.layer(public_cors);
+    let public_share_app = public_share_app
+        .layer(public_cors)
+        .layer(cache_headers.clone());
 
     // Permissive CORS for health check (marketing site, uptime monitors, etc.)
     let health_cors = CorsLayer::new()

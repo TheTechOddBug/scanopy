@@ -15,6 +15,8 @@
 	import PlanInquiryModal from '$lib/features/billing/PlanInquiryModal.svelte';
 	import { storeEventForAfterRedirect } from '$lib/shared/utils/analytics';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
+	import { useQueryClient } from '@tanstack/svelte-query';
+	import { queryKeys } from '$lib/api/query-client';
 
 	let {
 		isOpen = false,
@@ -78,6 +80,7 @@
 	);
 
 	// Mutations
+	const queryClient = useQueryClient();
 	const checkoutMutation = useCheckoutMutation();
 
 	// Determine initial filter based on use case from onboarding
@@ -107,7 +110,8 @@
 				// First-time checkout: redirect to Stripe
 				window.location.href = result;
 			} else {
-				// Plan change: already done via subscription update, close modal
+				// Plan activated directly — wait for org data to refresh so needsPlanSelection updates
+				await queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
 				onClose();
 			}
 		} catch {

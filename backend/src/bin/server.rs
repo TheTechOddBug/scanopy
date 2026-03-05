@@ -278,7 +278,7 @@ async fn main() -> anyhow::Result<()> {
                 request_logging_middleware,
             ))
             .layer(Extension(app_cache))
-            .layer(cache_headers)
+            .layer(cache_headers.clone())
             .layer(content_type_options)
             .layer(referrer_policy)
             .layer(csp),

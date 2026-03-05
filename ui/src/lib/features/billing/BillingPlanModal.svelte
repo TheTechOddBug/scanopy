@@ -18,7 +18,6 @@
 	import { upgradeContext } from '$lib/features/billing/stores';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { queryKeys } from '$lib/api/query-client';
-	import type { Organization } from '$lib/features/organizations/types';
 
 	let {
 		isOpen = false,
@@ -138,17 +137,9 @@
 				// First-time checkout: redirect to Stripe
 				window.location.href = result;
 			} else {
-				// Plan activated directly (Free or trial) — optimistically update org cache
-				// so needsPlanSelection flips to false and the modal closes.
-				// The webhook will overwrite with canonical data when it arrives.
-				queryClient.setQueryData<Organization>(queryKeys.organizations.current(), (old) => {
-					if (!old) return old;
-					return {
-						...old,
-						plan: plan as unknown as Organization['plan'],
-						plan_status: plan.trial_days > 0 ? 'trialing' : 'active'
-					};
-				});
+				// Plan activated directly (Free or trial) — refetch org so needsPlanSelection
+				// becomes false before we close the modal, preventing reactive reopening.
+				await queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
 				upgradeContext.set(null);
 				onClose();
 			}

@@ -275,16 +275,6 @@
 			{:else if subStep === 'email'}
 				<!-- Sub-step: Email -->
 				<div class="space-y-6">
-					<button
-						type="button"
-						onclick={() => {
-							subStep = 'method';
-							emailError = null;
-						}}
-						class="text-link text-sm hover:underline"
-					>
-						&larr; Back
-					</button>
 					<form.Field
 						name="email"
 						validators={{
@@ -360,9 +350,21 @@
 		<div class="modal-footer">
 			<div class="flex w-full flex-col gap-4">
 				{#if subStep === 'email'}
-					<button type="submit" disabled={checkingEmail} class="btn-primary w-full">
-						{checkingEmail ? 'Checking...' : common_continue()}
-					</button>
+					<div class="flex gap-3">
+						<button
+							type="button"
+							onclick={() => {
+								subStep = 'method';
+								emailError = null;
+							}}
+							class="btn-secondary"
+						>
+							Back
+						</button>
+						<button type="submit" disabled={checkingEmail} class="btn-primary flex-1">
+							{checkingEmail ? 'Checking...' : common_continue()}
+						</button>
+					</div>
 				{:else if subStep === 'password'}
 					<button type="submit" disabled={registering} class="btn-primary w-full">
 						{registering ? auth_creatingAccount() : auth_createAccount()}

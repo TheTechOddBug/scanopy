@@ -47,13 +47,6 @@
 		(needsPlanSelection && !planJustActivated) || $modalState.name === 'billing-plan'
 	);
 
-	// Reset planJustActivated once org data confirms the plan is active
-	$effect(() => {
-		if (planJustActivated && organization && isBillingPlanActive(organization)) {
-			planJustActivated = false;
-		}
-	});
-
 	let activeTab = $state(initialHash || 'home');
 	let appInitialized = $state(false);
 	let sidebarCollapsed = $state(false);

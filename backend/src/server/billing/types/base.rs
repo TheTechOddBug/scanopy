@@ -193,7 +193,6 @@ pub struct BillingPlanFeatures {
     pub daemon_poll: bool,
     pub service_definitions: bool,
     pub docker_integration: bool,
-    pub real_time_updates: bool,
     pub snmp_integration: bool,
 }
 
@@ -229,7 +228,8 @@ impl BillingPlan {
     pub fn is_commercial(&self) -> bool {
         matches!(
             self,
-            BillingPlan::Team(_)
+            BillingPlan::Pro(_)
+                | BillingPlan::Team(_)
                 | BillingPlan::Business(_)
                 | BillingPlan::Enterprise(_)
                 | BillingPlan::CommercialSelfHosted(_)
@@ -447,7 +447,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Free { .. } => BillingPlanFeatures {
@@ -473,7 +472,6 @@ impl BillingPlan {
                 daemon_poll: false,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Starter { .. } => BillingPlanFeatures {
@@ -499,7 +497,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Pro { .. } => BillingPlanFeatures {
@@ -525,7 +522,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Team { .. } => BillingPlanFeatures {
@@ -551,7 +547,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Business { .. } => BillingPlanFeatures {
@@ -577,7 +572,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Enterprise { .. } => BillingPlanFeatures {
@@ -603,7 +597,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Demo { .. } => BillingPlanFeatures {
@@ -629,7 +622,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::CommercialSelfHosted { .. } => BillingPlanFeatures {
@@ -655,7 +647,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
         }
@@ -690,7 +681,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             daemon_poll,
             service_definitions,
             docker_integration,
-            real_time_updates,
             snmp_integration,
         } = self;
 
@@ -782,10 +772,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             features.push(Feature::DockerIntegration)
         }
 
-        if real_time_updates {
-            features.push(Feature::RealTimeUpdates)
-        }
-
         if snmp_integration {
             features.push(Feature::SnmpIntegration)
         }
@@ -851,18 +837,14 @@ impl TypeMetadataProvider for BillingPlan {
                 "Community plan for individuals self-hosting Scanopy - full control over configuration and integrations"
             }
             BillingPlan::Free { .. } => {
-                "Get started with Scanopy — manual discovery for up to 25 hosts"
+                "Explore your network — discover and document up to 25 hosts"
             }
-            BillingPlan::Starter { .. } => {
-                "Automatically create living documentation of your network"
-            }
-            BillingPlan::Pro { .. } => "Visualize multiple networks and share network diagrams",
+            BillingPlan::Starter { .. } => "Living network documentation that updates itself",
+            BillingPlan::Pro { .. } => "For teams managing multiple networks",
             BillingPlan::Team { .. } => {
                 "Collaborate on infrastructure documentation with your team"
             }
-            BillingPlan::Business { .. } => {
-                "Manage multi-site and multi-customer documentation with advanced features"
-            }
+            BillingPlan::Business { .. } => "For MSPs and multi-site IT teams",
             BillingPlan::Enterprise { .. } => {
                 "Fully managed Scanopy with dedicated support and custom deployment"
             }

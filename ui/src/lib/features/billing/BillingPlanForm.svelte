@@ -202,8 +202,8 @@
 		// Sort categories: Core first, Support/Enterprise/Licensing last
 		const sortedEntries = [...groups.entries()].sort(([a], [b]) => {
 			const order = [
-				'Core',
-				'Sharing',
+				'Discovery',
+				'Visualization',
 				'Integrations',
 				'Support',
 				'Enterprise',

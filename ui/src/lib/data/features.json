@@ -168,6 +168,54 @@
 		}
 	},
 	{
+		"id": "network_discovery",
+		"name": "Network Discovery",
+		"description": "Automatically discover hosts, services, and connections on your network",
+		"category": "Core",
+		"icon": "sparkle",
+		"color": "Gray",
+		"metadata": {
+			"is_coming_soon": false,
+			"minimum_plan": "Free"
+		}
+	},
+	{
+		"id": "topology_visualization",
+		"name": "Topology Visualization",
+		"description": "Interactive network topology maps with automatic layout",
+		"category": "Core",
+		"icon": "sparkle",
+		"color": "Gray",
+		"metadata": {
+			"is_coming_soon": false,
+			"minimum_plan": "Free"
+		}
+	},
+	{
+		"id": "diagram_export",
+		"name": "Diagram Export",
+		"description": "Export network diagrams as high-resolution PNG or SVG images",
+		"category": "Core",
+		"icon": "sparkle",
+		"color": "Gray",
+		"metadata": {
+			"is_coming_soon": false,
+			"minimum_plan": "Free"
+		}
+	},
+	{
+		"id": "host_inventory",
+		"name": "Host Inventory",
+		"description": "Searchable inventory of all discovered hosts and their details",
+		"category": "Core",
+		"icon": "sparkle",
+		"color": "Gray",
+		"metadata": {
+			"is_coming_soon": false,
+			"minimum_plan": "Free"
+		}
+	},
+	{
 		"id": "scheduled_discovery",
 		"name": "Scheduled Discovery",
 		"description": "Schedule automatic network discovery scans",
@@ -181,7 +229,7 @@
 	},
 	{
 		"id": "daemon_poll",
-		"name": "DaemonPoll Mode",
+		"name": "No Port Forwarding",
 		"description": "Daemon-initiated polling — no open ports required on the daemon",
 		"category": "Core",
 		"icon": "sparkle",

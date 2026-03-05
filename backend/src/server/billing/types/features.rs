@@ -26,6 +26,10 @@ pub enum Feature {
     PrioritySupport,
     Embeds,
     // Core features
+    NetworkDiscovery,
+    TopologyVisualization,
+    DiagramExport,
+    HostInventory,
     ScheduledDiscovery,
     DaemonPoll,
     ServiceDefinitions,
@@ -51,6 +55,10 @@ impl HasId for Feature {
             Feature::CommunitySupport => "community_support",
             Feature::PrioritySupport => "priority_support",
             Feature::ApiAccess => "api_access",
+            Feature::NetworkDiscovery => "network_discovery",
+            Feature::TopologyVisualization => "topology_visualization",
+            Feature::DiagramExport => "diagram_export",
+            Feature::HostInventory => "host_inventory",
             Feature::ScheduledDiscovery => "scheduled_discovery",
             Feature::DaemonPoll => "daemon_poll",
             Feature::ServiceDefinitions => "service_definitions",
@@ -103,7 +111,11 @@ impl EntityMetadataProvider for Feature {
 impl TypeMetadataProvider for Feature {
     fn category(&self) -> &'static str {
         match self {
-            Feature::ScheduledDiscovery
+            Feature::NetworkDiscovery
+            | Feature::TopologyVisualization
+            | Feature::DiagramExport
+            | Feature::HostInventory
+            | Feature::ScheduledDiscovery
             | Feature::DaemonPoll
             | Feature::ServiceDefinitions
             | Feature::DockerIntegration
@@ -143,8 +155,12 @@ impl TypeMetadataProvider for Feature {
             Feature::EmailSupport => "Email Support",
             Feature::CommunitySupport => "Community Support",
             Feature::PrioritySupport => "Priority Support",
+            Feature::NetworkDiscovery => "Network Discovery",
+            Feature::TopologyVisualization => "Topology Visualization",
+            Feature::DiagramExport => "Diagram Export",
+            Feature::HostInventory => "Host Inventory",
             Feature::ScheduledDiscovery => "Scheduled Discovery",
-            Feature::DaemonPoll => "DaemonPoll Mode",
+            Feature::DaemonPoll => "No Port Forwarding",
             Feature::ServiceDefinitions => "200+ Service Definitions",
             Feature::DockerIntegration => "Docker Integration",
             Feature::RealTimeUpdates => "Real-time Updates",
@@ -178,6 +194,18 @@ impl TypeMetadataProvider for Feature {
             Feature::Whitelabeling => "We deploy Scanopy to a custom domain with your branding",
             Feature::LiveChatSupport => "Access to the Scanopy team via live chat",
             Feature::CommunitySupport => "Community support via GitHub issues and discussions",
+            Feature::NetworkDiscovery => {
+                "Automatically discover hosts, services, and connections on your network"
+            }
+            Feature::TopologyVisualization => {
+                "Interactive network topology maps with automatic layout"
+            }
+            Feature::DiagramExport => {
+                "Export network diagrams as high-resolution PNG or SVG images"
+            }
+            Feature::HostInventory => {
+                "Searchable inventory of all discovered hosts and their details"
+            }
             Feature::ScheduledDiscovery => "Schedule automatic network discovery scans",
             Feature::DaemonPoll => {
                 "Daemon-initiated polling — no open ports required on the daemon"

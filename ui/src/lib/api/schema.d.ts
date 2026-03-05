@@ -2731,7 +2731,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.14.10"
+         *       "server_version": "0.14.11"
          *     }
          */
         ApiMeta: {
@@ -2742,7 +2742,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.14.10
+             * @example 0.14.11
              */
             server_version: string;
         };
@@ -2756,14 +2756,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-03-02T07:10:08.153238Z",
-             *       "id": "657a39ad-211e-452a-bb26-c5b18579f364",
+             *       "created_at": "2026-03-05T01:32:16.202893Z",
+             *       "id": "35b29934-af0c-4f85-8750-070ea79deced",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-03-02T07:10:08.153238Z"
+             *       "updated_at": "2026-03-05T01:32:16.202893Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3011,14 +3011,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-03-02T07:10:08.140150Z",
-             *               "id": "73dc6c64-2d21-47b0-a281-6d30cfdabec7",
+             *               "created_at": "2026-03-05T01:32:16.188293Z",
+             *               "id": "638ef07c-2b89-42e4-9675-c686fbfb78a4",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-03-02T07:10:08.140150Z"
+             *               "updated_at": "2026-03-05T01:32:16.188293Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3027,7 +3027,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "PeaNUT",
+             *           "service_definition": "Sonarr",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3300,14 +3300,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-03-02T07:10:08.149315Z",
-             *           "id": "e5d475de-7396-4673-9c64-34e65577ac95",
+             *           "created_at": "2026-03-05T01:32:16.198753Z",
+             *           "id": "994dccc1-dc8b-441d-b489-3a22f64a726c",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-03-02T07:10:08.149315Z"
+             *           "updated_at": "2026-03-05T01:32:16.198753Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3316,7 +3316,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "PeaNUT",
+             *       "service_definition": "Sonarr",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3619,14 +3619,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-03-02T07:10:08.140413Z",
-         *       "id": "da39a29a-abb8-4190-9330-5fbd9295a703",
+         *       "created_at": "2026-03-05T01:32:16.188503Z",
+         *       "id": "ce9e73b7-f250-41d8-bd18-96a2a5cc2f2b",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-03-02T07:10:08.140413Z"
+         *       "updated_at": "2026-03-05T01:32:16.188503Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3808,7 +3808,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "PeaNUT",
+         *           "service_definition": "Sonarr",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4451,14 +4451,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-03-02T07:10:08.139796Z",
-         *               "id": "ae0c7ad1-abdf-40c1-8cfa-2f8e6e0e384b",
+         *               "created_at": "2026-03-05T01:32:16.188012Z",
+         *               "id": "23f6039d-f135-44f4-a909-aba7deb3b0ac",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-03-02T07:10:08.139796Z"
+         *               "updated_at": "2026-03-05T01:32:16.188012Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4467,7 +4467,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "PeaNUT",
+         *           "service_definition": "Sonarr",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5021,7 +5021,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.14.10"
+         *       "server_version": "0.14.11"
          *     }
          */
         PaginatedApiMeta: {
@@ -5034,7 +5034,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.14.10
+             * @example 0.14.11
              */
             server_version: string;
         };
@@ -5456,14 +5456,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-03-02T07:10:08.140328Z",
-         *           "id": "799bf172-b24c-443c-afe9-dd44d61797b3",
+         *           "created_at": "2026-03-05T01:32:16.188430Z",
+         *           "id": "b124b051-20d1-4786-b1b6-8d1342f3fafc",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-03-02T07:10:08.140328Z"
+         *           "updated_at": "2026-03-05T01:32:16.188430Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5472,7 +5472,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "PeaNUT",
+         *       "service_definition": "Sonarr",
          *       "source": {
          *         "type": "Manual"
          *       },

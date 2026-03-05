@@ -117,7 +117,6 @@
 								label={tag.label}
 								color={tag.color}
 								icon={tag.icon ?? null}
-								disablePopover={true}
 							/>
 						{:else}
 							<Tag

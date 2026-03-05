@@ -8,6 +8,7 @@
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { useHostsQuery } from '$lib/features/hosts/queries';
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
+	import { useSnmpCredentialsQuery } from '$lib/features/snmp/queries';
 	import { formatDuration, formatTimestamp } from '$lib/shared/utils/formatting';
 	import type { TagProps } from '$lib/shared/components/data/types';
 	import { entityRef } from '$lib/shared/components/data/types';
@@ -17,12 +18,14 @@
 	const networksQuery = useNetworksQuery();
 	const hostsQuery = useHostsQuery({ limit: 0 });
 	const subnetsQuery = useSubnetsQuery();
+	const snmpCredentialsQuery = useSnmpCredentialsQuery();
 
 	// Derived data
 	let daemonsData = $derived(daemonsQuery.data ?? []);
 	let networksData = $derived(networksQuery.data ?? []);
 	let hostsData = $derived(hostsQuery.data?.items ?? []);
 	let subnetsData = $derived(subnetsQuery.data ?? []);
+	let snmpCredentialsData = $derived(snmpCredentialsQuery.data ?? []);
 
 	let {
 		viewMode,
@@ -73,7 +76,9 @@
 							id: network.id,
 							label: network.name,
 							color: entities.getColorHelper('Network').color,
-							entityRef: entityRef('Network', network.id, network)
+							entityRef: entityRef('Network', network.id, network, {
+								snmpCredentials: snmpCredentialsData
+							})
 						}
 					];
 				})()

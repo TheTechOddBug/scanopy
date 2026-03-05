@@ -1,17 +1,40 @@
 <script lang="ts" context="module">
 	import { entities } from '$lib/shared/stores/metadata';
+	import { entityRef } from '$lib/shared/components/data/types';
+	import type { SnmpCredential } from '$lib/features/snmp/types/base';
 
-	export const NetworkDisplay: EntityDisplayComponent<Network, object> = {
+	export interface NetworkDisplayContext {
+		snmpCredentials?: SnmpCredential[];
+	}
+
+	export const NetworkDisplay: EntityDisplayComponent<Network, NetworkDisplayContext> = {
 		getId: (network: Network) => network.id,
 		getLabel: (network: Network) => network.name,
-		getDescription: (network: Network) => (network.snmp_credential_id ? 'SNMP Enabled' : ''),
+		getDescription: (network: Network, context: NetworkDisplayContext) => {
+			if (network.snmp_credential_id) {
+				const creds = context?.snmpCredentials ?? [];
+				const cred = creds.find((c) => c.id === network.snmp_credential_id);
+				if (cred) return `SNMP: ${cred.name}`;
+				return 'SNMP Enabled';
+			}
+			return 'No SNMP credential';
+		},
 		getIcon: () => entities.getIconComponent('Network'),
 		getIconColor: () => entities.getColorHelper('Network').icon,
-		getTags: (network: Network) => {
-			if (network.snmp_credential_id) {
-				return [{ label: 'SNMP', color: entities.getColorHelper('SnmpCredential').color }];
+		getTags: (network: Network, context: NetworkDisplayContext) => {
+			if (!network.snmp_credential_id) return [];
+			const creds = context?.snmpCredentials ?? [];
+			const cred = creds.find((c) => c.id === network.snmp_credential_id);
+			if (cred) {
+				return [
+					{
+						label: cred.name,
+						color: entities.getColorHelper('SnmpCredential').color,
+						entityRef: entityRef('SnmpCredential', cred.id, cred)
+					}
+				];
 			}
-			return [];
+			return [{ label: 'SNMP', color: entities.getColorHelper('SnmpCredential').color }];
 		},
 		getCategory: () => null
 	};
@@ -23,7 +46,7 @@
 	import type { Network } from '$lib/features/networks/types';
 
 	export let item: Network;
-	export let context = {};
+	export let context: NetworkDisplayContext = {};
 </script>
 
 <ListSelectItem {item} {context} displayComponent={NetworkDisplay} />

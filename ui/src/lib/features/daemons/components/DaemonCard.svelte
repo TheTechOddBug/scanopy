@@ -111,11 +111,32 @@
 		fields: [
 			{
 				label: 'Network',
-				value: networksData.find((n) => n.id == daemon.network_id)?.name || 'Unknown Network'
+				value: (() => {
+					const network = networksData.find((n) => n.id == daemon.network_id);
+					if (!network) return 'Unknown Network';
+					return [
+						{
+							id: network.id,
+							label: network.name,
+							color: entities.getColorHelper('Network').color,
+							entityRef: entityRef('Network', network.id, network)
+						}
+					];
+				})()
 			},
 			{
 				label: 'Host',
-				value: host ? host.name : 'Unknown Host'
+				value: (() => {
+					if (!host) return 'Unknown Host';
+					return [
+						{
+							id: host.id,
+							label: host.name,
+							color: entities.getColorHelper('Host').color,
+							entityRef: entityRef('Host', host.id, host)
+						}
+					];
+				})()
 			},
 			{
 				label: 'Version',
@@ -133,7 +154,14 @@
 				? [
 						{
 							label: 'API Key',
-							value: linkedApiKey.name
+							value: [
+								{
+									id: linkedApiKey.id,
+									label: linkedApiKey.name,
+									color: entities.getColorHelper('DaemonApiKey').color,
+									entityRef: entityRef('DaemonApiKey', linkedApiKey.id, linkedApiKey)
+								}
+							]
 						}
 					]
 				: [

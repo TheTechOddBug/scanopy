@@ -1,7 +1,6 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities, permissions } from '$lib/shared/stores/metadata';
-	import { entities } from '$lib/shared/stores/metadata';
 	import { entityRef } from '$lib/shared/components/data/types';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { Edit, Trash2 } from 'lucide-svelte';

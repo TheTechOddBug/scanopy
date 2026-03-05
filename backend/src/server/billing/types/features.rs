@@ -1,3 +1,5 @@
+use crate::server::billing::types::base::BillingPlanDiscriminants;
+use crate::server::billing::types::base::Hosting;
 use crate::server::shared::types::metadata::EntityMetadataProvider;
 use crate::server::shared::types::metadata::HasId;
 use crate::server::shared::types::metadata::TypeMetadataProvider;
@@ -6,6 +8,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use strum::Display;
 use strum::EnumIter;
+use strum::IntoDiscriminant;
+use strum::IntoEnumIterator;
 use strum::IntoStaticStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumIter, IntoStaticStr, Display, Default)]
@@ -25,13 +29,12 @@ pub enum Feature {
     LiveChatSupport,
     PrioritySupport,
     Embeds,
-    // Core features
     ScheduledDiscovery,
     DaemonPoll,
+    // Core features
     ServiceDefinitions,
     DockerIntegration,
     SnmpIntegration,
-    RealTimeUpdates,
 }
 
 impl HasId for Feature {
@@ -55,7 +58,6 @@ impl HasId for Feature {
             Feature::DaemonPoll => "daemon_poll",
             Feature::ServiceDefinitions => "service_definitions",
             Feature::DockerIntegration => "docker_integration",
-            Feature::RealTimeUpdates => "real_time_updates",
             Feature::SnmpIntegration => "snmp_integration",
         }
     }
@@ -68,17 +70,10 @@ impl Feature {
 
     /// Returns the ID of the lowest-tier cloud plan that includes this feature.
     pub fn minimum_plan(&self) -> Option<&'static str> {
-        use super::base::{BillingPlan, BillingPlanDiscriminants};
+        use super::base::{BillingPlan};
 
         let feature_id = self.id();
-        let cloud_tiers = [
-            BillingPlanDiscriminants::Free,
-            BillingPlanDiscriminants::Starter,
-            BillingPlanDiscriminants::Pro,
-            BillingPlanDiscriminants::Team,
-            BillingPlanDiscriminants::Business,
-            BillingPlanDiscriminants::Enterprise,
-        ];
+        let cloud_tiers: Vec<BillingPlanDiscriminants> = BillingPlan::iter().filter_map(|p| if p.hosting() == Hosting::Cloud { Some(p.discriminant())} else {None}).collect();
 
         for disc in &cloud_tiers {
             if let Some(plan) = BillingPlan::default_for_discriminant(*disc)
@@ -108,8 +103,7 @@ impl TypeMetadataProvider for Feature {
             | Feature::DaemonPoll
             | Feature::ServiceDefinitions
             | Feature::DockerIntegration
-            | Feature::SnmpIntegration
-            | Feature::RealTimeUpdates => "Core",
+            | Feature::SnmpIntegration => "Core",
 
             Feature::CommunitySupport
             | Feature::EmailSupport
@@ -146,9 +140,8 @@ impl TypeMetadataProvider for Feature {
             Feature::PrioritySupport => "Priority Support",
             Feature::ScheduledDiscovery => "Scheduled Discovery",
             Feature::DaemonPoll => "DaemonPoll Mode",
-            Feature::ServiceDefinitions => "200+ Service Definitions",
+            Feature::ServiceDefinitions => "Auto-Detect 200+ Services",
             Feature::DockerIntegration => "Docker Integration",
-            Feature::RealTimeUpdates => "Real-time Updates",
             Feature::SnmpIntegration => "SNMP Integration",
         }
     }
@@ -181,13 +174,12 @@ impl TypeMetadataProvider for Feature {
             Feature::CommunitySupport => "Community support via GitHub issues and discussions",
             Feature::ScheduledDiscovery => "Schedule automatic network discovery scans",
             Feature::DaemonPoll => {
-                "Daemon-initiated polling — no open ports required on the daemon"
+                "Run daemons without opening or forwarding ports on the host's network"
             }
             Feature::ServiceDefinitions => {
                 "Auto-detect databases, containers, web servers, and more"
             }
             Feature::DockerIntegration => "Automatic discovery of containerized services",
-            Feature::RealTimeUpdates => "Live topology updates as your network changes",
             Feature::SnmpIntegration => "Query network devices for interface and hardware details",
         }
     }

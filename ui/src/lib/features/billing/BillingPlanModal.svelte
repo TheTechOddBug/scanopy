@@ -161,7 +161,7 @@
 	{isOpen}
 	title=""
 	{name}
-	onClose={dismissible ? handleClose : null}
+	onClose={dismissible ? () => { upgradeContext.set(null); onClose(); } : null}
 	size="full"
 	preventCloseOnClickOutside={!dismissible}
 	showCloseButton={false}

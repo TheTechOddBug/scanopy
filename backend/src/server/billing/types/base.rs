@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::Hash;
 use stripe_product::price::CreatePriceRecurringInterval;
-use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use strum::{Display, EnumDiscriminants, EnumIter, IntoDiscriminant, IntoEnumIterator, IntoStaticStr};
 use utoipa::ToSchema;
 
 #[derive(
@@ -185,7 +185,6 @@ pub struct BillingPlanFeatures {
     pub daemon_poll: bool,
     pub service_definitions: bool,
     pub docker_integration: bool,
-    pub real_time_updates: bool,
     pub snmp_integration: bool,
 }
 
@@ -268,28 +267,16 @@ impl BillingPlan {
         }
     }
 
-    pub fn discriminant(&self) -> BillingPlanDiscriminants {
-        BillingPlanDiscriminants::from(self)
-    }
-
     /// Returns the next-lower-tier cloud plan, if this is a cloud plan.
     /// Returns None for Free (no previous) and self-hosted/demo plans.
     pub fn previous_tier(&self) -> Option<BillingPlanDiscriminants> {
-        let cloud_tiers: Vec<BillingPlanDiscriminants> = vec![
-            BillingPlanDiscriminants::Free,
-            BillingPlanDiscriminants::Starter,
-            BillingPlanDiscriminants::Pro,
-            BillingPlanDiscriminants::Team,
-            BillingPlanDiscriminants::Business,
-            BillingPlanDiscriminants::Enterprise,
-        ];
-
-        let my_disc = self.discriminant();
-        let idx = cloud_tiers.iter().position(|d| *d == my_disc)?;
+        let cloud_plans: Vec<BillingPlanDiscriminants> = BillingPlan::iter().filter_map(|p| if p.hosting() == Hosting::Cloud {Some(p.discriminant())} else {None}).collect();
+        
+        let idx = cloud_plans.iter().position(|d| *d == self.discriminant())?;
         if idx == 0 {
             return None;
         }
-        Some(cloud_tiers[idx - 1])
+        Some(cloud_plans[idx - 1])
     }
 
     /// Returns feature IDs added by this plan over its previous tier.
@@ -436,7 +423,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Free { .. } => BillingPlanFeatures {
@@ -458,7 +444,6 @@ impl BillingPlan {
                 daemon_poll: false,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Starter { .. } => BillingPlanFeatures {
@@ -480,7 +465,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Pro { .. } => BillingPlanFeatures {
@@ -502,7 +486,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Team { .. } => BillingPlanFeatures {
@@ -524,7 +507,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Business { .. } => BillingPlanFeatures {
@@ -546,7 +528,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Enterprise { .. } => BillingPlanFeatures {
@@ -568,7 +549,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::Demo { .. } => BillingPlanFeatures {
@@ -590,7 +570,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
             BillingPlan::CommercialSelfHosted { .. } => BillingPlanFeatures {
@@ -612,7 +591,6 @@ impl BillingPlan {
                 daemon_poll: true,
                 service_definitions: true,
                 docker_integration: true,
-                real_time_updates: true,
                 snmp_integration: true,
             },
         }
@@ -643,7 +621,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             daemon_poll,
             service_definitions,
             docker_integration,
-            real_time_updates,
             snmp_integration,
         } = self;
 
@@ -717,10 +694,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
 
         if docker_integration {
             features.push(Feature::DockerIntegration)
-        }
-
-        if real_time_updates {
-            features.push(Feature::RealTimeUpdates)
         }
 
         if snmp_integration {

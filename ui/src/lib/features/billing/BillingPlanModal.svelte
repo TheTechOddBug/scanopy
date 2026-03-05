@@ -16,6 +16,8 @@
 	import { storeEventForAfterRedirect } from '$lib/shared/utils/analytics';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import { upgradeContext } from '$lib/features/billing/stores';
+	import { useQueryClient } from '@tanstack/svelte-query';
+	import { queryKeys } from '$lib/api/query-client';
 
 	let {
 		isOpen = false,
@@ -28,11 +30,6 @@
 		onClose: () => void;
 		name?: string;
 	} = $props();
-
-	function handleClose() {
-		upgradeContext.set(null);
-		onClose();
-	}
 
 	// Create helpers from static fixtures (no API calls needed)
 	const billingPlanHelpers = createStaticHelpers<BillingPlanMetadata>(billingPlansJson);
@@ -84,6 +81,7 @@
 	);
 
 	// Mutations
+	const queryClient = useQueryClient();
 	const checkoutMutation = useCheckoutMutation();
 
 	// Determine initial filter based on use case from onboarding
@@ -135,8 +133,10 @@
 				// First-time checkout: redirect to Stripe
 				window.location.href = result;
 			} else {
-				// Plan change: already done via subscription update, close modal
-				handleClose();
+				// Plan activated directly — wait for org data to refresh so needsPlanSelection updates
+				await queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
+				upgradeContext.set(null);
+				onClose();
 			}
 		} catch {
 			// Error handled by mutation

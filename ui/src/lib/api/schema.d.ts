@@ -2465,6 +2465,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topology/{id}/export/confluence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export topology as Confluence wiki markup */
+        get: operations["export_confluence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topology/{id}/export/mermaid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export topology as Mermaid flowchart */
+        get: operations["export_mermaid"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topology/{id}/lock": {
         parameters: {
             query?: never;
@@ -2753,14 +2787,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-03-06T00:09:46.757830Z",
-             *       "id": "95ed7fcf-f975-4072-bc9d-dac94d91064f",
+             *       "created_at": "2026-03-06T03:44:42.652404Z",
+             *       "id": "3a5bf462-8f34-4536-84e0-024c2dceafe7",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-03-06T00:09:46.757830Z"
+             *       "updated_at": "2026-03-06T03:44:42.652404Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3008,14 +3042,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-03-06T00:09:46.737765Z",
-             *               "id": "bc3a1a64-a910-45ff-84d4-796d54f747d1",
+             *               "created_at": "2026-03-06T03:44:42.634468Z",
+             *               "id": "a00faadb-2961-4ec1-934d-595ead58489f",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-03-06T00:09:46.737765Z"
+             *               "updated_at": "2026-03-06T03:44:42.634468Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3024,7 +3058,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Sonarr",
+             *           "service_definition": "NTP Server",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3280,14 +3314,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-03-06T00:09:46.752518Z",
-             *           "id": "866b7259-4b4b-4938-a814-aabb5f5575df",
+             *           "created_at": "2026-03-06T03:44:42.647360Z",
+             *           "id": "cc999907-1595-4ed7-a7c1-f567cb1e089d",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-03-06T00:09:46.752518Z"
+             *           "updated_at": "2026-03-06T03:44:42.647360Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3296,7 +3330,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Sonarr",
+             *       "service_definition": "NTP Server",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3599,14 +3633,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-03-06T00:09:46.738031Z",
-         *       "id": "8ae69caa-08f1-43d8-a452-446437011356",
+         *       "created_at": "2026-03-06T03:44:42.634670Z",
+         *       "id": "d1830da5-bb9c-41be-a76a-94d0d95b0a08",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-03-06T00:09:46.738031Z"
+         *       "updated_at": "2026-03-06T03:44:42.634670Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3788,7 +3822,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Sonarr",
+         *           "service_definition": "NTP Server",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3911,7 +3945,7 @@ export interface components {
             name: string;
             /** Format: uuid */
             network_id: string;
-            /** @description Whether the daemon is on standby due to plan restrictions (DaemonPoll on Free plan). */
+            /** @description Whether the daemon is on standby due to inactivity (no discovery in 30 days). */
             readonly standby?: boolean;
             tags: string[];
             readonly url: string;
@@ -4354,7 +4388,7 @@ export interface components {
          * @description Fields that hosts can be ordered/grouped by.
          * @enum {string}
          */
-        HostOrderField: "created_at" | "name" | "hostname" | "updated_at" | "virtualized_by" | "network_id";
+        HostOrderField: "created_at" | "name" | "hostname" | "updated_at" | "virtualized_by" | "network_id" | "interface_ip";
         /**
          * @description Response type for host endpoints.
          *     Includes children (interfaces, ports, services, if_entries).
@@ -4426,14 +4460,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-03-06T00:09:46.737435Z",
-         *               "id": "4ac732a2-3040-4d7e-b990-57e0b75906cb",
+         *               "created_at": "2026-03-06T03:44:42.634203Z",
+         *               "id": "9ad158ed-8abc-4369-9b2b-151cf2d399f3",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-03-06T00:09:46.737435Z"
+         *               "updated_at": "2026-03-06T03:44:42.634203Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4442,7 +4476,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Sonarr",
+         *           "service_definition": "NTP Server",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5420,14 +5454,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-03-06T00:09:46.737946Z",
-         *           "id": "8b0184db-c723-4130-a9be-802b1626458d",
+         *           "created_at": "2026-03-06T03:44:42.634603Z",
+         *           "id": "663c61e0-39fc-4e21-a4ba-01a25a0667d3",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-03-06T00:09:46.737946Z"
+         *           "updated_at": "2026-03-06T03:44:42.634603Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5436,7 +5470,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Sonarr",
+         *       "service_definition": "NTP Server",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -11916,6 +11950,88 @@ export interface operations {
                 };
             };
             /** @description Topology or edge not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    export_confluence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Topology ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confluence wiki markup export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Topology not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    export_mermaid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Topology ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mermaid flowchart export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
+                };
+            };
+            /** @description Access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Topology not found */
             404: {
                 headers: {
                     [name: string]: unknown;

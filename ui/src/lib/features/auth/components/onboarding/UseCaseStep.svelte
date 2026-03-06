@@ -10,6 +10,7 @@
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { required } from '$lib/shared/components/forms/validators';
+	import { validateForm } from '$lib/shared/components/forms/form-context';
 	import {
 		auth_scanopyLogo,
 		common_continue,
@@ -86,9 +87,6 @@
 		defaultValues: {
 			referralSource: '',
 			referralSourceOther: ''
-		},
-		onSubmit: () => {
-			submitAndProceed();
 		}
 	}));
 
@@ -151,13 +149,13 @@
 		onNext();
 	}
 
-	function handleContinue() {
+	async function handleContinue() {
 		if (!selectedUseCase) return;
 		if (showCloudFields) {
-			form.handleSubmit();
-		} else {
-			submitAndProceed();
+			const isValid = await validateForm(form);
+			if (!isValid) return;
 		}
+		submitAndProceed();
 	}
 
 	let canProceed = $derived(selectedUseCase !== null && !showLicenseWarning);
@@ -218,7 +216,7 @@
 							<form.Field
 								name="referralSource"
 								validators={{
-									onChange: ({ value }) => required(value)
+									onBlur: ({ value }) => required(value)
 								}}
 							>
 								{#snippet children(field)}
@@ -234,8 +232,6 @@
 											<form.Field
 												name="referralSourceOther"
 												validators={{
-													onChange: ({ value }) =>
-														referralSourceValue === 'other' ? required(value) : undefined,
 													onBlur: ({ value }) =>
 														referralSourceValue === 'other' ? required(value) : undefined
 												}}

@@ -78,7 +78,7 @@ impl OrderField for HostOrderField {
             Self::UpdatedAt => "hosts.updated_at",
             Self::NetworkId => "hosts.network_id",
             Self::VirtualizedBy => "COALESCE(virt_service.name, '')",
-            Self::InterfaceIp => "COALESCE(primary_interface.ip_address, '')",
+            Self::InterfaceIp => "primary_interface.ip_address",
         }
     }
 

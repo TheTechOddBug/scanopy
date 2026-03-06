@@ -72,7 +72,7 @@
 		{href}
 		target="_blank"
 		rel="noopener noreferrer"
-		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-125"
+		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-90 dark:hover:brightness-125"
 		onclick={(e) => e.stopPropagation()}
 	>
 		{@render content()}

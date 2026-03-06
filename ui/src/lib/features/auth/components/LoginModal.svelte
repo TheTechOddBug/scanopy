@@ -244,22 +244,6 @@
 						</div>
 					{/if}
 
-					<!-- Register Link -->
-					{#if onSwitchToRegister && !disableRegistration && !demoMode}
-						<div class="text-center">
-							<p class="text-sm text-gray-400">
-								{auth_dontHaveAccount()}
-								<button
-									type="button"
-									onclick={onSwitchToRegister}
-									class="font-medium text-blue-400 hover:text-blue-300"
-								>
-									{auth_registerHere()}
-								</button>
-							</p>
-						</div>
-					{/if}
-
 					{#if enablePasswordReset && !demoMode}
 						<div class="text-center">
 							<p class="text-sm text-gray-400">
@@ -274,6 +258,22 @@
 							</p>
 						</div>
 					{/if}
+				{/if}
+
+				<!-- Register Link (visible in both OIDC-only and normal mode) -->
+				{#if onSwitchToRegister && !disableRegistration && !demoMode}
+					<div class="text-center">
+						<p class="text-sm text-gray-400">
+							{auth_dontHaveAccount()}
+							<button
+								type="button"
+								onclick={onSwitchToRegister}
+								class="font-medium text-blue-400 hover:text-blue-300"
+							>
+								{auth_registerHere()}
+							</button>
+						</p>
+					</div>
 				{/if}
 			</div>
 		</div>

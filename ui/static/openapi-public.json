@@ -9541,14 +9541,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-03-06T00:09:46.757831Z",
-              "id": "32f6b4b0-7ebd-4086-9ebc-0a495a7d1a6d",
+              "created_at": "2026-03-06T03:44:42.652406Z",
+              "id": "80677722-fdcf-4312-8be0-e52f00620a5e",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-03-06T00:09:46.757831Z"
+              "updated_at": "2026-03-06T03:44:42.652406Z"
             }
           },
           "error": {
@@ -10348,14 +10348,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-03-06T00:09:46.737752Z",
-                      "id": "b21b0581-fa92-4ed2-bd6e-1915bf399a7e",
+                      "created_at": "2026-03-06T03:44:42.634482Z",
+                      "id": "46cd08f4-5f23-46b0-8369-7786167e9071",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-03-06T00:09:46.737752Z"
+                      "updated_at": "2026-03-06T03:44:42.634482Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10364,7 +10364,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Sonarr",
+                  "service_definition": "NTP Server",
                   "source": {
                     "type": "Manual"
                   },
@@ -11066,14 +11066,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-03-06T00:09:46.752542Z",
-                  "id": "21beaf5f-8304-4af0-8278-f1750328da34",
+                  "created_at": "2026-03-06T03:44:42.647402Z",
+                  "id": "5896de4a-f34c-4862-bd11-5a989f2c477f",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-03-06T00:09:46.752542Z"
+                  "updated_at": "2026-03-06T03:44:42.647402Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11082,7 +11082,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Sonarr",
+              "service_definition": "NTP Server",
               "source": {
                 "type": "Manual"
               },
@@ -12281,14 +12281,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-03-06T00:09:46.738030Z",
-          "id": "91e492e2-fcb9-458c-8e53-bbed0f991caa",
+          "created_at": "2026-03-06T03:44:42.634690Z",
+          "id": "077d0f54-5a51-4a85-ad51-ca80f89c375d",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-03-06T00:09:46.738030Z"
+          "updated_at": "2026-03-06T03:44:42.634690Z"
         }
       },
       "BindingBase": {
@@ -12795,7 +12795,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Sonarr",
+              "service_definition": "NTP Server",
               "tags": [],
               "virtualization": null
             }
@@ -13084,7 +13084,7 @@
           },
           "standby": {
             "type": "boolean",
-            "description": "Whether the daemon is on standby due to plan restrictions (DaemonPoll on Free plan).",
+            "description": "Whether the daemon is on standby due to inactivity (no discovery in 30 days).",
             "readOnly": true
           },
           "tags": {
@@ -14454,7 +14454,8 @@
           "hostname",
           "updated_at",
           "virtualized_by",
-          "network_id"
+          "network_id",
+          "interface_ip"
         ]
       },
       "HostResponse": {
@@ -14666,14 +14667,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-03-06T00:09:46.737438Z",
-                  "id": "a3b88548-c838-4875-aae3-228cd7e5a01d",
+                  "created_at": "2026-03-06T03:44:42.634210Z",
+                  "id": "5e928dcc-8b7e-4afe-af69-102738308186",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-03-06T00:09:46.737438Z"
+                  "updated_at": "2026-03-06T03:44:42.634210Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14682,7 +14683,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Sonarr",
+              "service_definition": "NTP Server",
               "source": {
                 "type": "Manual"
               },
@@ -16546,14 +16547,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-03-06T00:09:46.717932Z",
-                        "id": "a8ce6660-dd39-462d-9f03-9012a947ec4e",
+                        "created_at": "2026-03-06T03:44:42.619646Z",
+                        "id": "050d5875-aff8-4eab-af0a-3c5f0228b0ce",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-03-06T00:09:46.717932Z"
+                        "updated_at": "2026-03-06T03:44:42.619646Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16562,7 +16563,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Sonarr",
+                    "service_definition": "NTP Server",
                     "source": {
                       "type": "Manual"
                     },
@@ -16639,14 +16640,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-03-06T00:09:46.751303Z",
-                    "id": "a14b4fbc-2146-4018-826b-23f9a8b79caf",
+                    "created_at": "2026-03-06T03:44:42.646400Z",
+                    "id": "311e1308-9d6b-4ff4-af52-18fa5dd9cfa5",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-03-06T00:09:46.751303Z"
+                    "updated_at": "2026-03-06T03:44:42.646400Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16655,7 +16656,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Sonarr",
+                "service_definition": "NTP Server",
                 "source": {
                   "type": "Manual"
                 },
@@ -17742,14 +17743,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-03-06T00:09:46.737944Z",
-              "id": "0d05035c-4803-427c-af81-9a30530dd876",
+              "created_at": "2026-03-06T03:44:42.634621Z",
+              "id": "5e268fd4-0327-449c-b1ef-fb5ad8ec5d4e",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-03-06T00:09:46.737944Z"
+              "updated_at": "2026-03-06T03:44:42.634621Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17758,7 +17759,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Sonarr",
+          "service_definition": "NTP Server",
           "source": {
             "type": "Manual"
           },

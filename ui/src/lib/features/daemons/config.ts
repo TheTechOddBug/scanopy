@@ -67,6 +67,7 @@ export const fieldDefs: FieldDef[] = [
 		envVar: 'SCANOPY_NAME',
 		helpText: () => m.daemons_config_nameHelp(),
 		placeholder: () => m.daemons_config_namePlaceholder(),
+		defaultValue: 'scanopy-daemon',
 		validators: [required, max(100)],
 		required: true
 	},
@@ -307,7 +308,7 @@ export const sectionDefs: Record<
 	'Docker Discovery': {
 		description: () => m.daemons_config_sectionDockerDiscoveryDesc(),
 		docsHint: {
-			text: () => m.common_docsLink(),
+			text: () => m.daemons_docsDockerProxy(),
 			href: 'https://scanopy.net/docs/docker-proxy/',
 			linkText: () => m.daemons_docsDockerProxyLinkText()
 		}

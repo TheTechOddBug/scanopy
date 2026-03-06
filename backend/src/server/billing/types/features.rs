@@ -32,7 +32,6 @@ pub enum Feature {
     SvgExport,
     MermaidExport,
     ConfluenceExport,
-    HostInventory,
     ScheduledDiscovery,
     DaemonPoll,
     ServiceDefinitions,
@@ -64,7 +63,6 @@ impl HasId for Feature {
             Feature::SvgExport => "svg_export",
             Feature::MermaidExport => "mermaid_export",
             Feature::ConfluenceExport => "confluence_export",
-            Feature::HostInventory => "host_inventory",
             Feature::ScheduledDiscovery => "scheduled_discovery",
             Feature::DaemonPoll => "daemon_poll",
             Feature::ServiceDefinitions => "service_definitions",
@@ -129,7 +127,6 @@ impl TypeMetadataProvider for Feature {
             | Feature::SvgExport
             | Feature::MermaidExport
             | Feature::ConfluenceExport
-            | Feature::HostInventory
             | Feature::Embeds
             | Feature::ShareViews
             | Feature::RemoveCreatedWith => "Visualization",
@@ -171,7 +168,6 @@ impl TypeMetadataProvider for Feature {
             Feature::SvgExport => "SVG Export",
             Feature::MermaidExport => "Mermaid Export",
             Feature::ConfluenceExport => "Confluence Export",
-            Feature::HostInventory => "Host Inventory",
             Feature::ScheduledDiscovery => "Scheduled Discovery",
             Feature::DaemonPoll => "No Port Forwarding",
             Feature::ServiceDefinitions => "200+ Service Definitions",
@@ -222,9 +218,6 @@ impl TypeMetadataProvider for Feature {
             }
             Feature::ConfluenceExport => {
                 "Export topology as Confluence wiki markup tables for team documentation"
-            }
-            Feature::HostInventory => {
-                "Searchable inventory of all discovered hosts and their details"
             }
             Feature::ScheduledDiscovery => "Schedule automatic network discovery scans",
             Feature::DaemonPoll => {

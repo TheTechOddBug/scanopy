@@ -6,7 +6,7 @@
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import DocsHint from '$lib/shared/components/feedback/DocsHint.svelte';
 	import CollapsibleCard from '$lib/shared/components/data/CollapsibleCard.svelte';
-	import { common_documentation, common_documentationLinkText } from '$lib/paraglide/messages';
+	import { daemons_docsConfigOptions, daemons_docsConfigOptionsLinkText } from '$lib/paraglide/messages';
 	import { fieldDefs, sectionDefs } from '../../../config';
 
 	interface Props {
@@ -49,9 +49,9 @@
 
 <div class="space-y-6">
 	<DocsHint
-		text={common_documentation()}
+		text={daemons_docsConfigOptions()}
 		href="https://scanopy.net/docs/reference/daemon-configuration/"
-		linkText={common_documentationLinkText()}
+		linkText={daemons_docsConfigOptionsLinkText()}
 	/>
 
 	{#each advancedSections as section (section.name)}

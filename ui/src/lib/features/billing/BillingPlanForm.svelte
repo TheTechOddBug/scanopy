@@ -351,7 +351,7 @@
 
 <div class="space-y-6 {className}">
 	<!-- Header with Toggles -->
-	<div class="flex flex-wrap items-stretch justify-center gap-3 px-4 lg:gap-6 lg:px-10">
+	<div class="flex flex-wrap items-stretch justify-center gap-3 lg:gap-6 lg:px-10">
 		{#if showGithubStars}
 			<!-- <GithubStars /> -->
 		{/if}
@@ -445,12 +445,8 @@
 								{/if}
 							</div>
 						{/if}
-						{#if showBilledYearly(plan)}
-							<div class="text-tertiary text-xs">billed yearly</div>
-						{/if}
-						{#if hasTrial(plan) && !hasCustomPrice(plan)}
-							<div class="text-xs font-medium text-success">{plan.trial_days}-day free trial</div>
-						{/if}
+						<div class={`text-tertiary text-xs ${showBilledYearly(plan) ? "opacity-100" : "opacity-0"}`}>billed yearly</div>
+						<div class={`text-xs font-medium text-success ${hasTrial(plan) && !hasCustomPrice(plan) ? "opacity-100" : "opacity-0"}`}>{plan.trial_days}-day free trial</div>
 					</div>
 
 					<!-- Description -->
@@ -459,6 +455,62 @@
 							{description}
 						</p>
 					{/if}
+
+					<!-- CTA Button -->
+					<div class="border-gray-700 py-4">
+						{#if enterprise && onPlanInquiry}
+							<button
+								type="button"
+								onclick={() => onPlanInquiry(plan)}
+								disabled={loadingPlanType !== null}
+								class="btn-primary w-full text-sm"
+							>
+								Request Information
+							</button>
+						{:else if hosting === 'Cloud'}
+							<button
+								type="button"
+								onclick={() => handlePlanSelect(plan)}
+								disabled={loadingPlanType !== null}
+								class="btn-primary w-full text-sm"
+							>
+								{#if loadingPlanType === plan.type}
+									<Loader2 class="mx-auto h-4 w-4 animate-spin" />
+								{:else}
+									{trial ? `Start ${plan.trial_days}-day free trial` : 'Get Started'}
+								{/if}
+							</button>
+						{:else if hosting === 'SelfHosted'}
+							{#if commercial && onPlanInquiry}
+								<button
+									type="button"
+									onclick={() => onPlanInquiry(plan)}
+									disabled={loadingPlanType !== null}
+									class="btn-primary w-full text-sm"
+								>
+									Contact Us
+								</button>
+							{:else}
+								<a
+									href="https://github.com/scanopy/scanopy"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="btn-secondary inline-block w-full text-center text-sm"
+								>
+									View on GitHub
+								</a>
+							{/if}
+						{:else if commercial && onPlanInquiry}
+							<button
+								type="button"
+								onclick={() => onPlanInquiry(plan)}
+								disabled={loadingPlanType !== null}
+								class="btn-primary w-full text-sm"
+							>
+								Contact Us
+							</button>
+						{/if}
+					</div>
 
 					<!-- Included Resources with Stepper Controls -->
 					<div class="space-y-2 border-b border-gray-700 pb-4">
@@ -591,62 +643,6 @@
 								</li>
 							{/each}
 						</ul>
-					</div>
-
-					<!-- CTA Button -->
-					<div class="border-t border-gray-700 pt-4">
-						{#if enterprise && onPlanInquiry}
-							<button
-								type="button"
-								onclick={() => onPlanInquiry(plan)}
-								disabled={loadingPlanType !== null}
-								class="btn-primary w-full text-sm"
-							>
-								Request Information
-							</button>
-						{:else if hosting === 'Cloud'}
-							<button
-								type="button"
-								onclick={() => handlePlanSelect(plan)}
-								disabled={loadingPlanType !== null}
-								class="btn-primary w-full text-sm"
-							>
-								{#if loadingPlanType === plan.type}
-									<Loader2 class="mx-auto h-4 w-4 animate-spin" />
-								{:else}
-									{trial ? `Start ${plan.trial_days}-day free trial` : 'Get Started'}
-								{/if}
-							</button>
-						{:else if hosting === 'SelfHosted'}
-							{#if commercial && onPlanInquiry}
-								<button
-									type="button"
-									onclick={() => onPlanInquiry(plan)}
-									disabled={loadingPlanType !== null}
-									class="btn-primary w-full text-sm"
-								>
-									Contact Us
-								</button>
-							{:else}
-								<a
-									href="https://github.com/scanopy/scanopy"
-									target="_blank"
-									rel="noopener noreferrer"
-									class="btn-secondary inline-block w-full text-center text-sm"
-								>
-									View on GitHub
-								</a>
-							{/if}
-						{:else if commercial && onPlanInquiry}
-							<button
-								type="button"
-								onclick={() => onPlanInquiry(plan)}
-								disabled={loadingPlanType !== null}
-								class="btn-primary w-full text-sm"
-							>
-								Contact Us
-							</button>
-						{/if}
 					</div>
 				</div>
 			{/each}

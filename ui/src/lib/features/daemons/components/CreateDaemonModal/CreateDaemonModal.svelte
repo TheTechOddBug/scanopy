@@ -85,10 +85,6 @@
 	// Network selection
 	let selectedNetworkId = $state('');
 
-	$effect(() => {
-		selectedNetworkId = networksData[0].id;
-	});
-
 	// API key state
 	let keyState = $state<string | null>(null);
 	let key = $derived(keyState);

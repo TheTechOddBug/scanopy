@@ -191,7 +191,6 @@ pub struct BillingPlanFeatures {
     pub svg_export: bool,
     pub mermaid_export: bool,
     pub confluence_export: bool,
-    pub host_inventory: bool,
     pub scheduled_discovery: bool,
     pub daemon_poll: bool,
     pub service_definitions: bool,
@@ -445,7 +444,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: true,
                 confluence_export: false,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -474,7 +472,6 @@ impl BillingPlan {
                 svg_export: false,
                 mermaid_export: false,
                 confluence_export: false,
-                host_inventory: true,
                 scheduled_discovery: false,
                 daemon_poll: true,
                 service_definitions: true,
@@ -503,7 +500,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: false,
                 confluence_export: false,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -532,7 +528,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: true,
                 confluence_export: false,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -561,7 +556,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: true,
                 confluence_export: true,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -590,7 +584,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: true,
                 confluence_export: true,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -619,7 +612,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: true,
                 confluence_export: true,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -648,7 +640,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: true,
                 confluence_export: true,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -677,7 +668,6 @@ impl BillingPlan {
                 svg_export: true,
                 mermaid_export: true,
                 confluence_export: true,
-                host_inventory: true,
                 scheduled_discovery: true,
                 daemon_poll: true,
                 service_definitions: true,
@@ -715,7 +705,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             svg_export,
             mermaid_export,
             confluence_export,
-            host_inventory,
             scheduled_discovery,
             daemon_poll,
             service_definitions,
@@ -804,10 +793,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             features.push(Feature::ConfluenceExport)
         }
 
-        if host_inventory {
-            features.push(Feature::HostInventory)
-        }
-
         if scheduled_discovery {
             features.push(Feature::ScheduledDiscovery)
         }
@@ -893,16 +878,16 @@ impl TypeMetadataProvider for BillingPlan {
                 "Community plan for individuals self-hosting Scanopy - full control over configuration and integrations"
             }
             BillingPlan::Free { .. } => {
-                "Explore your network — discover and document up to 25 hosts"
+                "Explore your network: discover and document up to 25 hosts"
             }
             BillingPlan::Starter { .. } => "Living network documentation that updates itself",
             BillingPlan::Pro { .. } => "For professionals managing multiple networks",
             BillingPlan::Team { .. } => {
                 "Collaborate on infrastructure documentation with your team"
             }
-            BillingPlan::Business { .. } => "For MSPs and multi-site IT teams",
+            BillingPlan::Business { .. } => "For MSPs and multi-site IT teams who need advanced features",
             BillingPlan::Enterprise { .. } => {
-                "Fully managed Scanopy with dedicated support and custom deployment"
+                "Fully managed Scanopy deployment with dedicated support"
             }
             BillingPlan::Demo { .. } => "Demo mode",
             BillingPlan::CommercialSelfHosted { .. } => {

@@ -54,7 +54,7 @@
 		centerTitle?: boolean;
 		isOpen?: boolean;
 		onClose?: (() => void) | null;
-		size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+		size?: 'sm' | 'md' | 'lg' | 'xl' | 'full' | 'max';
 		preventCloseOnClickOutside?: boolean;
 		showCloseButton?: boolean;
 		showBackdrop?: boolean;
@@ -163,7 +163,8 @@
 		md: 'max-w-lg',
 		lg: 'max-w-2xl',
 		xl: 'max-w-4xl',
-		full: 'max-w-7xl'
+		full: 'max-w-7xl',
+		max: 'max-w-none w-full'
 	};
 
 	function handleClose() {

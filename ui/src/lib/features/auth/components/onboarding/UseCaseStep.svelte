@@ -10,6 +10,7 @@
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { required } from '$lib/shared/components/forms/validators';
+	import { validateForm } from '$lib/shared/components/forms/form-context';
 	import {
 		auth_scanopyLogo,
 		common_continue,
@@ -135,7 +136,7 @@
 		}
 	}
 
-	function handleContinue() {
+	function submitAndProceed() {
 		if (!selectedUseCase) return;
 		saveFields();
 		const values = form.state.values;
@@ -148,11 +149,16 @@
 		onNext();
 	}
 
-	let canProceed = $derived(
-		selectedUseCase !== null &&
-			!showLicenseWarning &&
-			!(referralSourceValue === 'other' && !form.state.values.referralSourceOther.trim())
-	);
+	async function handleContinue() {
+		if (!selectedUseCase) return;
+		if (showCloudFields) {
+			const isValid = await validateForm(form);
+			if (!isValid) return;
+		}
+		submitAndProceed();
+	}
+
+	let canProceed = $derived(selectedUseCase !== null && !showLicenseWarning);
 </script>
 
 <GenericModal
@@ -207,13 +213,19 @@
 					<!-- Referral Source (all use cases on Cloud) -->
 					{#if selectedUseCase}
 						<div class="card card-static">
-							<form.Field name="referralSource">
+							<form.Field
+								name="referralSource"
+								validators={{
+									onBlur: ({ value }) => required(value)
+								}}
+							>
 								{#snippet children(field)}
 									<SelectInput
 										label={onboarding_howDidYouHear()}
 										id="referral-source"
 										{field}
 										options={referralSourceOptions}
+										required={true}
 									/>
 									{#if referralSourceValue === 'other'}
 										<div class="mt-3">

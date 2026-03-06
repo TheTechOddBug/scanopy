@@ -200,11 +200,18 @@ pub trait EmailProvider: Send + Sync {
         &self,
         daemon_name: &str,
         network_name: &str,
+        is_daemon_poll: bool,
     ) -> (String, String) {
+        let resume_instructions = if is_daemon_poll {
+            "To resume monitoring, queue a new discovery session in Scanopy and restart the daemon. It will automatically come off standby when the session starts."
+        } else {
+            "To resume monitoring, queue a new discovery session in Scanopy. Your daemon will automatically come off standby and resume on the next polling cycle."
+        };
         let body = self.build_email(
             DAEMON_STANDBY_BODY
                 .replace("{daemon_name}", daemon_name)
-                .replace("{network_name}", network_name),
+                .replace("{network_name}", network_name)
+                .replace("{resume_instructions}", resume_instructions),
         );
         (DAEMON_STANDBY_TITLE.to_string(), body)
     }
@@ -616,10 +623,11 @@ impl EmailService {
         to: EmailAddress,
         daemon_name: &str,
         network_name: &str,
+        is_daemon_poll: bool,
     ) -> Result<()> {
         let (subject, body) = self
             .provider
-            .build_daemon_standby_email(daemon_name, network_name);
+            .build_daemon_standby_email(daemon_name, network_name, is_daemon_poll);
         let body = body.replace("{base_url}", &self.public_url);
         self.provider.send_billing_email(to, subject, body).await
     }

@@ -473,7 +473,7 @@ pub const DAEMON_STANDBY_BODY: &str = r#"                    <!-- Main Content -
                             <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Daemon on Standby</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your daemon <strong>{daemon_name}</strong> on <strong>{network_name}</strong> has been placed on standby because it hasn't completed a discovery session in over 30 days.</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">To resume monitoring, queue a new discovery session in Scanopy and restart the daemon. It will automatically come off standby when the session starts.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">{resume_instructions}</p>
                         </td>
                     </tr>
 

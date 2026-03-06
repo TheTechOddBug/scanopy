@@ -5,7 +5,7 @@ import type { TagProps } from '$lib/shared/components/data/types';
 import { toColor } from '$lib/shared/utils/styling';
 import { CircleHelp } from 'lucide-svelte';
 
-export const DAEMON_STATUS_DOCS_URL = 'https://scanopy.net/docs/daemon-status';
+export const DAEMON_STATUS_DOCS_URL = 'https://scanopy.net/docs/reference/daemon-status/';
 
 /**
  * Returns the highest-priority status tag for a daemon.

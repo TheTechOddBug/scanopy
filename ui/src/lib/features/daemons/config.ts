@@ -309,7 +309,7 @@ export const sectionDefs: Record<
 		description: () => m.daemons_config_sectionDockerDiscoveryDesc(),
 		docsHint: {
 			text: () => m.daemons_docsDockerProxy(),
-			href: 'https://scanopy.net/docs/docker-proxy/',
+			href: 'https://scanopy.net/docs/guides/docker-proxy/',
 			linkText: () => m.daemons_docsDockerProxyLinkText()
 		}
 	},

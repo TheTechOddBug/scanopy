@@ -39,7 +39,6 @@
 		onNetworkChange: (id: string) => void;
 		hasDaemonPoll: boolean;
 		keySet: boolean;
-		onboardingMode: boolean;
 	}
 
 	let {
@@ -49,7 +48,6 @@
 		onNetworkChange,
 		hasDaemonPoll,
 		keySet,
-		onboardingMode
 	}: Props = $props();
 
 	// Get validators for a field
@@ -92,19 +90,12 @@
 </script>
 
 <div class="space-y-4">
-	{#if onboardingMode}
-		<InlineInfo
-			title={daemons_activateAfterCreation()}
-			body={daemons_activateAfterCreationBody()}
-		/>
-	{:else}
-		<SelectNetwork
-			{selectedNetworkId}
-			onNetworkChange={(id) => onNetworkChange(id)}
-			disabled={keySet}
-			disabledReason={daemons_networkCannotChange()}
-		/>
-	{/if}
+	<SelectNetwork
+		{selectedNetworkId}
+		onNetworkChange={(id) => onNetworkChange(id)}
+		disabled={keySet}
+		disabledReason={daemons_networkCannotChange()}
+	/>
 
 	<!-- Name -->
 	<form.Field name={nameDef.id} validators={getValidators(nameDef.id)}>

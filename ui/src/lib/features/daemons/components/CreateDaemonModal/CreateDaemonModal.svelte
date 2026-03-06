@@ -7,7 +7,14 @@
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { trackEvent } from '$lib/shared/utils/analytics';
 	import { entities } from '$lib/shared/stores/metadata';
-	import { SatelliteDish, Settings, KeyRound, Terminal, SlidersHorizontal } from 'lucide-svelte';
+	import {
+		SatelliteDish,
+		Settings,
+		KeyRound,
+		Terminal,
+		SlidersHorizontal,
+		Loader2
+	} from 'lucide-svelte';
 	import {
 		createEmptyApiKeyFormData,
 		useCreateApiKeyMutation
@@ -36,36 +43,23 @@
 		common_back,
 		common_close,
 		common_configure,
-		common_continue,
 		common_failedGenerateApiKey,
 		common_install,
 		common_next,
 		daemons_createDaemon,
 		daemons_enterApiKey,
 		daemons_generateKeyToContinue,
-		daemons_setupScanning,
-		daemons_doThisLater
 	} from '$lib/paraglide/messages';
 
 	interface Props {
 		isOpen?: boolean;
 		onClose: () => void;
-		onboardingMode?: boolean;
-		onSkip?: (() => void) | null;
-		onContinue?: (() => void) | null;
-		provisionalApiKey?: string | null;
-		provisionalNetworkId?: string | null;
 		name?: string;
 	}
 
 	let {
 		isOpen = false,
 		onClose,
-		onboardingMode = false,
-		onSkip = null,
-		onContinue = null,
-		provisionalApiKey = null,
-		provisionalNetworkId = null,
 		name = undefined
 	}: Props = $props();
 
@@ -92,17 +86,16 @@
 	let selectedNetworkId = $state('');
 
 	$effect(() => {
-		if (onboardingMode && provisionalNetworkId) {
-			selectedNetworkId = provisionalNetworkId;
-		} else if (!selectedNetworkId && networksData[0]?.id) {
-			selectedNetworkId = networksData[0].id;
-		}
+		selectedNetworkId = networksData[0].id;
 	});
 
 	// API key state
 	let keyState = $state<string | null>(null);
-	let key = $derived(onboardingMode ? provisionalApiKey : keyState);
+	let key = $derived(keyState);
 	let keySet = $derived(!!key);
+
+	// Auto-generation state (for first daemon flow)
+	let isAutoGenerating = $state(false);
 
 	// OS selection
 	let selectedOS: DaemonOS = $state(detectOS());
@@ -145,7 +138,11 @@
 	});
 
 	// --- Tab / wizard state ---
-	const mainFlow = ['configure', 'api-key', 'install'] as const;
+	let mainFlow = $derived(
+		isFirstDaemon
+			? (['configure', 'install'] as const)
+			: (['configure', 'api-key', 'install'] as const)
+	);
 
 	let activeTab = $state('configure');
 	let previousMainTab = $state('configure');
@@ -153,20 +150,34 @@
 
 	let tabs: ModalTab[] = $derived([
 		{ id: 'configure', label: common_configure(), icon: Settings },
-		{ id: 'api-key', label: common_apiKey(), icon: KeyRound, disabled: furthestReached < 1 },
-		{ id: 'install', label: common_install(), icon: Terminal, disabled: furthestReached < 2 },
+		...(isFirstDaemon
+			? []
+			: [
+					{
+						id: 'api-key',
+						label: common_apiKey(),
+						icon: KeyRound,
+						disabled: furthestReached < 1
+					}
+				]),
+		{
+			id: 'install',
+			label: common_install(),
+			icon: Terminal,
+			disabled: furthestReached < (isFirstDaemon ? 1 : 2)
+		},
 		{
 			id: 'advanced',
 			label: common_advanced(),
 			icon: SlidersHorizontal,
-			disabled: furthestReached < 2
+			disabled: furthestReached < (isFirstDaemon ? 1 : 2)
 		}
 	]);
 
 	let isOnAdvanced = $derived(activeTab === 'advanced');
 
 	function nextTab() {
-		const idx = mainFlow.indexOf(activeTab as (typeof mainFlow)[number]);
+		const idx = (mainFlow as readonly string[]).indexOf(activeTab);
 		if (idx >= 0 && idx < mainFlow.length - 1) {
 			activeTab = mainFlow[idx + 1];
 		}
@@ -177,7 +188,7 @@
 			activeTab = previousMainTab;
 			return;
 		}
-		const idx = mainFlow.indexOf(activeTab as (typeof mainFlow)[number]);
+		const idx = (mainFlow as readonly string[]).indexOf(activeTab);
 		if (idx > 0) {
 			activeTab = mainFlow[idx - 1];
 		}
@@ -244,11 +255,23 @@
 	async function handleNext() {
 		if (activeTab === 'configure') {
 			const isValid = await validateForm(form);
-			if (isValid) {
-				trackEvent('daemon_wizard_step_completed', { step: 'configure' });
-				if (furthestReached < 1) furthestReached = 1;
-				nextTab();
+
+			if (!isValid) return;
+
+			trackEvent('daemon_wizard_step_completed', { step: 'configure' });
+			
+			if (isFirstDaemon && !key) {
+				isAutoGenerating = true;
+				try {
+					await handleCreateNewApiKey();
+				} finally {
+					isAutoGenerating = false;
+				}
+				if (!keyState) return; // generation failed
 			}
+
+			if (furthestReached < 1) furthestReached = 1;
+			nextTab();
 		} else if (activeTab === 'api-key') {
 			if (!key) {
 				pushError(daemons_generateKeyToContinue());
@@ -263,28 +286,22 @@
 	function handleOnClose() {
 		trackEvent('daemon_wizard_closed');
 		keyState = null;
+		isAutoGenerating = false;
 		activeTab = 'configure';
 		previousMainTab = 'configure';
 		furthestReached = 0;
 		onClose();
 	}
 
-	// --- Onboarding: skip to install when provisionalApiKey provided ---
 	function handleOpen() {
 		trackEvent('daemon_wizard_opened');
-		if (onboardingMode && provisionalApiKey) {
-			activeTab = 'install';
-			furthestReached = 2;
-		} else {
-			activeTab = 'configure';
-			furthestReached = 0;
-		}
+		activeTab = 'configure';
+		furthestReached = 0;
 		previousMainTab = 'configure';
 	}
 
 	let colorHelper = entities.getColorHelper('Daemon');
-	let title = $derived(onboardingMode ? daemons_setupScanning() : daemons_createDaemon());
-	let showTabs = $derived(!onboardingMode || !!key);
+	let title = daemons_createDaemon();
 </script>
 
 <GenericModal
@@ -295,18 +312,12 @@
 	fixedHeight={true}
 	onClose={handleOnClose}
 	onOpen={handleOpen}
-	showCloseButton={!onboardingMode}
-	showBackdrop={!onboardingMode}
-	tabs={showTabs ? tabs : []}
+	tabs={tabs}
 	{activeTab}
 	onTabChange={handleTabChange}
 >
 	{#snippet headerIcon()}
-		{#if onboardingMode}
-			<ModalHeaderIcon Icon={SatelliteDish} color="Green" />
-		{:else}
-			<ModalHeaderIcon Icon={entities.getIconComponent('Daemon')} color={colorHelper.color} />
-		{/if}
+		<ModalHeaderIcon Icon={entities.getIconComponent('Daemon')} color={colorHelper.color} />
 	{/snippet}
 
 	<div class="flex min-h-0 flex-1 flex-col">
@@ -319,7 +330,6 @@
 					onNetworkChange={(id) => (selectedNetworkId = id)}
 					{hasDaemonPoll}
 					{keySet}
-					{onboardingMode}
 				/>
 			{/if}
 
@@ -353,22 +363,19 @@
 
 		<!-- Footer -->
 		<div class="modal-footer">
-			{#if onboardingMode}
-				<div class="flex w-full items-center justify-between gap-4">
-					{#if onSkip}
-						<button type="button" class="btn-secondary" onclick={onSkip}>
-							{daemons_doThisLater()}
-						</button>
-					{/if}
-					<button type="button" class="btn-primary ml-auto" onclick={onContinue ?? handleOnClose}>
-						{common_continue()}
-					</button>
-				</div>
-			{:else}
 				<div class="flex items-center justify-end gap-3">
 					{#if activeTab === 'configure'}
-						<button type="button" class="btn-primary" onclick={handleNext}>
-							{common_next()}
+						<button
+							type="button"
+							class="btn-primary"
+							onclick={handleNext}
+							disabled={isAutoGenerating}
+						>
+							{#if isAutoGenerating}
+								<Loader2 class="h-4 w-4 animate-spin" />
+							{:else}
+								{common_next()}
+							{/if}
 						</button>
 					{:else if activeTab === 'api-key'}
 						<button type="button" class="btn-secondary" onclick={previousTab}>
@@ -390,7 +397,6 @@
 						</button>
 					{/if}
 				</div>
-			{/if}
 		</div>
 	</div>
 </GenericModal>

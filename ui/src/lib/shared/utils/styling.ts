@@ -18,8 +18,8 @@ export interface ColorStyle {
 	rgb: string; // Added RGB value
 }
 
-// Map backend color names to Tailwind classes with RGB values
-export const COLOR_MAP: Record<Color, ColorStyle> = {
+// Dark mode color map (original)
+const DARK_COLOR_MAP: Record<Color, ColorStyle> = {
 	Pink: {
 		color: 'Pink',
 		text: 'text-pink-400',
@@ -152,6 +152,148 @@ export const COLOR_MAP: Record<Color, ColorStyle> = {
 	}
 };
 
+// Light mode color map
+const LIGHT_COLOR_MAP: Record<Color, ColorStyle> = {
+	Pink: {
+		color: 'Pink',
+		text: 'text-pink-600',
+		bg: 'bg-pink-100 border-pink-300',
+		border: 'border-pink-300',
+		icon: 'text-pink-600',
+		ring: 'ring-pink-400',
+		stroke: 'stroke-pink-600',
+		rgb: 'rgb(219, 39, 119)' // pink-600
+	},
+	Rose: {
+		color: 'Rose',
+		text: 'text-rose-600',
+		bg: 'bg-rose-100 border-rose-300',
+		border: 'border-rose-300',
+		icon: 'text-rose-600',
+		ring: 'ring-rose-400',
+		stroke: 'stroke-rose-600',
+		rgb: 'rgb(225, 29, 72)' // rose-600
+	},
+	Red: {
+		color: 'Red',
+		text: 'text-red-600',
+		bg: 'bg-red-100 border-red-300',
+		border: 'border-red-300',
+		icon: 'text-red-600',
+		ring: 'ring-red-400',
+		stroke: 'stroke-red-600',
+		rgb: 'rgb(220, 38, 38)' // red-600
+	},
+	Orange: {
+		color: 'Orange',
+		text: 'text-orange-600',
+		bg: 'bg-orange-100 border-orange-300',
+		border: 'border-orange-300',
+		icon: 'text-orange-600',
+		ring: 'ring-orange-400',
+		stroke: 'stroke-orange-600',
+		rgb: 'rgb(234, 88, 12)' // orange-600
+	},
+	Yellow: {
+		color: 'Yellow',
+		text: 'text-yellow-600',
+		bg: 'bg-yellow-100 border-yellow-300',
+		border: 'border-yellow-300',
+		icon: 'text-yellow-600',
+		ring: 'ring-yellow-400',
+		stroke: 'stroke-yellow-600',
+		rgb: 'rgb(202, 138, 4)' // yellow-600
+	},
+	Green: {
+		color: 'Green',
+		text: 'text-green-600',
+		bg: 'bg-green-100 border-green-300',
+		border: 'border-green-300',
+		icon: 'text-green-600',
+		ring: 'ring-green-400',
+		stroke: 'stroke-green-600',
+		rgb: 'rgb(22, 163, 74)' // green-600
+	},
+	Emerald: {
+		color: 'Emerald',
+		text: 'text-emerald-600',
+		bg: 'bg-emerald-100 border-emerald-300',
+		border: 'border-emerald-300',
+		icon: 'text-emerald-600',
+		ring: 'ring-emerald-400',
+		stroke: 'stroke-emerald-600',
+		rgb: 'rgb(5, 150, 105)' // emerald-600
+	},
+	Teal: {
+		color: 'Teal',
+		text: 'text-teal-600',
+		bg: 'bg-teal-100 border-teal-300',
+		border: 'border-teal-300',
+		icon: 'text-teal-600',
+		ring: 'ring-teal-400',
+		stroke: 'stroke-teal-600',
+		rgb: 'rgb(13, 148, 136)' // teal-600
+	},
+	Cyan: {
+		color: 'Cyan',
+		text: 'text-cyan-600',
+		bg: 'bg-cyan-100 border-cyan-300',
+		border: 'border-cyan-300',
+		icon: 'text-cyan-600',
+		ring: 'ring-cyan-400',
+		stroke: 'stroke-cyan-600',
+		rgb: 'rgb(8, 145, 178)' // cyan-600
+	},
+	Blue: {
+		color: 'Blue',
+		text: 'text-blue-600',
+		bg: 'bg-blue-100 border-blue-300',
+		border: 'border-blue-300',
+		icon: 'text-blue-600',
+		ring: 'ring-blue-400',
+		stroke: 'stroke-blue-600',
+		rgb: 'rgb(37, 99, 235)' // blue-600
+	},
+	Indigo: {
+		color: 'Indigo',
+		text: 'text-indigo-600',
+		bg: 'bg-indigo-100 border-indigo-300',
+		border: 'border-indigo-300',
+		icon: 'text-indigo-600',
+		ring: 'ring-indigo-400',
+		stroke: 'stroke-indigo-600',
+		rgb: 'rgb(79, 70, 229)' // indigo-600
+	},
+	Purple: {
+		color: 'Purple',
+		text: 'text-purple-600',
+		bg: 'bg-purple-100 border-purple-300',
+		border: 'border-purple-300',
+		icon: 'text-purple-600',
+		ring: 'ring-purple-400',
+		stroke: 'stroke-purple-600',
+		rgb: 'rgb(147, 51, 234)' // purple-600
+	},
+	Gray: {
+		color: 'Gray',
+		text: 'text-gray-600',
+		bg: 'bg-gray-100 border-gray-300',
+		border: 'border-gray-300',
+		icon: 'text-gray-600',
+		ring: 'ring-gray-400',
+		stroke: 'stroke-gray-600',
+		rgb: 'rgb(75, 85, 99)' // gray-600
+	}
+};
+
+// Map backend color names to Tailwind classes with RGB values
+export const COLOR_MAP: Record<Color, ColorStyle> = DARK_COLOR_MAP;
+
+export function getColorMap(): Record<Color, ColorStyle> {
+	if (typeof window === 'undefined') return DARK_COLOR_MAP;
+	return document.documentElement.classList.contains('dark') ? DARK_COLOR_MAP : LIGHT_COLOR_MAP;
+}
+
 // Export available colors array derived from COLOR_MAP keys
 export const AVAILABLE_COLORS = Object.keys(COLOR_MAP) as Color[];
 
@@ -166,9 +308,10 @@ export function toColor(value: string | null | undefined): Color {
 
 // Unified color helper - works everywhere!
 export function createColorHelper(colorName: Color | null): ColorStyle {
-	const color = colorName && COLOR_MAP[colorName] ? colorName : 'Gray';
+	const map = getColorMap();
+	const color = colorName && map[colorName] ? colorName : 'Gray';
 
-	return COLOR_MAP[color];
+	return map[color];
 }
 
 // Icon helper that converts string to component

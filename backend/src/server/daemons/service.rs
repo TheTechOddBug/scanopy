@@ -1527,17 +1527,23 @@ impl DaemonService {
         let is_daemon_poll = daemon.base.mode == DaemonMode::DaemonPoll;
 
         // Send to org owner
-        let owner_email = email_service.get_owner_email(&org_id).await?;
+        let owners = email_service
+            .user_service
+            .get_organization_owners(&org_id)
+            .await?;
+        let owner = owners
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("No owner found for organization {}", org_id))?;
         email_service
-            .send_daemon_standby_email(owner_email.clone(), daemon_name, network_name, is_daemon_poll)
+            .send_daemon_standby_email(owner.base.email.clone(), daemon_name, network_name, is_daemon_poll)
             .await?;
 
         // Also send to daemon installer if different from owner
-        if let Some(user) = email_service
-            .user_service
-            .get_by_id(&daemon.base.user_id)
-            .await?
-            && user.base.email != owner_email
+        if daemon.base.user_id != owner.id
+            && let Some(user) = email_service
+                .user_service
+                .get_by_id(&daemon.base.user_id)
+                .await?
         {
             email_service
                 .send_daemon_standby_email(user.base.email, daemon_name, network_name, is_daemon_poll)

@@ -811,7 +811,7 @@
 	"shares_shareTopology": "Share Topology",
 	"shares_shareUrl": "Share URL",
 	"shares_shareTheme": "Theme",
-	"shares_shareThemeDefault": "Viewer's preference",
+	"shares_shareThemeDefault": "System default",
 	"shares_shareThemeLight": "Always light",
 	"shares_shareThemeDark": "Always dark",
 	"shares_showExportButton": "Show export button",

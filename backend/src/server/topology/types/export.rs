@@ -92,7 +92,16 @@ pub fn topology_to_mermaid(topology: &Topology) -> String {
         }
     }
 
-    // Generate edges
+    // Build set of SubnetNode IDs (their node ID == subnet ID, rendered as subgraphs)
+    let subnet_node_ids: std::collections::HashSet<Uuid> = topology
+        .base
+        .nodes
+        .iter()
+        .filter(|n| matches!(n.node_type, NodeType::SubnetNode { .. }))
+        .map(|n| n.id)
+        .collect();
+
+    // Generate edges — use sub_ prefix for subgraph nodes, n_ for interface nodes
     for edge in &topology.base.edges {
         let arrow = match &edge.edge_type {
             EdgeType::RequestPath { .. } | EdgeType::HubAndSpoke { .. } => "-->",
@@ -106,12 +115,25 @@ pub fn topology_to_mermaid(topology: &Topology) -> String {
             .map(|l| format!("|{}|", mermaid_escape(l)))
             .unwrap_or_default();
 
+        let source_prefix = if subnet_node_ids.contains(&edge.source) {
+            "sub"
+        } else {
+            "n"
+        };
+        let target_prefix = if subnet_node_ids.contains(&edge.target) {
+            "sub"
+        } else {
+            "n"
+        };
+
         writeln!(
             output,
-            "    n_{} {}{} n_{}",
+            "    {}_{} {}{} {}_{}",
+            source_prefix,
             short_id(&edge.source),
             arrow,
             label_str,
+            target_prefix,
             short_id(&edge.target)
         )
         .unwrap();

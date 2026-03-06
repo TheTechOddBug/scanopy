@@ -267,7 +267,9 @@
 												<div class="w-full border-t border-gray-600"></div>
 											</div>
 											<div class="relative flex justify-center text-sm">
-												<span class="bg-gray-900 px-2 text-gray-400">{common_or()}</span>
+												<span class="text-tertiary bg-[var(--color-bg-elevated)] px-2"
+													>{common_or()}</span
+												>
 											</div>
 										</div>
 									{/if}

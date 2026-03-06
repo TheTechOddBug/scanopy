@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toPng, toSvg } from 'html-to-image';
 	import { useSvelteFlow, type Node } from '@xyflow/svelte';
-	import { FileImage, FileCode, FileText, Image } from 'lucide-svelte';
+	import { FileImage, FileCode, FileText, Image, Sun, Moon } from 'lucide-svelte';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
@@ -19,9 +19,12 @@
 		topology_exportMermaidDesc,
 		topology_exportConfluence,
 		topology_exportConfluenceDesc,
+		topology_exportTheme,
 		topology_flowNotFound,
 		topology_noNodesToExport
 	} from '$lib/paraglide/messages';
+	import { getResolvedTheme } from '$lib/shared/stores/theme';
+	import { common_light, common_dark } from '$lib/paraglide/messages';
 	import { trackEvent } from '$lib/shared/utils/analytics';
 	import { downloadTopologyExport } from '$lib/shared/utils/csvExport';
 	import UpgradeBadge from '$lib/shared/components/UpgradeBadge.svelte';
@@ -64,6 +67,8 @@
 			? billingPlans.getMetadata(organization.plan.type).features.confluence_export
 			: true
 	);
+
+	let exportTheme = $state<'light' | 'dark'>(getResolvedTheme());
 
 	function getAbsolutePosition(node: Node, nodes: Node[]) {
 		if (node.parentId) {
@@ -186,6 +191,14 @@
 		const originalWidth = flowElement.style.width;
 		const originalHeight = flowElement.style.height;
 
+		// Temporarily switch theme for export
+		const currentTheme = getResolvedTheme();
+		const needsThemeSwitch = exportTheme !== currentTheme;
+		if (needsThemeSwitch) {
+			document.documentElement.classList.toggle('dark', exportTheme === 'dark');
+			document.documentElement.style.colorScheme = exportTheme;
+		}
+
 		flowElement.style.width = `${imageWidth}px`;
 		flowElement.style.height = `${imageHeight}px`;
 		setViewport(newViewport, { duration: 0 });
@@ -193,6 +206,8 @@
 		isExporting.set(true);
 
 		let watermark = document.createElement('div');
+		const watermarkColor =
+			exportTheme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.3)';
 
 		if (!hideCreatedWith) {
 			watermark = document.createElement('div');
@@ -203,7 +218,7 @@
 				display: flex;
 				align-items: center;
 				gap: 8px;
-				color: rgba(255, 255, 255, 0.5);
+				color: ${watermarkColor};
 				font-size: 14px;
 				font-family: system-ui;
 				pointer-events: none;
@@ -257,6 +272,11 @@
 			flowElement.classList.remove('hide-for-export');
 			flowElement.style.width = originalWidth;
 			flowElement.style.height = originalHeight;
+			// Restore original theme
+			if (needsThemeSwitch) {
+				document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+				document.documentElement.style.colorScheme = currentTheme;
+			}
 			setTimeout(() => setViewport(originalViewport, { duration: 0 }), 50);
 		}
 	}
@@ -293,94 +313,118 @@
 
 <GenericModal title={topology_export()} {isOpen} onClose={() => (isOpen = false)} size="sm">
 	<div class="flex flex-col gap-1">
+		<!-- Export Theme Toggle -->
+		<div class="mb-2 flex items-center justify-between px-3">
+			<span class="text-tertiary text-xs font-medium">{topology_exportTheme()}</span>
+			<div class="flex gap-1">
+				<button
+					class="btn-secondary gap-1 !px-2.5 !py-1 !text-xs {exportTheme === 'light'
+						? 'list-item-selected'
+						: ''}"
+					onclick={() => (exportTheme = 'light')}
+				>
+					<Sun size={12} />
+					{common_light()}
+				</button>
+				<button
+					class="btn-secondary gap-1 !px-2.5 !py-1 !text-xs {exportTheme === 'dark'
+						? 'list-item-selected'
+						: ''}"
+					onclick={() => (exportTheme = 'dark')}
+				>
+					<Moon size={12} />
+					{common_dark()}
+				</button>
+			</div>
+		</div>
 		<button
-			class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-zinc-700/50"
+			class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50"
 			onclick={() => captureImage('png')}
 		>
-			<Image class="h-5 w-5 flex-shrink-0 text-zinc-400" />
+			<Image class="text-tertiary h-5 w-5 flex-shrink-0" />
 			<div>
-				<div class="text-sm font-medium text-zinc-200">{topology_exportPng()}</div>
-				<div class="text-xs text-zinc-400">{topology_exportPngDesc()}</div>
+				<div class="text-secondary text-sm font-medium">{topology_exportPng()}</div>
+				<div class="text-tertiary text-xs">{topology_exportPngDesc()}</div>
 			</div>
 		</button>
 
 		{#if hasSvgExport}
 			<button
-				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-zinc-700/50"
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50"
 				onclick={() => captureImage('svg')}
 			>
-				<FileImage class="h-5 w-5 flex-shrink-0 text-zinc-400" />
+				<FileImage class="text-tertiary h-5 w-5 flex-shrink-0" />
 				<div>
-					<div class="text-sm font-medium text-zinc-200">{topology_exportSvg()}</div>
-					<div class="text-xs text-zinc-400">{topology_exportSvgDesc()}</div>
+					<div class="text-secondary text-sm font-medium">{topology_exportSvg()}</div>
+					<div class="text-tertiary text-xs">{topology_exportSvgDesc()}</div>
 				</div>
 			</button>
 		{:else if !isShareView}
 			<button
-				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-zinc-700/50"
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50"
 				onclick={() => handleUpgrade('svg_export')}
 			>
-				<FileImage class="h-5 w-5 flex-shrink-0 text-zinc-500" />
+				<FileImage class="text-muted h-5 w-5 flex-shrink-0" />
 				<div class="flex-1">
-					<div class="flex items-center gap-2 text-sm font-medium text-zinc-400">
+					<div class="text-tertiary flex items-center gap-2 text-sm font-medium">
 						{topology_exportSvg()}
 						<UpgradeBadge feature="svg_export" />
 					</div>
-					<div class="text-xs text-zinc-500">{topology_exportSvgDesc()}</div>
+					<div class="text-muted text-xs">{topology_exportSvgDesc()}</div>
 				</div>
 			</button>
 		{/if}
 
 		{#if hasMermaidExport}
 			<button
-				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-zinc-700/50"
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50"
 				onclick={handleMermaidExport}
 			>
-				<FileCode class="h-5 w-5 flex-shrink-0 text-zinc-400" />
+				<FileCode class="text-tertiary h-5 w-5 flex-shrink-0" />
 				<div>
-					<div class="text-sm font-medium text-zinc-200">{topology_exportMermaid()}</div>
-					<div class="text-xs text-zinc-400">{topology_exportMermaidDesc()}</div>
+					<div class="text-secondary text-sm font-medium">{topology_exportMermaid()}</div>
+					<div class="text-tertiary text-xs">{topology_exportMermaidDesc()}</div>
 				</div>
 			</button>
 		{:else if !isShareView}
 			<button
-				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-zinc-700/50"
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50"
 				onclick={() => handleUpgrade('mermaid_export')}
 			>
-				<FileCode class="h-5 w-5 flex-shrink-0 text-zinc-500" />
+				<FileCode class="text-muted h-5 w-5 flex-shrink-0" />
 				<div class="flex-1">
-					<div class="flex items-center gap-2 text-sm font-medium text-zinc-400">
+					<div class="text-tertiary flex items-center gap-2 text-sm font-medium">
 						{topology_exportMermaid()}
 						<UpgradeBadge feature="mermaid_export" />
 					</div>
-					<div class="text-xs text-zinc-500">{topology_exportMermaidDesc()}</div>
+					<div class="text-muted text-xs">{topology_exportMermaidDesc()}</div>
 				</div>
 			</button>
 		{/if}
 
 		{#if hasConfluenceExport}
 			<button
-				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-zinc-700/50"
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50"
 				onclick={handleConfluenceExport}
 			>
-				<FileText class="h-5 w-5 flex-shrink-0 text-zinc-400" />
+				<FileText class="text-tertiary h-5 w-5 flex-shrink-0" />
 				<div>
-					<div class="text-sm font-medium text-zinc-200">{topology_exportConfluence()}</div>
-					<div class="text-xs text-zinc-400">{topology_exportConfluenceDesc()}</div>
+					<div class="text-secondary text-sm font-medium">{topology_exportConfluence()}</div>
+					<div class="text-tertiary text-xs">{topology_exportConfluenceDesc()}</div>
 				</div>
 			</button>
 		{:else if !isShareView}
 			<button
-				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-zinc-700/50"
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50"
 				onclick={() => handleUpgrade('confluence_export')}
 			>
-				<FileText class="h-5 w-5 flex-shrink-0 text-zinc-500" />
+				<FileText class="text-muted h-5 w-5 flex-shrink-0" />
 				<div class="flex-1">
-					<div class="flex items-center gap-2 text-sm font-medium text-zinc-400">
+					<div class="text-tertiary flex items-center gap-2 text-sm font-medium">
 						{topology_exportConfluence()}
 						<UpgradeBadge feature="confluence_export" />
 					</div>
-					<div class="text-xs text-zinc-500">{topology_exportConfluenceDesc()}</div>
+					<div class="text-muted text-xs">{topology_exportConfluenceDesc()}</div>
 				</div>
 			</button>
 		{/if}

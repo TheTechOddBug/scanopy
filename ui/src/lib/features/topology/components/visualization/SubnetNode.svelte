@@ -191,7 +191,7 @@
 		<!-- Main container -->
 		<div
 			class="rounded-xl text-center text-sm font-semibold shadow-lg transition-all duration-200"
-			style="background: #1a1d29; width: 100%; height: 100%; position: relative; overflow: hidden; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
+			style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: hidden; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
 		>
 			<!-- Infrastructure background area with gradient centered at infra_width -->
 			{#if hasInfra}

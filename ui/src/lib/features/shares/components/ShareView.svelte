@@ -118,7 +118,7 @@
 	{/if}
 </svelte:head>
 
-<div class="{isEmbed ? 'h-screen w-screen' : 'min-h-screen'} bg-gray-900">
+<div class="{isEmbed ? 'h-screen w-screen' : 'min-h-screen'} bg-[var(--color-bg-elevated)]">
 	{#if loading}
 		<div class="flex {isEmbed ? 'h-full' : 'min-h-screen'} items-center justify-center">
 			<Loading />

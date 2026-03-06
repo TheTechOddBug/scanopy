@@ -94,7 +94,7 @@
 	function handleClose() {}
 </script>
 
-<div class="relative flex min-h-screen flex-col items-center bg-gray-900 p-4">
+<div class="relative flex min-h-screen flex-col items-center bg-[var(--color-bg-elevated)] p-4">
 	<!-- Background image with overlay -->
 	<div class="absolute inset-0 z-0">
 		<div

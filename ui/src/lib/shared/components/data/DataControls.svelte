@@ -977,7 +977,7 @@
 
 	<!-- Sticky Controls Bar -->
 	<div
-		class="sticky top-0 z-20 -mx-8 border-b bg-[#1a1d29] px-8 pb-4 {isStuck
+		class="sticky top-0 z-20 -mx-8 border-b bg-[var(--color-bg-body)] px-8 pb-4 {isStuck
 			? 'border-gray-700 pt-4 shadow-lg'
 			: 'border-transparent'}"
 	>

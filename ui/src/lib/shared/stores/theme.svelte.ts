@@ -1,54 +1,60 @@
 const STORAGE_KEY = 'scanopy-theme';
 
-type ThemeMode = 'system' | 'light' | 'dark';
-type ResolvedTheme = 'light' | 'dark';
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type ResolvedTheme = 'light' | 'dark';
 
-class ThemeStore {
-	themeMode = $state<ThemeMode>('system');
-	resolvedTheme = $derived<ResolvedTheme>(this.resolve());
+let themeMode = $state<ThemeMode>('system');
 
-	private mediaQuery: MediaQueryList | null = null;
-
-	constructor() {
-		if (typeof window !== 'undefined') {
-			const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-			if (stored === 'light' || stored === 'dark' || stored === 'system') {
-				this.themeMode = stored;
-			}
-
-			this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-			this.mediaQuery.addEventListener('change', () => this.applyTheme());
-
-			$effect.root(() => {
-				$effect(() => {
-					this.applyTheme();
-				});
-			});
-		}
-	}
-
-	private resolve(): ResolvedTheme {
-		if (this.themeMode === 'system') {
-			if (typeof window === 'undefined') return 'dark';
-			return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-		}
-		return this.themeMode;
-	}
-
-	private applyTheme() {
-		const resolved = this.resolvedTheme;
-		document.documentElement.classList.toggle('dark', resolved === 'dark');
-		document.documentElement.style.colorScheme = resolved;
-	}
-
-	setTheme(mode: ThemeMode) {
-		this.themeMode = mode;
-		localStorage.setItem(STORAGE_KEY, mode);
-	}
+function getSystemTheme(): ResolvedTheme {
+	if (typeof window === 'undefined') return 'dark';
+	return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-export const themeStore = new ThemeStore();
+let resolvedTheme = $derived<ResolvedTheme>(themeMode === 'system' ? getSystemTheme() : themeMode);
+
+// Initialize from localStorage and set up listeners (browser only)
+if (typeof window !== 'undefined') {
+	const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
+	if (stored === 'light' || stored === 'dark' || stored === 'system') {
+		themeMode = stored;
+	}
+
+	// Re-evaluate when OS preference changes
+	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+		// Trigger reactivity by re-assigning when in system mode
+		if (themeMode === 'system') {
+			themeMode = 'system';
+		}
+	});
+
+	// Apply theme to DOM whenever resolvedTheme changes
+	$effect.root(() => {
+		$effect(() => {
+			document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
+			document.documentElement.style.colorScheme = resolvedTheme;
+		});
+	});
+}
+
+export function setTheme(mode: ThemeMode) {
+	themeMode = mode;
+	localStorage.setItem(STORAGE_KEY, mode);
+}
+
+export function getThemeMode(): ThemeMode {
+	return themeMode;
+}
 
 export function getResolvedTheme(): ResolvedTheme {
-	return themeStore.resolvedTheme;
+	return resolvedTheme;
 }
+
+export const themeStore = {
+	get themeMode() {
+		return themeMode;
+	},
+	get resolvedTheme() {
+		return resolvedTheme;
+	},
+	setTheme
+};

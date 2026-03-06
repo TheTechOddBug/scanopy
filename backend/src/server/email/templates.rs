@@ -472,15 +472,15 @@ pub const DAEMON_STANDBY_BODY: &str = r#"                    <!-- Main Content -
                         <td style="padding: 0 40px 20px 40px;">
                             <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Daemon on Standby</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your daemon <strong>{daemon_name}</strong> on <strong>{network_name}</strong> has been placed on standby because it hasn't completed a discovery session in over 30 days.</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">To resume monitoring, queue a new discovery session in Scanopy and restart the daemon. It will automatically come off standby when the session starts.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your daemon <strong>{daemon_name}</strong> on <strong>{network_name}</strong> has been placed on <a href="https://scanopy.net/docs/reference/daemon-status/" style="color: #2563eb; text-decoration: none;">standby</a> because it hasn't completed a discovery session in over 30 days.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">{resume_instructions}</p>
                         </td>
                     </tr>
 
                     <!-- CTA Button -->
                     <tr>
                         <td align="center" style="padding: 0 40px 30px 40px;">
-                            <a href="{base_url}" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Open Scanopy</a>
+                            <a href="{base_url}/#discovery-scheduled" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Queue Discovery</a>
                         </td>
                     </tr>
 "#;

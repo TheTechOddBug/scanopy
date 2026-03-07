@@ -41,6 +41,7 @@
 		common_password,
 		common_save,
 		common_saving,
+		common_theme,
 		common_width,
 		shares_accessControl,
 		shares_allowedDomainsHelp,
@@ -61,7 +62,6 @@
 		shares_passwordHelpCreate,
 		shares_passwordHelpEdit,
 		shares_passwordPlaceholder,
-		shares_shareTheme,
 		shares_shareThemeDefault,
 		shares_shareThemeLight,
 		shares_shareThemeDark,
@@ -408,9 +408,7 @@
 							{/snippet}
 						</form.Field>
 						<div>
-							<span class="text-secondary mb-1 block text-sm font-medium"
-								>{shares_shareTheme()}</span
-							>
+							<span class="text-secondary mb-1 block text-sm font-medium">{common_theme()}</span>
 							<div class="flex gap-2">
 								<button
 									type="button"

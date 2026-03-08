@@ -6,7 +6,7 @@
 	import type { User } from '$lib/features/users/types';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import { Link, Key, LogOut, Shield } from 'lucide-svelte';
-	import { openCookieSettings } from '$lib/shared/components/feedback/CookieConsent.svelte';
+	import CookieSettingsPanel from '$lib/shared/components/feedback/CookieSettingsPanel.svelte';
 	import { createForm } from '@tanstack/svelte-form';
 	import { submitForm } from '$lib/shared/components/forms/form-context';
 	import {
@@ -59,10 +59,10 @@
 	} from '$lib/paraglide/messages';
 
 	let {
-		subView = $bindable<'main' | 'credentials' | 'email-change'>('main'),
+		subView = $bindable<'main' | 'credentials' | 'email-change' | 'cookies'>('main'),
 		onClose
 	}: {
-		subView?: 'main' | 'credentials' | 'email-change';
+		subView?: 'main' | 'credentials' | 'email-change' | 'cookies';
 		onClose: () => void;
 	} = $props();
 
@@ -184,7 +184,7 @@
 	}
 
 	function handleCancel() {
-		if (subView === 'credentials' || subView === 'email-change') {
+		if (subView === 'credentials' || subView === 'email-change' || subView === 'cookies') {
 			subView = 'main';
 			form.reset({ currentPassword: '', password: '', confirmPassword: '' });
 			emailChangeForm.reset({ currentPassword: '', newEmail: '' });
@@ -363,14 +363,7 @@
 										</p>
 									</div>
 								</div>
-								<button
-									type="button"
-									onclick={() => {
-										onClose();
-										setTimeout(() => openCookieSettings(), 150);
-									}}
-									class="btn-primary"
-								>
+								<button type="button" onclick={() => (subView = 'cookies')} class="btn-primary">
 									{common_manage()}
 								</button>
 							</div>
@@ -483,6 +476,8 @@
 					</emailChangeForm.Field>
 				</div>
 			</div>
+		{:else if subView === 'cookies'}
+			<CookieSettingsPanel onSave={() => (subView = 'main')} />
 		{/if}
 	</div>
 

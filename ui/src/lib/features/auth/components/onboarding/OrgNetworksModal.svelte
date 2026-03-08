@@ -13,7 +13,10 @@
 		common_continue,
 		common_settingUp,
 		common_version,
+		onboarding_companyNetworkHelp,
+		onboarding_homelabNetworkHelp,
 		onboarding_mspNetworkHelp,
+		onboarding_orgHelp,
 		onboarding_visualizeCompany,
 		onboarding_visualizeHomelab,
 		onboarding_visualizeMsp,
@@ -111,6 +114,14 @@
 				? onboarding_visualizeCompany()
 				: onboarding_visualizeHomelab()
 	);
+
+	let networkHelpText = $derived(
+		useCase === 'msp'
+			? onboarding_mspNetworkHelp()
+			: useCase === 'company'
+				? onboarding_companyNetworkHelp()
+				: onboarding_homelabNetworkHelp()
+	);
 </script>
 
 <GenericModal
@@ -150,6 +161,7 @@
 							id="organizationName"
 							placeholder={useCaseConfig.orgPlaceholder}
 							required={true}
+							helpText={onboarding_orgHelp()}
 							{field}
 						/>
 					{/snippet}
@@ -171,7 +183,7 @@
 										{field}
 										required={true}
 										placeholder={useCaseConfig.networkPlaceholder}
-										helpText={useCase === 'msp' ? onboarding_mspNetworkHelp() : ''}
+										helpText={networkHelpText}
 									/>
 								{/snippet}
 							</form.Field>

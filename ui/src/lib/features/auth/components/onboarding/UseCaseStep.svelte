@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import { createForm } from '@tanstack/svelte-form';
 	import { AlertTriangle, Home, Building2, Users } from 'lucide-svelte';
-	import { type UseCase, USE_CASES } from '../../types/base';
+	import { type UseCase, getUseCases } from '../../types/base';
 	import { useConfigQuery, isCloud, isCommunity } from '$lib/shared/stores/config-query';
 	import { onboardingStore } from '../../stores/onboarding';
 	import { trackEvent } from '$lib/shared/utils/analytics';
@@ -183,7 +183,7 @@
 				<!-- Use Case Cards -->
 				<div class="grid gap-3">
 					{#each useCaseIds as useCaseId (useCaseId)}
-						{@const useCaseConfig = USE_CASES[useCaseId]}
+						{@const useCaseConfig = getUseCases()[useCaseId]}
 						{@const isSelected = selectedUseCase === useCaseId}
 						{@const Icon = useCaseIcons[useCaseId]}
 						<button

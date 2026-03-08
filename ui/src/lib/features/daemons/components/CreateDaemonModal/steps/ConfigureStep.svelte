@@ -200,6 +200,15 @@
 		<InlineInfo title="" body={daemons_portForwardingHint()} />
 	{/if}
 
+	<!-- API key info: auto-generated when no key source choice is shown -->
+	{#if isFirstDaemon || isServerPoll}
+		<InlineInfo
+			title=""
+			body="An API key will be automatically generated when you proceed to the next step."
+			dismissableKey="daemon-auto-key-hint"
+		/>
+	{/if}
+
 	<!-- Inline API key source for DaemonPoll (subsequent daemons only) -->
 	{#if !isFirstDaemon && !isServerPoll}
 		<div class="border-primary/10 space-y-3 border-t pt-4">

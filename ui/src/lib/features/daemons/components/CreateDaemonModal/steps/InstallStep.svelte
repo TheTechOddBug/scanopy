@@ -19,10 +19,8 @@
 		daemons_docsMacvlanLinkText,
 		daemons_docsMultiVlan,
 		daemons_docsMultiVlanLinkText,
-		daemons_downloadDaemon,
 		daemons_fixValidationErrors,
 		daemons_fixValidationErrorsBody,
-		daemons_runDaemon,
 		daemons_runInPowershell,
 		daemons_wslWarning,
 		daemons_wslWarningBody
@@ -36,11 +34,10 @@
 		hasErrors: boolean;
 		isFirstDaemon?: boolean;
 		connectionStatus?: DaemonConnectionStatus;
-		onInstalled?: () => void;
-		onTrouble?: () => void;
 		onReviewCommands?: () => void;
 		onViewDiscovery?: () => void;
 		hasEmailSupport?: boolean;
+		showTroubleshootingPanel?: boolean;
 	}
 
 	let {
@@ -51,11 +48,10 @@
 		hasErrors,
 		isFirstDaemon = false,
 		connectionStatus = 'idle',
-		onInstalled,
-		onTrouble,
 		onReviewCommands,
 		onViewDiscovery,
-		hasEmailSupport = false
+		hasEmailSupport = false,
+		showTroubleshootingPanel = false
 	}: Props = $props();
 
 	const configQuery = useConfigQuery();
@@ -68,8 +64,6 @@
 		'https://github.com/scanopy/scanopy/releases/latest/download/scanopy-daemon-windows-amd64.exe';
 	const windowsInstallCommand = `Invoke-WebRequest -Uri "${windowsDownloadUrl}" -OutFile "scanopy-daemon-windows-amd64.exe"`;
 	const installScript = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/scanopy/scanopy/refs/heads/main/install.sh)"`;
-
-	let showTroubleshooting = $state(false);
 
 	function handleOsSelect(os: DaemonOS) {
 		onOsSelect(os);
@@ -95,27 +89,14 @@
 						Waiting for your daemon to connect...
 					</h3>
 					<p class="text-secondary mt-1 text-sm">
-						This usually takes less than a minute. Run the install commands and start the daemon.
+						This usually takes less than a minute. Make sure the daemon is running.
 					</p>
 				</div>
-				<div class="flex items-center gap-3">
-					<button type="button" class="btn-link text-sm" onclick={() => onReviewCommands?.()}>
-						Review install commands
-					</button>
-					<span class="text-tertiary">·</span>
-					<button
-						type="button"
-						class="btn-link text-sm"
-						onclick={() => {
-							showTroubleshooting = true;
-							onTrouble?.();
-						}}
-					>
-						Still not connecting?
-					</button>
-				</div>
+				<button type="button" class="btn-link text-sm" onclick={() => onReviewCommands?.()}>
+					Review install commands
+				</button>
 			</div>
-			{#if showTroubleshooting}
+			{#if showTroubleshootingPanel}
 				<div class="border-primary/10 border-t pt-4">
 					<p class="text-secondary mb-3 text-sm font-medium">Need help?</p>
 					<SupportOptions isTroubleshooting={true} {hasEmailSupport} />
@@ -185,7 +166,7 @@
 					{#if linuxMethod === 'binary'}
 						<div class="text-secondary">
 							<b>{common_stepNumber({ number: '1' })}</b>
-							{daemons_downloadDaemon()}
+							Download the binary
 						</div>
 						<CodeContainer
 							language="bash"
@@ -195,7 +176,7 @@
 						/>
 						<div class="text-secondary">
 							<b>{common_stepNumber({ number: '2' })}</b>
-							{daemons_runDaemon()}
+							Run the install command
 						</div>
 						<CodeContainer
 							language="bash"
@@ -219,7 +200,7 @@
 				{:else if selectedOS === 'macos'}
 					<div class="text-secondary">
 						<b>{common_stepNumber({ number: '1' })}</b>
-						{daemons_downloadDaemon()}
+						Download the binary
 					</div>
 					<CodeContainer
 						language="bash"
@@ -229,7 +210,7 @@
 					/>
 					<div class="text-secondary">
 						<b>{common_stepNumber({ number: '2' })}</b>
-						{daemons_runDaemon()}
+						Run the install command
 					</div>
 					<CodeContainer
 						language="bash"
@@ -242,7 +223,7 @@
 				{:else if selectedOS === 'windows'}
 					<div class="text-secondary">
 						<b>{common_stepNumber({ number: '1' })}</b>
-						{daemons_downloadDaemon()}
+						Download the executable
 					</div>
 					<CodeContainer
 						language="powershell"
@@ -267,26 +248,11 @@
 				{/if}
 			</OsSelector>
 
-			<!-- Footer CTAs for first daemon flow -->
-			{#if isFirstDaemon}
-				<div class="border-primary/10 flex items-center gap-3 border-t pt-4">
-					<button type="button" class="btn-primary" onclick={() => onInstalled?.()}>
-						I've installed it
-					</button>
-					<button
-						type="button"
-						class="btn-link text-sm"
-						onclick={() => {
-							showTroubleshooting = true;
-							onTrouble?.();
-						}}
-					>
-						I'm having trouble
-					</button>
-				</div>
-				{#if showTroubleshooting}
+			{#if showTroubleshootingPanel}
+				<div class="border-primary/10 border-t pt-4">
+					<p class="text-secondary mb-3 text-sm font-medium">Need help?</p>
 					<SupportOptions isTroubleshooting={true} {hasEmailSupport} />
-				{/if}
+				</div>
 			{/if}
 		{/if}
 	{/if}

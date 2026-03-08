@@ -2,6 +2,7 @@
 	import posthog from 'posthog-js';
 	import { dev } from '$app/environment';
 	import { type CookiePreferences, COOKIE_NAME, getGdprPreferences } from './CookieConsent.svelte';
+	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import {
 		common_analytics,
 		common_marketing,
@@ -81,8 +82,8 @@
 
 		<div class="space-y-3">
 			<!-- Necessary -->
-			<div class="border-default bg-surface rounded-md border p-4">
-				<div class="mb-2 flex items-center justify-between">
+			<InfoCard variant="compact">
+				<div class="flex items-center justify-between">
 					<label class="flex cursor-pointer items-center gap-3">
 						<input type="checkbox" checked disabled class="accent-blue-600" />
 						<span class="text-primary text-sm font-medium">{common_necessary()}</span>
@@ -90,29 +91,29 @@
 					<span class="text-tertiary text-xs uppercase tracking-wider">{cookies_alwaysOn()}</span>
 				</div>
 				<p class="text-secondary text-xs leading-relaxed">{cookies_necessaryDesc()}</p>
-			</div>
+			</InfoCard>
 
 			<!-- Analytics -->
-			<div class="border-default bg-surface rounded-md border p-4">
-				<div class="mb-2 flex items-center justify-between">
+			<InfoCard variant="compact">
+				<div class="flex items-center justify-between">
 					<label class="flex cursor-pointer items-center gap-3">
 						<input type="checkbox" bind:checked={preferences.analytics} class="accent-blue-600" />
 						<span class="text-primary text-sm font-medium">{common_analytics()}</span>
 					</label>
 				</div>
 				<p class="text-secondary text-xs leading-relaxed">{cookies_analyticsDesc()}</p>
-			</div>
+			</InfoCard>
 
 			<!-- Marketing -->
-			<div class="border-default bg-surface rounded-md border p-4">
-				<div class="mb-2 flex items-center justify-between">
+			<InfoCard variant="compact">
+				<div class="flex items-center justify-between">
 					<label class="flex cursor-pointer items-center gap-3">
 						<input type="checkbox" bind:checked={preferences.marketing} class="accent-blue-600" />
 						<span class="text-primary text-sm font-medium">{common_marketing()}</span>
 					</label>
 				</div>
 				<p class="text-secondary text-xs leading-relaxed">{cookies_marketingDesc()}</p>
-			</div>
+			</InfoCard>
 		</div>
 
 		<div class="flex flex-wrap justify-end gap-2 border-t border-[var(--color-border)] pt-3">

@@ -70,6 +70,9 @@
 		return billingPlans.getMetadata(org.plan.type).features.daemon_poll;
 	});
 	let isFirstDaemon = $derived(!org?.onboarding?.includes('FirstDaemonRegistered'));
+	// Snapshot: tracks whether wizard was opened as first-daemon flow.
+	// Prevents reactivity from flipping showWaitingUI when FirstDaemonRegistered appears.
+	let startedAsFirstDaemon = $state(false);
 	let hasEmailSupport = $derived.by(() => {
 		if (!org?.plan?.type) return false;
 		return billingPlans.getMetadata(org.plan.type).features.email_support;
@@ -97,6 +100,7 @@
 	// Connection waiting state
 	let connectionStatus = $state<DaemonConnectionStatus>('idle');
 	let troubleTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
+	let showTroubleshootingPanel = $state(false);
 
 	function getDefaultDaemonName(networkId: string): string {
 		const network = networksData.find((n) => n.id === networkId);
@@ -293,7 +297,7 @@
 
 	// --- Connection waiting ---
 	function handleInstalled() {
-		if (!isFirstDaemon) return;
+		if (!startedAsFirstDaemon) return;
 		connectionStatus = 'waiting';
 		daemonSetupState.set({ connectionStatus: 'waiting' });
 		trackEvent('daemon_install_confirmed');
@@ -319,6 +323,7 @@
 	}
 
 	function handleTrouble() {
+		showTroubleshootingPanel = true;
 		trackEvent('daemon_install_trouble');
 	}
 
@@ -369,6 +374,7 @@
 		previousMainTab = 'configure';
 		furthestReached = 0;
 		connectionStatus = 'idle';
+		showTroubleshootingPanel = false;
 		onClose();
 	}
 
@@ -379,6 +385,8 @@
 		furthestReached = 0;
 		previousMainTab = 'configure';
 		connectionStatus = 'idle';
+		startedAsFirstDaemon = isFirstDaemon;
+		showTroubleshootingPanel = false;
 	}
 
 	let colorHelper = entities.getColorHelper('Daemon');
@@ -424,13 +432,12 @@
 					{runCommand}
 					{dockerCompose}
 					{hasErrors}
-					{isFirstDaemon}
+					isFirstDaemon={startedAsFirstDaemon}
 					{connectionStatus}
-					onInstalled={handleInstalled}
-					onTrouble={handleTrouble}
 					onReviewCommands={handleReviewCommands}
 					onViewDiscovery={handleViewDiscovery}
 					{hasEmailSupport}
+					{showTroubleshootingPanel}
 				/>
 			{/if}
 
@@ -459,6 +466,17 @@
 					{#if connectionStatus === 'connected'}
 						<button type="button" class="btn-primary" onclick={handleOnClose}>
 							{common_close()}
+						</button>
+					{:else if connectionStatus === 'waiting' || connectionStatus === 'trouble'}
+						<button type="button" class="btn-secondary" onclick={handleOnClose}>
+							{common_close()}
+						</button>
+					{:else if startedAsFirstDaemon}
+						<button type="button" class="btn-link text-sm" onclick={handleTrouble}>
+							I'm having trouble
+						</button>
+						<button type="button" class="btn-primary" onclick={handleInstalled}>
+							I've run the install command
 						</button>
 					{:else}
 						<button type="button" class="btn-secondary" onclick={previousTab}>

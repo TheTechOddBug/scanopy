@@ -6,6 +6,7 @@
 	import ExportButton from './ExportButton.svelte';
 	import ExportModal from './ExportModal.svelte';
 	import ShareModal from '$lib/features/shares/components/ShareModal.svelte';
+	import { tooltip } from '$lib/features/billing/tooltip';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
@@ -337,9 +338,17 @@
 				<div class="flex items-center gap-4 py-2">
 					<ExportButton onclick={() => (isExportModalOpen = true)} />
 					{#if !isReadOnly}
-						<button class="btn-secondary" onclick={() => openModal('topology-share')}>
-							<Share2 class="my-1 h-5 w-5" />
-						</button>
+						{#if currentUser && !currentUser.email_verified}
+							<span data-tooltip="Please verify email to share topology" use:tooltip>
+								<button class="btn-secondary opacity-50" disabled>
+									<Share2 class="my-1 h-5 w-5" />
+								</button>
+							</span>
+						{:else}
+							<button class="btn-secondary" onclick={() => openModal('topology-share')}>
+								<Share2 class="my-1 h-5 w-5" />
+							</button>
+						{/if}
 					{/if}
 					<a
 						href="https://tally.so/r/lbqLAv"

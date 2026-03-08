@@ -29,6 +29,7 @@ use cidr::IpCidr;
 use futures::{StreamExt, future::try_join_all};
 use mac_address::MacAddress;
 use pnet::datalink;
+use redact::Secret;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
@@ -1036,8 +1037,15 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         // SNMP polling - gather system info, interface table, and neighbor discovery
         // Only attempt if UDP 161 is open (saves time on hosts without SNMP)
         let snmp_port_open = open_ports.contains(&PortType::Snmp);
+        let default_public_credential = SnmpQueryCredential {
+            version: Default::default(),
+            community: Secret::from("public".to_string()),
+        };
+        let effective_credential = snmp_credential
+            .as_ref()
+            .or(Some(&default_public_credential));
         let (snmp_system_info, snmp_if_entries, lldp_neighbors, cdp_neighbors, ip_addr_table) =
-            if let Some(credential) = &snmp_credential
+            if let Some(credential) = effective_credential
                 && snmp_port_open
             {
                 match snmp::query_system_info(ip, credential).await {

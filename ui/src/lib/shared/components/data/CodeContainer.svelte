@@ -13,12 +13,14 @@
 	export let expandable: boolean = true;
 	export let expanded: boolean = true;
 	export let language: string = 'json';
+	export let onCopy: (() => void) | undefined = undefined;
 
 	// Copy JSON to clipboard
 	async function copyJson() {
 		try {
 			await navigator.clipboard.writeText(code);
 			pushSuccess(common_copied());
+			onCopy?.();
 		} catch (error) {
 			pushWarning(common_failedToCopy({ error: String(error) }));
 		}

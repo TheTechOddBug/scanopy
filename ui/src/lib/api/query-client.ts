@@ -25,13 +25,14 @@ export function createQueryClient(): QueryClient {
 					}
 					return failureCount < 2;
 				},
-				// Use Retry-After for 429s, default exponential backoff for others
+				// Use Retry-After for 429s with jitter to avoid thundering herd
 				retryDelay: (attemptIndex, error) => {
 					if (error instanceof ApiError && error.status === 429) {
+						const jitter = Math.random() * 2000;
 						if (error.retryAfter !== null) {
-							return error.retryAfter * 1000;
+							return error.retryAfter * 1000 + jitter;
 						}
-						return Math.min(2000 * 2 ** attemptIndex, 60000);
+						return Math.min(2000 * 2 ** attemptIndex, 60000) + jitter;
 					}
 					return Math.min(1000 * 2 ** attemptIndex, 30000);
 				},

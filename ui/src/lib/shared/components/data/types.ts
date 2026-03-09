@@ -18,6 +18,8 @@ export interface TagProps {
 	icon?: IconComponent;
 	href?: string;
 	entityRef?: EntityRef;
+	pill?: boolean;
+	title?: string;
 	onmouseenter?: () => void;
 	onmouseleave?: () => void;
 	onclick?: () => void;

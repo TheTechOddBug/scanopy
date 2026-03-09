@@ -3,8 +3,13 @@
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
-	import { useTopologiesQuery, selectedTopologyId } from '$lib/features/topology/queries';
+	import {
+		useTopologiesQuery,
+		selectedTopologyId,
+		autoRebuild
+	} from '$lib/features/topology/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
+	import { getTopologyStateInfo } from '$lib/features/topology/state';
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import OptionToggle from '../../options/OptionToggle.svelte';
@@ -20,6 +25,12 @@
 		topologyContext ? $topologyContext : topologiesData.find((t) => t.id === $selectedTopologyId)
 	);
 
+	// Freshness gating for inline edits
+	let isReadonly = $derived(!!topologyContext);
+	let liveEditsEnabled = $derived(
+		!isReadonly && topology && getTopologyStateInfo(topology, $autoRebuild).type == 'fresh'
+	);
+
 	let vmService = $derived(topology ? topology.services.find((s) => s.id == vmServiceId) : null);
 	let hypervisorHost = $derived(topology ? topology.hosts.find((h) => h.id == edge.target) : null);
 </script>
@@ -29,7 +40,14 @@
 		<span class="text-secondary mb-2 block text-sm font-medium">VM Service</span>
 		<div class="card card-static">
 			<EntityDisplayWrapper
-				context={{ interfaceId: null }}
+				context={{
+					interfaceId: null,
+					ports: topology?.ports ?? [],
+					showEntityTagPicker: !isReadonly,
+					tagPickerDisabled: !liveEditsEnabled,
+					categoryInteractable: !!liveEditsEnabled,
+					entityTags: topology?.entity_tags ?? []
+				}}
 				item={vmService}
 				displayComponent={ServiceDisplay}
 			/>
@@ -44,7 +62,10 @@
 					services:
 						topology?.services.filter((s) =>
 							hypervisorHost ? s.host_id == hypervisorHost.id : false
-						) ?? []
+						) ?? [],
+					showEntityTagPicker: !isReadonly,
+					tagPickerDisabled: !liveEditsEnabled,
+					entityTags: topology?.entity_tags ?? []
 				}}
 				item={hypervisorHost}
 				displayComponent={HostDisplay}

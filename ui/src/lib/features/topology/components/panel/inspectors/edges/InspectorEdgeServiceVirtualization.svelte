@@ -6,9 +6,11 @@
 	import {
 		useTopologiesQuery,
 		selectedTopologyId,
-		topologyOptions
+		topologyOptions,
+		autoRebuild
 	} from '$lib/features/topology/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
+	import { getTopologyStateInfo } from '$lib/features/topology/state';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type { Subnet } from '$lib/features/subnets/types/base';
@@ -25,6 +27,12 @@
 	let topologiesData = $derived(topologiesQuery.data ?? []);
 	let topology = $derived(
 		topologyContext ? $topologyContext : topologiesData.find((t) => t.id === $selectedTopologyId)
+	);
+
+	// Freshness gating for inline edits
+	let isReadonly = $derived(!!topologyContext);
+	let liveEditsEnabled = $derived(
+		!isReadonly && topology && getTopologyStateInfo(topology, $autoRebuild).type == 'fresh'
 	);
 
 	let containerizingService = $derived(
@@ -104,7 +112,10 @@
 					services:
 						topology?.services.filter((s) =>
 							containerizingHost ? s.host_id == containerizingHost.id : false
-						) ?? []
+						) ?? [],
+					showEntityTagPicker: !isReadonly,
+					tagPickerDisabled: !liveEditsEnabled,
+					entityTags: topology?.entity_tags ?? []
 				}}
 				item={containerizingHost}
 				displayComponent={HostDisplay}
@@ -115,7 +126,14 @@
 		<span class="text-secondary mb-2 block text-sm font-medium">Docker Service</span>
 		<div class="card card-static">
 			<EntityDisplayWrapper
-				context={{ interfaceId: null }}
+				context={{
+					interfaceId: null,
+					ports: topology?.ports ?? [],
+					showEntityTagPicker: !isReadonly,
+					tagPickerDisabled: !liveEditsEnabled,
+					categoryInteractable: !!liveEditsEnabled,
+					entityTags: topology?.entity_tags ?? []
+				}}
 				item={containerizingService}
 				displayComponent={ServiceDisplay}
 			/>
@@ -128,7 +146,14 @@
 	{#each containerizedServices as service (service.id)}
 		<div class="card card-static">
 			<EntityDisplayWrapper
-				context={{ interfaceId: null }}
+				context={{
+					interfaceId: null,
+					ports: topology?.ports ?? [],
+					showEntityTagPicker: !isReadonly,
+					tagPickerDisabled: !liveEditsEnabled,
+					categoryInteractable: !!liveEditsEnabled,
+					entityTags: topology?.entity_tags ?? []
+				}}
 				item={service}
 				displayComponent={ServiceDisplay}
 			/>

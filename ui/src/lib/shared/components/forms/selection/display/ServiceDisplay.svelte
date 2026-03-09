@@ -11,6 +11,8 @@
 		ports?: Port[];
 		showEntityTagPicker?: boolean;
 		tagPickerDisabled?: boolean;
+		categoryInteractable?: boolean;
+		entityTags?: import('$lib/features/tags/types/base').Tag[];
 	}
 
 	export const ServiceDisplay: EntityDisplayComponent<Service, ServiceDisplayContext> = {
@@ -66,23 +68,28 @@
 		},
 		getIconColor: (service: Service) =>
 			serviceDefinitions.getColorHelper(service.service_definition).icon,
-		getTags: (service: Service) => {
+		getTags: (service: Service, context) => {
 			let tags: TagProps[] = [];
 
 			// Add category tag
 			const category = serviceDefinitions.getCategory(service.service_definition);
 			if (category) {
 				const categoryColor = serviceDefinitions.getColorHelper(service.service_definition).color;
-				tags.push({
+				const tagProps: TagProps = {
 					label: category,
-					color: categoryColor,
-					onmouseenter: () => {
+					color: categoryColor
+				};
+
+				if (context.categoryInteractable) {
+					tagProps.pill = true;
+					tagProps.title = 'Click to hide this category';
+					tagProps.onmouseenter = () => {
 						hoveredServiceCategory.set({ category, color: categoryColor });
-					},
-					onmouseleave: () => {
+					};
+					tagProps.onmouseleave = () => {
 						hoveredServiceCategory.set(null);
-					},
-					onclick: () => {
+					};
+					tagProps.onclick = () => {
 						const cat = category as ServiceCategory;
 						topologyOptions.update((opts) => {
 							const hidden = opts.request.hide_service_categories ?? [];
@@ -97,8 +104,10 @@
 							}
 							return opts;
 						});
-					}
-				});
+					};
+				}
+
+				tags.push(tagProps);
 			}
 
 			if (service.virtualization) {
@@ -115,7 +124,8 @@
 			return {
 				selectedTagIds: service.tags,
 				entityId: service.id,
-				entityType: 'Service' as const
+				entityType: 'Service' as const,
+				availableTags: context.entityTags
 			};
 		},
 		getCategory: () => null

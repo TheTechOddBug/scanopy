@@ -25,6 +25,7 @@ export interface EntityDisplayComponent<T, C> {
 		selectedTagIds: string[];
 		entityId: string;
 		entityType: EntityDiscriminants;
+		availableTags?: import('$lib/features/tags/types/base').Tag[];
 	} | null;
 
 	// Inline editing support

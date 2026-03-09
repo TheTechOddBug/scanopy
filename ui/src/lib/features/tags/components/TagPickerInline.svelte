@@ -32,7 +32,9 @@
 		entityType,
 		// Callback mode props - for bulk operations or custom handling
 		onAdd,
-		onRemove
+		onRemove,
+		// Optional pre-resolved tags (e.g. from topology snapshot on share pages)
+		availableTags: availableTagsProp
 	}: {
 		selectedTagIds?: string[];
 		disabled?: boolean;
@@ -40,6 +42,7 @@
 		entityType?: EntityDiscriminants;
 		onAdd?: (tagId: string) => void;
 		onRemove?: (tagId: string) => void;
+		availableTags?: import('$lib/features/tags/types/base').Tag[];
 	} = $props();
 
 	// Entity mode: use generic mutations
@@ -131,7 +134,7 @@
 	const currentUserQuery = useCurrentUserQuery();
 
 	// Derived state
-	let tags = $derived(tagsQuery.data ?? []);
+	let tags = $derived(availableTagsProp ?? tagsQuery.data ?? []);
 	let isCreating = $derived(createTagMutation.isPending);
 	let organization = $derived(organizationQuery.data);
 	let currentUser = $derived(currentUserQuery.data);

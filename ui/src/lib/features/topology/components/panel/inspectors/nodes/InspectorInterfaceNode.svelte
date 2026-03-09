@@ -82,15 +82,18 @@
 	let serviceContext = $derived({
 		interfaceId: nodeData.interface_id ?? null,
 		ports: topology?.ports ?? [],
-		showEntityTagPicker: true,
-		tagPickerDisabled: !liveEditsEnabled
+		showEntityTagPicker: !isReadonly,
+		tagPickerDisabled: !liveEditsEnabled,
+		categoryInteractable: !!liveEditsEnabled,
+		entityTags: topology?.entity_tags ?? []
 	});
 
 	// Context for host display
 	let hostContext = $derived({
 		services: topology?.services.filter((s) => host && s.host_id == host.id) ?? [],
-		showEntityTagPicker: true,
-		tagPickerDisabled: !liveEditsEnabled
+		showEntityTagPicker: !isReadonly,
+		tagPickerDisabled: !liveEditsEnabled,
+		entityTags: topology?.entity_tags ?? []
 	});
 </script>
 

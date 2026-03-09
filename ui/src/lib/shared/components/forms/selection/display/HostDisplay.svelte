@@ -10,6 +10,7 @@
 		services?: Service[];
 		showEntityTagPicker?: boolean;
 		tagPickerDisabled?: boolean;
+		entityTags?: import('$lib/features/tags/types/base').Tag[];
 	}
 
 	export const HostDisplay: EntityDisplayComponent<Host, HostDisplayContext> = {
@@ -39,7 +40,8 @@
 			return {
 				selectedTagIds: host.tags,
 				entityId: host.id,
-				entityType: 'Host' as const
+				entityType: 'Host' as const,
+				availableTags: context.entityTags
 			};
 		}
 	};

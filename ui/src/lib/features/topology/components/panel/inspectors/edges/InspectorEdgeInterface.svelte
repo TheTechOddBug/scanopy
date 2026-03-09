@@ -3,8 +3,13 @@
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
-	import { useTopologiesQuery, selectedTopologyId } from '$lib/features/topology/queries';
+	import {
+		useTopologiesQuery,
+		selectedTopologyId,
+		autoRebuild
+	} from '$lib/features/topology/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
+	import { getTopologyStateInfo } from '$lib/features/topology/state';
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
@@ -16,6 +21,12 @@
 	let topologiesData = $derived(topologiesQuery.data ?? []);
 	let topology = $derived(
 		topologyContext ? $topologyContext : topologiesData.find((t) => t.id === $selectedTopologyId)
+	);
+
+	// Freshness gating for inline edits
+	let isReadonly = $derived(!!topologyContext);
+	let liveEditsEnabled = $derived(
+		!isReadonly && topology && getTopologyStateInfo(topology, $autoRebuild).type == 'fresh'
 	);
 
 	let host = $derived(topology ? topology.hosts.find((h) => h.id == hostId) : null);
@@ -32,7 +43,12 @@
 		<span class="text-secondary mb-2 block text-sm font-medium">Host</span>
 		<div class="card card-static">
 			<EntityDisplayWrapper
-				context={{ services: topology?.services.filter((s) => host && s.host_id == host.id) ?? [] }}
+				context={{
+					services: topology?.services.filter((s) => host && s.host_id == host.id) ?? [],
+					showEntityTagPicker: !isReadonly,
+					tagPickerDisabled: !liveEditsEnabled,
+					entityTags: topology?.entity_tags ?? []
+				}}
 				item={host}
 				displayComponent={HostDisplay}
 			/>

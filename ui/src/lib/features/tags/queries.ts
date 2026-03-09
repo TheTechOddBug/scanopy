@@ -208,6 +208,7 @@ export function useBulkAddTagMutation() {
 			if (queryKey) {
 				queryClient.invalidateQueries({ queryKey });
 			}
+			queryClient.invalidateQueries({ queryKey: queryKeys.topology.all });
 		}
 	}));
 }
@@ -231,6 +232,7 @@ export function useBulkRemoveTagMutation() {
 			if (queryKey) {
 				queryClient.invalidateQueries({ queryKey });
 			}
+			queryClient.invalidateQueries({ queryKey: queryKeys.topology.all });
 		}
 	}));
 }

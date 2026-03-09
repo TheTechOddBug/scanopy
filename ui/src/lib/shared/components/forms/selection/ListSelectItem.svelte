@@ -137,6 +137,7 @@
 							<button
 								type="button"
 								class="inline-flex cursor-pointer"
+								title={tag.title}
 								onmouseenter={tag.onmouseenter}
 								onmouseleave={tag.onmouseleave}
 								onclick={tag.onclick}
@@ -144,6 +145,7 @@
 								<Tag
 									label={tag.label}
 									color={tag.color}
+									pill={tag.pill}
 									icon={tag.icon ?? null}
 									href={tag.href ?? ''}
 								/>
@@ -167,12 +169,13 @@
 			<span class="text-tertiary mt-1 block truncate text-xs">{description}</span>
 		{/if}
 		{#if showTagPicker && tagPickerProps}
-			<div class="mt-1">
+			<div class="mt-2">
 				<TagPickerInline
 					selectedTagIds={tagPickerProps.selectedTagIds}
 					entityId={tagPickerProps.entityId}
 					entityType={tagPickerProps.entityType}
 					disabled={tagPickerDisabled}
+					availableTags={tagPickerProps.availableTags}
 				/>
 			</div>
 		{/if}

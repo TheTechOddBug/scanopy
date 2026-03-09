@@ -1,6 +1,6 @@
 {
   "server_url": "http://server:60072",
-  "network_id": "1dbd05a8-2f56-4582-b679-7982c7e435e6",
+  "network_id": "3995f704-6ebb-4f48-9c17-a030bd622caf",
   "server_target": null,
   "server_port": null,
   "daemon_port": 60073,
@@ -9,10 +9,10 @@
   "heartbeat_interval": 30,
   "bind_address": "0.0.0.0",
   "concurrent_scans": 15,
-  "id": "cc09d1cb-ac25-45b7-94ba-c3eb5ce81e05",
+  "id": "852b7aca-28b0-457a-a2f3-eb96c351a1d9",
   "last_heartbeat": null,
   "host_id": null,
-  "daemon_api_key": "scp_d_EWGRBxIE5HCFtbzxYEjrnvK68TFaKOsQ",
+  "daemon_api_key": "scp_d_OUy7SbRvPRsGNRmoJHUfCMDYAXEEfFnx",
   "user_id": null,
   "docker_proxy": null,
   "mode": "daemon_poll",
@@ -31,7 +31,7 @@
   "capabilities": {
     "has_docker_socket": false,
     "interfaced_subnet_ids": [
-      "e81c2520-34f1-40ea-bf62-aefce4d23304"
+      "f03c167a-7a44-4469-be8d-82ddee939ef3"
     ]
   }
 }

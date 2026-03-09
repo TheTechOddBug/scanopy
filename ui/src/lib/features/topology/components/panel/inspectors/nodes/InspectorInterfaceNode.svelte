@@ -8,8 +8,6 @@
 		useTopologiesQuery,
 		selectedTopologyId,
 		topologyOptions,
-		selectedNode,
-		selectedEdge,
 		autoRebuild
 	} from '$lib/features/topology/queries';
 	import type { InterfaceNode, Topology } from '$lib/features/topology/types/base';
@@ -74,10 +72,6 @@
 	);
 	let isVirtualized = $derived(host?.virtualization != null);
 
-	function deselect() {
-		selectedNode.set(null);
-		selectedEdge.set(null);
-	}
 	// Context for service displays - include ports for actual port number display
 	let serviceContext = $derived({
 		interfaceId: nodeData.interface_id ?? null,

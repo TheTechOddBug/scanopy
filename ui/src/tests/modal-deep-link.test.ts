@@ -13,8 +13,12 @@ const entities: TestEntity[] = [
 	{ id: 'ccc', name: 'Charlie' }
 ];
 
-function state(name: string | null, id: string | null = null): ModalState {
-	return { name, id, tab: null, subEntityId: null, returnUrl: null, returnTitle: null };
+function state(
+	name: string | null,
+	id: string | null = null,
+	entityData?: Record<string, unknown>
+): ModalState {
+	return { name, id, tab: null, subEntityId: null, returnUrl: null, returnTitle: null, entityData };
 }
 
 describe('resolveModalDeepLink', () => {
@@ -155,6 +159,66 @@ describe('resolveModalDeepLink', () => {
 				alwaysFail
 			);
 			expect(result).toBeNull();
+		});
+	});
+
+	describe('entityData fallback', () => {
+		const fallbackEntity = { id: 'zzz', name: 'Zulu' };
+
+		it('uses entityData when entity not in data array', () => {
+			const result = resolveModalDeepLink(
+				state('my-modal', 'zzz', fallbackEntity),
+				'my-modal',
+				entities,
+				false,
+				null
+			);
+			expect(result).toEqual(fallbackEntity);
+		});
+
+		it('data array takes precedence over entityData', () => {
+			const result = resolveModalDeepLink(
+				state('my-modal', 'aaa', { id: 'aaa', name: 'Stale Alpha' }),
+				'my-modal',
+				entities,
+				false,
+				null
+			);
+			expect(result).toEqual({ id: 'aaa', name: 'Alpha' });
+		});
+
+		it('ignores entityData when its id does not match state.id', () => {
+			const result = resolveModalDeepLink(
+				state('my-modal', 'zzz', { id: 'other', name: 'Wrong' }),
+				'my-modal',
+				entities,
+				false,
+				null
+			);
+			expect(result).toBeUndefined();
+		});
+
+		it('applies validate callback to entityData fallback', () => {
+			const result = resolveModalDeepLink(
+				state('my-modal', 'zzz', fallbackEntity),
+				'my-modal',
+				entities,
+				false,
+				null,
+				() => false
+			);
+			expect(result).toBeUndefined();
+		});
+
+		it('uses entityData fallback during entity switch', () => {
+			const result = resolveModalDeepLink(
+				state('my-modal', 'zzz', fallbackEntity),
+				'my-modal',
+				entities,
+				true,
+				'aaa'
+			);
+			expect(result).toEqual(fallbackEntity);
 		});
 	});
 });

@@ -91,6 +91,9 @@
 		// Server-side tag filtering callback (optional)
 		// Called when tag filter selection changes, with array of selected tag IDs
 		onTagFilterChange = null,
+		// Server-side exclude filter callback (optional)
+		// Called when an exclude-mode filter changes, with field key and excluded values
+		onExcludeFilterChange = null,
 		// CSV export callback (optional, default behavior)
 		// Called when user clicks export button; parent handles the actual export
 		onCsvExport = null,
@@ -119,6 +122,9 @@
 		// Server-side tag filtering: called when tag filter changes
 		// Args: array of tag IDs to filter by
 		onTagFilterChange?: ((tagIds: string[]) => void) | null;
+		// Server-side exclude filter: called when exclude-mode filter changes
+		// Args: (fieldKey, array of excluded values)
+		onExcludeFilterChange?: ((fieldKey: string, values: string[]) => void) | null;
 		// CSV export: default behavior when user clicks export button
 		onCsvExport?: (() => void | Promise<void>) | null;
 		// Export button click override: if provided, replaces onCsvExport entirely
@@ -308,7 +314,7 @@
 				} else {
 					filterState[key] = {
 						type: 'string',
-						values: new SvelteSet()
+						values: new SvelteSet(field.filterDefaults)
 					};
 				}
 			}
@@ -334,6 +340,19 @@
 		const tagFilter = filterState['tags'];
 		if (onTagFilterChange && tagFilter && tagFilter.values.size > 0) {
 			onTagFilterChange(Array.from(tagFilter.values));
+		}
+
+		// Notify parent of restored exclude filter state
+		if (onExcludeFilterChange) {
+			for (const field of fields) {
+				if (field.filterable && field.filterMode === 'exclude') {
+					const key = getFieldKey(field);
+					const filter = filterState[key];
+					if (filter && filter.values.size > 0) {
+						onExcludeFilterChange(key, Array.from(filter.values));
+					}
+				}
+			}
 		}
 
 		// Set up reactive save (debounced)
@@ -447,6 +466,11 @@
 					return true;
 				}
 
+				// Skip client-side exclude filtering when server-side filtering is enabled
+				if (field.filterMode === 'exclude' && onExcludeFilterChange) {
+					return true;
+				}
+
 				const value = getFieldValue(item, field);
 
 				if (field.type === 'boolean') {
@@ -462,6 +486,10 @@
 					return value.some((v) => filterConfig.values.has(String(v)));
 				} else if (field.type === 'string') {
 					if (filterConfig.values.size === 0) return true;
+					if (field.filterMode === 'exclude') {
+						// Exclude mode: checked values are hidden
+						return value == null || !filterConfig.values.has(String(value));
+					}
 					if (value === null || value === undefined) return false;
 					return filterConfig.values.has(String(value));
 				}
@@ -617,7 +645,7 @@
 		};
 	}
 
-	// Clear all filters
+	// Clear all filters (restores defaults for exclude filters)
 	function clearFilters() {
 		const newFilterState: FilterState = {};
 
@@ -639,7 +667,7 @@
 				} else {
 					newFilterState[key] = {
 						type: 'string',
-						values: new SvelteSet()
+						values: new SvelteSet(field.filterDefaults)
 					};
 				}
 			}
@@ -891,6 +919,58 @@
 			// Notify parent of the change
 			if (onTagFilterChange) {
 				onTagFilterChange(currentTagIds);
+			}
+		}
+	});
+
+	// Track previous exclude filter state to detect changes
+	let prevExcludeFilterValues = new SvelteMap<string, string[]>();
+	let excludeFilterInitialized = false;
+
+	// Notify parent of exclude filter changes
+	$effect(() => {
+		if (!onExcludeFilterChange) return;
+
+		const excludeFields = fields.filter((f) => f.filterable && f.filterMode === 'exclude');
+		if (excludeFields.length === 0) return;
+
+		const currentValues = new SvelteMap<string, string[]>();
+		for (const field of excludeFields) {
+			const key = getFieldKey(field);
+			const filter = filterState[key];
+			currentValues.set(key, filter ? Array.from(filter.values).sort() : []);
+		}
+
+		// Skip the initial run (state restoration)
+		if (!excludeFilterInitialized) {
+			prevExcludeFilterValues = currentValues;
+			excludeFilterInitialized = true;
+			return;
+		}
+
+		// Check if any exclude filter actually changed
+		let changed = false;
+		for (const [key, values] of currentValues) {
+			const prev = prevExcludeFilterValues.get(key) ?? [];
+			if (values.length !== prev.length || values.some((v, i) => v !== prev[i])) {
+				changed = true;
+				break;
+			}
+		}
+
+		if (changed) {
+			prevExcludeFilterValues = currentValues;
+
+			// Reset to page 1
+			if (useServerPagination && onPageChange) {
+				onPageChange(1, pageSize);
+			} else {
+				currentPage = 1;
+			}
+
+			// Notify parent for each exclude field
+			for (const [key, values] of currentValues) {
+				onExcludeFilterChange(key, values);
 			}
 		}
 	});
@@ -1185,7 +1265,7 @@
 									{/if}
 								</div>
 							{:else}
-								{@const uniqueValues = getUniqueValues(field)}
+								{@const uniqueValues = field.filterOptions ?? getUniqueValues(field)}
 								{@const filter = filterState[fieldKey]}
 								<div class="max-h-32 space-y-1.5 overflow-y-auto">
 									{#if uniqueValues.length === 0}

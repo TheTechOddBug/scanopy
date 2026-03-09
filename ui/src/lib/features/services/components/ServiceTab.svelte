@@ -26,9 +26,11 @@
 		common_services,
 		services_confirmBulkDelete,
 		services_confirmDelete,
+		services_hiddenCategories,
 		services_noServicesYet,
 		services_subtitle
 	} from '$lib/paraglide/messages';
+	import { serviceDefinitions } from '$lib/shared/stores/metadata';
 
 	type ServiceOrderField = components['schemas']['ServiceOrderField'];
 	type OrderDirection = components['schemas']['OrderDirection'];
@@ -47,6 +49,9 @@
 	// Tag filter state (for server-side filtering)
 	let tagIds = $state<string[]>([]);
 
+	// Exclude categories state (for server-side filtering)
+	let excludeCategories = $state<string[]>(['OpenPorts']);
+
 	// Queries
 	const tagsQuery = useTagsQuery();
 	// Paginated services with server-side pagination, ordering, and tag filtering
@@ -57,7 +62,11 @@
 			group_by: groupBy,
 			order_by: orderBy,
 			order_direction: orderDirection,
-			tag_ids: tagIds.length > 0 ? tagIds : undefined
+			tag_ids: tagIds.length > 0 ? tagIds : undefined,
+			exclude_categories:
+				excludeCategories.length > 0
+					? (excludeCategories as components['schemas']['ServiceCategory'][])
+					: undefined
 		})
 	);
 	const networksQuery = useNetworksQuery();
@@ -107,6 +116,13 @@
 	function handleTagFilterChange(selectedTagIds: string[]) {
 		tagIds = selectedTagIds;
 		// Reset to page 1 is handled by DataControls
+	}
+
+	// Exclude filter change handler for server-side filtering
+	function handleExcludeFilterChange(fieldKey: string, values: string[]) {
+		if (fieldKey === 'category') {
+			excludeCategories = values;
+		}
 	}
 
 	// CSV export handler
@@ -184,6 +200,15 @@
 		return service.tags;
 	}
 
+	// Derive available service categories from metadata
+	let serviceCategories = $derived.by(() => {
+		const items = serviceDefinitions.getItems() || [];
+		const categoriesSet = new Set(items.map((i) => serviceDefinitions.getCategory(i.id)));
+		return Array.from(categoriesSet)
+			.filter((c) => c)
+			.sort();
+	});
+
 	// Define field configuration for the DataTableControls
 	// Uses defineFields to ensure all ServiceOrderField values are covered
 	let serviceFields = $derived(
@@ -211,6 +236,16 @@
 				updated_at: { label: 'Updated', type: 'date' }
 			},
 			[
+				{
+					key: 'category',
+					label: services_hiddenCategories(),
+					type: 'string',
+					filterable: true,
+					filterMode: 'exclude',
+					filterOptions: serviceCategories,
+					filterDefaults: ['OpenPorts'],
+					getValue: (item) => serviceDefinitions.getCategory(item.service_definition) || 'Unknown'
+				},
 				{
 					key: 'containerized_by',
 					type: 'string',
@@ -270,6 +305,7 @@
 			onPageChange={handlePageChange}
 			onOrderChange={handleOrderChange}
 			onTagFilterChange={handleTagFilterChange}
+			onExcludeFilterChange={handleExcludeFilterChange}
 			onCsvExport={handleCsvExport}
 		>
 			{#snippet children(

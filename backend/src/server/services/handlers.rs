@@ -1,5 +1,7 @@
 use crate::server::auth::middleware::permissions::{Authorized, Member, Viewer};
 use crate::server::hosts::r#impl::base::Host;
+use crate::server::services::definitions::ServiceDefinitionRegistry;
+use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::shared::handlers::ordering::OrderField;
 use crate::server::shared::handlers::query::{
     FilterQueryExtractor, OrderDirection, PaginationParams,
@@ -86,6 +88,8 @@ pub struct ServiceFilterQuery {
     pub order_by: Option<ServiceOrderField>,
     /// Direction for order_by field (group_by always uses ASC).
     pub order_direction: Option<OrderDirection>,
+    /// Exclude services belonging to these categories.
+    pub exclude_categories: Option<Vec<ServiceCategory>>,
     /// Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.
     #[param(minimum = 0, maximum = 1000)]
     pub limit: Option<u32>,
@@ -201,6 +205,23 @@ async fn get_all_services(
             tag_ids,
             crate::server::shared::entities::EntityDiscriminants::Service,
         ),
+        _ => filter,
+    };
+
+    // Exclude services by category if specified
+    let filter = match &query.exclude_categories {
+        Some(categories) if !categories.is_empty() => {
+            let excluded_ids: Vec<String> = ServiceDefinitionRegistry::all_service_definitions()
+                .iter()
+                .filter(|def| categories.contains(&def.category()))
+                .map(|def| def.id().to_string())
+                .collect();
+            if !excluded_ids.is_empty() {
+                filter.service_definition_not_in(&excluded_ids)
+            } else {
+                filter
+            }
+        }
         _ => filter,
     };
 

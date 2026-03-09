@@ -2762,7 +2762,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.14.16"
+         *       "server_version": "0.14.17"
          *     }
          */
         ApiMeta: {
@@ -2773,7 +2773,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.14.16
+             * @example 0.14.17
              */
             server_version: string;
         };
@@ -2787,14 +2787,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-03-09T04:32:54.934519Z",
-             *       "id": "4a1a9f26-0c00-4fbb-b057-bb980c7501f3",
+             *       "created_at": "2026-03-09T23:34:28.989409Z",
+             *       "id": "72d06179-21ae-42f4-8eb5-9a9ab58d6f07",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-03-09T04:32:54.934519Z"
+             *       "updated_at": "2026-03-09T23:34:28.989409Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3042,14 +3042,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-03-09T04:32:54.914110Z",
-             *               "id": "45d0563e-f81d-4cda-8720-5b4042d993c3",
+             *               "created_at": "2026-03-09T23:34:28.971254Z",
+             *               "id": "88e331b8-d26d-41be-a49c-24945b84edd5",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-03-09T04:32:54.914110Z"
+             *               "updated_at": "2026-03-09T23:34:28.971254Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3058,7 +3058,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Gatus",
+             *           "service_definition": "NATS",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3314,14 +3314,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-03-09T04:32:54.928959Z",
-             *           "id": "e771badb-0b58-4936-9727-5574c473c697",
+             *           "created_at": "2026-03-09T23:34:28.984320Z",
+             *           "id": "50295bbd-a9eb-4bbd-92cb-ec50a98f6960",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-03-09T04:32:54.928959Z"
+             *           "updated_at": "2026-03-09T23:34:28.984320Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3330,7 +3330,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Gatus",
+             *       "service_definition": "NATS",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3633,14 +3633,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-03-09T04:32:54.914530Z",
-         *       "id": "8fd30344-9894-47a6-a3f4-ae3f0011254d",
+         *       "created_at": "2026-03-09T23:34:28.971460Z",
+         *       "id": "4d8a51db-180a-4418-a458-f7bb1ef3654f",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-03-09T04:32:54.914530Z"
+         *       "updated_at": "2026-03-09T23:34:28.971460Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3822,7 +3822,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Gatus",
+         *           "service_definition": "NATS",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4466,14 +4466,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-03-09T04:32:54.913512Z",
-         *               "id": "3f2708c4-dafa-4029-8be0-835331d7ca6a",
+         *               "created_at": "2026-03-09T23:34:28.970974Z",
+         *               "id": "d1b99062-9c55-4d5e-8c3d-3e2fd49471e6",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-03-09T04:32:54.913512Z"
+         *               "updated_at": "2026-03-09T23:34:28.970974Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4482,7 +4482,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Gatus",
+         *           "service_definition": "NATS",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5019,7 +5019,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.14.16"
+         *       "server_version": "0.14.17"
          *     }
          */
         PaginatedApiMeta: {
@@ -5032,7 +5032,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.14.16
+             * @example 0.14.17
              */
             server_version: string;
         };
@@ -5460,14 +5460,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-03-09T04:32:54.914382Z",
-         *           "id": "9936581a-5f73-44e7-8e79-8e10e63fb285",
+         *           "created_at": "2026-03-09T23:34:28.971389Z",
+         *           "id": "8094b4cf-968b-4083-a578-10d616855ac2",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-03-09T04:32:54.914382Z"
+         *           "updated_at": "2026-03-09T23:34:28.971389Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5476,7 +5476,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Gatus",
+         *       "service_definition": "NATS",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -10379,6 +10379,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */
@@ -10476,6 +10478,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */

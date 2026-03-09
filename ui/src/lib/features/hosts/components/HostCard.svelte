@@ -104,6 +104,10 @@
 
 		const containerIds = containers.map((c) => c.id);
 
+		const visibleServices = hostServices.filter(
+			(sv) => sv.service_definition !== 'Unclaimed Open Ports'
+		);
+
 		return {
 			title: host.name,
 			...(host.virtualization !== null && virtualizationService
@@ -116,8 +120,8 @@
 			link: host.hostname ? `http://${host.hostname}` : undefined,
 			iconColor: entities.getColorHelper('Host').icon,
 			Icon:
-				hostServices.length > 0
-					? serviceDefinitions.getIconComponent(hostServices[0].service_definition)
+				visibleServices.length > 0
+					? serviceDefinitions.getIconComponent(visibleServices[0].service_definition)
 					: entities.getIconComponent('Host'),
 			fields: [
 				{
@@ -126,7 +130,7 @@
 				},
 				{
 					label: common_services(),
-					value: hostServices
+					value: visibleServices
 						.filter((sv) => !containerIds.includes(sv.id))
 						.map((sv) => ({
 							id: sv.id,

@@ -16,6 +16,7 @@
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
+	import DocsHint from '$lib/shared/components/feedback/DocsHint.svelte';
 	import {
 		common_bindings,
 		common_details,
@@ -34,7 +35,9 @@
 		hosts_services_noPorts,
 		hosts_services_portBindingsHelp,
 		hosts_services_portRequired,
-		hosts_services_selectBinding
+		hosts_services_selectBinding,
+		hosts_services_unclaimedPortsHint,
+		hosts_services_unclaimedPortsLearnMore
 	} from '$lib/paraglide/messages';
 
 	// TanStack Query hooks
@@ -337,6 +340,14 @@
 {#if service && serviceMetadata}
 	<div class="space-y-6">
 		<ConfigHeader title={serviceMetadata.name ?? ''} subtitle={serviceMetadata.description} />
+
+		{#if serviceMetadata.category === 'OpenPorts'}
+			<DocsHint
+				text={hosts_services_unclaimedPortsHint()}
+				href="https://scanopy.net/docs/using-scanopy/network-data/#unclaimed-open-ports"
+				linkText={hosts_services_unclaimedPortsLearnMore()}
+			/>
+		{/if}
 
 		<!-- Basic Configuration -->
 		<div class="space-y-4">

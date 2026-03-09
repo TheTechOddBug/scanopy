@@ -5,8 +5,14 @@
 	import { upgradeContext } from '$lib/features/billing/stores';
 	import { optionsPanelExpanded } from '$lib/features/topology/queries';
 	import { entities } from '$lib/shared/stores/metadata';
+	import { useServicesCacheQuery } from '$lib/features/services/queries';
 	import type { IconComponent } from '$lib/shared/utils/types';
 	import { onMount } from 'svelte';
+	import {
+		home_nudges_unclaimedPortsAction,
+		home_nudges_unclaimedPortsDescription,
+		home_nudges_unclaimedPortsTitle
+	} from '$lib/paraglide/messages';
 
 	type Organization = components['schemas']['Organization'];
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
@@ -21,6 +27,11 @@
 		dashboard: DashboardSummary;
 		onNavigate: (tab: string) => void;
 	} = $props();
+
+	const servicesQuery = useServicesCacheQuery();
+	let hasUnclaimedPorts = $derived(
+		(servicesQuery.data ?? []).some((s) => s.service_definition === 'Unclaimed Open Ports')
+	);
 
 	let mounted = $state(false);
 	let dismissCount = $state(0);
@@ -53,6 +64,21 @@
 
 	let nudges = $derived.by((): Nudge[] => {
 		const all: Nudge[] = [
+			{
+				id: 'unclaimed-ports',
+				title: home_nudges_unclaimedPortsTitle(),
+				description: home_nudges_unclaimedPortsDescription(),
+				actionLabel: home_nudges_unclaimedPortsAction(),
+				action: () => {
+					window.open(
+						'https://scanopy.net/docs/using-scanopy/network-data/#unclaimed-open-ports',
+						'_blank'
+					);
+				},
+				visible: has('FirstDiscoveryCompleted') && hasUnclaimedPorts,
+				icon: entities.getIconComponent('Port'),
+				iconColor: entities.getColorHelper('Port').icon
+			},
 			{
 				id: 'tags',
 				title: 'Organize with Tags',

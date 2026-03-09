@@ -1,10 +1,17 @@
 <script lang="ts">
-	import { optionsPanelExpanded, selectedNode, selectedEdge } from '../../queries';
+	import { optionsPanelExpanded, selectedNode, selectedEdge, selectedNodes } from '../../queries';
+	import { get } from 'svelte/store';
+	import { topology_multiSelectInspectorHint } from '$lib/paraglide/messages';
 	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import OptionsContent from './options/OptionsContent.svelte';
 	import InspectorNode from './inspectors/InspectorNode.svelte';
 	import InspectorEdge from './inspectors/InspectorEdge.svelte';
 	import { topology_collapsePanel, topology_expandPanel } from '$lib/paraglide/messages';
+
+	let multiSelectedNodes = $state(get(selectedNodes));
+	selectedNodes.subscribe((value) => {
+		multiSelectedNodes = value;
+	});
 </script>
 
 <!-- Floating Panel -->
@@ -28,7 +35,11 @@
 
 			<!-- Content area -->
 			<div class="overflow-y-auto p-3" style="max-height: calc(100vh - 250px);">
-				{#if $selectedNode}
+				{#if multiSelectedNodes.length >= 2}
+					<div class="text-tertiary py-8 text-center text-sm">
+						{topology_multiSelectInspectorHint({ count: multiSelectedNodes.length })}
+					</div>
+				{:else if $selectedNode}
 					{#key $selectedNode.id}
 						<InspectorNode node={$selectedNode} />
 					{/key}

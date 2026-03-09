@@ -4,6 +4,7 @@
 	import {
 		selectedEdge as globalSelectedEdge,
 		selectedNode as globalSelectedNode,
+		selectedNodes as globalSelectedNodes,
 		selectedTopologyId,
 		topologyOptions,
 		useTopologiesQuery
@@ -46,6 +47,12 @@
 	let hiddenServices = $state(get(tagHiddenServiceIds));
 	tagHiddenServiceIds.subscribe((value) => {
 		hiddenServices = value;
+	});
+
+	// Subscribe to multi-select store
+	let multiSelectedNodes = $state(get(globalSelectedNodes));
+	globalSelectedNodes.subscribe((value) => {
+		multiSelectedNodes = value;
 	});
 
 	// Subscribe to tag hover state
@@ -145,7 +152,10 @@
 			: null
 	);
 
-	let isNodeSelected = $derived(selectedNode?.id === nodeRenderData?.interface_id);
+	let isNodeSelected = $derived(
+		selectedNode?.id === nodeRenderData?.interface_id ||
+			multiSelectedNodes.some((n) => n.id === nodeRenderData?.interface_id)
+	);
 
 	// Calculate if this node should fade out when another node is selected or hidden by tag filter
 	let shouldFadeOut = $derived.by(() => {
@@ -157,7 +167,7 @@
 		}
 
 		// Selection-based fading
-		if (!selectedNode && !selectedEdge) return false;
+		if (!selectedNode && !selectedEdge && multiSelectedNodes.length < 2) return false;
 		if (!nodeRenderData) return false;
 
 		// Check if this node is in the connected set

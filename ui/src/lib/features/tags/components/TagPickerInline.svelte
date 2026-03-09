@@ -53,6 +53,7 @@
 	let isDropdownOpen = $state(false);
 	let inputElement: HTMLInputElement | undefined = $state();
 	let triggerElement: HTMLDivElement | undefined = $state();
+	let dropdownElement: HTMLDivElement | undefined = $state();
 	let dropdownPosition = $state({ top: 0, left: 0 });
 
 	// Portal container for escaping stacking contexts
@@ -85,11 +86,34 @@
 	function calculatePosition() {
 		if (!triggerElement) return;
 		const rect = triggerElement.getBoundingClientRect();
-		dropdownPosition = {
-			top: rect.bottom + 4,
-			left: rect.left
-		};
+		const viewportHeight = window.innerHeight;
+		const viewportWidth = window.innerWidth;
+
+		// Vertical: flip above if not enough space below
+		let top: number;
+		const dropdownHeight = dropdownElement?.getBoundingClientRect().height ?? 192; // max-h-48 = 12rem = 192px
+		const spaceBelow = viewportHeight - rect.bottom;
+		const spaceAbove = rect.top;
+
+		if (spaceBelow >= dropdownHeight + 8 || spaceBelow >= spaceAbove) {
+			top = rect.bottom + 4;
+		} else {
+			top = rect.top - dropdownHeight - 4;
+		}
+
+		// Horizontal: clamp to viewport edges
+		let left = rect.left;
+		left = Math.max(8, Math.min(left, viewportWidth - 160 - 8)); // min-w-40 = 160px
+
+		dropdownPosition = { top, left };
 	}
+
+	// Recalculate position once dropdown renders (so we measure real height for flip)
+	$effect(() => {
+		if (isDropdownOpen && dropdownElement) {
+			calculatePosition();
+		}
+	});
 
 	// Reposition dropdown on scroll when open
 	$effect(() => {
@@ -271,6 +295,7 @@
 <!-- Portal dropdown to body to escape stacking contexts -->
 {#if showDropdown && portalContainer}
 	<div
+		bind:this={dropdownElement}
 		use:portal
 		class="select-dropdown fixed z-[9999] max-h-48 min-w-40 overflow-y-auto rounded-md shadow-lg"
 		style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;"

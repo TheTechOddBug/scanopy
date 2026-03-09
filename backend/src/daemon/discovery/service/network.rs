@@ -119,7 +119,22 @@ impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
         cancel: CancellationToken,
     ) -> Result<(), Error> {
         // Ignore docker bridge subnets, they are discovered through Docker Discovery
-        let subnets: Vec<Subnet> = self.discover_create_subnets(&cancel).await?;
+        let subnets: Vec<Subnet> = match self.discover_create_subnets(&cancel).await {
+            Ok(subnets) => subnets,
+            Err(e) => {
+                // Pre-start failure: initialize a minimal session so we can report the error
+                let daemon_id = self.as_ref().config_store.get_id().await?;
+                if let Err(init_err) = self.initialize_discovery_session(request, daemon_id).await {
+                    tracing::error!(
+                        "Failed to initialize session for error reporting: {}",
+                        init_err
+                    );
+                    return Err(e);
+                }
+                self.finish_discovery(Err(e), cancel).await?;
+                return Ok(());
+            }
+        };
 
         self.start_discovery(request).await?;
 

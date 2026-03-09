@@ -9,7 +9,7 @@
 		selectedTopologyId,
 		topologyOptions,
 		selectedNode,
-		selectedEdge
+		selectedEdge,
 		autoRebuild
 	} from '$lib/features/topology/queries';
 	import type { InterfaceNode, Topology } from '$lib/features/topology/types/base';

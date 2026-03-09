@@ -151,9 +151,8 @@ fn check_user(user_id: Uuid) -> Result<RateLimitInfo, RateLimitInfo> {
             reset_in_secs: 60,
         }),
         Err(not_until) => {
-            let wait_time = not_until
-                .wait_time_from(DefaultClock::default().now())
-                .as_secs();
+            let wait_duration = not_until.wait_time_from(DefaultClock::default().now());
+            let wait_time = wait_duration.as_secs() + u64::from(wait_duration.subsec_nanos() > 0);
             Err(RateLimitInfo {
                 limit: 100,
                 remaining: 0,
@@ -175,9 +174,8 @@ fn check_anonymous(ip: IpAddr) -> Result<RateLimitInfo, RateLimitInfo> {
             reset_in_secs: 60,
         }),
         Err(not_until) => {
-            let wait_time = not_until
-                .wait_time_from(DefaultClock::default().now())
-                .as_secs();
+            let wait_duration = not_until.wait_time_from(DefaultClock::default().now());
+            let wait_time = wait_duration.as_secs() + u64::from(wait_duration.subsec_nanos() > 0);
             Err(RateLimitInfo {
                 limit: 40,
                 remaining: 0,
@@ -199,9 +197,8 @@ fn check_demo(ip: IpAddr) -> Result<RateLimitInfo, RateLimitInfo> {
             reset_in_secs: 60,
         }),
         Err(not_until) => {
-            let wait_time = not_until
-                .wait_time_from(DefaultClock::default().now())
-                .as_secs();
+            let wait_duration = not_until.wait_time_from(DefaultClock::default().now());
+            let wait_time = wait_duration.as_secs() + u64::from(wait_duration.subsec_nanos() > 0);
             Err(RateLimitInfo {
                 limit: 150,
                 remaining: 0,
@@ -223,9 +220,8 @@ fn check_external_service(ip: IpAddr) -> Result<RateLimitInfo, RateLimitInfo> {
             reset_in_secs: 60,
         }),
         Err(not_until) => {
-            let wait_time = not_until
-                .wait_time_from(DefaultClock::default().now())
-                .as_secs();
+            let wait_duration = not_until.wait_time_from(DefaultClock::default().now());
+            let wait_time = wait_duration.as_secs() + u64::from(wait_duration.subsec_nanos() > 0);
             Err(RateLimitInfo {
                 limit: 60,
                 remaining: 0,

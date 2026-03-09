@@ -744,6 +744,7 @@
 	"onboarding_visualizeMsp": "Let's visualize your customers' networks!",
 	"services_confirmBulkDelete": "Are you sure you want to delete {count} Services?",
 	"services_confirmDelete": "Are you sure you want to delete \"{serviceName}\"?",
+	"services_hiddenCategories": "Hidden Categories",
 	"services_noInterfacesAssigned": "No interfaces assigned",
 	"services_noPortsAssigned": "No ports assigned",
 	"services_noServicesYet": "No services configured yet",

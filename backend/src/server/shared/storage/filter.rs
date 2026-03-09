@@ -366,6 +366,24 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
+    pub fn service_definition_not_in(mut self, definitions: &[String]) -> Self {
+        if definitions.is_empty() {
+            return self;
+        }
+        let col = self.qualify_column("service_definition");
+        let placeholders: Vec<String> = definitions
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("${}", self.values.len() + i + 1))
+            .collect();
+        self.conditions
+            .push(format!("{} NOT IN ({})", col, placeholders.join(", ")));
+        for def in definitions {
+            self.values.push(SqlValue::String(def.clone()));
+        }
+        self
+    }
+
     pub fn group_id(mut self, id: &Uuid) -> Self {
         let col = self.qualify_column("group_id");
         self.conditions

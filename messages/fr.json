@@ -726,6 +726,7 @@
     "onboarding_yesLetsGo": "",
     "services_confirmBulkDelete": "",
     "services_confirmDelete": "",
+    "services_hiddenCategories": "",
     "services_noInterfacesAssigned": "",
     "services_noPortsAssigned": "",
     "services_noServicesYet": "",

@@ -87,6 +87,12 @@ interface BaseFieldConfig<T> {
 	searchable?: boolean;
 	filterable?: boolean;
 	getValue?: (item: T) => string | boolean | Date | string[] | null;
+	/** 'include' (default): checked values shown. 'exclude': checked values hidden. */
+	filterMode?: 'include' | 'exclude';
+	/** External filter options (bypasses getUniqueValues). Use when values aren't derivable from current items (e.g., server-side pagination). */
+	filterOptions?: string[];
+	/** Default checked values for the filter (applied on first load if no localStorage state). */
+	filterDefaults?: string[];
 }
 
 /**

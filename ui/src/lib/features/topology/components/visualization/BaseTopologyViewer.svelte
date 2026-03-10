@@ -62,6 +62,12 @@
 		requestAnimationFrame(() => fitView());
 	}
 
+	export function fitViewToNodes(nodeIds: string[]) {
+		requestAnimationFrame(() =>
+			fitView({ nodes: nodeIds.map((id) => ({ id })), padding: 0.5, duration: 300 })
+		);
+	}
+
 	onMount(() => {
 		const { fitView } = useSvelteFlow();
 

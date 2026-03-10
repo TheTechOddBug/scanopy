@@ -21,6 +21,7 @@
 		isExporting,
 		tagHiddenNodeIds,
 		tagHiddenServiceIds,
+		searchHiddenNodeIds,
 		hoveredTag,
 		hoveredServiceCategory,
 		UNTAGGED_SENTINEL
@@ -47,6 +48,12 @@
 	let hiddenServices = $state(get(tagHiddenServiceIds));
 	tagHiddenServiceIds.subscribe((value) => {
 		hiddenServices = value;
+	});
+
+	// Subscribe to search filter store for reactivity
+	let searchHiddenNodes = $state(get(searchHiddenNodeIds));
+	searchHiddenNodeIds.subscribe((value) => {
+		searchHiddenNodes = value;
 	});
 
 	// Subscribe to multi-select store
@@ -163,6 +170,11 @@
 
 		// Tag filter: fade if this node is hidden
 		if (nodeRenderData && hiddenNodes.has(nodeRenderData.interface_id)) {
+			return true;
+		}
+
+		// Search filter: fade if this node is hidden by search
+		if (nodeRenderData && searchHiddenNodes.has(nodeRenderData.interface_id)) {
 			return true;
 		}
 

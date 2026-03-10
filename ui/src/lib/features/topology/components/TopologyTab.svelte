@@ -375,6 +375,7 @@
 								<button
 									onclick={handleToggleLock}
 									class={`text-xs ${currentTopology.is_locked ? 'btn-icon-info' : 'btn-icon'}`}
+									title="{currentTopology.is_locked ? 'Unlock' : 'Lock'} (L)"
 								>
 									<Lock class="mr-2 h-4 w-4" />
 									{currentTopology.is_locked ? common_unlock() : common_lock()}
@@ -386,6 +387,7 @@
 										type="button"
 										class={`text-xs ${$autoRebuild && !currentTopology.is_locked ? 'btn-icon-success' : 'btn-icon'}`}
 										disabled={currentTopology.is_locked}
+										title="{$autoRebuild ? 'Auto' : 'Manual'} (R)"
 									>
 										{#if $autoRebuild}
 											<Radio class="mr-2 h-4 w-4" /> {common_auto()}
@@ -500,7 +502,11 @@
 						handleRefresh();
 					}}
 				/>
-				<TopologyViewer bind:this={topologyViewer} />
+				<TopologyViewer
+					bind:this={topologyViewer}
+					onToggleLock={handleToggleLock}
+					onRebuild={handleRefresh}
+				/>
 			</div>
 		{:else}
 			<div class="card card-static text-secondary">

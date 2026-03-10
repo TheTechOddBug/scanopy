@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { Eye, EyeOff, X } from 'lucide-svelte';
+	import { Eye, EyeOff, X, Crosshair } from 'lucide-svelte';
+	import { useSvelteFlow } from '@xyflow/svelte';
 	import {
 		selectedNodes,
 		previewEdges,
@@ -42,7 +43,8 @@
 		common_tags,
 		groups_createGroup,
 		groups_serviceBindings,
-		groups_serviceBindingsHelp
+		groups_serviceBindingsHelp,
+		topology_focusSelection
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -55,6 +57,7 @@
 		onGroupCreated?: (groupId: string) => void;
 	} = $props();
 
+	const { fitView } = useSvelteFlow();
 	const PREVIEW_STORAGE_KEY = 'scanopy_topology_group_preview';
 
 	const queryClient = useQueryClient();
@@ -377,14 +380,24 @@
 </script>
 
 <div class="w-full space-y-4">
-	<!-- Header with count and clear -->
+	<!-- Header with count, focus, and clear -->
 	<div class="flex items-center justify-between">
 		<span class="text-secondary text-sm font-medium">
 			{topology_multiSelectActionBarCount({ count: nodes.length })}
 		</span>
-		<button class="btn-icon p-1" onclick={onClearSelection} title={common_clearSelection()}>
-			<X class="h-4 w-4" />
-		</button>
+		<div class="flex items-center gap-1">
+			<button
+				class="btn-icon p-1"
+				onclick={() =>
+					fitView({ nodes: nodes.map((n) => ({ id: n.id })), padding: 0.5, duration: 300 })}
+				title={topology_focusSelection()}
+			>
+				<Crosshair class="h-4 w-4" />
+			</button>
+			<button class="btn-icon p-1" onclick={onClearSelection} title={common_clearSelection()}>
+				<X class="h-4 w-4" />
+			</button>
+		</div>
 	</div>
 
 	{#if canMutate}

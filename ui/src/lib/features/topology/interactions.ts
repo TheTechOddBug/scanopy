@@ -21,6 +21,12 @@ export const isExporting = writable(false);
 export const tagHiddenNodeIds = writable<Set<string>>(new Set());
 export const tagHiddenServiceIds = writable<Set<string>>(new Set());
 
+// Search stores
+export const searchHiddenNodeIds = writable<Set<string>>(new Set());
+export const searchMatchNodeIds = writable<string[]>([]);
+export const searchActiveIndex = writable<number>(0);
+export const searchOpen = writable<boolean>(false);
+
 // Special sentinel value for "Untagged" pseudo-tag
 export const UNTAGGED_SENTINEL = '__untagged__';
 
@@ -436,4 +442,117 @@ export function getEdgeDisplayState(
 	}
 
 	return { shouldShowFull, shouldAnimate };
+}
+
+/**
+ * Update search filter: find nodes matching query, set non-matching nodes to fade.
+ * Searches hosts (name/hostname), interfaces (ip_address/name), services (name),
+ * subnets (name/cidr), and tags (name matched to entities).
+ */
+export function updateSearchFilter(topology: Topology | undefined, query: string) {
+	if (!topology || !query.trim()) {
+		searchHiddenNodeIds.set(new Set());
+		searchMatchNodeIds.set([]);
+		searchActiveIndex.set(0);
+		return;
+	}
+
+	const q = query.toLowerCase().trim();
+	const matchingNodeIds: string[] = [];
+	const allNodeIds = new Set<string>();
+
+	// Collect all node IDs (interfaces + subnets)
+	for (const iface of topology.interfaces) {
+		allNodeIds.add(iface.id);
+	}
+	for (const subnet of topology.subnets) {
+		allNodeIds.add(subnet.id);
+	}
+
+	// Search hosts -> match their interface nodes
+	for (const host of topology.hosts) {
+		const nameMatch = host.name.toLowerCase().includes(q);
+		const hostnameMatch = host.hostname?.toLowerCase().includes(q) ?? false;
+		if (nameMatch || hostnameMatch) {
+			const hostInterfaces = topology.interfaces.filter((i) => i.host_id === host.id);
+			hostInterfaces.forEach((i) => {
+				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+			});
+		}
+	}
+
+	// Search interfaces -> match by ip_address or name
+	for (const iface of topology.interfaces) {
+		const ipMatch = iface.ip_address?.toLowerCase().includes(q) ?? false;
+		const nameMatch = iface.name?.toLowerCase().includes(q) ?? false;
+		if (ipMatch || nameMatch) {
+			if (!matchingNodeIds.includes(iface.id)) matchingNodeIds.push(iface.id);
+		}
+	}
+
+	// Search services -> match their host's interface nodes
+	for (const service of topology.services) {
+		if (service.name.toLowerCase().includes(q)) {
+			const hostInterfaces = topology.interfaces.filter((i) => i.host_id === service.host_id);
+			hostInterfaces.forEach((i) => {
+				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+			});
+		}
+	}
+
+	// Search subnets -> match subnet nodes
+	for (const subnet of topology.subnets) {
+		const nameMatch = subnet.name.toLowerCase().includes(q);
+		const cidrMatch = subnet.cidr.toLowerCase().includes(q);
+		if (nameMatch || cidrMatch) {
+			if (!matchingNodeIds.includes(subnet.id)) matchingNodeIds.push(subnet.id);
+		}
+	}
+
+	// Search tags -> match entities with matching tag names
+	const entityTags = topology.entity_tags ?? [];
+	for (const host of topology.hosts) {
+		for (const tagId of host.tags) {
+			const tag = entityTags.find((t) => t.id === tagId);
+			if (tag && tag.name.toLowerCase().includes(q)) {
+				const hostInterfaces = topology.interfaces.filter((i) => i.host_id === host.id);
+				hostInterfaces.forEach((i) => {
+					if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+				});
+				break;
+			}
+		}
+	}
+
+	for (const subnet of topology.subnets) {
+		for (const tagId of subnet.tags) {
+			const tag = entityTags.find((t) => t.id === tagId);
+			if (tag && tag.name.toLowerCase().includes(q)) {
+				if (!matchingNodeIds.includes(subnet.id)) matchingNodeIds.push(subnet.id);
+				break;
+			}
+		}
+	}
+
+	// Hidden = all nodes NOT in the matching set
+	const hiddenIds = new Set<string>();
+	for (const nodeId of allNodeIds) {
+		if (!matchingNodeIds.includes(nodeId)) {
+			hiddenIds.add(nodeId);
+		}
+	}
+
+	searchHiddenNodeIds.set(hiddenIds);
+	searchMatchNodeIds.set(matchingNodeIds);
+	searchActiveIndex.set(0);
+}
+
+/**
+ * Clear all search state.
+ */
+export function clearSearch() {
+	searchHiddenNodeIds.set(new Set());
+	searchMatchNodeIds.set([]);
+	searchActiveIndex.set(0);
+	searchOpen.set(false);
 }

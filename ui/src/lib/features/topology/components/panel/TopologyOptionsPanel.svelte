@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { optionsPanelExpanded, selectedNode, selectedEdge, selectedNodes } from '../../queries';
+	import {
+		optionsPanelExpanded,
+		selectedNode,
+		selectedEdge,
+		selectedNodes,
+		previewEdges
+	} from '../../queries';
 	import { get } from 'svelte/store';
 	import { ChevronLeft, ChevronRight, Settings, Info } from 'lucide-svelte';
 	import OptionsContent from './options/OptionsContent.svelte';
@@ -37,6 +43,13 @@
 		if ($selectedNode || $selectedEdge || multiSelectedNodes.length >= 2) {
 			activeTab = 'inspector';
 			optionsPanelExpanded.set(true);
+		}
+	});
+
+	// Clear preview edges when multi-selection drops below 2
+	$effect(() => {
+		if (multiSelectedNodes.length < 2) {
+			previewEdges.set([]);
 		}
 	});
 </script>

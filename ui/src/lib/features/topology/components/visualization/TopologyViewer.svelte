@@ -44,6 +44,21 @@
 	// Overlay state
 	let shortcutsHelpOpen = $state(false);
 
+	// Track mouse movement to distinguish pane click from pan
+	let mouseDownPos: { x: number; y: number } | null = null;
+	const PAN_THRESHOLD = 5; // pixels
+
+	function handleMouseDown(event: MouseEvent) {
+		mouseDownPos = { x: event.clientX, y: event.clientY };
+	}
+
+	function wasPan(event?: MouseEvent): boolean {
+		if (!mouseDownPos || !event) return false;
+		const dx = event.clientX - mouseDownPos.x;
+		const dy = event.clientY - mouseDownPos.y;
+		return Math.abs(dx) > PAN_THRESHOLD || Math.abs(dy) > PAN_THRESHOLD;
+	}
+
 	export function triggerFitView() {
 		baseViewer?.triggerFitView();
 	}
@@ -105,10 +120,14 @@
 		optionsPanelExpanded.set(true);
 	}
 
-	function handlePaneSelect() {
+	function handlePaneSelect(event?: MouseEvent) {
 		selectedNode.set(null);
 		selectedEdge.set(null);
-		selectedNodes.set([]);
+		// Only clear multi-selection on true click, not after panning
+		if (!wasPan(event)) {
+			selectedNodes.set([]);
+		}
+		mouseDownPos = null;
 	}
 
 	function handleSelectionChange(newNodes: Node[]) {
@@ -211,7 +230,7 @@
 
 {#if topology}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="relative h-[calc(100vh-150px)] w-full" tabindex="-1" onkeydown={handleKeydown}>
+	<div class="relative h-[calc(100vh-150px)] w-full" tabindex="-1" onkeydown={handleKeydown} onmousedown={handleMouseDown}>
 		<BaseTopologyViewer
 			bind:this={baseViewer}
 			{topology}

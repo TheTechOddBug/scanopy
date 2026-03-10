@@ -143,7 +143,7 @@
 	<!-- This Interface -->
 	{#if thisInterface}
 		<div>
-			<div class="mb-2 flex items-center justify-between">
+			<div class="mb-2 flex items-center gap-2">
 				<span class="text-secondary text-sm font-medium">This Interface</span>
 				<button class="btn-icon p-0.5" onclick={handleFocus} title={topology_focusNode()}>
 					<Crosshair class="h-3.5 w-3.5" />

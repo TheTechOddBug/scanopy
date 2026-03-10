@@ -41,6 +41,8 @@
 		if (value) {
 			// Focus the input when opened
 			requestAnimationFrame(() => inputEl?.focus());
+		} else {
+			query = '';
 		}
 	});
 

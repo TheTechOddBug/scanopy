@@ -120,17 +120,20 @@
 		optionsPanelExpanded.set(true);
 	}
 
-	function handlePaneSelect(event?: MouseEvent) {
+	function handlePaneSelect(_event?: MouseEvent, wasPanning?: boolean) {
 		selectedNode.set(null);
 		selectedEdge.set(null);
 		// Only clear multi-selection on true click, not after panning
-		if (!wasPan(event)) {
+		if (!wasPanning) {
 			selectedNodes.set([]);
 		}
-		mouseDownPos = null;
 	}
 
-	function handleSelectionChange(newNodes: Node[]) {
+	function handleSelectionChange(
+		newNodes: Node[],
+		_edges: Edge[],
+		lastClickedNodeId?: string | null
+	) {
 		// Filter to InterfaceNodes only
 		const interfaceNodes = newNodes.filter((n) => {
 			const nodeData = n.data as TopologyNode;
@@ -144,6 +147,16 @@
 			const newIds = new Set(interfaceNodes.map((n) => n.id));
 			const kept = current.filter((n) => newIds.has(n.id));
 			const added = interfaceNodes.filter((n) => !currentIds.has(n.id));
+
+			// Sort added so the most recently clicked node comes last
+			if (lastClickedNodeId && added.length > 1) {
+				added.sort((a, b) => {
+					if (a.id === lastClickedNodeId) return 1;
+					if (b.id === lastClickedNodeId) return -1;
+					return 0;
+				});
+			}
+
 			selectedNodes.set([...kept, ...added]);
 			// Clear single-select to hide inspector, show action bar
 			selectedNode.set(null);

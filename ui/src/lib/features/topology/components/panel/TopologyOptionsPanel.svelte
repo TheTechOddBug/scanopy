@@ -18,12 +18,16 @@
 		topology_expandPanel,
 		topology_shortcutsTitle
 	} from '$lib/paraglide/messages';
+	import TopologyStatsBar from './TopologyStatsBar.svelte';
+	import type { Topology } from '../../types/base';
 
 	let {
+		topology,
 		isReadOnly = false,
 		onClearSelection,
 		onGroupCreated
 	}: {
+		topology: Topology;
 		isReadOnly?: boolean;
 		onClearSelection?: () => void;
 		onGroupCreated?: (groupId: string) => void;
@@ -75,6 +79,7 @@
 				>
 					<ChevronLeft class="text-secondary h-5 w-5" />
 				</button>
+				<TopologyStatsBar {topology} />
 			</div>
 
 			<!-- Content area -->

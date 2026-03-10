@@ -57,7 +57,7 @@
 	<div class="card card-static p-0 shadow-lg">
 		{#if $optionsPanelExpanded}
 			<!-- Header with collapse button -->
-			<div class="flex items-center justify-end border-b border-gray-700">
+			<div class="flex items-center justify-start border-b border-gray-700">
 				<button
 					class="btn-icon flex-shrink-0 rounded-xl p-3"
 					onclick={() => optionsPanelExpanded.set(false)}

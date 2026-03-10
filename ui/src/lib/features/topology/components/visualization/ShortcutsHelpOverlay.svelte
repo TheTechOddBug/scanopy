@@ -13,6 +13,7 @@
 		topology_shortcutBoxSelect,
 		topology_shortcutToggleSelect
 	} from '$lib/paraglide/messages';
+	import KbdKey from '$lib/shared/components/feedback/KbdKey.svelte';
 
 	let { isOpen = $bindable(false) }: { isOpen: boolean } = $props();
 
@@ -38,12 +39,7 @@
 				<span class="text-secondary text-sm">{shortcut.description()}</span>
 				<div class="flex items-center gap-1">
 					{#each shortcut.keys as key (key)}
-						<kbd
-							class="rounded border px-1.5 py-0.5 text-xs"
-							style="border-color: var(--color-border); background: var(--color-bg-secondary); color: var(--color-text-secondary)"
-						>
-							{key}
-						</kbd>
+						<KbdKey {key} size="md"/>
 					{/each}
 				</div>
 			</div>

@@ -29,6 +29,8 @@
 	import { onMount, tick, setContext } from 'svelte';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
+	import { themeStore } from '$lib/shared/stores/theme.svelte';
+	import { twColorToRgba } from '$lib/shared/utils/styling';
 
 	// Props
 	export let topology: Topology;
@@ -411,11 +413,11 @@
 				{#snippet before()}
 					{#if onOpenShortcuts}
 						<button
-							class="svelte-flow__controls-button"
+							class="svelte-flow__controls-button pb-2"
 							onclick={onOpenShortcuts}
 							title={topology_shortcutsTitle()}
 						>
-							<Keyboard class="h-3 w-3" />
+							<Keyboard class="h-4 w-4"  />
 						</button>
 					{/if}
 				{/snippet}
@@ -423,7 +425,15 @@
 		{/if}
 
 		{#if (showMinimap !== undefined ? showMinimap : $topologyOptions.local.show_minimap) && !$isExporting}
-			<MiniMap position="bottom-left" />
+
+<MiniMap                                                                                                                                                                                                           
+    position="bottom-left"
+    bgColor={themeStore.resolvedTheme === "dark" ? "#1f2937" : "#ffffff"}
+    nodeColor={themeStore.resolvedTheme === "dark" ? "#6b7280" : "#9ca3af"}
+    maskColor={themeStore.resolvedTheme === "dark" ? "rgba(17, 24, 39, 0.7)" : "rgba(243, 244, 246, 0.7)"}
+    maskStrokeColor={themeStore.resolvedTheme === "dark" ? "#374151" : "#d1d5db"}
+  />
+
 		{/if}
 
 		{#if showBranding}
@@ -451,6 +461,7 @@
 
 	:global(.svelte-flow__attribution.bottom) {
 		bottom: 10px;
+		right: 10px;
 	}
 
 	:global(.svelte-flow__attribution a) {
@@ -459,20 +470,6 @@
 
 	:global(.svelte-flow__attribution a:hover) {
 		color: var(--color-text-muted);
-	}
-
-	:global(.svelte-flow__minimap) {
-		border-radius: 0.25rem;
-		border: 1px solid #d1d5db;
-		background: white;
-		box-shadow:
-			0 10px 15px -3px rgb(0 0 0 / 0.1),
-			0 4px 6px -4px rgb(0 0 0 / 0.1);
-	}
-
-	:global(.dark .svelte-flow__minimap) {
-		border-color: #374151;
-		background: #1f2937;
 	}
 
 	.branding-badge {

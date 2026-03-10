@@ -39,7 +39,6 @@
 		topology_leftZone,
 		topology_leftZoneCategoriesHelp,
 		topology_leftZoneTitleHelp,
-		topology_multiselectHelp,
 		topology_optionDisabledRebuildRequired,
 		topology_showGatewayInLeftZone,
 		topology_showGatewayInLeftZoneHelp,
@@ -358,13 +357,6 @@
 </script>
 
 <div class="space-y-4">
-	<!-- Helper text -->
-	<div class="rounded pt-2" style="background: var(--color-bg-surface)">
-		<p class="text-tertiary text-[10px] leading-tight">
-			{topology_multiselectHelp()}
-		</p>
-	</div>
-
 	<!-- Tag Filter Section -->
 	<div class="card card-static px-0 py-2">
 		<button

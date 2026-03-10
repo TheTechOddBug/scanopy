@@ -61,6 +61,7 @@
 		topology_staleData,
 		topology_staleDataBody
 	} from '$lib/paraglide/messages';
+	import KbdKey from '$lib/shared/components/feedback/KbdKey.svelte';
 
 	let { isReadOnly = false, isActive = false }: TabProps = $props();
 
@@ -412,28 +413,29 @@
 
 				{#if !isReadOnly}
 					<div class="card-divider-v self-stretch"></div>
-
-					<div class="flex items-center py-2">
-						{#if activeSession}
-							<div class="flex flex-col items-center px-2 py-1 {discoveryColor.icon}">
-								<div class="inline-flex items-center gap-1 text-xs font-medium">
-									<Radar class="h-4 w-4 animate-pulse" />
+					{#if activeSession}
+							<div class="cursor-default flex flex-col items-center {discoveryColor.icon}">
+								<div class="flex items-center p-2">
+									<Radar class="h-4 w-4 mr-2 animate-pulse [animation-duration:5s]" />
 									{#if activeSession.progress > 0}
-										{activeSession.progress}%
+										<span class="text-xs">{activeSession.progress}%</span>
 									{/if}
 								</div>
 								<span class="text-[10px]">{activeSession.phase ?? 'Scanning'}</span>
 							</div>
+							<div class="card-divider-v self-stretch"></div>
 						{/if}
-						<div class="mr-2 flex flex-col text-center">
-							{#if hasCompletedFirstRebuild}
+						{#if hasCompletedFirstRebuild}
+					<div class="flex items-center">
+						<div class="mx-2 flex flex-col text-center">
+							
 								<div class="flex justify-around gap-6">
 									<button
 										onclick={handleToggleLock}
 										class={`text-xs ${currentTopology.is_locked ? 'btn-icon-info' : 'btn-icon'}`}
 										data-tooltip="Lock your topology layout to prevent discovery from changing it"
 										use:tooltip
-										title="{currentTopology.is_locked ? 'Unlock' : 'Lock'} (L)"
+										title="{currentTopology.is_locked ? 'Unlock' : 'Lock'}"
 									>
 										<Lock class="mr-2 h-4 w-4" />
 										{currentTopology.is_locked ? common_unlock() : common_lock()}
@@ -449,7 +451,7 @@
 												? 'Your topology rebuilds automatically when new data arrives from discovery'
 												: "In manual mode, your topology won't update until you trigger a rebuild"}
 											use:tooltip
-											title="{$autoRebuild ? 'Auto' : 'Manual'} (R)"
+											title="{$autoRebuild ? 'Auto' : 'Manual'}"
 										>
 											{#if $autoRebuild}
 												<Radio class="mr-2 h-4 w-4" /> {common_auto()}
@@ -473,7 +475,7 @@
 										})}</span
 									>
 								{/if}
-							{/if}
+							
 						</div>
 						<!-- State Badge / Action Button -->
 						{#if stateConfig && !currentTopology.is_locked && !$autoRebuild}
@@ -491,7 +493,9 @@
 						{/if}
 					</div>
 
+
 					<div class="card-divider-v self-stretch"></div>
+						{/if}
 				{/if}
 
 				{#if topologiesData.length > 0}

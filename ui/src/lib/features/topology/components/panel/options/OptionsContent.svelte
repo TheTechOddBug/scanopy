@@ -31,6 +31,8 @@
 		topology_hidePortsHelp,
 		topology_hideResizeHandles,
 		topology_hideResizeHandlesHelp,
+		topology_showMinimap,
+		topology_showMinimapHelp,
 		topology_hideStuff,
 		topology_hideVmOnContainer,
 		topology_hideVmOnContainerHelp,
@@ -204,6 +206,15 @@
 			path: 'local',
 			key: 'hide_resize_handles',
 			helpText: () => topology_hideResizeHandlesHelp(),
+			section: () => common_visual()
+		},
+		{
+			id: 'show_minimap',
+			label: () => topology_showMinimap(),
+			type: 'boolean',
+			path: 'local',
+			key: 'show_minimap',
+			helpText: () => topology_showMinimapHelp(),
 			section: () => common_visual()
 		},
 		// Docker section

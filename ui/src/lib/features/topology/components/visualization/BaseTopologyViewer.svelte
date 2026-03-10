@@ -3,6 +3,7 @@
 	import {
 		SvelteFlow,
 		Controls,
+		MiniMap,
 		Background,
 		BackgroundVariant,
 		type EdgeMarkerType,
@@ -14,7 +15,8 @@
 	import '@xyflow/svelte/dist/style.css';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
-	import { previewEdges, selectedNodes } from '../../queries';
+	import { previewEdges, selectedNodes, topologyOptions } from '../../queries';
+	import { isExporting } from '../../interactions';
 
 	// Import custom node/edge components
 	import SubnetNode from './SubnetNode.svelte';
@@ -366,6 +368,13 @@
 			/>
 		{/if}
 
+		{#if $topologyOptions.local.show_minimap && !$isExporting}
+			<MiniMap
+				position="bottom-left"
+				class="!rounded !border !border-gray-300 !bg-white !shadow-lg dark:!border-gray-600 dark:!bg-gray-800"
+			/>
+		{/if}
+
 		{#if showBranding}
 			<a
 				href="https://scanopy.net?utm_source={isEmbed
@@ -429,6 +438,10 @@
 	}
 
 	:global(.hide-for-export .svelte-flow__controls) {
+		opacity: 0;
+	}
+
+	:global(.hide-for-export .svelte-flow__minimap) {
 		opacity: 0;
 	}
 

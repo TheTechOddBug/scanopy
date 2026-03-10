@@ -224,6 +224,12 @@ pub struct TopologyLocalOptions {
     pub hide_edge_types: Vec<EdgeTypeDiscriminants>,
     #[serde(default)]
     pub tag_filter: TopologyTagFilter,
+    #[serde(default = "default_true")]
+    pub show_minimap: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for TopologyLocalOptions {
@@ -234,6 +240,7 @@ impl Default for TopologyLocalOptions {
             hide_resize_handles: false,
             hide_edge_types: vec![EdgeTypeDiscriminants::HostVirtualization],
             tag_filter: TopologyTagFilter::default(),
+            show_minimap: true,
         }
     }
 }

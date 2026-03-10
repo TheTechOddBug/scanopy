@@ -855,6 +855,8 @@
 	"topology_selectParent": "",
 	"topology_showGatewayInLeftZone": "",
 	"topology_showGatewayInLeftZoneHelp": "",
+	"topology_showMinimap": "",
+	"topology_showMinimapHelp": "",
 	"topology_staleData": "",
 	"topology_staleDataBody": "",
 	"topology_startFresh": "",

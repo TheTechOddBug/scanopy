@@ -2787,14 +2787,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-03-09T19:59:46.367720Z",
-             *       "id": "b0a7d3b8-12ed-410c-810e-90f3dc445216",
+             *       "created_at": "2026-03-10T04:43:21.291154Z",
+             *       "id": "ad08bca2-19d8-4ac4-a6d3-14608d4590f1",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-03-09T19:59:46.367720Z"
+             *       "updated_at": "2026-03-10T04:43:21.291154Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3046,14 +3046,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-03-09T19:59:46.348377Z",
-             *               "id": "5f29676a-97dc-4697-9799-1b497063602c",
+             *               "created_at": "2026-03-10T04:43:21.271673Z",
+             *               "id": "2e6a3578-18bd-4f5a-b833-1ccfc192d2c4",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-03-09T19:59:46.348377Z"
+             *               "updated_at": "2026-03-10T04:43:21.271673Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3062,7 +3062,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Bacula",
+             *           "service_definition": "Mealie",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3318,14 +3318,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-03-09T19:59:46.362488Z",
-             *           "id": "5b6169b9-6796-4a2f-aca7-99a5496b9a34",
+             *           "created_at": "2026-03-10T04:43:21.286328Z",
+             *           "id": "0407c0d9-f206-4858-8e48-fe3ab69fd73f",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-03-09T19:59:46.362488Z"
+             *           "updated_at": "2026-03-10T04:43:21.286328Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3334,7 +3334,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Bacula",
+             *       "service_definition": "Mealie",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3641,14 +3641,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-03-09T19:59:46.348781Z",
-         *       "id": "5080a264-3e80-4373-adbf-1c2491ad94c5",
+         *       "created_at": "2026-03-10T04:43:21.271866Z",
+         *       "id": "75768559-f47b-4ae7-8605-0eb4b6d74970",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-03-09T19:59:46.348781Z"
+         *       "updated_at": "2026-03-10T04:43:21.271866Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3830,7 +3830,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Bacula",
+         *           "service_definition": "Mealie",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4478,14 +4478,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-03-09T19:59:46.347814Z",
-         *               "id": "7c8b3311-36fb-4322-b103-4241d99f7a8f",
+         *               "created_at": "2026-03-10T04:43:21.271407Z",
+         *               "id": "5246fb29-8480-40c3-9671-061be4376da0",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-03-09T19:59:46.347814Z"
+         *               "updated_at": "2026-03-10T04:43:21.271407Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4494,7 +4494,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Bacula",
+         *           "service_definition": "Mealie",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5474,14 +5474,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-03-09T19:59:46.348642Z",
-         *           "id": "bec50013-3e91-457d-b83b-4368d00c7f5f",
+         *           "created_at": "2026-03-10T04:43:21.271802Z",
+         *           "id": "d89029f6-90ac-48f0-bd9b-11a0bcc74242",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-03-09T19:59:46.348642Z"
+         *           "updated_at": "2026-03-10T04:43:21.271802Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5490,7 +5490,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Bacula",
+         *       "service_definition": "Mealie",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5824,6 +5824,7 @@ export interface components {
             hide_resize_handles: boolean;
             left_zone_title: string;
             no_fade_edges: boolean;
+            show_minimap?: boolean;
             tag_filter?: components["schemas"]["TopologyTagFilter"];
         };
         /**
@@ -10393,6 +10394,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */
@@ -10490,6 +10493,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */

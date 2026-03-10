@@ -967,6 +967,8 @@
 	"topology_selectParent": "Select a parent to branch off of",
 	"topology_showGatewayInLeftZone": "Show gateways in left zone",
 	"topology_showGatewayInLeftZoneHelp": "Display gateway services in the subnet's left zone",
+	"topology_showMinimap": "Show Minimap",
+	"topology_showMinimapHelp": "Show a minimap overview of the topology",
 	"topology_staleData": "Stale Data",
 	"topology_staleDataBody": "Entities have been updated, and the diagram layout may need to change to fit them.",
 	"topology_startFresh": "Start fresh",

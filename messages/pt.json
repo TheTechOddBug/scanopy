@@ -848,6 +848,7 @@
 	"topology_multiSelectPreviewEdge": "Preview Edge",
 	"topology_multiSelectStaleHint": "Rebuild this topology to make changes.",
 	"topology_multiselectHelp": "Hold Ctrl/Cmd+click or Shift+drag to select multiple nodes",
+	"topology_optionDisabledRebuildRequired": "Rebuild topology to change this option",
 	"topology_namePlaceholder": "",
 	"topology_noNodesToExport": "",
 	"topology_noTopologySelected": "",

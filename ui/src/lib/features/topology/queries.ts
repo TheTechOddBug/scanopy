@@ -9,6 +9,7 @@ import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-qu
 import { queryClient, queryKeys } from '$lib/api/query-client';
 import { apiClient } from '$lib/api/client';
 import type { Topology, TopologyOptions } from './types/base';
+import type { Organization } from '../organizations/types';
 import { uuidv4Sentinel, utcTimeZoneSentinel } from '$lib/shared/utils/formatting';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
 import { writable, get } from 'svelte/store';
@@ -186,6 +187,23 @@ export function useRebuildTopologyMutation() {
 			return topology.id;
 		},
 		onSuccess: () => {
+			// Optimistically update org cache so controls appear immediately.
+			// Mirror the backend condition: only add FirstTopologyRebuild
+			// if FirstDiscoveryCompleted is already present.
+			queryClient.setQueryData(
+				queryKeys.organizations.current(),
+				(old: Organization | undefined) => {
+					if (
+						!old ||
+						old.onboarding.includes('FirstTopologyRebuild') ||
+						!old.onboarding.includes('FirstDiscoveryCompleted')
+					) {
+						return old;
+					}
+					return { ...old, onboarding: [...old.onboarding, 'FirstTopologyRebuild'] };
+				}
+			);
+			// Also invalidate to sync with actual server state
 			queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
 		}
 	}));

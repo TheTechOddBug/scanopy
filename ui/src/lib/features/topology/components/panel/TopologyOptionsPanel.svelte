@@ -12,12 +12,7 @@
 	import InspectorNode from './inspectors/InspectorNode.svelte';
 	import InspectorEdge from './inspectors/InspectorEdge.svelte';
 	import InspectorMultiSelect from './inspectors/InspectorMultiSelect.svelte';
-	import ShortcutsHelpOverlay from '../visualization/ShortcutsHelpOverlay.svelte';
-	import {
-		topology_collapsePanel,
-		topology_expandPanel,
-		topology_shortcutsTitle
-	} from '$lib/paraglide/messages';
+	import { topology_collapsePanel, topology_expandPanel } from '$lib/paraglide/messages';
 	import TopologyStatsBar from './TopologyStatsBar.svelte';
 	import type { Topology } from '../../types/base';
 

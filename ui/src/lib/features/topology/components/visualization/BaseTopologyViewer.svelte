@@ -4,7 +4,6 @@
 		SvelteFlow,
 		Controls,
 		MiniMap,
-		Panel,
 		Background,
 		BackgroundVariant,
 		type EdgeMarkerType,

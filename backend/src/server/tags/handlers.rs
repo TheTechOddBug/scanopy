@@ -372,8 +372,13 @@ pub async fn bulk_add_tag(
         .await?;
 
     if affected_count > 0 {
-        emit_tag_change_events(&state, &auth.entity, &request.entity_ids, request.entity_type)
-            .await;
+        emit_tag_change_events(
+            &state,
+            &auth.entity,
+            &request.entity_ids,
+            request.entity_type,
+        )
+        .await;
     }
 
     Ok(Json(ApiResponse::success(BulkTagResponse {
@@ -420,8 +425,13 @@ pub async fn bulk_remove_tag(
         .await?;
 
     if affected_count > 0 {
-        emit_tag_change_events(&state, &auth.entity, &request.entity_ids, request.entity_type)
-            .await;
+        emit_tag_change_events(
+            &state,
+            &auth.entity,
+            &request.entity_ids,
+            request.entity_type,
+        )
+        .await;
     }
 
     Ok(Json(ApiResponse::success(BulkTagResponse {
@@ -477,7 +487,13 @@ pub async fn set_entity_tags(
         )
         .await?;
 
-    emit_tag_change_events(&state, &auth.entity, &[request.entity_id], request.entity_type).await;
+    emit_tag_change_events(
+        &state,
+        &auth.entity,
+        &[request.entity_id],
+        request.entity_type,
+    )
+    .await;
 
     Ok(Json(ApiResponse::success(())))
 }

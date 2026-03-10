@@ -2787,14 +2787,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-03-10T05:04:33.127821Z",
-             *       "id": "b641e7b8-c812-403a-8bfb-5da1cf4cce3d",
+             *       "created_at": "2026-03-10T19:26:46.643516Z",
+             *       "id": "1092b9e5-446d-4a63-8902-2e2bdeb4db64",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-03-10T05:04:33.127821Z"
+             *       "updated_at": "2026-03-10T19:26:46.643516Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3046,14 +3046,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-03-10T05:04:33.116806Z",
-             *               "id": "6ab75937-ba2d-49df-819a-0fb79bb78824",
+             *               "created_at": "2026-03-10T19:26:46.624916Z",
+             *               "id": "6a1a6ada-7f4f-49a7-9756-4111f4bbb18c",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-03-10T05:04:33.116806Z"
+             *               "updated_at": "2026-03-10T19:26:46.624916Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3062,7 +3062,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Mealie",
+             *           "service_definition": "UptimeKuma",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3318,14 +3318,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-03-10T05:04:33.124388Z",
-             *           "id": "b1daa48a-9813-4858-abeb-9ee4ad87f898",
+             *           "created_at": "2026-03-10T19:26:46.636884Z",
+             *           "id": "3e7b6cb4-3918-4e36-bbaf-4b5740c73926",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-03-10T05:04:33.124388Z"
+             *           "updated_at": "2026-03-10T19:26:46.636884Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3334,7 +3334,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Mealie",
+             *       "service_definition": "UptimeKuma",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3641,14 +3641,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-03-10T05:04:33.117018Z",
-         *       "id": "6ed416dd-bcfa-4248-a5a4-9fc569049e61",
+         *       "created_at": "2026-03-10T19:26:46.625238Z",
+         *       "id": "1da8f54b-b5d4-4fe3-9831-7a490b7e0dfd",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-03-10T05:04:33.117018Z"
+         *       "updated_at": "2026-03-10T19:26:46.625238Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3830,7 +3830,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Mealie",
+         *           "service_definition": "UptimeKuma",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4478,14 +4478,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-03-10T05:04:33.116515Z",
-         *               "id": "cfd9f480-8281-4118-a7a3-dc266d8fb525",
+         *               "created_at": "2026-03-10T19:26:46.624241Z",
+         *               "id": "8c054259-f363-4d04-bda3-7075fa3f600a",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-03-10T05:04:33.116515Z"
+         *               "updated_at": "2026-03-10T19:26:46.624241Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4494,7 +4494,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Mealie",
+         *           "service_definition": "UptimeKuma",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5474,14 +5474,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-03-10T05:04:33.116947Z",
-         *           "id": "d72be9b3-c0e4-4ce0-bf4b-fd98a12b591e",
+         *           "created_at": "2026-03-10T19:26:46.625152Z",
+         *           "id": "cf29b3dd-c920-4062-a52e-0aa3d6baff88",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-03-10T05:04:33.116947Z"
+         *           "updated_at": "2026-03-10T19:26:46.625152Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5490,7 +5490,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Mealie",
+         *       "service_definition": "UptimeKuma",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5618,6 +5618,7 @@ export interface components {
         ShareOptions: {
             show_export_button: boolean;
             show_inspect_panel: boolean;
+            show_minimap: boolean;
             show_zoom_controls: boolean;
         };
         SnmpCredential: components["schemas"]["SnmpCredentialBase"] & {

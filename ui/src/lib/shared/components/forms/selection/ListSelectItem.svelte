@@ -37,7 +37,7 @@
 		'showEditableEntityDescription' in context &&
 		(context as Record<string, unknown>).showEditableEntityDescription;
 	$: descriptionValue = showEditableDescription
-		? ((context as Record<string, unknown>).entityDescription as string | null) ?? null
+		? (((context as Record<string, unknown>).entityDescription as string | null) ?? null)
 		: null;
 	$: descriptionDisabled = showEditableDescription
 		? !!(context as Record<string, unknown>).entityDescriptionDisabled

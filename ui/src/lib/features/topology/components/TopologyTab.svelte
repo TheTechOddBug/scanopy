@@ -426,38 +426,6 @@
 							</div>
 						{/if}
 						<div class="mr-2 flex flex-col text-center">
-							<div class="flex justify-around gap-6">
-								<button
-									onclick={handleToggleLock}
-									class={`text-xs ${currentTopology.is_locked ? 'btn-icon-info' : 'btn-icon'}`}
-								>
-									<Lock class="mr-2 h-4 w-4" />
-									{currentTopology.is_locked ? common_unlock() : common_lock()}
-									<kbd
-										class="ml-1.5 rounded border border-current px-1 py-0.5 text-[10px] opacity-50"
-										>L</kbd
-									>
-								</button>
-
-								{#if !currentTopology.is_locked}
-									<button
-										onclick={handleAutoRebuildToggle}
-										type="button"
-										class={`text-xs ${$autoRebuild && !currentTopology.is_locked ? 'btn-icon-success' : 'btn-icon'}`}
-										disabled={currentTopology.is_locked}
-									>
-										{#if $autoRebuild}
-											<Radio class="mr-2 h-4 w-4" /> {common_auto()}
-										{:else}
-											<RefreshCcw class="mr-2 h-4 w-4" /> {common_manual()}
-										{/if}
-										<kbd
-											class="ml-1.5 rounded border border-current px-1 py-0.5 text-[10px] opacity-50"
-											>R</kbd
-										>
-									</button>
-								{/if}
-						<div class="mr-2 flex flex-col text-center">
 							{#if hasCompletedFirstRebuild}
 								<div class="flex justify-around gap-6">
 									<button

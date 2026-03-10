@@ -432,8 +432,8 @@ export function useUpdateHostDescriptionMutation() {
 					description: data.description,
 					virtualization: data.host.virtualization,
 					hidden: data.host.hidden,
-					expected_updated_at: data.host.updated_at
-					// tags intentionally omitted: serde(default) → [] → set_tags() early return preserves existing
+					expected_updated_at: data.host.updated_at,
+					tags: data.host.tags ?? []
 				}
 			});
 			if (!result?.success || !result.data) {

@@ -413,21 +413,18 @@
 				{#if !isReadOnly}
 					<div class="card-divider-v self-stretch"></div>
 
-					{#if activeSession}
-						<div
-							class="flex flex-col items-center rounded px-2 py-1 {discoveryColor.bg} {discoveryColor.icon}"
-						>
-							<div class="inline-flex items-center gap-1 text-xs font-medium">
-								<Radar class="h-4 w-4 animate-pulse" />
-								{#if activeSession.progress > 0}
-									{activeSession.progress}%
-								{/if}
-							</div>
-							<span class="text-[10px]">{activeSession.phase ?? 'Scanning'}</span>
-						</div>
-					{/if}
-
 					<div class="flex items-center py-2">
+						{#if activeSession}
+							<div class="flex flex-col items-center px-2 py-1 {discoveryColor.icon}">
+								<div class="inline-flex items-center gap-1 text-xs font-medium">
+									<Radar class="h-4 w-4 animate-pulse" />
+									{#if activeSession.progress > 0}
+										{activeSession.progress}%
+									{/if}
+								</div>
+								<span class="text-[10px]">{activeSession.phase ?? 'Scanning'}</span>
+							</div>
+						{/if}
 						<div class="mr-2 flex flex-col text-center">
 							{#if hasCompletedFirstRebuild}
 								<div class="flex justify-around gap-6">

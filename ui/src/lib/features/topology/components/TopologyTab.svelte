@@ -573,6 +573,7 @@
 					bind:this={topologyViewer}
 					onToggleLock={handleToggleLock}
 					onRebuild={handleRefresh}
+					{isActive}
 				/>
 			</div>
 		{:else}

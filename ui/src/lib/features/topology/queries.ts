@@ -24,7 +24,8 @@ export const defaultTopologyOptions: TopologyOptions = {
 			hidden_host_tag_ids: [],
 			hidden_service_tag_ids: [],
 			hidden_subnet_tag_ids: []
-		}
+		},
+		show_minimap: true
 	},
 	request: {
 		group_docker_bridges_by_host: true,

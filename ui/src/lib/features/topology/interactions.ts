@@ -16,6 +16,7 @@ export const groupHoverState = writable<Map<string, boolean>>(new Map());
 export const edgeHoverState = writable<Map<string, boolean>>(new Map());
 export const connectedNodeIds = writable<Set<string>>(new Set());
 export const isExporting = writable(false);
+export const newNodeIds = writable<Set<string>>(new Set());
 
 // Tag filter stores - nodes/services hidden by tag filter
 export const tagHiddenNodeIds = writable<Set<string>>(new Set());

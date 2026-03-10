@@ -23,6 +23,7 @@
 	} from '../queries';
 	import type { Topology } from '../types/base';
 	import TopologyModal from './TopologyModal.svelte';
+	import { newNodeIds } from '../interactions';
 	import { getTopologyState } from '../state';
 	import StateBadge from './StateBadge.svelte';
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
@@ -124,6 +125,33 @@
 			}
 			// Default to first topology
 			selectedTopologyId.set(topologiesData[0].id);
+		}
+	});
+
+	// New node highlight: snapshot pre-rebuild node IDs, detect new ones after rebuild
+	let preRebuildNodeIds: Set<string> | null = $state(null);
+
+	function snapshotBeforeRebuild() {
+		if (currentTopology) {
+			preRebuildNodeIds = new Set(currentTopology.nodes.map((n) => n.id));
+		}
+	}
+
+	// Detect new nodes after rebuild completes
+	$effect(() => {
+		if (!preRebuildNodeIds || !currentTopology || currentTopology.is_stale) return;
+
+		const currentIds = currentTopology.nodes.map((n) => n.id);
+		const addedIds = currentIds.filter((id) => !preRebuildNodeIds!.has(id));
+
+		preRebuildNodeIds = null;
+
+		if (addedIds.length > 0) {
+			newNodeIds.set(new Set(addedIds));
+			topologyViewer?.triggerFitView();
+			setTimeout(() => {
+				newNodeIds.set(new Set());
+			}, 3000);
 		}
 	});
 
@@ -297,6 +325,7 @@
 			isRefreshConflictsOpen = true;
 		} else {
 			// Safe to refresh directly
+			snapshotBeforeRebuild();
 			await rebuildTopologyMutation.mutateAsync(currentTopology);
 			topologyViewer?.triggerFitView();
 		}
@@ -304,6 +333,7 @@
 
 	async function handleReset() {
 		if (!currentTopology) return;
+		snapshotBeforeRebuild();
 		let resetTopology = { ...currentTopology };
 		resetTopology.nodes = [];
 		resetTopology.edges = [];
@@ -313,6 +343,7 @@
 
 	async function handleConfirmRefresh() {
 		if (!currentTopology) return;
+		snapshotBeforeRebuild();
 		await rebuildTopologyMutation.mutateAsync(currentTopology);
 		topologyViewer?.triggerFitView();
 		isRefreshConflictsOpen = false;

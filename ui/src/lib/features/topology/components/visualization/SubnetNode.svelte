@@ -26,6 +26,7 @@
 		connectedNodeIds,
 		isExporting,
 		tagHiddenNodeIds,
+		searchHiddenNodeIds,
 		hoveredTag,
 		UNTAGGED_SENTINEL
 	} from '../../interactions';
@@ -47,6 +48,12 @@
 	let hiddenNodes = $state(get(tagHiddenNodeIds));
 	tagHiddenNodeIds.subscribe((value) => {
 		hiddenNodes = value;
+	});
+
+	// Subscribe to search filter store for reactivity
+	let searchHiddenNodes = $state(get(searchHiddenNodeIds));
+	searchHiddenNodeIds.subscribe((value) => {
+		searchHiddenNodes = value;
 	});
 
 	// Subscribe to tag hover state
@@ -82,6 +89,11 @@
 
 		// Tag filter: fade if this subnet is hidden
 		if (hiddenNodes.has(id)) {
+			return true;
+		}
+
+		// Search filter: fade if this subnet is hidden by search
+		if (searchHiddenNodes.has(id)) {
 			return true;
 		}
 

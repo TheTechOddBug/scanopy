@@ -12,7 +12,19 @@
 		useUpdateEdgeHandlesMutation
 	} from '../../queries';
 	import { type EdgeHandle, type TopologyEdge, type TopologyNode } from '../../types/base';
+	import { searchOpen, clearSearch } from '../../interactions';
 	import BaseTopologyViewer from './BaseTopologyViewer.svelte';
+	import SearchOverlay from './SearchOverlay.svelte';
+	import ShortcutsHelpOverlay from './ShortcutsHelpOverlay.svelte';
+
+	// Props for callbacks from parent
+	let {
+		onToggleLock,
+		onRebuild
+	}: {
+		onToggleLock?: () => void;
+		onRebuild?: () => void;
+	} = $props();
 
 	// TanStack Query hooks
 	const topologiesQuery = useTopologiesQuery();
@@ -28,6 +40,9 @@
 	// Selection state synced with stores
 	let localSelectedNode: Node | null = $state(null);
 	let localSelectedEdge: Edge | null = $state(null);
+
+	// Overlay state
+	let shortcutsHelpOpen = $state(false);
 
 	export function triggerFitView() {
 		baseViewer?.triggerFitView();
@@ -122,18 +137,81 @@
 		// Explicit clear happens via pane click or Escape
 	}
 
+	function isInputElement(target: EventTarget | null): boolean {
+		if (!target || !(target instanceof HTMLElement)) return false;
+		const tag = target.tagName.toLowerCase();
+		if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+		if (target.isContentEditable) return true;
+		return false;
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
+		const isSearchOpen = get(searchOpen);
+
+		// Escape always works
 		if (event.key === 'Escape') {
-			selectedNodes.set([]);
-			selectedNode.set(null);
-			selectedEdge.set(null);
+			if (isSearchOpen) {
+				clearSearch();
+			} else {
+				selectedNodes.set([]);
+				selectedNode.set(null);
+				selectedEdge.set(null);
+			}
+			return;
+		}
+
+		// Skip shortcuts when typing in inputs (except Escape handled above)
+		if (isInputElement(event.target)) return;
+
+		// Cmd/Ctrl+F: open search
+		if ((event.metaKey || event.ctrlKey) && event.key === 'f') {
+			event.preventDefault();
+			searchOpen.set(true);
+			return;
+		}
+
+		// Single key shortcuts (no modifiers)
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+		switch (event.key) {
+			case '/':
+				event.preventDefault();
+				searchOpen.set(true);
+				break;
+			case 'f':
+			case 'F':
+				baseViewer?.triggerFitView();
+				break;
+			case 'z':
+			case 'Z': {
+				// Zoom to selected node(s)
+				const multiSelected = get(selectedNodes);
+				const singleSelected = get(selectedNode);
+				if (multiSelected.length >= 2) {
+					baseViewer?.fitViewToNodes(multiSelected.map((n) => n.id));
+				} else if (singleSelected) {
+					baseViewer?.fitViewToNodes([singleSelected.id]);
+				}
+				break;
+			}
+			case 'l':
+			case 'L':
+				onToggleLock?.();
+				break;
+			case 'r':
+			case 'R':
+				onRebuild?.();
+				break;
+			case '?':
+				shortcutsHelpOpen = !shortcutsHelpOpen;
+				break;
 		}
 	}
 </script>
 
 {#if topology}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="h-[calc(100vh-150px)] w-full" onkeydown={handleKeydown}>
+	<div class="relative h-[calc(100vh-150px)] w-full" tabindex="-1" onkeydown={handleKeydown}>
 		<BaseTopologyViewer
 			bind:this={baseViewer}
 			{topology}
@@ -148,5 +226,7 @@
 			onPaneSelect={handlePaneSelect}
 			onSelectionChange={handleSelectionChange}
 		/>
+		<SearchOverlay />
+		<ShortcutsHelpOverlay bind:isOpen={shortcutsHelpOpen} />
 	</div>
 {/if}

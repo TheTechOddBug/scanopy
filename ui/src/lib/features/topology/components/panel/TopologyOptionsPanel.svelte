@@ -7,12 +7,17 @@
 		previewEdges
 	} from '../../queries';
 	import { get } from 'svelte/store';
-	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import { ChevronLeft, ChevronRight, Keyboard } from 'lucide-svelte';
 	import OptionsContent from './options/OptionsContent.svelte';
 	import InspectorNode from './inspectors/InspectorNode.svelte';
 	import InspectorEdge from './inspectors/InspectorEdge.svelte';
 	import InspectorMultiSelect from './inspectors/InspectorMultiSelect.svelte';
-	import { topology_collapsePanel, topology_expandPanel } from '$lib/paraglide/messages';
+	import ShortcutsHelpOverlay from '../visualization/ShortcutsHelpOverlay.svelte';
+	import {
+		topology_collapsePanel,
+		topology_expandPanel,
+		topology_shortcutsTitle
+	} from '$lib/paraglide/messages';
 
 	let {
 		isReadOnly = false,
@@ -23,6 +28,8 @@
 		onClearSelection?: () => void;
 		onGroupCreated?: (groupId: string) => void;
 	} = $props();
+
+	let shortcutsHelpOpen = $state(false);
 
 	let multiSelectedNodes = $state(get(selectedNodes));
 	selectedNodes.subscribe((value) => {
@@ -52,8 +59,15 @@
 >
 	<div class="card card-static p-0 shadow-lg">
 		{#if $optionsPanelExpanded}
-			<!-- Header with collapse button -->
-			<div class="flex items-center border-b border-gray-700">
+			<!-- Header with shortcuts and collapse buttons -->
+			<div class="flex items-center justify-between border-b border-gray-700">
+				<button
+					class="btn-icon rounded-xl p-3"
+					onclick={() => (shortcutsHelpOpen = true)}
+					title={topology_shortcutsTitle()}
+				>
+					<Keyboard class="text-secondary h-4 w-4" />
+				</button>
 				<button
 					class="btn-icon rounded-xl p-3"
 					onclick={() => optionsPanelExpanded.set(false)}
@@ -95,3 +109,5 @@
 		{/if}
 	</div>
 </div>
+
+<ShortcutsHelpOverlay bind:isOpen={shortcutsHelpOpen} />

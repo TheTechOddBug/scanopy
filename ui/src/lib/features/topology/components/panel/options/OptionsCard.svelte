@@ -43,7 +43,7 @@
 		{common_options()}
 	</button>
 	{#if expanded}
-		<p class="text-tertiary px-3 text-xs">{topology_optionsHint()}</p>
+		<p class="text-tertiary mb-2 px-3 text-xs">{topology_optionsHint()}</p>
 		<div class="space-y-3 px-3 pb-3">
 			{@render children()}
 		</div>

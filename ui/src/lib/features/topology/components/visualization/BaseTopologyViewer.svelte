@@ -49,19 +49,15 @@
 	export let onReconnect: ((edge: Edge, newConnection: Connection) => void) | null = null;
 
 	// Optional callbacks for selection changes
-	export let onNodeSelect: ((node: Node | null) => void) | null = null;
+	export let onNodeSelect: ((node: Node | null, event?: MouseEvent | TouchEvent) => void) | null =
+		null;
 	export let onEdgeSelect: ((edge: Edge | null) => void) | null = null;
 	export let onPaneSelect: ((event?: MouseEvent, wasPanning?: boolean) => void) | null = null;
-	export let onSelectionChange:
-		| ((nodes: Node[], edges: Edge[], lastClickedNodeId?: string | null) => void)
-		| null = null;
+	export let onSelectionChange: ((nodes: Node[], edges: Edge[]) => void) | null = null;
 
 	// Track viewport panning state
 	let viewportMoved = false;
 	let viewportMoveTimer: ReturnType<typeof setTimeout> | null = null;
-
-	// Track last clicked node for selection order preservation
-	let lastClickedNodeId: string | null = null;
 
 	const { fitView } = useSvelteFlow();
 	const queryClient = useQueryClient();
@@ -261,12 +257,15 @@
 		}
 	}
 
-	function handleNodeClick({ node }: { node: Node; event: MouseEvent | TouchEvent }) {
-		lastClickedNodeId = node.id;
-		selectedNode = node;
-		selectedEdge = null;
+	function handleNodeClick({ node, event }: { node: Node; event: MouseEvent | TouchEvent }) {
+		const isModifierClick = event instanceof MouseEvent && (event.ctrlKey || event.metaKey);
+
+		if (!isModifierClick) {
+			selectedNode = node;
+			selectedEdge = null;
+		}
 		if (onNodeSelect) {
-			onNodeSelect(node);
+			onNodeSelect(node, event);
 		}
 	}
 
@@ -278,7 +277,7 @@
 		}
 	}
 
-	function handleMoveStart() {
+	function handleMove() {
 		viewportMoved = true;
 		if (viewportMoveTimer) {
 			clearTimeout(viewportMoveTimer);
@@ -327,7 +326,7 @@
 
 	function handleSelectionChange({ nodes: selNodes }: { nodes: Node[]; edges: Edge[] }) {
 		if (onSelectionChange) {
-			onSelectionChange(selNodes, [], lastClickedNodeId);
+			onSelectionChange(selNodes, []);
 		}
 	}
 
@@ -368,7 +367,7 @@
 		onnodedragstop={readonly ? undefined : handleNodeDragStop}
 		onreconnect={readonly ? undefined : handleReconnect}
 		onselectionchange={handleSelectionChange}
-		onmovestart={handleMoveStart}
+		onmove={handleMove}
 		onmoveend={handleMoveEnd}
 		fitView={true}
 		minZoom={0.1}

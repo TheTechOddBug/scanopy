@@ -445,6 +445,38 @@ export function getEdgeDisplayState(
 }
 
 /**
+ * Add interface nodes for a service based on its bindings.
+ * If binding.interface_id is set, add that interface.
+ * If binding.interface_id is null (all-interfaces binding), add all host interfaces.
+ */
+function addBoundInterfaces(
+	topology: Topology,
+	service: Topology['services'][number],
+	matchingNodeIds: string[]
+) {
+	for (const binding of service.bindings) {
+		if (binding.interface_id) {
+			if (!matchingNodeIds.includes(binding.interface_id)) {
+				matchingNodeIds.push(binding.interface_id);
+			}
+		} else {
+			// null interface_id = bound to all host interfaces
+			const hostInterfaces = topology.interfaces.filter((i) => i.host_id === service.host_id);
+			hostInterfaces.forEach((i) => {
+				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+			});
+		}
+	}
+	// If service has no bindings, fall back to all host interfaces
+	if (service.bindings.length === 0) {
+		const hostInterfaces = topology.interfaces.filter((i) => i.host_id === service.host_id);
+		hostInterfaces.forEach((i) => {
+			if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+		});
+	}
+}
+
+/**
  * Update search filter: find nodes matching query, set non-matching nodes to fade.
  * Searches hosts (name/hostname), interfaces (ip_address/name), services (name),
  * subnets (name/cidr), and tags (name matched to entities).
@@ -490,13 +522,10 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 		}
 	}
 
-	// Search services -> match their host's interface nodes
+	// Search services -> match bound interface nodes (binding-aware)
 	for (const service of topology.services) {
 		if (service.name.toLowerCase().includes(q)) {
-			const hostInterfaces = topology.interfaces.filter((i) => i.host_id === service.host_id);
-			hostInterfaces.forEach((i) => {
-				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
-			});
+			addBoundInterfaces(topology, service, matchingNodeIds);
 		}
 	}
 
@@ -519,6 +548,17 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 				hostInterfaces.forEach((i) => {
 					if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
 				});
+				break;
+			}
+		}
+	}
+
+	// Service tag search -> match bound interfaces (binding-aware)
+	for (const service of topology.services) {
+		for (const tagId of service.tags) {
+			const tag = entityTags.find((t) => t.id === tagId);
+			if (tag && tag.name.toLowerCase().includes(q)) {
+				addBoundInterfaces(topology, service, matchingNodeIds);
 				break;
 			}
 		}

@@ -97,7 +97,7 @@
 				onkeydown={handleKeydown}
 				type="text"
 				placeholder={topology_searchPlaceholder()}
-				class="h-7 w-48 border-none bg-transparent text-sm focus:outline-none"
+				class="h-7 w-64 border-none bg-transparent text-sm focus:outline-none"
 				style="color: var(--color-text-primary)"
 			/>
 

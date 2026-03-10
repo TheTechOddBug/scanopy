@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
+	import { useSvelteFlow } from '@xyflow/svelte';
+	import { Crosshair } from 'lucide-svelte';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
@@ -20,10 +22,17 @@
 		topology_hidePorts,
 		topology_hidePortsHelp,
 		topology_hideVmOnContainer,
-		topology_hideVmOnContainerHelp
+		topology_hideVmOnContainerHelp,
+		topology_focusNode
 	} from '$lib/paraglide/messages';
 
 	let { node }: { node: Node } = $props();
+
+	const { fitView } = useSvelteFlow();
+
+	function handleFocus() {
+		fitView({ nodes: [{ id: node.id }], padding: 0.5, duration: 300 });
+	}
 
 	// Try to get topology from context (for share/embed pages), fallback to query + selected topology
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
@@ -121,7 +130,12 @@
 	<!-- This Interface -->
 	{#if thisInterface}
 		<div>
-			<span class="text-secondary mb-2 block text-sm font-medium">This Interface</span>
+			<div class="mb-2 flex items-center justify-between">
+				<span class="text-secondary text-sm font-medium">This Interface</span>
+				<button class="btn-icon p-0.5" onclick={handleFocus} title={topology_focusNode()}>
+					<Crosshair class="h-3.5 w-3.5" />
+				</button>
+			</div>
 			<div class="card card-static">
 				<EntityDisplayWrapper
 					context={interfaceContext}

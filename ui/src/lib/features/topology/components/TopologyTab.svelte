@@ -375,10 +375,14 @@
 								<button
 									onclick={handleToggleLock}
 									class={`text-xs ${currentTopology.is_locked ? 'btn-icon-info' : 'btn-icon'}`}
-									title="{currentTopology.is_locked ? 'Unlock' : 'Lock'} (L)"
 								>
 									<Lock class="mr-2 h-4 w-4" />
 									{currentTopology.is_locked ? common_unlock() : common_lock()}
+									<kbd
+										class="ml-1.5 rounded border px-1 py-0.5 text-[10px]"
+										style="border-color: var(--color-border); color: var(--color-text-tertiary)"
+										>L</kbd
+									>
 								</button>
 
 								{#if !currentTopology.is_locked}
@@ -387,13 +391,17 @@
 										type="button"
 										class={`text-xs ${$autoRebuild && !currentTopology.is_locked ? 'btn-icon-success' : 'btn-icon'}`}
 										disabled={currentTopology.is_locked}
-										title="{$autoRebuild ? 'Auto' : 'Manual'} (R)"
 									>
 										{#if $autoRebuild}
 											<Radio class="mr-2 h-4 w-4" /> {common_auto()}
 										{:else}
 											<RefreshCcw class="mr-2 h-4 w-4" /> {common_manual()}
 										{/if}
+										<kbd
+											class="ml-1.5 rounded border px-1 py-0.5 text-[10px]"
+											style="border-color: var(--color-border); color: var(--color-text-tertiary)"
+											>R</kbd
+										>
 									</button>
 								{/if}
 							</div>
@@ -506,6 +514,7 @@
 					bind:this={topologyViewer}
 					onToggleLock={handleToggleLock}
 					onRebuild={handleRefresh}
+					{isActive}
 				/>
 			</div>
 		{:else}

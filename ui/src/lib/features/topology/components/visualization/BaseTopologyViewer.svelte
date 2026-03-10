@@ -3,6 +3,7 @@
 	import {
 		SvelteFlow,
 		Controls,
+		Panel,
 		Background,
 		BackgroundVariant,
 		type EdgeMarkerType,
@@ -10,6 +11,8 @@
 		type Connection,
 		useSvelteFlow
 	} from '@xyflow/svelte';
+	import { Keyboard } from 'lucide-svelte';
+	import { topology_shortcutsTitle } from '$lib/paraglide/messages';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
@@ -53,13 +56,14 @@
 	export let onEdgeSelect: ((edge: Edge | null) => void) | null = null;
 	export let onPaneSelect: (() => void) | null = null;
 	export let onSelectionChange: ((nodes: Node[], edges: Edge[]) => void) | null = null;
+	export let onOpenShortcuts: (() => void) | null = null;
 
 	const { fitView } = useSvelteFlow();
 	const queryClient = useQueryClient();
 	let containerElement: HTMLDivElement;
 
 	export function triggerFitView() {
-		requestAnimationFrame(() => fitView());
+		requestAnimationFrame(() => fitView({ padding: 0.2 }));
 	}
 
 	export function fitViewToNodes(nodeIds: string[]) {
@@ -363,6 +367,17 @@
 		/>
 
 		{#if showControls}
+			{#if onOpenShortcuts}
+				<Panel position="top-right" class="!mb-1">
+					<button
+						class="rounded !border !border-gray-300 !bg-gray-50 p-1.5 !text-gray-700 !shadow-lg hover:!bg-gray-100 dark:!border-gray-600 dark:!bg-gray-700 dark:!text-gray-100 dark:hover:!bg-gray-600"
+						onclick={onOpenShortcuts}
+						title={topology_shortcutsTitle()}
+					>
+						<Keyboard class="h-4 w-4" />
+					</button>
+				</Panel>
+			{/if}
 			<Controls
 				showZoom={true}
 				showFitView={true}

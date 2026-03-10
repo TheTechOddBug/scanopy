@@ -966,7 +966,7 @@
 	"topology_startFresh": "Start fresh",
 	"topology_tagFilter": "Tag Filter",
 	"topology_tagFilterHelp": "Click tags to toggle visibility. Hidden tags will fade out their associated entities.",
-	"topology_searchPlaceholder": "Search nodes...",
+	"topology_searchPlaceholder": "Search hosts, IPs, services, tags...",
 	"topology_searchNoMatches": "No matches",
 	"topology_searchMatchCount": "{current} of {total}",
 	"topology_shortcutsTitle": "Keyboard Shortcuts",

@@ -20,10 +20,12 @@
 	// Props for callbacks from parent
 	let {
 		onToggleLock,
-		onRebuild
+		onRebuild,
+		isActive = false
 	}: {
 		onToggleLock?: () => void;
 		onRebuild?: () => void;
+		isActive?: boolean;
 	} = $props();
 
 	// TanStack Query hooks
@@ -143,6 +145,9 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		if (!isActive) return;
+		if (shortcutsHelpOpen) return;
+
 		const isSearchOpen = get(searchOpen);
 
 		// Escape always works
@@ -206,9 +211,10 @@
 	}
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 {#if topology}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="relative h-[calc(100vh-150px)] w-full" tabindex="-1" onkeydown={handleKeydown}>
+	<div class="relative h-[calc(100vh-150px)] w-full">
 		<BaseTopologyViewer
 			bind:this={baseViewer}
 			{topology}
@@ -222,6 +228,7 @@
 			onEdgeSelect={handleEdgeSelect}
 			onPaneSelect={handlePaneSelect}
 			onSelectionChange={handleSelectionChange}
+			onOpenShortcuts={() => (shortcutsHelpOpen = true)}
 		/>
 		<SearchOverlay />
 		<ShortcutsHelpOverlay bind:isOpen={shortcutsHelpOpen} />

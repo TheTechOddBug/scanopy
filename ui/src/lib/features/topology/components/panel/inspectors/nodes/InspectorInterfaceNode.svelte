@@ -69,7 +69,7 @@
 		ports: topology?.ports ?? [],
 		showEntityTagPicker: true,
 		tagPickerDisabled: !liveEditsEnabled,
-		entityTags: topology?.entity_tags ?? []
+		entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined
 	});
 
 	// Context for host display
@@ -77,7 +77,7 @@
 		services: topology?.services.filter((s) => host && s.host_id == host.id) ?? [],
 		showEntityTagPicker: true,
 		tagPickerDisabled: !liveEditsEnabled,
-		entityTags: topology?.entity_tags ?? []
+		entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined
 	});
 </script>
 

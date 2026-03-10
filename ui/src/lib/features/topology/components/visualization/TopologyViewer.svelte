@@ -114,9 +114,12 @@
 			// Clear single-select to hide inspector, show action bar
 			selectedNode.set(null);
 			selectedEdge.set(null);
-		} else {
+		} else if (newNodes.length > 0) {
+			// Single interface node selected — not enough for multi-select
 			selectedNodes.set([]);
 		}
+		// When newNodes is empty, don't clear — could be a pan event
+		// Explicit clear happens via pane click or Escape
 	}
 
 	function handleKeydown(event: KeyboardEvent) {

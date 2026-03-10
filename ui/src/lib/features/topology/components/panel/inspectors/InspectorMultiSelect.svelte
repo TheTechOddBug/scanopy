@@ -21,6 +21,7 @@
 	import { entityRef } from '$lib/shared/components/data/types';
 	import { entities, groupTypes } from '$lib/shared/stores/metadata';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Color } from '$lib/shared/utils/styling';
 	import { AVAILABLE_COLORS, createColorHelper } from '$lib/shared/utils/styling';
@@ -42,7 +43,9 @@
 		common_tags,
 		groups_createGroup,
 		groups_serviceBindings,
-		groups_serviceBindingsHelp
+		groups_serviceBindingsInfoTitle,
+		groups_serviceBindingsInfoBody,
+		topology_multiSelectPreviewEdge
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -312,20 +315,42 @@
 		onGroupCreated?.(created.id);
 	}
 
+	// Compute best source/target handles based on node positions
+	function getBestHandles(
+		source: Node,
+		target: Node
+	): { sourceHandle: string; targetHandle: string } {
+		const dx = target.position.x - source.position.x;
+		const dy = target.position.y - source.position.y;
+		if (Math.abs(dx) > Math.abs(dy)) {
+			return dx > 0
+				? { sourceHandle: 'Right', targetHandle: 'Left' }
+				: { sourceHandle: 'Left', targetHandle: 'Right' };
+		} else {
+			return dy > 0
+				? { sourceHandle: 'Bottom', targetHandle: 'Top' }
+				: { sourceHandle: 'Top', targetHandle: 'Bottom' };
+		}
+	}
+
 	// Preview edges — render as colored group edges
 	function updatePreviewEdges() {
-		const nodeIds = nodes.map((n) => n.id);
-		if (nodeIds.length < 2) return;
+		if (nodes.length < 2) return;
 
 		const colorHelper = createColorHelper(groupColor);
 		const preview: Edge[] = [];
 
 		if (groupType === 'RequestPath') {
-			for (let i = 0; i < nodeIds.length - 1; i++) {
+			for (let i = 0; i < nodes.length - 1; i++) {
+				const source = nodes[i];
+				const target = nodes[i + 1];
+				const handles = getBestHandles(source, target);
 				preview.push({
 					id: `preview-${i}`,
-					source: nodeIds[i],
-					target: nodeIds[i + 1],
+					source: source.id,
+					target: target.id,
+					sourceHandle: handles.sourceHandle,
+					targetHandle: handles.targetHandle,
 					type: 'custom',
 					data: {
 						edge_type: 'RequestPath',
@@ -341,11 +366,16 @@
 				});
 			}
 		} else {
-			for (let i = 1; i < nodeIds.length; i++) {
+			const hub = nodes[0];
+			for (let i = 1; i < nodes.length; i++) {
+				const spoke = nodes[i];
+				const handles = getBestHandles(hub, spoke);
 				preview.push({
 					id: `preview-${i}`,
-					source: nodeIds[0],
-					target: nodeIds[i],
+					source: hub.id,
+					target: spoke.id,
+					sourceHandle: handles.sourceHandle,
+					targetHandle: handles.targetHandle,
 					type: 'custom',
 					data: {
 						edge_type: 'HubAndSpoke',
@@ -394,24 +424,14 @@
 			<div class="card card-static space-y-2 p-2">
 				<!-- Entity type toggle -->
 				<div class="flex items-center gap-1">
-					<div class="flex rounded-md border border-gray-600">
-						<button
-							class="px-2 py-1 text-xs transition-colors {tagEntityType === 'Host'
-								? 'bg-blue-600 text-white'
-								: 'text-secondary hover:text-primary'}"
-							onclick={() => (tagEntityType = 'Host')}
-						>
-							{common_hosts()}
-						</button>
-						<button
-							class="px-2 py-1 text-xs transition-colors {tagEntityType === 'Service'
-								? 'bg-blue-600 text-white'
-								: 'text-secondary hover:text-primary'}"
-							onclick={() => (tagEntityType = 'Service')}
-						>
-							{common_services()}
-						</button>
-					</div>
+					<SegmentedControl
+						options={[
+							{ value: 'Host', label: common_hosts() },
+							{ value: 'Service', label: common_services() }
+						]}
+						selected={tagEntityType}
+						onchange={(v) => (tagEntityType = v as 'Host' | 'Service')}
+					/>
 				</div>
 				<!-- Entity names as EntityTag pills -->
 				{#if tagEntities.length > 0}
@@ -424,7 +444,6 @@
 								label={entity.name}
 								icon={IconComponent}
 								{color}
-								disablePopover
 							/>
 						{/each}
 					</div>
@@ -447,22 +466,18 @@
 			<div class="card card-static space-y-3 p-3">
 				<!-- Group type toggle + preview button -->
 				<div class="flex items-center gap-2">
-					<div class="flex rounded-md border border-gray-600">
-						{#each ['RequestPath', 'HubAndSpoke'] as type (type)}
-							{@const Icon = groupTypes.getIconComponent(type)}
-							<button
-								class="px-2 py-1.5 text-xs transition-colors {groupType === type
-									? 'bg-blue-600 text-white'
-									: 'text-secondary hover:text-primary'}"
-								onclick={() => (groupType = type as GroupType)}
-								title={type === 'RequestPath' ? 'Request Path' : 'Hub & Spoke'}
-							>
-								<Icon class="h-3.5 w-3.5" />
-							</button>
-						{/each}
-					</div>
+					<SegmentedControl
+						options={['RequestPath', 'HubAndSpoke'].map((type) => ({
+							value: type,
+							label: '',
+							icon: groupTypes.getIconComponent(type)
+						}))}
+						selected={groupType}
+						onchange={(v) => (groupType = v as GroupType)}
+					/>
+					<span class="text-secondary text-xs">{groupTypes.getName(groupType)}</span>
 					<button
-						class="btn-secondary p-1.5"
+						class="btn-secondary ml-auto flex items-center gap-1 p-1.5 text-xs"
 						onclick={togglePreview}
 						title={showPreview ? 'Hide preview' : 'Show preview'}
 					>
@@ -471,6 +486,7 @@
 						{:else}
 							<EyeOff class="h-3.5 w-3.5" />
 						{/if}
+						{topology_multiSelectPreviewEdge()}
 					</button>
 				</div>
 
@@ -496,7 +512,11 @@
 				<!-- Binding selection -->
 				<div class="space-y-2">
 					<span class="text-secondary block text-xs font-medium">{groups_serviceBindings()}</span>
-					<InlineInfo title={groups_serviceBindings()} body={groups_serviceBindingsHelp()} />
+					<InlineInfo
+						title={groups_serviceBindingsInfoTitle()}
+						body={groups_serviceBindingsInfoBody()}
+						dismissableKey="group-bindings-info"
+					/>
 					{#each interfaceBindingChoices as choice (choice.interfaceId)}
 						<div class="card card-static space-y-1 p-2">
 							<div class="text-primary truncate text-xs font-medium">

@@ -41,7 +41,7 @@
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import type { components } from '$lib/api/schema';
-	import { permissions } from '$lib/shared/stores/metadata';
+	import { entities, permissions } from '$lib/shared/stores/metadata';
 	import { modalState, openModal } from '$lib/shared/stores/modal-registry';
 	import type { TabProps } from '$lib/shared/types';
 	import {

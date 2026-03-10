@@ -454,23 +454,29 @@ function addBoundInterfaces(
 	service: Topology['services'][number],
 	matchingNodeIds: string[]
 ) {
+	const getNonContainerHostInterfaces = () =>
+		topology.interfaces.filter((i) => {
+			if (i.host_id !== service.host_id) return false;
+			const subnet = topology.subnets.find((s) => s.id === i.subnet_id);
+			if (!subnet) return true;
+			return !subnetTypes.getMetadata(subnet.subnet_type).is_for_containers;
+		});
+
 	for (const binding of service.bindings) {
 		if (binding.interface_id) {
 			if (!matchingNodeIds.includes(binding.interface_id)) {
 				matchingNodeIds.push(binding.interface_id);
 			}
 		} else {
-			// null interface_id = bound to all host interfaces
-			const hostInterfaces = topology.interfaces.filter((i) => i.host_id === service.host_id);
-			hostInterfaces.forEach((i) => {
+			// null interface_id = bound to all host interfaces (exclude container subnets)
+			getNonContainerHostInterfaces().forEach((i) => {
 				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
 			});
 		}
 	}
-	// If service has no bindings, fall back to all host interfaces
+	// If service has no bindings, fall back to all host interfaces (exclude container subnets)
 	if (service.bindings.length === 0) {
-		const hostInterfaces = topology.interfaces.filter((i) => i.host_id === service.host_id);
-		hostInterfaces.forEach((i) => {
+		getNonContainerHostInterfaces().forEach((i) => {
 			if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
 		});
 	}

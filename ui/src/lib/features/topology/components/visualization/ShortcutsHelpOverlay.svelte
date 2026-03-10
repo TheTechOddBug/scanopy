@@ -32,7 +32,7 @@
 </script>
 
 <GenericModal title={topology_shortcutsTitle()} {isOpen} onClose={() => (isOpen = false)} size="sm">
-	<div class="space-y-1">
+	<div class="space-y-1 p-4">
 		{#each shortcuts as shortcut (shortcut.keys.join('+'))}
 			<div class="flex items-center justify-between py-1.5">
 				<span class="text-secondary text-sm">{shortcut.description()}</span>

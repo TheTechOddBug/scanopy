@@ -110,9 +110,61 @@
 		}
 	}
 
-	function handleNodeSelect(node: Node | null) {
+	// Flag to ignore SvelteFlow's onselectionchange after we handle Ctrl+click ourselves
+	let ignoreNextSelectionChange = false;
+
+	function handleNodeSelect(node: Node | null, event?: MouseEvent | TouchEvent) {
+		const isModifierClick = event instanceof MouseEvent && (event.ctrlKey || event.metaKey);
+
+		if (isModifierClick && node) {
+			const nodeData = node.data as TopologyNode;
+			if (nodeData.node_type !== 'InterfaceNode') return;
+
+			const current = get(selectedNodes);
+			const currentSingle = get(selectedNode);
+			const idx = current.findIndex((n) => n.id === node.id);
+
+			if (idx !== -1) {
+				// Deselect: remove node from multi-selection
+				const remaining = current.filter((_, i) => i !== idx);
+				if (remaining.length < 2) {
+					// Exit multi-select, revert to single-select on the remaining node
+					selectedNodes.set([]);
+					if (remaining.length === 1) {
+						selectedNode.set(remaining[0]);
+						optionsPanelExpanded.set(true);
+					}
+				} else {
+					selectedNodes.set(remaining);
+				}
+			} else {
+				// Add node to multi-selection
+				if (current.length === 0 && currentSingle) {
+					// Transition from single-select to multi-select
+					const currentSingleData = currentSingle.data as TopologyNode;
+					if (currentSingleData.node_type === 'InterfaceNode') {
+						selectedNodes.set([currentSingle, node]);
+					} else {
+						selectedNodes.set([node]);
+					}
+				} else if (current.length > 0) {
+					selectedNodes.set([...current, node]);
+				} else {
+					// No current selection at all — just start fresh
+					selectedNodes.set([node]);
+				}
+				selectedNode.set(null);
+				selectedEdge.set(null);
+			}
+
+			ignoreNextSelectionChange = true;
+			return;
+		}
+
+		// Normal click (no modifier)
 		selectedNode.set(node);
 		selectedEdge.set(null);
+		selectedNodes.set([]);
 		optionsPanelExpanded.set(true);
 	}
 
@@ -131,12 +183,15 @@
 		}
 	}
 
-	function handleSelectionChange(
-		newNodes: Node[],
-		_edges: Edge[],
-		lastClickedNodeId?: string | null
-	) {
-		// Filter to InterfaceNodes only
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	function handleSelectionChange(newNodes: Node[], _edges: Edge[]) {
+		// Ignore SvelteFlow's selection change after we handled a Ctrl+click ourselves
+		if (ignoreNextSelectionChange) {
+			ignoreNextSelectionChange = false;
+			return;
+		}
+
+		// Box-select scenario (Shift+drag): use SvelteFlow's node set
 		const interfaceNodes = newNodes.filter((n) => {
 			const nodeData = n.data as TopologyNode;
 			return nodeData.node_type === 'InterfaceNode';
@@ -150,17 +205,7 @@
 			const kept = current.filter((n) => newIds.has(n.id));
 			const added = interfaceNodes.filter((n) => !currentIds.has(n.id));
 
-			// Sort added so the most recently clicked node comes last
-			if (lastClickedNodeId && added.length > 1) {
-				added.sort((a, b) => {
-					if (a.id === lastClickedNodeId) return 1;
-					if (b.id === lastClickedNodeId) return -1;
-					return 0;
-				});
-			}
-
 			selectedNodes.set([...kept, ...added]);
-			// Clear single-select to hide inspector, show action bar
 			selectedNode.set(null);
 			selectedEdge.set(null);
 		} else if (newNodes.length > 0) {

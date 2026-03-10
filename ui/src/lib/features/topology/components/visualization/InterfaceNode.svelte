@@ -19,6 +19,7 @@
 	import {
 		connectedNodeIds,
 		isExporting,
+		newNodeIds,
 		tagHiddenNodeIds,
 		tagHiddenServiceIds,
 		hoveredTag,
@@ -47,6 +48,12 @@
 	let hiddenServices = $state(get(tagHiddenServiceIds));
 	tagHiddenServiceIds.subscribe((value) => {
 		hiddenServices = value;
+	});
+
+	// Subscribe to new node highlight store
+	let highlightedNewNodes = $state(get(newNodeIds));
+	newNodeIds.subscribe((value) => {
+		highlightedNewNodes = value;
 	});
 
 	// Subscribe to multi-select store
@@ -152,6 +159,8 @@
 			: null
 	);
 
+	let isNewNode = $derived(nodeRenderData ? highlightedNewNodes.has(id) : false);
+
 	let isNodeSelected = $derived(
 		selectedNode?.id === nodeRenderData?.interface_id ||
 			multiSelectedNodes.some((n) => n.id === nodeRenderData?.interface_id)
@@ -216,7 +225,7 @@
 
 {#if nodeRenderData}
 	<div
-		class={cardClass}
+		class={`${cardClass} ${isNewNode ? 'animate-pulse-highlight' : ''}`}
 		style={`width: ${effectiveWidth}px; height: ${effectiveHeight}px; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out, box-shadow 0.15s ease-in-out; ${tagHoverRingStyle}`}
 	>
 		<!-- Rest of component stays the same -->

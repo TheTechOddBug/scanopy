@@ -225,7 +225,8 @@ impl GroupBindingStorage {
 
         // Deduplicate binding_ids while preserving order
         let mut seen = std::collections::HashSet::new();
-        let unique_bindings: Vec<&Uuid> = binding_ids.iter().filter(|id| seen.insert(*id)).collect();
+        let unique_bindings: Vec<&Uuid> =
+            binding_ids.iter().filter(|id| seen.insert(*id)).collect();
 
         // Insert new bindings with position
         for (position, binding_id) in unique_bindings.iter().enumerate() {

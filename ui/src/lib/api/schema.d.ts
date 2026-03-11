@@ -2787,14 +2787,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-03-09T19:59:46.367720Z",
-             *       "id": "b0a7d3b8-12ed-410c-810e-90f3dc445216",
+             *       "created_at": "2026-03-10T23:23:01.675594Z",
+             *       "id": "20bf025f-ceef-4749-8ea2-57a5569514a7",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-03-09T19:59:46.367720Z"
+             *       "updated_at": "2026-03-10T23:23:01.675594Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3046,14 +3046,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-03-09T19:59:46.348377Z",
-             *               "id": "5f29676a-97dc-4697-9799-1b497063602c",
+             *               "created_at": "2026-03-10T23:23:01.656622Z",
+             *               "id": "834eb3a7-7421-4325-94b2-ac53f2eb645f",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-03-09T19:59:46.348377Z"
+             *               "updated_at": "2026-03-10T23:23:01.656622Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3062,7 +3062,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Bacula",
+             *           "service_definition": "Karakeep",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3318,14 +3318,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-03-09T19:59:46.362488Z",
-             *           "id": "5b6169b9-6796-4a2f-aca7-99a5496b9a34",
+             *           "created_at": "2026-03-10T23:23:01.670495Z",
+             *           "id": "61cdf3e0-4209-456a-b4fb-8b9d1026ef33",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-03-09T19:59:46.362488Z"
+             *           "updated_at": "2026-03-10T23:23:01.670495Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3334,7 +3334,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Bacula",
+             *       "service_definition": "Karakeep",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3641,14 +3641,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-03-09T19:59:46.348781Z",
-         *       "id": "5080a264-3e80-4373-adbf-1c2491ad94c5",
+         *       "created_at": "2026-03-10T23:23:01.657008Z",
+         *       "id": "dc40be5c-4929-42f2-b493-d4bb638445a2",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-03-09T19:59:46.348781Z"
+         *       "updated_at": "2026-03-10T23:23:01.657008Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3830,7 +3830,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Bacula",
+         *           "service_definition": "Karakeep",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4478,14 +4478,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-03-09T19:59:46.347814Z",
-         *               "id": "7c8b3311-36fb-4322-b103-4241d99f7a8f",
+         *               "created_at": "2026-03-10T23:23:01.656093Z",
+         *               "id": "530ccc55-4884-4ec2-8ad8-1571b19dc935",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-03-09T19:59:46.347814Z"
+         *               "updated_at": "2026-03-10T23:23:01.656093Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4494,7 +4494,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Bacula",
+         *           "service_definition": "Karakeep",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5474,14 +5474,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-03-09T19:59:46.348642Z",
-         *           "id": "bec50013-3e91-457d-b83b-4368d00c7f5f",
+         *           "created_at": "2026-03-10T23:23:01.656876Z",
+         *           "id": "af95cedb-7fa8-4428-987e-4e1b22107e5e",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-03-09T19:59:46.348642Z"
+         *           "updated_at": "2026-03-10T23:23:01.656876Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5490,7 +5490,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Bacula",
+         *       "service_definition": "Karakeep",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -10393,6 +10393,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */
@@ -10490,6 +10492,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */

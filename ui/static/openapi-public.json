@@ -6184,6 +6184,21 @@
             }
           },
           {
+            "name": "exclude_categories",
+            "in": "query",
+            "description": "Exclude services belonging to these categories.",
+            "required": false,
+            "schema": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/components/schemas/ServiceCategory"
+              }
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "description": "Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.",
@@ -6440,6 +6455,21 @@
                   "$ref": "#/components/schemas/OrderDirection"
                 }
               ]
+            }
+          },
+          {
+            "name": "exclude_categories",
+            "in": "query",
+            "description": "Exclude services belonging to these categories.",
+            "required": false,
+            "schema": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/components/schemas/ServiceCategory"
+              }
             }
           },
           {
@@ -9541,14 +9571,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-03-09T19:59:46.367724Z",
-              "id": "7098957c-e2f9-48d7-bfc0-163eac86ae6f",
+              "created_at": "2026-03-10T23:23:01.675589Z",
+              "id": "7468e587-f09e-4d29-b57c-a4265efac866",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-03-09T19:59:46.367724Z"
+              "updated_at": "2026-03-10T23:23:01.675589Z"
             }
           },
           "error": {
@@ -10364,14 +10394,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-03-09T19:59:46.348396Z",
-                      "id": "91062f3c-615a-4f22-9a34-1a8c4e0cf1de",
+                      "created_at": "2026-03-10T23:23:01.656622Z",
+                      "id": "f5bccb9c-e211-4c22-94a8-88586a5f2212",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-03-09T19:59:46.348396Z"
+                      "updated_at": "2026-03-10T23:23:01.656622Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10380,7 +10410,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Bacula",
+                  "service_definition": "Karakeep",
                   "source": {
                     "type": "Manual"
                   },
@@ -11082,14 +11112,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-03-09T19:59:46.362506Z",
-                  "id": "8e9439cb-7e91-49d4-8424-11fa9aafb0be",
+                  "created_at": "2026-03-10T23:23:01.670537Z",
+                  "id": "efd16266-208f-4e31-b8a5-00311573d4bd",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-03-09T19:59:46.362506Z"
+                  "updated_at": "2026-03-10T23:23:01.670537Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11098,7 +11128,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Bacula",
+              "service_definition": "Karakeep",
               "source": {
                 "type": "Manual"
               },
@@ -12313,14 +12343,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-03-09T19:59:46.348799Z",
-          "id": "78f58e7f-9994-47d1-9368-62df703180b0",
+          "created_at": "2026-03-10T23:23:01.656999Z",
+          "id": "0d7d7656-c32f-4476-ab95-d97eb7e8f56a",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-03-09T19:59:46.348799Z"
+          "updated_at": "2026-03-10T23:23:01.656999Z"
         }
       },
       "BindingBase": {
@@ -12827,7 +12857,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Bacula",
+              "service_definition": "Karakeep",
               "tags": [],
               "virtualization": null
             }
@@ -14723,14 +14753,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-03-09T19:59:46.347832Z",
-                  "id": "f8f5e4a4-8c33-492c-be0f-1a73d07a800c",
+                  "created_at": "2026-03-10T23:23:01.656088Z",
+                  "id": "833aca8f-4cae-408e-90a7-62f7fa680135",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-03-09T19:59:46.347832Z"
+                  "updated_at": "2026-03-10T23:23:01.656088Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14739,7 +14769,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Bacula",
+              "service_definition": "Karakeep",
               "source": {
                 "type": "Manual"
               },
@@ -16610,14 +16640,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-03-09T19:59:46.335215Z",
-                        "id": "abd3f602-e86b-4908-8795-20d545f5e5c3",
+                        "created_at": "2026-03-10T23:23:01.643430Z",
+                        "id": "648332bd-c355-4c5a-9a1c-cf1ddbd18e44",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-03-09T19:59:46.335215Z"
+                        "updated_at": "2026-03-10T23:23:01.643430Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16626,7 +16656,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Bacula",
+                    "service_definition": "Karakeep",
                     "source": {
                       "type": "Manual"
                     },
@@ -16703,14 +16733,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-03-09T19:59:46.360946Z",
-                    "id": "aade3a4c-2274-48dc-a999-6a5d0d8779e1",
+                    "created_at": "2026-03-10T23:23:01.668948Z",
+                    "id": "874ae0fe-3ec8-4d72-b38c-f3ec0dc4276a",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-03-09T19:59:46.360946Z"
+                    "updated_at": "2026-03-10T23:23:01.668948Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16719,7 +16749,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Bacula",
+                "service_definition": "Karakeep",
                 "source": {
                   "type": "Manual"
                 },
@@ -17806,14 +17836,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-03-09T19:59:46.348664Z",
-              "id": "0481ae47-cfe9-4949-a9cd-e98d68002408",
+              "created_at": "2026-03-10T23:23:01.656867Z",
+              "id": "3de14e6e-578e-4504-a8a8-7fa897db81c1",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-03-09T19:59:46.348664Z"
+              "updated_at": "2026-03-10T23:23:01.656867Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17822,7 +17852,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Bacula",
+          "service_definition": "Karakeep",
           "source": {
             "type": "Manual"
           },

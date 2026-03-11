@@ -88,6 +88,9 @@ pub struct CreatedEntitiesPayload {
     pub subnets: Vec<(Uuid, Subnet)>,
     /// Hosts: (pending_id, actual_host_response) pairs - includes children (interfaces, ports, services)
     pub hosts: Vec<(Uuid, HostResponse)>,
+    /// Set when a host was skipped due to billing host limit (limit value, org_id)
+    #[serde(skip)]
+    pub billing_limit_hit: Option<(u64, Uuid)>,
 }
 
 /// Daemon state for handlers.

@@ -187,13 +187,6 @@
 		{/if}
 		{#if (showEditableDescription && descriptionOnSave) || (showTagPicker && tagPickerProps && (!tagPickerDisabled || tagPickerProps.selectedTagIds.length > 0))}
 			<div class="mt-2 space-y-2 border-t border-gray-700/50 pt-2">
-				{#if showEditableDescription && descriptionOnSave}
-					<InlineDescription
-						value={descriptionValue}
-						editable={!descriptionDisabled}
-						onSave={descriptionOnSave}
-					/>
-				{/if}
 				{#if showTagPicker && tagPickerProps && (!tagPickerDisabled || tagPickerProps.selectedTagIds.length > 0)}
 					<div class="flex items-start gap-1.5">
 						<span class="text-tertiary shrink-0 text-xs leading-5">Tags:</span>
@@ -205,6 +198,13 @@
 							availableTags={tagPickerProps.availableTags}
 						/>
 					</div>
+				{/if}
+				{#if showEditableDescription && descriptionOnSave}
+					<InlineDescription
+						value={descriptionValue}
+						editable={!descriptionDisabled}
+						onSave={descriptionOnSave}
+					/>
 				{/if}
 			</div>
 		{/if}

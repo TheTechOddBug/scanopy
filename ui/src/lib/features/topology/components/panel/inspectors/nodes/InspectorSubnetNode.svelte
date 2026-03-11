@@ -55,6 +55,9 @@
 
 	// Context for subnet display with description
 	let subnetContext = $derived({
+		showEntityTagPicker: true,
+		tagPickerDisabled: !editState.isEditable,
+		entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined,
 		showEditableEntityDescription: true,
 		entityDescription: subnet?.description ?? null,
 		entityDescriptionDisabled: !editState.isEditable,

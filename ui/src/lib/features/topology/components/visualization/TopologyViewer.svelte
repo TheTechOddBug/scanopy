@@ -96,12 +96,14 @@
 	}
 
 	function handleNodeSelect(node: Node | null) {
+		clearSearch();
 		selectedNode.set(node);
 		selectedEdge.set(null);
 		optionsPanelExpanded.set(true);
 	}
 
 	function handleEdgeSelect(edge: Edge | null) {
+		clearSearch();
 		selectedEdge.set(edge);
 		selectedNode.set(null);
 		optionsPanelExpanded.set(true);

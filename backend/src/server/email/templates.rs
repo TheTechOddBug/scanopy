@@ -39,7 +39,7 @@ pub const EMAIL_FOOTER: &str = r#"                    <!-- Footer -->
                                 </tr>
                             </table>
                             
-                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #9ca3af;">© 2025 Scanopy. All rights reserved.</p>
+                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #9ca3af;">© {current_year} Scanopy. All rights reserved.</p>
                         </td>
                     </tr>
                 </table>
@@ -374,7 +374,7 @@ pub const TOPOLOGY_READY_BODY: &str = r#"                    <!-- Main Content -
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi {first_name},</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your first network discovery on <strong>{network_name}</strong> has completed. Scanopy found <strong>{host_count} hosts</strong> and <strong>{service_count} services</strong>.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your interactive topology map is now available — open Scanopy to explore your network visually.</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;"><strong>Quick tips:</strong> Drag nodes to rearrange your layout, click any host to inspect its services and details, and use the export button to save your map as a PNG.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;"><strong>Quick tips:</strong> Drag nodes to rearrange your layout, click any host to inspect its services and details, and use the export button to save your map as PNG, SVG, Mermaid, or Confluence markup.</p>
                         </td>
                     </tr>
 

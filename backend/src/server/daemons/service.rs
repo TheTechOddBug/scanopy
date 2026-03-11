@@ -36,12 +36,14 @@ use crate::server::discovery::r#impl::base::{Discovery, DiscoveryBase};
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback, RunType};
 use crate::server::discovery::service::DiscoveryService;
 use crate::server::hosts::r#impl::base::{Host, HostBase};
-use crate::server::hosts::service::HostService;
+use crate::server::hosts::service::{HostLimitContext, HostService};
 use crate::server::networks::r#impl::Network;
 use crate::server::networks::service::NetworkService;
 use crate::server::organizations::service::OrganizationService;
 use crate::server::shared::events::bus::EventBus;
-use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
+use crate::server::shared::events::types::{
+    BillingEvent, BillingOperation, OnboardingEvent, OnboardingOperation,
+};
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
@@ -783,17 +785,46 @@ impl DaemonService {
         &self,
         entities: BufferedEntities,
         auth: AuthenticatedEntity,
-        host_limit: Option<u64>,
     ) -> Result<CreatedEntitiesPayload, ApiError> {
         let host_service = self
             .host_service
             .get()
             .ok_or_else(|| ApiError::internal_error("HostService not initialized"))?;
 
+        // Compute host limit context from the first host's network → org → plan
+        let limit_ctx = if let Some(first_host) = entities.hosts.first() {
+            let network_id = first_host.host.base.network_id;
+            if let Ok(Some(network)) = self.network_service.get_by_id(&network_id).await
+                && let Ok(Some(org)) = self
+                    .organization_service
+                    .get_by_id(&network.base.organization_id)
+                    .await
+                && let Some(plan) = &org.base.plan
+                && let Some(limit) = plan.host_limit()
+            {
+                let org_networks = self
+                    .network_service
+                    .get_all(StorableFilter::<Network>::new_from_org_id(&org.id))
+                    .await
+                    .unwrap_or_default();
+                let org_network_ids: Vec<Uuid> = org_networks.iter().map(|n| n.id).collect();
+                Some(HostLimitContext {
+                    limit,
+                    org_id: org.id,
+                    org_network_ids,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let mut created_hosts = Vec::new();
         let mut created_subnets = Vec::new();
         let mut host_failures = 0;
         let mut subnet_failures = 0;
+        let mut limit_event_emitted = false;
 
         // Process each discovered host - continue on failure to avoid blocking entire batch
         for host_request in entities.hosts {
@@ -807,7 +838,7 @@ impl DaemonService {
                     host_request.services,
                     host_request.if_entries,
                     auth.clone(),
-                    host_limit,
+                    limit_ctx.as_ref(),
                 )
                 .await
             {
@@ -816,6 +847,31 @@ impl DaemonService {
                 }
                 Err(e) => {
                     host_failures += 1;
+
+                    // Emit billing event once when host limit is hit
+                    if !limit_event_emitted
+                        && e.to_string().contains("Host limit reached")
+                        && let Some(ctx) = &limit_ctx
+                    {
+                        limit_event_emitted = true;
+                        let _ = self
+                            .event_bus
+                            .publish_billing(BillingEvent::new(
+                                Uuid::new_v4(),
+                                ctx.org_id,
+                                BillingOperation::FeatureLimitHit,
+                                Utc::now(),
+                                auth.clone(),
+                                serde_json::json!({
+                                    "limit_type": "hosts",
+                                    "current_count": ctx.limit,
+                                    "limit": ctx.limit,
+                                    "source": "discovery",
+                                }),
+                            ))
+                            .await;
+                    }
+
                     tracing::warn!(
                         pending_id = %pending_id,
                         host_name = %host_name,
@@ -1417,7 +1473,7 @@ impl DaemonService {
                 // Process entities if any
                 if !poll_response.entities.is_empty() {
                     match self
-                        .process_discovery_entities(poll_response.entities, auth.clone(), None)
+                        .process_discovery_entities(poll_response.entities, auth.clone())
                         .await
                     {
                         Ok(created_entities) => {

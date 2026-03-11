@@ -42,6 +42,12 @@ use strum::IntoDiscriminant;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+pub struct HostLimitContext {
+    pub limit: u64,
+    pub org_id: Uuid,
+    pub org_network_ids: Vec<Uuid>,
+}
+
 pub struct HostService {
     storage: Arc<GenericPostgresStorage<Host>>,
     interface_service: Arc<InterfaceService>,
@@ -518,7 +524,7 @@ impl HostService {
             if_entries,
             ConflictBehavior::Error,
             authentication,
-            None, // host limit checked in handler
+            None, // limit checked in handler
         )
         .await
     }
@@ -554,7 +560,7 @@ impl HostService {
         if_entries: Vec<IfEntry>,
         conflict_behavior: ConflictBehavior,
         authentication: AuthenticatedEntity,
-        host_limit: Option<u64>,
+        limit_ctx: Option<&HostLimitContext>,
     ) -> Result<HostResponse> {
         // Stage 1: Interface-based collision detection
         // Compares MAC addresses and subnet+IP to find hosts that represent the same physical machine
@@ -593,14 +599,14 @@ impl HostService {
         }
 
         // Check host limit for new hosts (not upserts)
-        if is_new_host && let Some(limit) = host_limit {
-            let filter = StorableFilter::<Host>::new_from_network_ids(&[host.base.network_id]);
+        if is_new_host && let Some(ctx) = limit_ctx {
+            let filter = StorableFilter::<Host>::new_from_network_ids(&ctx.org_network_ids);
             let current_hosts = self.get_all(filter).await?.len() as u64;
-            if current_hosts >= limit {
+            if current_hosts >= ctx.limit {
                 return Err(anyhow!(
                     "Host limit reached ({}/{}). Upgrade your plan for unlimited hosts.",
                     current_hosts,
-                    limit
+                    ctx.limit
                 ));
             }
         }
@@ -1198,7 +1204,7 @@ impl HostService {
         services: Vec<Service>,
         if_entries: Vec<crate::server::if_entries::r#impl::base::IfEntry>,
         authentication: AuthenticatedEntity,
-        host_limit: Option<u64>,
+        limit_ctx: Option<&HostLimitContext>,
     ) -> Result<HostResponse> {
         let host_response = self
             .create_with_children(
@@ -1209,7 +1215,7 @@ impl HostService {
                 if_entries.clone(),
                 ConflictBehavior::Upsert,
                 authentication.clone(),
-                host_limit,
+                limit_ctx,
             )
             .await?;
 

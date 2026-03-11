@@ -575,7 +575,7 @@ async fn create_host_discovery(
     let created = state
         .services
         .daemon_service
-        .process_discovery_entities(entities, auth.into_entity(), None)
+        .process_discovery_entities(entities, auth.into_entity())
         .await?;
 
     let (_, host_response) = created

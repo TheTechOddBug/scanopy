@@ -62,6 +62,7 @@
 		topology_staleDataBody
 	} from '$lib/paraglide/messages';
 	import KbdKey from '$lib/shared/components/feedback/KbdKey.svelte';
+	import { useConfigQuery } from '$lib/shared/stores/config-query';
 
 	let { isReadOnly = false, isActive = false }: TabProps = $props();
 
@@ -82,6 +83,7 @@
 	const topologiesQuery = useTopologiesQuery();
 	const organizationQuery = useOrganizationQuery();
 	const activeSessionsQuery = useActiveSessionsQuery();
+	const configQuery = useConfigQuery();
 
 	// Derived data
 	let usersData = $derived(usersQuery.data ?? []);
@@ -89,6 +91,8 @@
 	let isLoading = $derived(
 		subnetsQuery.isPending || groupsQuery.isPending || topologiesQuery.isPending
 	);
+
+	let hasEmail = $derived(configQuery.data?.has_email_service ?? false);
 
 	// Selected topology (derived from ID + query data)
 	let currentTopology = $derived(
@@ -105,6 +109,9 @@
 
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
 	let onboarding = $derived((organizationQuery.data?.onboarding ?? []) as OnboardingOperation[]);
+	let hasCompletedFirstDiscovery = $derived(
+		onboarding.length === 0 || onboarding.includes('FirstDiscoveryCompleted')
+	);
 	let hasCompletedFirstRebuild = $derived(
 		onboarding.length === 0 || onboarding.includes('FirstTopologyRebuild')
 	);
@@ -415,7 +422,13 @@
 					<div class="card-divider-v self-stretch"></div>
 					{#if activeSession}
 						{@const estimate = activeSession.estimated_remaining_secs}
-						<div class="flex cursor-default flex-col items-center {discoveryColor.icon}">
+						<div
+							class="flex cursor-default flex-col items-center {discoveryColor.icon}"
+							data-tooltip={!hasCompletedFirstDiscovery && hasEmail
+								? "We'll email you when your scan is complete."
+								: ''}
+							use:tooltip
+						>
 							<div class="flex items-center p-2">
 								<Radar class="mr-2 h-4 w-4 animate-pulse [animation-duration:5s]" />
 								{#if activeSession.progress > 0}
@@ -423,11 +436,10 @@
 								{/if}
 							</div>
 							{#if estimate != null}
-								<span class="text-[10px]">~{Math.round(estimate/60)} min left</span>
+								<span class="text-[10px]">~{Math.round(estimate / 60)} min left</span>
 							{:else}
 								<span class="text-[10px]">Estimating...</span>
 							{/if}
-							
 						</div>
 						<div class="card-divider-v self-stretch"></div>
 					{/if}

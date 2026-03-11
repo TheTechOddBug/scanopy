@@ -308,8 +308,10 @@
 	}
 
 	function handlePaneClick({ event }: { event: MouseEvent }) {
-		selectedNode = null;
 		selectedEdge = null;
+		if (!viewportMoved) {
+			selectedNode = null;
+		}
 		if (onPaneSelect) {
 			onPaneSelect(event, viewportMoved);
 		}

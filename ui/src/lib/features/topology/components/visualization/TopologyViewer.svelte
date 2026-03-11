@@ -162,7 +162,6 @@
 	}
 
 	function handlePaneSelect(_event?: MouseEvent, wasPanning?: boolean) {
-		
 		selectedEdge.set(null);
 		// Only clear selection on true click, not after panning
 		if (!wasPanning) {

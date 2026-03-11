@@ -4,7 +4,6 @@
 	import { required, max } from '$lib/shared/components/forms/validators';
 	import { Info, Palette, ArrowRight } from 'lucide-svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
-	import SectionPanel from '$lib/shared/components/layout/SectionPanel.svelte';
 	import { createEmptyGroupFormData } from '../../queries';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import type { Group, EdgeStyle } from '../../types/base';
@@ -407,7 +406,7 @@
 						body={groups_serviceBindingsInfoBody()}
 						dismissableKey="group-bindings-info"
 					/>
-					<SectionPanel>
+					<div class="card">
 						<ListManager
 							label={groups_serviceBindings()}
 							helpText={groups_serviceBindingsHelp()}
@@ -427,7 +426,7 @@
 							onMoveUp={(index) => handleServiceBindingsReorder(index, index - 1)}
 							onMoveDown={(index) => handleServiceBindingsReorder(index, index + 1)}
 						/>
-					</SectionPanel>
+					</div>
 				</div>
 			{/if}
 

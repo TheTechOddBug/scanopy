@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { components } from '$lib/api/schema';
 	import { Check, Circle, Info, Loader2, ExternalLink } from 'lucide-svelte';
-	import SectionPanel from '$lib/shared/components/layout/SectionPanel.svelte';
 	import { openModal } from '$lib/shared/stores/modal-registry';
 	import { onMount } from 'svelte';
 	import { trackEvent } from '$lib/shared/utils/analytics';
@@ -230,18 +229,18 @@
 					label: 'Browse r/homelab for inspiration',
 					url: 'https://reddit.com/r/homelab'
 				},
-				{ id: 'homelab-upgrade', label: 'Plan your next hardware upgrade' },
-				{ id: 'homelab-nas', label: "Research that NAS build you've been eyeing" }
+				{ id: 'homelab-upgrade', label: 'Convince yourself you do need another Raspberry Pi' },
+				{ id: 'homelab-daydream', label: 'Daydream about a fully documented network' }
 			];
 		}
 		if (useCase === 'msp') {
 			return [
 				{
 					id: 'msp-reddit',
-					label: 'Browse r/msp for war stories',
+					label: 'Commiserate on r/msp for a few minutes',
 					url: 'https://reddit.com/r/msp'
 				},
-				{ id: 'msp-refresh', label: 'Start planning that infrastructure refresh' },
+				{ id: 'msp-scope', label: "Practice saying 'that's out of scope' in the mirror" },
 				{ id: 'msp-daydream', label: 'Daydream about a fully documented network' }
 			];
 		}
@@ -249,10 +248,10 @@
 			return [
 				{
 					id: 'company-reddit',
-					label: 'Catch up on r/sysadmin',
+					label: "Confirm you're not alone on r/sysadmin",
 					url: 'https://reddit.com/r/sysadmin'
 				},
-				{ id: 'company-upgrade', label: "Research that network upgrade you've been pitching" },
+				{ id: 'company-restart', label: "Rehearse your 'have you tried restarting it?' delivery" },
 				{ id: 'company-daydream', label: 'Daydream about a fully documented network' }
 			];
 		}
@@ -291,7 +290,7 @@
 	</section>
 {:else if !allComplete && !dismissed}
 	<section>
-		<SectionPanel>
+		<div class="card">
 			<div class="mb-3 flex items-center justify-between">
 				<h3 class="text-primary text-base font-semibold">Getting Started</h3>
 				<div class="flex items-center gap-3">
@@ -430,6 +429,6 @@
 					<SupportOptions isTroubleshooting={true} hasEmailSupport={false} />
 				</div>
 			{/if}
-		</SectionPanel>
+		</div>
 	</section>
 {/if}

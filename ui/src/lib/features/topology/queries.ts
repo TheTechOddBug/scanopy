@@ -188,7 +188,10 @@ export function useRebuildTopologyMutation() {
 			return topology.id;
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
+			const org = queryClient.getQueryData<Organization>(queryKeys.organizations.current());
+			if (org && !org.onboarding.includes('FirstTopologyRebuild')) {
+				queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
+			}
 		}
 	}));
 }

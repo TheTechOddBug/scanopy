@@ -27,7 +27,7 @@
 		<h3 class="text-primary mb-3 text-base font-semibold">Active Discoveries</h3>
 		<div class="grid grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-4">
 			{#each scanningSessions as session (session.session_id)}
-				{@const daemon = daemons.find(d => d.id == session.daemon_id)}
+				{@const daemon = daemons.find((d) => d.id == session.daemon_id)}
 				<div
 					class="card card-static cursor-pointer hover:ring-1 hover:ring-gray-700"
 					onclick={onNavigate}
@@ -37,7 +37,6 @@
 					role="button"
 					tabindex={0}
 				>
-
 					<div class="mb-2 flex items-center justify-between">
 						<span class="text-primary text-sm font-medium">
 							{session.discovery_type.type} Discovery
@@ -45,11 +44,11 @@
 						<EntityTag
 							entityRef={{
 								entityId: session.daemon_id,
-								entityType: "Daemon",
+								entityType: 'Daemon',
 								data: daemon
 							}}
-							label={daemon?.name ?? "Unknown Daemon"}
-							color={entities.getColorHelper("Daemon").color}
+							label={daemon?.name ?? 'Unknown Daemon'}
+							color={entities.getColorHelper('Daemon').color}
 						/>
 					</div>
 					<DiscoveryEstimation

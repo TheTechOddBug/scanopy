@@ -31,7 +31,6 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
 	import { themeStore } from '$lib/shared/stores/theme.svelte';
-	import { twColorToRgba } from '$lib/shared/utils/styling';
 
 	// Props
 	export let topology: Topology;

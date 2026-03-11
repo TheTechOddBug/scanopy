@@ -61,7 +61,6 @@
 		topology_staleData,
 		topology_staleDataBody
 	} from '$lib/paraglide/messages';
-	import KbdKey from '$lib/shared/components/feedback/KbdKey.svelte';
 	import { useConfigQuery } from '$lib/shared/stores/config-query';
 
 	let { isReadOnly = false, isActive = false }: TabProps = $props();
@@ -577,7 +576,6 @@
 		{:else if currentTopology}
 			<div class="relative">
 				<TopologyOptionsPanel
-					topology={currentTopology}
 					{isReadOnly}
 					onClearSelection={clearMultiSelect}
 					onGroupCreated={() => {

@@ -187,23 +187,6 @@ export function useRebuildTopologyMutation() {
 			return topology.id;
 		},
 		onSuccess: () => {
-			// Optimistically update org cache so controls appear immediately.
-			// Mirror the backend condition: only add FirstTopologyRebuild
-			// if FirstDiscoveryCompleted is already present.
-			queryClient.setQueryData(
-				queryKeys.organizations.current(),
-				(old: Organization | undefined) => {
-					if (
-						!old ||
-						old.onboarding.includes('FirstTopologyRebuild') ||
-						!old.onboarding.includes('FirstDiscoveryCompleted')
-					) {
-						return old;
-					}
-					return { ...old, onboarding: [...old.onboarding, 'FirstTopologyRebuild'] };
-				}
-			);
-			// Also invalidate to sync with actual server state
 			queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
 		}
 	}));
@@ -633,6 +616,12 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 		return {
 			url: '/api/v1/topology/stream',
 			onMessage: (update) => {
+				// Invalidate org cache until FirstTopologyRebuild milestone appears
+				const org = queryClient.getQueryData<Organization>(queryKeys.organizations.current());
+				if (org && !org.onboarding.includes('FirstTopologyRebuild')) {
+					queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
+				}
+
 				// If the update says it's NOT stale, apply immediately (it's a full refresh)
 				if (!update.is_stale) {
 					this.applyFullUpdate(update);

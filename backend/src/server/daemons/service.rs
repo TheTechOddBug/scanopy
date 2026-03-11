@@ -825,6 +825,7 @@ impl DaemonService {
         let mut host_failures = 0;
         let mut subnet_failures = 0;
         let mut limit_event_emitted = false;
+        let mut billing_limit_reached: Option<(u64, Uuid)> = None;
 
         // Process each discovered host - continue on failure to avoid blocking entire batch
         for host_request in entities.hosts {
@@ -854,6 +855,7 @@ impl DaemonService {
                         && let Some(ctx) = &limit_ctx
                     {
                         limit_event_emitted = true;
+                        billing_limit_reached = Some((ctx.limit, ctx.org_id));
                         let _ = self
                             .event_bus
                             .publish_billing(BillingEvent::new(
@@ -938,6 +940,7 @@ impl DaemonService {
         Ok(CreatedEntitiesPayload {
             subnets: created_subnets,
             hosts: created_hosts,
+            billing_limit_hit: billing_limit_reached,
         })
     }
 

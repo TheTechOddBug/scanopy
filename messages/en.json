@@ -850,7 +850,7 @@
 	"snmp_communityStringPlaceholder": "my-community-string",
 	"snmp_confirmBulkDelete": "Delete {count} SNMP credential(s)? This cannot be undone.",
 	"snmp_createCredential": "Create SNMP Credential",
-	"snmp_enableForNetwork": "Use a custom SNMP credential for this network",
+	"snmp_enableForNetwork": "Enable SNMP discovery for this network",
 	"snmp_failedToBulkDelete": "Failed to delete SNMP credentials",
 	"snmp_failedToCreate": "Failed to create SNMP credential",
 	"snmp_failedToDelete": "Failed to delete SNMP credential",

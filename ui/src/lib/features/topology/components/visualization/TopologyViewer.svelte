@@ -147,6 +147,7 @@
 		}
 
 		// Normal click (no modifier)
+		clearSearch();
 		selectedNode.set(node);
 		selectedEdge.set(null);
 		selectedNodes.set([]);
@@ -154,6 +155,7 @@
 	}
 
 	function handleEdgeSelect(edge: Edge | null) {
+		clearSearch();
 		selectedEdge.set(edge);
 		selectedNode.set(null);
 		optionsPanelExpanded.set(true);

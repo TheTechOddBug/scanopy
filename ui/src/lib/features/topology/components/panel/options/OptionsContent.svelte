@@ -208,6 +208,30 @@
 		return result.sort((a, b) => a.label.localeCompare(b.label));
 	});
 
+	// All categories including hidden ones (for Hide Stuff section).
+	// Hidden categories are removed from topology.services by the backend,
+	// so we need to merge them back from the request options + service definitions.
+	let allServiceCategoriesWithColors = $derived.by(() => {
+		const hiddenCategories = $topologyOptions.request.hide_service_categories ?? [];
+		if (hiddenCategories.length === 0) return serviceCategoriesWithColors;
+
+		const seen = new Set(serviceCategoriesWithColors.map((c) => c.value));
+		const result = [...serviceCategoriesWithColors];
+
+		for (const category of hiddenCategories) {
+			if (seen.has(category)) continue;
+			// Find any service definition with this category to get the color
+			const allDefs = serviceDefinitions.getItems();
+			const def = allDefs.find((d) => d.category === category);
+			if (def) {
+				const color = serviceDefinitions.getColorHelper(def.id).color;
+				result.push({ value: category, label: category, color });
+			}
+		}
+
+		return result.sort((a, b) => a.label.localeCompare(b.label));
+	});
+
 	// Build edge types with colors from edges present in the topology
 	let edgeTypesWithColors = $derived.by(() => {
 		if (!topology?.edges) return [];
@@ -489,7 +513,7 @@
 					{/if}
 					{#if section.name === topology_hideStuff()}
 						<CategoryFilterGroup
-							categories={serviceCategoriesWithColors}
+							categories={allServiceCategoriesWithColors}
 							hiddenCategories={$topologyOptions.request.hide_service_categories ?? []}
 							onToggle={toggleServiceCategory}
 							disabled={!editState.isEditable}

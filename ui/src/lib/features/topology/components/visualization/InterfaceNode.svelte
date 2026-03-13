@@ -266,7 +266,7 @@
 				>
 					{#each nodeRenderData.services as service (service.id)}
 						{@const ServiceIcon = serviceDefinitions.getIconComponent(service.service_definition)}
-						{@const serviceTagUnderline = (() => {
+						{@const serviceTagHighlight = (() => {
 							if (!currentHoveredTag || currentHoveredTag.entityType !== 'service') return '';
 							const { tagId, color } = currentHoveredTag;
 							const isUntagged = service.tags.length === 0;
@@ -276,16 +276,16 @@
 							const colorHelper = createColorHelper(
 								color as Parameters<typeof createColorHelper>[0]
 							);
-							return `text-decoration: underline; text-decoration-color: ${colorHelper.rgb}; text-underline-offset: 2px;`;
+							return `background-color: ${colorHelper.rgb}20; border-radius: 4px; padding: 0 2px;`;
 						})()}
-						{@const serviceCategoryUnderline = (() => {
+						{@const serviceCategoryHighlight = (() => {
 							if (!currentHoveredCategory) return '';
 							const serviceCategory = serviceDefinitions.getCategory(service.service_definition);
 							if (serviceCategory !== currentHoveredCategory.category) return '';
 							const colorHelper = createColorHelper(
 								currentHoveredCategory.color as Parameters<typeof createColorHelper>[0]
 							);
-							return `text-decoration: underline; text-decoration-color: ${colorHelper.rgb}; text-underline-offset: 2px;`;
+							return `background-color: ${colorHelper.rgb}20; border-radius: 4px; padding: 0 2px;`;
 						})()}
 						<div
 							class="flex flex-1 flex-col items-center justify-center"
@@ -299,7 +299,7 @@
 								<ServiceIcon class="h-5 w-5 flex-shrink-0 {hostColorHelper.icon}" />
 								<span
 									class="text-m text-secondary truncate"
-									style={serviceTagUnderline || serviceCategoryUnderline}
+									style={serviceTagHighlight || serviceCategoryHighlight}
 								>
 									{service.name}
 								</span>

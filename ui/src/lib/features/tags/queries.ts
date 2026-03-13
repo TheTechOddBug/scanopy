@@ -145,7 +145,7 @@ export function useBulkDeleteTagsMutation() {
  * so we update the frontend cache directly for instant UI feedback.
  * Entity events will later persist the change across refresh.
  */
-async function updateTopologyEntityTags(
+function updateTopologyEntityTags(
 	queryClient: QueryClient,
 	entityType: EntityDiscriminants,
 	entityIds: string[],
@@ -183,35 +183,6 @@ async function updateTopologyEntityTags(
 			return { ...topo, [field]: updatedEntities };
 		});
 	});
-
-	// For 'add': ensure tag definition is in entity_tags
-	if (action === 'add') {
-		let allTags = queryClient.getQueryData<Tag[]>(queryKeys.tags.all);
-		if (!allTags) {
-			allTags = await queryClient.fetchQuery({
-				queryKey: queryKeys.tags.all,
-				queryFn: async () => {
-					const { data } = await apiClient.GET('/api/v1/tags', {
-						params: { query: { limit: 0 } }
-					});
-					if (!data?.success || !data.data) {
-						throw new Error(data?.error || 'Failed to fetch tags');
-					}
-					return data.data;
-				}
-			});
-		}
-		const tagDef = allTags?.find((t) => t.id === tagId);
-		if (tagDef) {
-			queryClient.setQueryData<Topology[]>(queryKeys.topology.all, (old) => {
-				if (!old) return old;
-				return old.map((topo) => {
-					if (topo.entity_tags?.some((t) => t.id === tagId)) return topo;
-					return { ...topo, entity_tags: [...(topo.entity_tags ?? []), tagDef] };
-				});
-			});
-		}
-	}
 }
 
 // ============================================================================

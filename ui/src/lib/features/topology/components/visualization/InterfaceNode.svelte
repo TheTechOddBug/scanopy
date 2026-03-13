@@ -276,7 +276,7 @@
 							const colorHelper = createColorHelper(
 								color as Parameters<typeof createColorHelper>[0]
 							);
-							return `background-color: ${colorHelper.rgb}20; border-radius: 4px; padding: 0 2px;`;
+							return `color: ${colorHelper.rgb};`;
 						})()}
 						{@const serviceCategoryHighlight = (() => {
 							if (!currentHoveredCategory) return '';
@@ -285,7 +285,7 @@
 							const colorHelper = createColorHelper(
 								currentHoveredCategory.color as Parameters<typeof createColorHelper>[0]
 							);
-							return `background-color: ${colorHelper.rgb}20; border-radius: 4px; padding: 0 2px;`;
+							return `color: ${colorHelper.rgb};`;
 						})()}
 						<div
 							class="flex flex-1 flex-col items-center justify-center"

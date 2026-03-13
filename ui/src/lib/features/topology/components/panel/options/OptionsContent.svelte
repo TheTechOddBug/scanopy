@@ -14,6 +14,8 @@
 	import OptionToggle from './OptionToggle.svelte';
 	import CategoryFilterGroup from './CategoryFilterGroup.svelte';
 	import FilterGroup from './FilterGroup.svelte';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		common_categories,
 		common_docker,
@@ -53,15 +55,19 @@
 	// Unified edit state for gating request-path options
 	let editState = $derived(getTopologyEditState(topology, $autoRebuild, false));
 
+	// Tags query — always up-to-date, survives SSE topology overwrites
+	const tagsQuery = useTagsQuery();
+	let allTags = $derived(tagsQuery.data ?? []);
+
 	// Derive tags that are actually used per entity type
 	let hostTagIds = $derived(new Set(topology?.hosts.flatMap((h) => h.tags) ?? []));
 	let serviceTagIds = $derived(new Set(topology?.services.flatMap((s) => s.tags) ?? []));
 	let subnetTagIds = $derived(new Set(topology?.subnets.flatMap((s) => s.tags) ?? []));
 
-	// Filter entity_tags to only those used by each entity type
-	let hostTags = $derived(topology?.entity_tags?.filter((t) => hostTagIds.has(t.id)) ?? []);
-	let serviceTags = $derived(topology?.entity_tags?.filter((t) => serviceTagIds.has(t.id)) ?? []);
-	let subnetTags = $derived(topology?.entity_tags?.filter((t) => subnetTagIds.has(t.id)) ?? []);
+	// Filter tags to only those used by each entity type (from tags query, not entity_tags)
+	let hostTags = $derived(allTags.filter((t) => hostTagIds.has(t.id)));
+	let serviceTags = $derived(allTags.filter((t) => serviceTagIds.has(t.id)));
+	let subnetTags = $derived(allTags.filter((t) => subnetTagIds.has(t.id)));
 
 	// Check if there are any untagged entities
 	let hasUntaggedHosts = $derived(topology?.hosts.some((h) => h.tags.length === 0) ?? false);
@@ -117,14 +123,31 @@
 		});
 	}
 
+	// Track categories being unhidden to prevent flicker during topology rebuild
+	let pendingUnhideCategories = new SvelteSet<string>();
+
+	// Clear pending unhide categories when topology reference changes (rebuild completed)
+	$effect(() => {
+		// Access topology to create dependency
+		void topology;
+		if (pendingUnhideCategories.size > 0) {
+			pendingUnhideCategories.clear();
+		}
+	});
+
 	function toggleServiceCategory(category: string) {
 		topologyOptions.update((opts) => {
 			const hidden = opts.request.hide_service_categories ?? [];
 			const idx = hidden.indexOf(category as (typeof hidden)[number]);
-			const newHidden =
-				idx === -1
-					? [...hidden, category as (typeof hidden)[number]]
-					: hidden.filter((c) => c !== category);
+			const isUnhiding = idx !== -1;
+			const newHidden = isUnhiding
+				? hidden.filter((c) => c !== category)
+				: [...hidden, category as (typeof hidden)[number]];
+
+			if (isUnhiding) {
+				pendingUnhideCategories.add(category);
+			}
+
 			return {
 				...opts,
 				request: {
@@ -208,18 +231,21 @@
 		return result.sort((a, b) => a.label.localeCompare(b.label));
 	});
 
-	// All categories including hidden ones (for Hide Stuff section).
+	// All categories including hidden ones and pending unhides (for Hide Stuff section).
 	// Hidden categories are removed from topology.services by the backend,
 	// so we need to merge them back from the request options + service definitions.
+	// Pending unhide categories are kept visible during the rebuild debounce window.
 	let allServiceCategoriesWithColors = $derived.by(() => {
 		const hiddenCategories = $topologyOptions.request.hide_service_categories ?? [];
-		if (hiddenCategories.length === 0) return serviceCategoriesWithColors;
+		const extraCategories = [...hiddenCategories, ...pendingUnhideCategories];
+		if (extraCategories.length === 0) return serviceCategoriesWithColors;
 
-		const seen = new Set(serviceCategoriesWithColors.map((c) => c.value));
+		const seen = new SvelteSet(serviceCategoriesWithColors.map((c) => c.value));
 		const result = [...serviceCategoriesWithColors];
 
-		for (const category of hiddenCategories) {
+		for (const category of extraCategories) {
 			if (seen.has(category)) continue;
+			seen.add(category);
 			// Find any service definition with this category to get the color
 			const allDefs = serviceDefinitions.getItems();
 			const def = allDefs.find((d) => d.category === category);

@@ -32,27 +32,31 @@ impl Uxy {
         has_header: bool,
         hide_ports: bool,
     ) -> Self {
-        let service_area_height: usize = services
-            .iter()
-            .map(|s| {
-                let bindings_with_ports = s
-                    .base
-                    .bindings
-                    .iter()
-                    .filter(|b| {
-                        b.interface_id().map(|i| i == interface_id).unwrap_or(true)
-                            && b.port_id().is_some()
-                    })
-                    .collect::<Vec<&Binding>>()
-                    .len();
-                HEIGHT_PER_SERVICE_IN_SUBNET_CHILD
-                    + if hide_ports && bindings_with_ports > 0 {
-                        0
-                    } else {
-                        25
-                    }
-            })
-            .sum();
+        let service_area_height: usize = if services.is_empty() {
+            HEIGHT_PER_SERVICE_IN_SUBNET_CHILD
+        } else {
+            services
+                .iter()
+                .map(|s| {
+                    let bindings_with_ports = s
+                        .base
+                        .bindings
+                        .iter()
+                        .filter(|b| {
+                            b.interface_id().map(|i| i == interface_id).unwrap_or(true)
+                                && b.port_id().is_some()
+                        })
+                        .collect::<Vec<&Binding>>()
+                        .len();
+                    HEIGHT_PER_SERVICE_IN_SUBNET_CHILD
+                        + if hide_ports && bindings_with_ports > 0 {
+                            0
+                        } else {
+                            25
+                        }
+                })
+                .sum()
+        };
 
         Self {
             x: SUBNET_CHILD_WIDTH,

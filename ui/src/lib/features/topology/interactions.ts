@@ -46,6 +46,13 @@ export interface HoveredServiceCategory {
 }
 export const hoveredServiceCategory = writable<HoveredServiceCategory | null>(null);
 
+// Edge type hover state for highlighting edges of a specific type
+export interface HoveredEdgeType {
+	edgeType: string;
+	color: string;
+}
+export const hoveredEdgeType = writable<HoveredEdgeType | null>(null);
+
 interface TagFilter {
 	hidden_host_tag_ids?: string[];
 	hidden_service_tag_ids?: string[];

@@ -26,7 +26,8 @@
 		edgeHoverState,
 		groupHoverState,
 		isExporting,
-		tagHiddenNodeIds
+		tagHiddenNodeIds,
+		hoveredEdgeType
 	} from '../../interactions';
 	import type { Node, Edge as FlowEdge } from '@xyflow/svelte';
 
@@ -134,14 +135,25 @@
 	let isPreview = $derived(!!(edgeData as Record<string, unknown> | undefined)?.is_preview);
 	let useMultiColorDash = $derived((isGroupEdge && shouldShowFull) || isPreview);
 
-	// Calculate base edge properties
-	let baseStrokeWidth = $derived(
-		!$topologyOptions.local.no_fade_edges && (shouldShowFull || isPreview) ? 3 : 2
+	// Edge type hover highlight
+	let isEdgeTypeHovered = $derived(
+		$hoveredEdgeType !== null && edgeData?.edge_type === $hoveredEdgeType.edgeType
 	);
+	let isAnotherEdgeTypeHovered = $derived($hoveredEdgeType !== null && !isEdgeTypeHovered);
+
+	// Calculate base edge properties
+	let baseStrokeWidth = $derived.by(() => {
+		if (isEdgeTypeHovered) return 3;
+		if (!$topologyOptions.local.no_fade_edges && (shouldShowFull || isPreview)) return 3;
+		return 2;
+	});
 	let baseOpacity = $derived.by(() => {
 		if ($isExporting) return 1;
 		// Preview edges always full opacity
 		if (isPreview) return 1;
+		// Edge type hover: matching edges full opacity, non-matching fade
+		if (isEdgeTypeHovered) return 1;
+		if (isAnotherEdgeTypeHovered) return 0.2;
 		// Fade if either endpoint is hidden by tag filter
 		if (isEndpointHiddenByTagFilter) return 0.4;
 		// Fade based on selection state
@@ -151,6 +163,8 @@
 	// Labels stay fully visible unless there's an active selection causing edges to fade
 	let labelOpacity = $derived.by(() => {
 		if ($isExporting) return 1;
+		if (isEdgeTypeHovered) return 1;
+		if (isAnotherEdgeTypeHovered) return 0.2;
 		if (isEndpointHiddenByTagFilter) return 0.4;
 		if (!$topologyOptions.local.no_fade_edges && (selectedNode || selectedEdge) && !shouldShowFull)
 			return 0.4;

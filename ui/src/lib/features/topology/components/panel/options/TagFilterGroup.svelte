@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import type { Color } from '$lib/shared/utils/styling';
 	import type { components } from '$lib/api/schema';
 	import { UNTAGGED_SENTINEL, hoveredTag, type HoveredTag } from '../../../interactions';
+	import FilterGroup from './FilterGroup.svelte';
 
 	type TagType = components['schemas']['Tag'];
 
@@ -22,42 +22,33 @@
 		hasUntagged?: boolean;
 	} = $props();
 
-	let isUntaggedHidden = $derived(hiddenTagIds.includes(UNTAGGED_SENTINEL));
+	// Build items list with untagged sentinel first if applicable
+	let items = $derived.by(() => {
+		const result: { value: string; label: string; color: Color }[] = [];
+		if (hasUntagged) {
+			result.push({ value: UNTAGGED_SENTINEL, label: 'Untagged', color: 'Gray' });
+		}
+		for (const tag of tags) {
+			result.push({ value: tag.id, label: tag.name, color: tag.color as Color });
+		}
+		return result;
+	});
 
-	function handleMouseEnter(tagId: string, color: string) {
-		hoveredTag.set({ tagId, color, entityType });
+	function handleHoverStart(value: string, color: Color) {
+		hoveredTag.set({ tagId: value, color: color as string, entityType });
 	}
 
-	function handleMouseLeave() {
+	function handleHoverEnd() {
 		hoveredTag.set(null);
 	}
 </script>
 
-<div class="space-y-2">
-	<div class="text-secondary text-sm font-medium">{label}</div>
-	<div class="flex flex-wrap gap-1.5">
-		{#if hasUntagged}
-			<button
-				onclick={() => onToggle(UNTAGGED_SENTINEL)}
-				onmouseenter={() => handleMouseEnter(UNTAGGED_SENTINEL, 'Gray')}
-				onmouseleave={handleMouseLeave}
-				class="transition-opacity {isUntaggedHidden
-					? 'opacity-50 hover:opacity-75'
-					: 'opacity-100'}"
-			>
-				<Tag label="Untagged" color="Gray" />
-			</button>
-		{/if}
-		{#each tags as tag (tag.id)}
-			{@const isHidden = hiddenTagIds.includes(tag.id)}
-			<button
-				onclick={() => onToggle(tag.id)}
-				onmouseenter={() => handleMouseEnter(tag.id, tag.color)}
-				onmouseleave={handleMouseLeave}
-				class="transition-opacity {isHidden ? 'opacity-50 hover:opacity-75' : 'opacity-100'}"
-			>
-				<Tag label={tag.name} color={tag.color as Color} />
-			</button>
-		{/each}
-	</div>
-</div>
+<FilterGroup
+	{items}
+	selectedValues={hiddenTagIds}
+	mode="exclude"
+	{onToggle}
+	onHoverStart={handleHoverStart}
+	onHoverEnd={handleHoverEnd}
+	{label}
+/>

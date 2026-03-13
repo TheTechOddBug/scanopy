@@ -5,13 +5,15 @@
 		useTopologiesQuery,
 		autoRebuild
 	} from '../../../queries';
-	import { updateTagFilter } from '../../../interactions';
+	import { updateTagFilter, hoveredServiceCategory, hoveredEdgeType } from '../../../interactions';
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
 	import { edgeTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import type { Color } from '$lib/shared/utils/styling';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 	import TagFilterGroup from './TagFilterGroup.svelte';
 	import OptionToggle from './OptionToggle.svelte';
 	import CategoryFilterGroup from './CategoryFilterGroup.svelte';
+	import FilterGroup from './FilterGroup.svelte';
 	import {
 		common_categories,
 		common_docker,
@@ -26,7 +28,6 @@
 		topology_groupDockerBridges,
 		topology_groupDockerBridgesHelp,
 		topology_hideEdgeTypes,
-		topology_hideEdgeTypesHelp,
 		topology_hidePorts,
 		topology_hidePortsHelp,
 		topology_hideResizeHandles,
@@ -37,7 +38,6 @@
 		topology_hideVmOnContainer,
 		topology_hideVmOnContainerHelp,
 		topology_leftZone,
-		topology_leftZoneCategoriesHelp,
 		topology_leftZoneTitleHelp,
 		topology_showGatewayInLeftZone,
 		topology_showGatewayInLeftZoneHelp,
@@ -135,55 +135,103 @@
 		});
 	}
 
+	function toggleLeftZoneCategory(category: string) {
+		topologyOptions.update((opts) => {
+			const current = opts.request.left_zone_service_categories ?? [];
+			const idx = current.indexOf(category as (typeof current)[number]);
+			const newCategories =
+				idx === -1
+					? [...current, category as (typeof current)[number]]
+					: current.filter((c) => c !== category);
+			return {
+				...opts,
+				request: {
+					...opts.request,
+					left_zone_service_categories: newCategories
+				}
+			};
+		});
+	}
+
+	function toggleEdgeType(edgeType: string) {
+		topologyOptions.update((opts) => {
+			const hidden = opts.local.hide_edge_types ?? [];
+			const idx = hidden.indexOf(edgeType as (typeof hidden)[number]);
+			const newHidden =
+				idx === -1
+					? [...hidden, edgeType as (typeof hidden)[number]]
+					: hidden.filter((e) => e !== edgeType);
+			return {
+				...opts,
+				local: {
+					...opts.local,
+					hide_edge_types: newHidden
+				}
+			};
+		});
+	}
+
+	function handleLeftZoneCategoryHoverStart(value: string, color: Color) {
+		hoveredServiceCategory.set({ category: value, color: color as string });
+	}
+
+	function handleLeftZoneCategoryHoverEnd() {
+		hoveredServiceCategory.set(null);
+	}
+
+	function handleEdgeTypeHoverStart(value: string, color: Color) {
+		hoveredEdgeType.set({ edgeType: value, color: color as string });
+	}
+
+	function handleEdgeTypeHoverEnd() {
+		hoveredEdgeType.set(null);
+	}
+
 	// Update tag filter stores when topology or options change
 	$effect(() => {
 		updateTagFilter(topology, $topologyOptions.local.tag_filter);
 	});
 
-	// Dynamic options loaded on mount
-	let serviceCategories: { value: string; label: string }[] = $derived.by(() => {
-		const serviceDefinitionItems = serviceDefinitions.getItems() || [];
-		const categoriesSet = new Set(
-			serviceDefinitionItems.map((i) => serviceDefinitions.getCategory(i.id))
-		);
-		return Array.from(categoriesSet)
-			.filter((c) => c)
-			.sort()
-			.map((c) => ({ value: c, label: c }));
-	});
-
-	// Build categories with colors for the CategoryFilterGroup
+	// Build categories with colors from services present in the topology
 	let serviceCategoriesWithColors = $derived.by(() => {
-		const serviceDefinitionItems = serviceDefinitions.getItems() || [];
+		if (!topology?.services) return [];
 		const seen: Record<string, boolean> = {};
-		const result: {
-			value: string;
-			label: string;
-			color: import('$lib/shared/utils/styling').Color;
-		}[] = [];
-		for (const item of serviceDefinitionItems) {
-			const category = serviceDefinitions.getCategory(item.id);
+		const result: { value: string; label: string; color: Color }[] = [];
+		for (const service of topology.services) {
+			const category = serviceDefinitions.getCategory(service.service_definition);
 			if (category && !seen[category]) {
 				seen[category] = true;
-				const color = serviceDefinitions.getColorHelper(item.id).color;
+				const color = serviceDefinitions.getColorHelper(service.service_definition).color;
 				result.push({ value: category, label: category, color });
 			}
 		}
 		return result.sort((a, b) => a.label.localeCompare(b.label));
 	});
-	let eTypes: { value: string; label: string }[] = $derived.by(() => {
-		return (edgeTypes.getItems() || []).map((e) => ({ value: e.id, label: e.id }));
+
+	// Build edge types with colors from edges present in the topology
+	let edgeTypesWithColors = $derived.by(() => {
+		if (!topology?.edges) return [];
+		const seen: Record<string, boolean> = {};
+		const result: { value: string; label: string; color: Color }[] = [];
+		for (const edge of topology.edges) {
+			const edgeType = edge.edge_type;
+			if (edgeType && !seen[edgeType]) {
+				seen[edgeType] = true;
+				const colorHelper = edgeTypes.getColorHelper(edgeType);
+				result.push({ value: edgeType, label: edgeType, color: colorHelper.color });
+			}
+		}
+		return result.sort((a, b) => a.label.localeCompare(b.label));
 	});
 
 	interface TopologyFieldDef {
 		id: string;
 		label: () => string;
-		type: 'boolean' | 'string' | 'multiselect';
+		type: 'boolean' | 'string';
 		path: 'local' | 'request';
 		key: string;
 		helpText: () => string;
 		section: () => string;
-		getOptions?: () => { value: string; label: string }[];
 		placeholder?: () => string;
 	}
 
@@ -247,16 +295,6 @@
 			placeholder: () => common_infrastructure()
 		},
 		{
-			id: 'left_zone_service_categories',
-			label: () => common_categories(),
-			type: 'multiselect',
-			path: 'request',
-			key: 'left_zone_service_categories',
-			helpText: () => topology_leftZoneCategoriesHelp(),
-			section: () => topology_leftZone(),
-			getOptions: () => serviceCategories
-		},
-		{
 			id: 'show_gateway_in_left_zone',
 			label: () => topology_showGatewayInLeftZone(),
 			type: 'boolean',
@@ -274,16 +312,6 @@
 			key: 'hide_ports',
 			helpText: () => topology_hidePortsHelp(),
 			section: () => topology_hideStuff()
-		},
-		{
-			id: 'hide_edge_types',
-			label: () => topology_hideEdgeTypes(),
-			type: 'multiselect',
-			path: 'local',
-			key: 'hide_edge_types',
-			helpText: () => topology_hideEdgeTypesHelp(),
-			section: () => topology_hideStuff(),
-			getOptions: () => eTypes
 		}
 	];
 
@@ -346,12 +374,6 @@
 
 	function toggleSection(sectionName: string) {
 		expandedSections[sectionName] = !expandedSections[sectionName];
-	}
-
-	function handleMultiSelectChange(def: TopologyFieldDef, event: Event) {
-		const select = event.target as HTMLSelectElement;
-		const selectedOptions = Array.from(select.selectedOptions).map((o) => o.value);
-		updateValue(def, selectedOptions);
 	}
 </script>
 
@@ -451,40 +473,35 @@
 									<p class="text-tertiary mt-1 text-xs">{def.helpText()}</p>
 								{/if}
 							</div>
-						{:else if def.type === 'multiselect'}
-							<div>
-								<label for={def.id} class="text-secondary mb-1 block text-sm font-medium">
-									{def.label()}
-								</label>
-								<select
-									id={def.id}
-									class="input-field w-full"
-									multiple
-									size={4}
-									disabled={def.path === 'request' && !editState.isEditable}
-									onchange={(e) => handleMultiSelectChange(def, e)}
-								>
-									{#each def.getOptions?.() ?? [] as option (option.value)}
-										<option
-											value={option.value}
-											selected={(values[def.id] as string[])?.includes(option.value)}
-										>
-											{option.label}
-										</option>
-									{/each}
-								</select>
-								{#if def.helpText}
-									<p class="text-tertiary mt-1 text-xs">{def.helpText()}</p>
-								{/if}
-							</div>
 						{/if}
 					{/each}
+					{#if section.name === topology_leftZone()}
+						<FilterGroup
+							items={serviceCategoriesWithColors}
+							selectedValues={$topologyOptions.request.left_zone_service_categories ?? []}
+							mode="include"
+							onToggle={toggleLeftZoneCategory}
+							onHoverStart={handleLeftZoneCategoryHoverStart}
+							onHoverEnd={handleLeftZoneCategoryHoverEnd}
+							disabled={!editState.isEditable}
+							label={common_categories()}
+						/>
+					{/if}
 					{#if section.name === topology_hideStuff()}
 						<CategoryFilterGroup
 							categories={serviceCategoriesWithColors}
 							hiddenCategories={$topologyOptions.request.hide_service_categories ?? []}
 							onToggle={toggleServiceCategory}
 							disabled={!editState.isEditable}
+						/>
+						<FilterGroup
+							items={edgeTypesWithColors}
+							selectedValues={$topologyOptions.local.hide_edge_types ?? []}
+							mode="exclude"
+							onToggle={toggleEdgeType}
+							onHoverStart={handleEdgeTypeHoverStart}
+							onHoverEnd={handleEdgeTypeHoverEnd}
+							label={topology_hideEdgeTypes()}
 						/>
 					{/if}
 				</div>

@@ -142,21 +142,19 @@ impl EdgeBuilder {
                                 .entry(host.id)
                                 .or_insert(*first_subnet_id);
 
-                            if ctx.interface_will_have_node(&origin_interface.id) {
-                                return vec![Edge {
-                                    id: Uuid::new_v4(),
-                                    source: origin_interface.id,
-                                    target: *first_subnet_id,
-                                    edge_type: EdgeType::ServiceVirtualization {
-                                        containerizing_service_id: s.id,
-                                        host_id: host.id,
-                                    },
-                                    label: Some(format!("{} @ {}", s.base.name, host.base.name)),
-                                    source_handle,
-                                    target_handle,
-                                    is_multi_hop,
-                                }];
-                            }
+                            return vec![Edge {
+                                id: Uuid::new_v4(),
+                                source: origin_interface.id,
+                                target: *first_subnet_id,
+                                edge_type: EdgeType::ServiceVirtualization {
+                                    containerizing_service_id: s.id,
+                                    host_id: host.id,
+                                },
+                                label: Some(format!("{} @ {}", s.base.name, host.base.name)),
+                                source_handle,
+                                target_handle,
+                                is_multi_hop,
+                            }];
                         }
                     }
                 } else {
@@ -187,24 +185,19 @@ impl EdgeBuilder {
                                     is_multi_hop,
                                 )?;
 
-                            if ctx.interface_will_have_node(&origin_interface.id)
-                                && ctx.interface_will_have_node(&container_binding_interface_id)
-                            {
-                                return Some(Edge {
-                                    id: Uuid::new_v4(),
-                                    source: origin_interface.id,
-                                    target: container_binding_interface_id,
-                                    edge_type: EdgeType::ServiceVirtualization {
-                                        containerizing_service_id: s.id,
-                                        host_id: host.id,
-                                    },
-                                    label: Some(format!("{} on {}", s.base.name, host.base.name)),
-                                    source_handle,
-                                    target_handle,
-                                    is_multi_hop,
-                                });
-                            }
-                            None
+                            Some(Edge {
+                                id: Uuid::new_v4(),
+                                source: origin_interface.id,
+                                target: container_binding_interface_id,
+                                edge_type: EdgeType::ServiceVirtualization {
+                                    containerizing_service_id: s.id,
+                                    host_id: host.id,
+                                },
+                                label: Some(format!("{} on {}", s.base.name, host.base.name)),
+                                source_handle,
+                                target_handle,
+                                is_multi_hop,
+                            })
                         })
                         .collect();
                 }
@@ -268,7 +261,6 @@ impl EdgeBuilder {
                             if let Some(proxmox_service_interface_id) =
                                 subnet_to_promxox_host_interface_id
                                     .get(&(i.base.subnet_id, *proxmox_service_id))
-                                && ctx.interface_will_have_node(proxmox_service_interface_id)
                             {
                                 let is_multi_hop =
                                     ctx.edge_is_multi_hop(proxmox_service_interface_id, &i.id);
@@ -317,11 +309,7 @@ impl EdgeBuilder {
                 {
                     host_interfaces
                         .iter()
-                        .filter(|interface| {
-                            interface.id != origin_interface.id
-                                && ctx.interface_will_have_node(&interface.id)
-                                && ctx.interface_will_have_node(&origin_interface.id)
-                        })
+                        .filter(|interface| interface.id != origin_interface.id)
                         .filter_map(|interface| {
                             let source_subnet =
                                 ctx.get_subnet_by_id(origin_interface.base.subnet_id);
@@ -410,13 +398,6 @@ impl EdgeBuilder {
                 let source_interface_id = ctx.resolve_interface_for_if_entry(source_entry)?;
                 let target_entry = ctx.get_if_entry_by_id(target_if_entry_id)?;
                 let target_interface_id = ctx.resolve_interface_for_if_entry(target_entry)?;
-
-                // Check that both interfaces will have nodes
-                if !ctx.interface_will_have_node(&source_interface_id)
-                    || !ctx.interface_will_have_node(&target_interface_id)
-                {
-                    return None;
-                }
 
                 let is_multi_hop =
                     ctx.edge_is_multi_hop(&source_interface_id, &target_interface_id);
@@ -519,69 +500,54 @@ impl EdgeBuilder {
             None
         });
 
-        if let (Some(Some(source_interface)), Some(Some(target_interface))) =
+        let (Some(Some(source_interface)), Some(Some(target_interface))) =
             (source_interface, target_interface)
-        {
-            if !ctx.interface_will_have_node(&source_interface)
-                || !ctx.interface_will_have_node(&target_interface)
-            {
-                return None;
-            }
-        } else {
+        else {
             return None;
-        }
+        };
 
-        // Re-extract interfaces (we know they exist now)
-        let source_interface = source_interface.unwrap().unwrap();
-        let target_interface = target_interface.unwrap().unwrap();
+        let is_multi_hop = ctx.edge_is_multi_hop(&source_interface, &target_interface);
 
-        if ctx.interface_will_have_node(&source_interface)
-            && ctx.interface_will_have_node(&target_interface)
-        {
-            let is_multi_hop = ctx.edge_is_multi_hop(&source_interface, &target_interface);
+        let (source_handle, target_handle) = EdgeBuilder::determine_interface_handles(
+            ctx,
+            &source_interface,
+            &target_interface,
+            is_multi_hop,
+        )?;
 
-            let (source_handle, target_handle) = EdgeBuilder::determine_interface_handles(
-                ctx,
-                &source_interface,
-                &target_interface,
-                is_multi_hop,
-            )?;
-
-            // If edge is intra-subnet, don't label - gets too messy
-            let label = if ctx
-                .get_subnet_from_interface_id(source_interface)
+        // If edge is intra-subnet, don't label - gets too messy
+        let label = if ctx
+            .get_subnet_from_interface_id(source_interface)
+            .map(|s| s.id)
+            == ctx
+                .get_subnet_from_interface_id(target_interface)
                 .map(|s| s.id)
-                == ctx
-                    .get_subnet_from_interface_id(target_interface)
-                    .map(|s| s.id)
-            {
-                None
-            } else {
-                Some(group.base.name.to_string())
-            };
+        {
+            None
+        } else {
+            Some(group.base.name.to_string())
+        };
 
-            return Some(Edge {
-                id: Uuid::new_v4(),
-                source: source_interface,
-                target: target_interface,
-                edge_type: match group.base.group_type {
-                    GroupType::HubAndSpoke => EdgeType::HubAndSpoke {
-                        source_binding_id,
-                        target_binding_id,
-                        group_id: group.id,
-                    },
-                    GroupType::RequestPath => EdgeType::RequestPath {
-                        source_binding_id,
-                        target_binding_id,
-                        group_id: group.id,
-                    },
+        Some(Edge {
+            id: Uuid::new_v4(),
+            source: source_interface,
+            target: target_interface,
+            edge_type: match group.base.group_type {
+                GroupType::HubAndSpoke => EdgeType::HubAndSpoke {
+                    source_binding_id,
+                    target_binding_id,
+                    group_id: group.id,
                 },
-                label,
-                source_handle,
-                target_handle,
-                is_multi_hop,
-            });
-        }
-        None
+                GroupType::RequestPath => EdgeType::RequestPath {
+                    source_binding_id,
+                    target_binding_id,
+                    group_id: group.id,
+                },
+            },
+            label,
+            source_handle,
+            target_handle,
+            is_multi_hop,
+        })
     }
 }

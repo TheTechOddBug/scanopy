@@ -879,9 +879,21 @@ async fn test_reachability(
     let reachable = match tcp_result {
         Ok(Ok(_stream)) => true,
         Ok(Err(e)) => {
+            let message = match e.kind() {
+                std::io::ErrorKind::ConnectionRefused => {
+                    "Connection refused — no service is listening on this port".to_string()
+                }
+                std::io::ErrorKind::TimedOut => {
+                    "Connection timed out — the host may be unreachable or a firewall is blocking the port".to_string()
+                }
+                std::io::ErrorKind::AddrNotAvailable => {
+                    "Address not available".to_string()
+                }
+                _ => format!("Connection failed: {}", e),
+            };
             return Ok(Json(ApiResponse::success(TestReachabilityResponse {
                 reachable: false,
-                error: Some(format!("Connection failed: {}", e)),
+                error: Some(message),
                 health: None,
             })));
         }

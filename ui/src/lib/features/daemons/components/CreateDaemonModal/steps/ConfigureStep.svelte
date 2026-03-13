@@ -7,10 +7,8 @@
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import RadioGroup from '$lib/shared/components/forms/input/RadioGroup.svelte';
-	import { Loader2, CheckCircle2, XCircle } from 'lucide-svelte';
+	import { CheckCircle2, XCircle } from 'lucide-svelte';
 	import { fieldDefs } from '../../../config';
-	import { constructDaemonUrl } from '../../../utils';
-	import { useTestReachabilityMutation } from '../../../queries';
 	import {
 		common_apiKey,
 		common_name,
@@ -44,6 +42,7 @@
 		isFirstDaemon?: boolean;
 		onUseExistingKey?: () => void;
 		onReachabilityChange?: (reachable: boolean | null) => void;
+		reachabilityResult?: { reachable: boolean; error?: string } | null;
 	}
 
 	let {
@@ -55,7 +54,8 @@
 		keySet,
 		isFirstDaemon = false,
 		onUseExistingKey,
-		onReachabilityChange
+		onReachabilityChange,
+		reachabilityResult = $bindable(null)
 	}: Props = $props();
 
 	// Get validators for a field
@@ -97,11 +97,6 @@
 		}
 	});
 
-	// Reachability test state
-	const testReachabilityMutation = useTestReachabilityMutation();
-	let reachabilityResult = $state<{ reachable: boolean; error?: string } | null>(null);
-	let isTesting = $derived(testReachabilityMutation.isPending);
-
 	// Reset reachability when URL or port changes
 	let prevUrlPort = $state('');
 	$effect(() => {
@@ -112,22 +107,6 @@
 			onReachabilityChange?.(null);
 		}
 	});
-
-	async function handleTestReachability() {
-		if (!daemonUrl) return;
-		const fullUrl = constructDaemonUrl(daemonUrl, daemonPort);
-		try {
-			const result = await testReachabilityMutation.mutateAsync({
-				url: fullUrl,
-				check_health: false
-			});
-			reachabilityResult = { reachable: result.reachable, error: result.error ?? undefined };
-			onReachabilityChange?.(result.reachable);
-		} catch {
-			reachabilityResult = { reachable: false, error: 'Failed to test reachability' };
-			onReachabilityChange?.(false);
-		}
-	}
 </script>
 
 <div class="space-y-4">
@@ -227,41 +206,25 @@
 			<InlineWarning title="" body={daemons_httpDaemonUrlWarning()} />
 		{/if}
 
-		<InlineInfo title="" body={daemons_portForwardingHint()} />
-
-		<!-- Reachability test -->
-		<div class="flex items-center gap-3">
-			<button
-				type="button"
-				class="btn-secondary text-sm"
-				disabled={!daemonUrl || isTesting}
-				onclick={handleTestReachability}
-			>
-				{#if isTesting}
-					<Loader2 class="h-4 w-4 animate-spin" />
-				{/if}
-				Test Connection
-			</button>
-			{#if reachabilityResult}
-				{#if reachabilityResult.reachable}
-					<span class="flex items-center gap-1 text-sm text-green-400">
-						<CheckCircle2 class="h-4 w-4" />
-						Port is reachable
-					</span>
-				{:else}
-					<span class="flex items-center gap-1 text-sm text-red-400">
-						<XCircle class="h-4 w-4" />
-						{reachabilityResult.error ?? 'Port is not reachable'}
-					</span>
-				{/if}
+		<!-- Reachability result (driven by parent) -->
+		{#if reachabilityResult}
+			{#if reachabilityResult.reachable}
+				<span class="flex items-center gap-1 text-sm text-green-400">
+					<CheckCircle2 class="h-4 w-4" />
+					Port is reachable
+				</span>
+			{:else}
+				<span class="flex items-center gap-1 text-sm text-red-400">
+					<XCircle class="h-4 w-4" />
+					{reachabilityResult.error ?? 'Port is not reachable'}
+				</span>
+				<InlineInfo title="" body={daemons_portForwardingHint()} />
+				<DocsHint
+					text="Having trouble? Check our %link% for common solutions."
+					href="https://scanopy.net/docs/setting-up-daemons/troubleshooting-setup/"
+					linkText="troubleshooting guide"
+				/>
 			{/if}
-		</div>
-		{#if reachabilityResult && !reachabilityResult.reachable}
-			<DocsHint
-				text="Having trouble? Check our %link% for common solutions."
-				href="https://scanopy.net/docs/setting-up-daemons/troubleshooting-setup/"
-				linkText="troubleshooting guide"
-			/>
 		{/if}
 	{/if}
 

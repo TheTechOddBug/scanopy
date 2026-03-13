@@ -101,6 +101,8 @@
 
 	// ServerPoll reachability state
 	let serverPollReachable = $state<boolean | null>(null);
+	let isTestingReachability = $state(false);
+	let serverPollReachabilityResult = $state<{ reachable: boolean; error?: string } | null>(null);
 	const testReachabilityMutation = useTestReachabilityMutation();
 
 	// Connection waiting state
@@ -265,8 +267,35 @@
 
 			if (!isValid) return;
 
-			// ServerPoll requires reachability check to pass
-			if (formValues.mode === 'server_poll' && serverPollReachable !== true) return;
+			// ServerPoll: run reachability test from Next button
+			if (formValues.mode === 'server_poll' && serverPollReachable !== true) {
+				const daemonUrlBase = String(formValues.daemonUrl ?? '');
+				if (!daemonUrlBase) return;
+				const port = Number(formValues.daemonPort) || 60073;
+				const fullUrl = constructDaemonUrl(daemonUrlBase, port);
+				isTestingReachability = true;
+				try {
+					const result = await testReachabilityMutation.mutateAsync({
+						url: fullUrl,
+						check_health: false
+					});
+					serverPollReachable = result.reachable;
+					serverPollReachabilityResult = {
+						reachable: result.reachable,
+						error: result.error ?? undefined
+					};
+					if (!result.reachable) return; // stay on step, result shown inline
+				} catch {
+					serverPollReachable = false;
+					serverPollReachabilityResult = {
+						reachable: false,
+						error: 'Failed to test reachability'
+					};
+					return;
+				} finally {
+					isTestingReachability = false;
+				}
+			}
 
 			trackEvent('daemon_wizard_step_completed', { step: 'configure' });
 
@@ -387,6 +416,8 @@
 		connectionStatus = 'idle';
 		showTroubleshootingPanel = false;
 		serverPollReachable = null;
+		isTestingReachability = false;
+		serverPollReachabilityResult = null;
 		onClose();
 	}
 
@@ -400,6 +431,7 @@
 		startedAsFirstDaemon = isFirstDaemon;
 		showTroubleshootingPanel = false;
 		serverPollReachable = null;
+		serverPollReachabilityResult = null;
 	}
 
 	let colorHelper = entities.getColorHelper('Daemon');
@@ -437,7 +469,11 @@
 					{keySet}
 					{isFirstDaemon}
 					onUseExistingKey={handleUseExistingKey}
-					onReachabilityChange={(r) => (serverPollReachable = r)}
+					onReachabilityChange={(r) => {
+						serverPollReachable = r;
+						if (r === null) serverPollReachabilityResult = null;
+					}}
+					bind:reachabilityResult={serverPollReachabilityResult}
 				/>
 			{:else if activeTab === 'install'}
 				<InstallStep
@@ -477,10 +513,9 @@
 						type="button"
 						class="btn-primary btn-primary-lg"
 						onclick={handleNext}
-						disabled={isAutoGenerating ||
-							(formValues.mode === 'server_poll' && serverPollReachable !== true)}
+						disabled={isAutoGenerating || isTestingReachability}
 					>
-						{#if isAutoGenerating}
+						{#if isAutoGenerating || isTestingReachability}
 							<Loader2 class="h-4 w-4 animate-spin" />
 						{:else}
 							{common_next()}

@@ -41,7 +41,6 @@
 		hasErrors: boolean;
 		isFirstDaemon?: boolean;
 		connectionStatus?: DaemonConnectionStatus;
-		onReviewCommands?: () => void;
 		onViewDiscovery?: () => void;
 		hasEmailSupport?: boolean;
 		showTroubleshootingPanel?: boolean;
@@ -63,7 +62,6 @@
 		hasErrors,
 		isFirstDaemon = false,
 		connectionStatus = 'idle',
-		onReviewCommands,
 		onViewDiscovery,
 		hasEmailSupport = false,
 		showTroubleshootingPanel = false,
@@ -215,7 +213,7 @@
 							<span class="text-secondary text-xs tabular-nums">{Math.round(waitingProgress)}%</span
 							>
 						</div>
-						<div class="text-left">
+						<div class="max-w-md text-left">
 							<InlineSuccess
 								title="Daemon is reachable and healthy — waiting for server to register it"
 							/>
@@ -228,25 +226,9 @@
 								Your daemon is running — the server will pick it up on its next polling cycle.
 							</p>
 						</div>
-						<div class="flex items-center gap-3">
-							<button
-								type="button"
-								class="btn-secondary text-sm"
-								onclick={() => onReviewCommands?.()}
-							>
-								Return to install commands
-							</button>
-							<button
-								type="button"
-								class="btn-secondary text-sm"
-								onclick={() => onTroubleshoot?.()}
-							>
-								Troubleshoot
-							</button>
-						</div>
 					{:else if healthResult}
 						<!-- Health check failed -->
-						<div class="text-left">
+						<div class="max-w-md text-left">
 							{#if healthResult.reachable}
 								<InlineWarning
 									title="Port open but health check failed"
@@ -259,7 +241,6 @@
 								/>
 							{/if}
 						</div>
-						<h3 class="text-primary text-base font-semibold">Connection test failed</h3>
 						<button
 							type="button"
 							class="btn-primary text-sm"
@@ -268,22 +249,13 @@
 						>
 							Test Daemon Reachability
 						</button>
-						<div class="flex items-center gap-3">
-							<button
-								type="button"
-								class="btn-secondary text-sm"
-								onclick={() => onReviewCommands?.()}
-							>
-								Return to install commands
-							</button>
-							<button
-								type="button"
-								class="btn-secondary text-sm"
-								onclick={() => onTroubleshoot?.()}
-							>
-								Troubleshoot
-							</button>
-						</div>
+						<button
+							type="button"
+							class="text-sm text-blue-400 hover:text-blue-300"
+							onclick={() => onTroubleshoot?.()}
+						>
+							Troubleshoot
+						</button>
 					{/if}
 				{:else}
 					<!-- DaemonPoll: progress bar immediately -->
@@ -300,18 +272,6 @@
 						<p class="text-secondary mt-1 text-sm">
 							This usually takes less than a minute. Make sure the daemon is running.
 						</p>
-					</div>
-					<div class="flex items-center gap-3">
-						<button
-							type="button"
-							class="btn-secondary text-sm"
-							onclick={() => onReviewCommands?.()}
-						>
-							Return to install commands
-						</button>
-						<button type="button" class="btn-secondary text-sm" onclick={() => onTroubleshoot?.()}>
-							Troubleshoot
-						</button>
 					</div>
 				{/if}
 			</div>
@@ -354,7 +314,7 @@
 					<li>Check that no firewall is blocking the connection</li>
 				</ol>
 				{#if isServerPoll && daemonUrl}
-					<div class="flex flex-col items-center gap-2 text-left">
+					<div class="flex max-w-md flex-col items-center gap-2 text-left">
 						{#if healthResult}
 							{#if healthResult.reachable && healthResult.health}
 								<InlineSuccess
@@ -385,14 +345,6 @@
 						</button>
 					</div>
 				{/if}
-				<div class="flex items-center gap-3">
-					<button type="button" class="btn-secondary text-sm" onclick={() => onReviewCommands?.()}>
-						Return to install commands
-					</button>
-					<button type="button" class="btn-secondary text-sm" onclick={() => onTroubleshoot?.()}>
-						Troubleshoot
-					</button>
-				</div>
 			</div>
 		{/if}
 	{:else}

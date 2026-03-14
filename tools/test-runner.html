@@ -181,14 +181,18 @@ function exportResults() {
       notes: branchNotes[branch] || null,
       tests: data.tests
         .filter(t => t.status === 'failed' || t.status === 'partial' || t.status === 'passed')
-        .map(t => ({
-          id: t.id,
-          category: t.category,
-          description: t.description,
-          status: t.status,
-          feedback: t.feedback || null,
-          fix_on: t.fix_on || 'merged'
-        }))
+        .map(t => {
+          const entry = {
+            id: t.id,
+            category: t.category,
+            description: t.description,
+            status: t.status,
+            feedback: t.feedback || null
+          };
+          // Only include fix_on when explicitly routed to a source branch
+          if (t.fix_on && t.fix_on !== 'merged') entry.fix_on = t.fix_on;
+          return entry;
+        })
     };
   });
   // Remove branches with no results and no notes

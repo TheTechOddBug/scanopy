@@ -45,7 +45,6 @@ use axum_extra::{TypedHeader, extract::Host, headers::UserAgent};
 use bad_email::is_email_unwanted;
 use chrono::{DateTime, Utc};
 use secrecy::SecretString;
-use serde::Deserialize;
 use std::{net::IpAddr, sync::Arc};
 use tower_sessions::Session;
 use url::Url;

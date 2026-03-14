@@ -8,10 +8,11 @@
 	let mouseX = -1000;
 	let mouseY = -1000;
 
-	// Scan line position (pixels from left). -30 = offscreen left, extends past canvas width
+	// Scan line position (pixels from left). -30 = offscreen left
 	let scanX = -30;
 	const SCAN_SPEED = 2.2; // pixels per frame
-	let scanComplete = false;
+	const PAUSE_FRAMES = 90; // pause before restarting loop
+	let pauseCounter = 0;
 
 	const COLORS = {
 		cyan: '#06b6d4',
@@ -127,12 +128,22 @@
 		canvas.height = h * dpr;
 		ctx.scale(dpr, dpr);
 
-		// Advance scan line
-		if (!scanComplete) {
-			scanX += SCAN_SPEED;
-			if (scanX > LAYOUT_W + 40) {
-				scanComplete = true;
+		// Advance scan line, loop after pause
+		if (scanX > LAYOUT_W + 40) {
+			pauseCounter++;
+			if (pauseCounter >= PAUSE_FRAMES) {
+				// Reset everything for next sweep
+				scanX = -30;
+				pauseCounter = 0;
+				for (const s of subnets) s.revealedAt = 0;
+				for (const n of nodes) {
+					n.revealedAt = 0;
+					n.x = n.homeX;
+					n.y = n.homeY;
+				}
 			}
+		} else {
+			scanX += SCAN_SPEED;
 		}
 
 		// Update reveal state: elements get revealed when scan passes their center x
@@ -202,24 +213,6 @@
 				ctx.arc(gx, gy, 0.7, 0, Math.PI * 2);
 				ctx.fill();
 			}
-		}
-
-		// Scan beam — subtle glow band behind the scan line
-		if (!scanComplete) {
-			const beamWidth = 50;
-			const beamGrad = ctx.createLinearGradient(scanX - beamWidth, 0, scanX, 0);
-			beamGrad.addColorStop(0, 'rgba(6, 182, 212, 0)');
-			beamGrad.addColorStop(1, scanColor);
-			ctx.fillStyle = beamGrad;
-			ctx.fillRect(scanX - beamWidth, 0, beamWidth, h);
-
-			// Scan line
-			ctx.beginPath();
-			ctx.moveTo(scanX, 0);
-			ctx.lineTo(scanX, h);
-			ctx.strokeStyle = scanLineColor;
-			ctx.lineWidth = 1.5;
-			ctx.stroke();
 		}
 
 		// Subnets
@@ -312,6 +305,23 @@
 			}
 
 			ctx.restore();
+		}
+
+		// Scan beam + line — drawn on top of everything
+		if (scanX >= -30 && scanX <= LAYOUT_W + 40) {
+			const beamWidth = 50;
+			const beamGrad = ctx.createLinearGradient(scanX - beamWidth, 0, scanX, 0);
+			beamGrad.addColorStop(0, 'rgba(6, 182, 212, 0)');
+			beamGrad.addColorStop(1, scanColor);
+			ctx.fillStyle = beamGrad;
+			ctx.fillRect(scanX - beamWidth, 0, beamWidth, h);
+
+			ctx.beginPath();
+			ctx.moveTo(scanX, 0);
+			ctx.lineTo(scanX, h);
+			ctx.strokeStyle = scanLineColor;
+			ctx.lineWidth = 1.5;
+			ctx.stroke();
 		}
 
 		// Bottom gradient fade

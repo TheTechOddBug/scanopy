@@ -9,7 +9,7 @@
 	import { useConfigQuery } from '$lib/shared/stores/config-query';
 	import type { DaemonOS } from '../../../utils';
 	import { trackEvent } from '$lib/shared/utils/analytics';
-	import { useTestReachabilityMutation } from '../../../queries';
+	import { useTestReachabilityMutation, useRetryDaemonConnectionMutation } from '../../../queries';
 	import OsSelector from '../../OsSelector.svelte';
 	import { Loader2, CheckCircle2, AlertTriangle, SlidersHorizontal } from 'lucide-svelte';
 	import type { DaemonConnectionStatus } from '../../../stores/daemon-setup';
@@ -46,6 +46,7 @@
 		onAdvanced?: (() => void) | null;
 		daemonMode?: string;
 		daemonUrl?: string;
+		provisionedDaemonId?: string;
 		onTroubleshoot?: () => void;
 	}
 
@@ -66,6 +67,7 @@
 		onAdvanced = null,
 		daemonMode = 'daemon_poll',
 		daemonUrl = '',
+		provisionedDaemonId = '',
 		onTroubleshoot
 	}: Props = $props();
 
@@ -81,71 +83,35 @@
 	let combinedLinuxMacCommand = $derived(`${installScript} && ${runCommand}`);
 	let combinedWindowsCommand = $derived(`${windowsInstallCommand}; ${runCommand}`);
 
-	// ServerPoll health check for trouble state
+	// ServerPoll health check
 	const healthCheckMutation = useTestReachabilityMutation();
+	const retryConnectionMutation = useRetryDaemonConnectionMutation();
 	let healthResult = $state<{ reachable: boolean; health?: boolean; error?: string } | null>(null);
 	let isCheckingHealth = $state(false);
 
-	// Severity ranking: not-reachable (0) < reachable+health-false (1) < reachable+health-true (2)
-	function healthSeverity(r: { reachable: boolean; health?: boolean } | null): number {
-		if (!r) return -1;
-		if (!r.reachable) return 0;
-		if (r.health) return 2;
-		return 1;
-	}
-
 	async function handleHealthCheck() {
 		if (!daemonUrl) return;
+		isCheckingHealth = true;
 		try {
 			const result = await healthCheckMutation.mutateAsync({
 				url: daemonUrl,
 				check_health: true
 			});
-			const newResult = {
+			healthResult = {
 				reachable: result.reachable,
 				health: result.health ?? undefined,
 				error: result.error ?? undefined
 			};
-			// Only update if new result is equal or better (prevents flicker)
-			if (healthSeverity(newResult) >= healthSeverity(healthResult)) {
-				healthResult = newResult;
+			// If reachable and healthy, reset unreachable flag so server resumes polling
+			if (result.reachable && result.health && provisionedDaemonId) {
+				retryConnectionMutation.mutate(provisionedDaemonId);
 			}
 		} catch {
-			const newResult = { reachable: false, error: 'Failed to test reachability' };
-			if (healthSeverity(newResult) >= healthSeverity(healthResult)) {
-				healthResult = newResult;
-			}
-		}
-	}
-
-	async function handleManualHealthCheck() {
-		isCheckingHealth = true;
-		try {
-			await handleHealthCheck();
+			healthResult = { reachable: false, error: 'Failed to test reachability' };
 		} finally {
 			isCheckingHealth = false;
 		}
 	}
-
-	// Auto-poll health check for ServerPoll when waiting
-	let healthPollInterval = $state<ReturnType<typeof setInterval> | null>(null);
-	$effect(() => {
-		if (connectionStatus === 'waiting' && daemonMode === 'server_poll' && daemonUrl) {
-			handleHealthCheck();
-			healthPollInterval = setInterval(handleHealthCheck, 10_000);
-			return () => {
-				if (healthPollInterval) clearInterval(healthPollInterval);
-			};
-		}
-	});
-
-	// Stop polling once health check is green
-	$effect(() => {
-		if (healthResult?.reachable && healthResult?.health && healthPollInterval) {
-			clearInterval(healthPollInterval);
-			healthPollInterval = null;
-		}
-	});
 
 	// Clear health result when transitioning to connected
 	$effect(() => {
@@ -163,7 +129,7 @@
 			daemonMode === 'server_poll' &&
 			daemonUrl
 		) {
-			handleManualHealthCheck();
+			handleHealthCheck();
 		}
 		prevConnectionStatus = connectionStatus;
 	});
@@ -205,19 +171,6 @@
 						This usually takes less than a minute. Make sure the daemon is running.
 					</p>
 				</div>
-				{#if daemonMode === 'server_poll' && healthResult}
-					<div class="text-sm">
-						{#if healthResult.reachable && healthResult.health}
-							<InlineSuccess
-								title="Daemon is running and reachable — waiting for server to register it"
-							/>
-						{:else if healthResult.reachable && healthResult.health === false}
-							<InlineWarning title="Port is open but daemon may still be starting..." />
-						{:else if !healthResult.reachable}
-							<InlineDanger title="Port not reachable — check firewall and port forwarding" />
-						{/if}
-					</div>
-				{/if}
 				<div class="flex items-center gap-3">
 					<button type="button" class="btn-secondary text-sm" onclick={() => onReviewCommands?.()}>
 						Return to install commands
@@ -282,7 +235,7 @@
 							type="button"
 							class="btn-secondary text-sm"
 							disabled={isCheckingHealth}
-							onclick={handleManualHealthCheck}
+							onclick={handleHealthCheck}
 						>
 							{#if isCheckingHealth}
 								<Loader2 class="h-4 w-4 animate-spin" />

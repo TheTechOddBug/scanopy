@@ -106,6 +106,7 @@
 	const testReachabilityMutation = useTestReachabilityMutation();
 
 	// Connection waiting state
+	let provisionedDaemonId = $state('');
 	let connectionStatus = $state<DaemonConnectionStatus>('idle');
 	let troubleTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
 	let showTroubleshootingPanel = $state(false);
@@ -231,6 +232,7 @@
 					url: fullDaemonUrl
 				});
 				keyState = result.daemon_api_key;
+				provisionedDaemonId = result.daemon.id;
 			} catch {
 				pushError(common_failedGenerateApiKey());
 			}
@@ -332,14 +334,6 @@
 		connectionStatus = 'waiting';
 		daemonSetupState.set({ connectionStatus: 'waiting' });
 		trackEvent('daemon_install_confirmed');
-
-		// For ServerPoll, fire a health check
-		if (formValues.mode === 'server_poll') {
-			const daemonUrlBase = String(formValues.daemonUrl ?? '');
-			const port = Number(formValues.daemonPort) || 60073;
-			const fullUrl = constructDaemonUrl(daemonUrlBase, port);
-			testReachabilityMutation.mutate({ url: fullUrl, check_health: true });
-		}
 
 		// Set 2-minute timeout for trouble state
 		troubleTimeoutId = setTimeout(() => {
@@ -496,6 +490,7 @@
 						String(formValues.daemonUrl ?? ''),
 						Number(formValues.daemonPort) || 60073
 					)}
+					{provisionedDaemonId}
 					onTroubleshoot={handleTrouble}
 				/>
 			{/if}

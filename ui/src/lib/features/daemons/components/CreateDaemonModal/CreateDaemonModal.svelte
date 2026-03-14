@@ -530,7 +530,6 @@
 					{hasErrors}
 					isFirstDaemon={startedAsFirstDaemon}
 					{connectionStatus}
-					onReviewCommands={handleReviewCommands}
 					onViewDiscovery={handleViewDiscovery}
 					{hasEmailSupport}
 					{showTroubleshootingPanel}
@@ -578,6 +577,9 @@
 							{common_close()}
 						</button>
 					{:else if connectionStatus === 'waiting' || connectionStatus === 'trouble'}
+						<button type="button" class="btn-secondary" onclick={handleReviewCommands}>
+							Return to install commands
+						</button>
 						<button type="button" class="btn-secondary" onclick={handleOnClose}>
 							{common_close()}
 						</button>

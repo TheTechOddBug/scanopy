@@ -60,7 +60,10 @@
 			closeModal();
 		}
 	});
-	let showDaemonPrompt = $derived(pendingDaemonPrompt && !showBillingModal);
+	// Only show after billing state is resolved (org query loaded or billing disabled)
+	// to prevent a brief flash before billing modal takes priority
+	let billingStateResolved = $derived(!billingEnabled || organizationQuery.isSuccess);
+	let showDaemonPrompt = $derived(pendingDaemonPrompt && !showBillingModal && billingStateResolved);
 
 	let activeTab = $state(initialHash || 'home');
 	let appInitialized = $state(false);

@@ -73,7 +73,14 @@
 	}
 </script>
 
-<GenericModal {isOpen} title={daemons_promptTitle()} size="md" onClose={handleSkip}>
+<GenericModal
+	{isOpen}
+	title={daemons_promptTitle()}
+	size="md"
+	onClose={handleSkip}
+	showCloseButton={false}
+	preventCloseOnClickOutside={true}
+>
 	{#snippet headerIcon()}
 		<ModalHeaderIcon Icon={Terminal} color="Blue" />
 	{/snippet}

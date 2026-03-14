@@ -480,7 +480,17 @@
 }
 
 .animate-pulse-highlight-once {
-	animation: pulse-highlight 1s ease-in-out 1;
+	animation: pulse-highlight-subtle 1s ease-in-out 1;
+}
+
+@keyframes pulse-highlight-subtle {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse-color) 0%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pulse-color) 40%, transparent);
+	}
 }
 
 @keyframes text-pulse-highlight {

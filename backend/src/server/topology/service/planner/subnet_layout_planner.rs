@@ -146,18 +146,8 @@ impl SubnetLayoutPlanner {
 
         let host_has_name = host.base.name != "Unknown Device" && !host.base.name.is_empty();
 
-        // P2: Assign a name to docker containers whose host will not have a node
-        // Docker container edges are routed to host origin interface which has a label
-        // but if host node isn't showing due to filters, we need to provide them with a name
+        // P2: Show docker container header with host name
         if *subnet_type == SubnetType::DockerBridge {
-            let origin_interface_will_have_node = if let Some(origin_interface) =
-                ctx.get_first_non_docker_bridge_interface_for_host(host.id)
-            {
-                ctx.interface_will_have_node(&origin_interface.id)
-            } else {
-                false
-            };
-
             let header_text = if host_has_name {
                 Some("Docker @ ".to_owned() + &host.base.name.clone())
             } else {
@@ -172,9 +162,7 @@ impl SubnetLayoutPlanner {
                     .map(|i| "Docker @ ".to_owned() + &i.base.ip_address.to_string())
             };
 
-            if !origin_interface_will_have_node {
-                return header_text;
-            }
+            return header_text;
         }
 
         // P3: Show host if it differs from the first service name + isn't shown via interface edges
@@ -242,10 +230,6 @@ impl SubnetLayoutPlanner {
                     })
                 })
                 .collect();
-
-            if interface_bound_services.is_empty() {
-                continue;
-            }
 
             // Update source/target handles for edges
             let edges = ChildAnchorPlanner::plan_anchors(interface.id, all_edges, ctx);

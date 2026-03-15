@@ -3,8 +3,13 @@
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
-	import { useTopologiesQuery, selectedTopologyId } from '$lib/features/topology/queries';
+	import {
+		useTopologiesQuery,
+		selectedTopologyId,
+		autoRebuild
+	} from '$lib/features/topology/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
+	import { getTopologyEditState } from '$lib/features/topology/state';
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
@@ -17,6 +22,10 @@
 	let topology = $derived(
 		topologyContext ? $topologyContext : topologiesData.find((t) => t.id === $selectedTopologyId)
 	);
+
+	// Unified edit state
+	let isReadonly = $derived(!!topologyContext);
+	let editState = $derived(getTopologyEditState(topology, $autoRebuild, isReadonly));
 
 	let host = $derived(topology ? topology.hosts.find((h) => h.id == hostId) : null);
 
@@ -32,7 +41,12 @@
 		<span class="text-secondary mb-2 block text-sm font-medium">Host</span>
 		<div class="card card-static">
 			<EntityDisplayWrapper
-				context={{ services: topology?.services.filter((s) => host && s.host_id == host.id) ?? [] }}
+				context={{
+					services: topology?.services.filter((s) => host && s.host_id == host.id) ?? [],
+					showEntityTagPicker: true,
+					tagPickerDisabled: !editState.isEditable,
+					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined
+				}}
 				item={host}
 				displayComponent={HostDisplay}
 			/>

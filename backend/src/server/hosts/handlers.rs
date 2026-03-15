@@ -575,14 +575,19 @@ async fn create_host_discovery(
     let created = state
         .services
         .daemon_service
-        .process_discovery_entities(entities, auth.into_entity(), None)
+        .process_discovery_entities(entities, auth.into_entity())
         .await?;
 
-    let (_, host_response) = created
-        .hosts
-        .into_iter()
-        .next()
-        .ok_or_else(|| ApiError::internal_error("No host returned from processor"))?;
+    let (_, host_response) = created.hosts.into_iter().next().ok_or_else(|| {
+        if let Some((limit, _org_id)) = created.billing_limit_hit {
+            ApiError::coded(
+                StatusCode::FORBIDDEN,
+                ErrorCode::BillingHostLimitReached { limit },
+            )
+        } else {
+            ApiError::internal_error("No host returned from processor")
+        }
+    })?;
 
     Ok(Json(ApiResponse::success(host_response)))
 }

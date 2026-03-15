@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Scanopy API",
-    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.16\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.16\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nThe API version is an integer (`api_version: 1`) incremented only on breaking changes. API is versioned independently from the application. Endpoints are prefixed with `/api/v1/`. Check `GET /api/version` for current versions.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
+    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.18\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.18\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nThe API version is an integer (`api_version: 1`) incremented only on breaking changes. API is versioned independently from the application. Endpoints are prefixed with `/api/v1/`. Check `GET /api/version` for current versions.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
     "license": {
       "name": "Dual (AGPL3.0, Commercial License Available)"
     },
@@ -1800,6 +1800,56 @@
             "description": "CSV file containing Daemons",
             "content": {
               "text/csv": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/daemons/test-reachability": {
+      "post": {
+        "tags": [
+          "Daemons"
+        ],
+        "summary": "Test reachability of a daemon URL",
+        "description": "Performs a TCP connection test and optionally an HTTP health check\nto verify that a daemon URL is reachable from the server.",
+        "operationId": "test_daemon_reachability",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestReachabilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Reachability test result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TestReachabilityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
             }
           }
         },
@@ -5510,6 +5560,68 @@
         ]
       }
     },
+    "/api/v1/organizations/profile": {
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Update user profile with deferred marketing fields",
+        "operationId": "update_profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/referral-source": {
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Submit referral source (how did you hear about us)",
+        "operationId": "submit_referral_source",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferralSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Referral source recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations/{id}": {
       "put": {
         "tags": [
@@ -6184,6 +6296,21 @@
             }
           },
           {
+            "name": "exclude_categories",
+            "in": "query",
+            "description": "Exclude services belonging to these categories.",
+            "required": false,
+            "schema": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/components/schemas/ServiceCategory"
+              }
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "description": "Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.",
@@ -6440,6 +6567,21 @@
                   "$ref": "#/components/schemas/OrderDirection"
                 }
               ]
+            }
+          },
+          {
+            "name": "exclude_categories",
+            "in": "query",
+            "description": "Exclude services belonging to these categories.",
+            "required": false,
+            "schema": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/components/schemas/ServiceCategory"
+              }
             }
           },
           {
@@ -9462,12 +9604,12 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.14.16"
+            "example": "0.14.18"
           }
         },
         "example": {
           "api_version": 1,
-          "server_version": "0.14.16"
+          "server_version": "0.14.18"
         }
       },
       "ApiResponse": {
@@ -9541,14 +9683,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-03-09T04:32:54.934531Z",
-              "id": "40172fb4-3c5d-4544-a895-d6c4cf1f8dab",
+              "created_at": "2026-03-15T02:51:16.558682Z",
+              "id": "60297329-c818-42f1-9d0c-fa6553f1ebd1",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-03-09T04:32:54.934531Z"
+              "updated_at": "2026-03-15T02:51:16.558682Z"
             }
           },
           "error": {
@@ -10017,12 +10159,28 @@
                   "null"
                 ]
               },
+              "estimated_remaining_secs": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int32",
+                "minimum": 0
+              },
               "finished_at": {
                 "type": [
                   "string",
                   "null"
                 ],
                 "format": "date-time"
+              },
+              "hosts_discovered": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int32",
+                "minimum": 0
               },
               "network_id": {
                 "type": "string",
@@ -10348,14 +10506,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-03-09T04:32:54.914180Z",
-                      "id": "cd0af905-12a2-4a30-a615-d893aacb2077",
+                      "created_at": "2026-03-15T02:51:16.541100Z",
+                      "id": "4e07dacf-b0db-4273-9ac0-024b7a818b88",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-03-09T04:32:54.914180Z"
+                      "updated_at": "2026-03-15T02:51:16.541100Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10364,7 +10522,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Gatus",
+                  "service_definition": "Jaeger",
                   "source": {
                     "type": "Manual"
                   },
@@ -11066,14 +11224,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-03-09T04:32:54.928990Z",
-                  "id": "1e4fec50-466b-4fe3-83fa-2a8f298c3a8a",
+                  "created_at": "2026-03-15T02:51:16.553883Z",
+                  "id": "6e54d34c-a8aa-4709-8d0e-a156a0fccdbf",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-03-09T04:32:54.928990Z"
+                  "updated_at": "2026-03-15T02:51:16.553883Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11082,7 +11240,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Gatus",
+              "service_definition": "Jaeger",
               "source": {
                 "type": "Manual"
               },
@@ -11382,6 +11540,54 @@
               "name": "production",
               "organization_id": "550e8400-e29b-41d4-a716-446655440001",
               "updated_at": "2026-01-15T10:30:00Z"
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiResponse_TestReachabilityResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Response from a reachability test.",
+            "required": [
+              "reachable"
+            ],
+            "properties": {
+              "error": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Error message if not reachable"
+              },
+              "health": {
+                "type": [
+                  "boolean",
+                  "null"
+                ],
+                "description": "Health check result (only present when check_health was true)"
+              },
+              "reachable": {
+                "type": "boolean",
+                "description": "Whether the TCP connection succeeded"
+              }
             }
           },
           "error": {
@@ -11846,12 +12052,28 @@
                     "null"
                   ]
                 },
+                "estimated_remaining_secs": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "minimum": 0
+                },
                 "finished_at": {
                   "type": [
                     "string",
                     "null"
                   ],
                   "format": "date-time"
+                },
+                "hosts_discovered": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "minimum": 0
                 },
                 "network_id": {
                   "type": "string",
@@ -12281,14 +12503,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-03-09T04:32:54.914609Z",
-          "id": "8fb7d633-5b46-4b3d-b32d-977004b4bcd6",
+          "created_at": "2026-03-15T02:51:16.541306Z",
+          "id": "e1b068fd-bbcf-4dfa-bc23-ae1c84af9ce9",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-03-09T04:32:54.914609Z"
+          "updated_at": "2026-03-15T02:51:16.541306Z"
         }
       },
       "BindingBase": {
@@ -12795,7 +13017,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Gatus",
+              "service_definition": "Jaeger",
               "tags": [],
               "virtualization": null
             }
@@ -13565,6 +13787,7 @@
       "DiscoveryPhase": {
         "type": "string",
         "enum": [
+          "Queued",
           "Pending",
           "Starting",
           "Started",
@@ -13693,12 +13916,28 @@
               "null"
             ]
           },
+          "estimated_remaining_secs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
           "finished_at": {
             "type": [
               "string",
               "null"
             ],
             "format": "date-time"
+          },
+          "hosts_discovered": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
           },
           "network_id": {
             "type": "string",
@@ -14675,14 +14914,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-03-09T04:32:54.913585Z",
-                  "id": "d8cb3da5-00a4-477f-b7e0-2bbf85b3fc54",
+                  "created_at": "2026-03-15T02:51:16.540821Z",
+                  "id": "bf162e81-a3a6-4d49-85c8-b9cc35252bae",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-03-09T04:32:54.913585Z"
+                  "updated_at": "2026-03-15T02:51:16.540821Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14691,7 +14930,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Gatus",
+              "service_definition": "Jaeger",
               "source": {
                 "type": "Manual"
               },
@@ -15993,7 +16232,8 @@
           "FirstSnmpCredentialCreated",
           "InviteSent",
           "InviteAccepted",
-          "ProfileCompleted"
+          "ProfileCompleted",
+          "ReferralSourceCompleted"
         ]
       },
       "OnboardingStateResponse": {
@@ -16161,6 +16401,13 @@
             ],
             "format": "date-time",
             "readOnly": true
+          },
+          "use_case": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Use case selection (homelab, company, msp)"
           }
         }
       },
@@ -16186,7 +16433,7 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.14.16"
+            "example": "0.14.18"
           }
         },
         "example": {
@@ -16197,7 +16444,7 @@
             "offset": 0,
             "total_count": 142
           },
-          "server_version": "0.14.16"
+          "server_version": "0.14.18"
         }
       },
       "PaginatedApiResponse_DaemonResponse": {
@@ -16555,14 +16802,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-03-09T04:32:54.900650Z",
-                        "id": "bb2d5e3f-9087-4bd7-9603-ffcdffb4ec6d",
+                        "created_at": "2026-03-15T02:51:16.528474Z",
+                        "id": "833a9e0a-1398-49c2-84f3-286514637903",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-03-09T04:32:54.900650Z"
+                        "updated_at": "2026-03-15T02:51:16.528474Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16571,7 +16818,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Gatus",
+                    "service_definition": "Jaeger",
                     "source": {
                       "type": "Manual"
                     },
@@ -16648,14 +16895,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-03-09T04:32:54.927417Z",
-                    "id": "6d689337-d59f-4655-8b38-9e500e55efdb",
+                    "created_at": "2026-03-15T02:51:16.552762Z",
+                    "id": "9dc21ea5-2571-41f0-a167-7bbca7d43ac7",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-03-09T04:32:54.927417Z"
+                    "updated_at": "2026-03-15T02:51:16.552762Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16664,7 +16911,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Gatus",
+                "service_definition": "Jaeger",
                 "source": {
                   "type": "Manual"
                 },
@@ -17529,6 +17776,24 @@
           }
         }
       },
+      "ReferralSourceRequest": {
+        "type": "object",
+        "description": "Request to submit referral source",
+        "required": [
+          "referral_source"
+        ],
+        "properties": {
+          "referral_source": {
+            "type": "string"
+          },
+          "referral_source_other": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "RegisterRequest": {
         "type": "object",
         "description": "Registration request from client",
@@ -17751,14 +18016,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-03-09T04:32:54.914459Z",
-              "id": "ac526822-5310-4923-8741-75a0e32d0130",
+              "created_at": "2026-03-15T02:51:16.541239Z",
+              "id": "270d1e9b-4e0a-47ee-b79d-2217f69b6c36",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-03-09T04:32:54.914459Z"
+              "updated_at": "2026-03-15T02:51:16.541239Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17767,7 +18032,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Gatus",
+          "service_definition": "Jaeger",
           "source": {
             "type": "Manual"
           },
@@ -18128,13 +18393,17 @@
         "required": [
           "show_inspect_panel",
           "show_zoom_controls",
-          "show_export_button"
+          "show_export_button",
+          "show_minimap"
         ],
         "properties": {
           "show_export_button": {
             "type": "boolean"
           },
           "show_inspect_panel": {
+            "type": "boolean"
+          },
+          "show_minimap": {
             "type": "boolean"
           },
           "show_zoom_controls": {
@@ -18482,6 +18751,50 @@
           "updated_at"
         ]
       },
+      "TestReachabilityRequest": {
+        "type": "object",
+        "description": "Request to test reachability of a daemon URL.",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "check_health": {
+            "type": "boolean",
+            "description": "If true, also perform an HTTP GET to {url}/health after the TCP check"
+          },
+          "url": {
+            "type": "string",
+            "description": "Full URL of the daemon (e.g. \"https://daemon.example.com:60073\")"
+          }
+        }
+      },
+      "TestReachabilityResponse": {
+        "type": "object",
+        "description": "Response from a reachability test.",
+        "required": [
+          "reachable"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Error message if not reachable"
+          },
+          "health": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Health check result (only present when check_health was true)"
+          },
+          "reachable": {
+            "type": "boolean",
+            "description": "Whether the TCP connection succeeded"
+          }
+        }
+      },
       "Topology": {
         "allOf": [
           {
@@ -18769,6 +19082,9 @@
             "type": "string"
           },
           "no_fade_edges": {
+            "type": "boolean"
+          },
+          "show_minimap": {
             "type": "boolean"
           },
           "tag_filter": {

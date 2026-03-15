@@ -3,6 +3,7 @@ use crate::daemon::discovery::types::base::DiscoveryPhase;
 use crate::daemon::runtime::service::LOG_TARGET;
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::daemons::r#impl::api::DiscoveryUpdatePayload;
+use crate::server::daemons::service::DaemonService;
 use crate::server::discovery::r#impl::base::Discovery;
 use crate::server::discovery::r#impl::types::{DiscoveryType, RunType};
 use crate::server::networks::service::NetworkService;
@@ -14,7 +15,7 @@ use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation}
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
-use crate::server::shared::storage::traits::{Storable, Storage};
+use crate::server::shared::storage::traits::{Entity, Storable, Storage};
 use crate::server::shared::types::api::ApiError;
 use crate::server::snmp_credentials::service::SnmpCredentialService;
 use crate::server::tags::entity_tags::EntityTagService;
@@ -22,13 +23,17 @@ use anyhow::anyhow;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use chrono::Utc;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Weak},
+};
 use tokio::sync::{RwLock, broadcast};
 use tokio_cron_scheduler::{JobBuilder, JobScheduler};
 use uuid::Uuid;
 
 /// Server-side session management for discovery
 pub struct DiscoveryService {
+    self_ref: Weak<Self>,
     discovery_storage: Arc<GenericPostgresStorage<Discovery>>,
     sessions: RwLock<HashMap<Uuid, DiscoveryUpdatePayload>>, // session_id -> session state mapping
     daemon_sessions: RwLock<HashMap<Uuid, Vec<Uuid>>>,       // daemon_id -> session_id mapping
@@ -36,13 +41,15 @@ pub struct DiscoveryService {
     daemon_pull_cancellations: RwLock<HashMap<Uuid, (bool, Uuid)>>, // daemon_id -> (boolean, session_id) mapping for pull mode cancellations of current session on daemon
     session_last_updated: RwLock<HashMap<Uuid, chrono::DateTime<Utc>>>,
     update_tx: broadcast::Sender<DiscoveryUpdatePayload>,
-    scheduler: Option<Arc<RwLock<JobScheduler>>>,
+    scheduler: Option<Arc<JobScheduler>>,
     job_ids: RwLock<HashMap<Uuid, Uuid>>, // discovery_id -> scheduler job_id mapping
     event_bus: Arc<EventBus>,
     entity_tag_service: Arc<EntityTagService>,
     snmp_credential_service: Arc<SnmpCredentialService>,
     network_service: Arc<NetworkService>,
     organization_service: Arc<OrganizationService>,
+    // Lazy dependency (set after construction to break circular dependency)
+    daemon_service: std::sync::OnceLock<Arc<DaemonService>>,
 }
 
 impl EventBusService<Discovery> for DiscoveryService {
@@ -67,6 +74,144 @@ impl CrudService<Discovery> for DiscoveryService {
     fn entity_tag_service(&self) -> Option<&Arc<EntityTagService>> {
         Some(&self.entity_tag_service)
     }
+
+    async fn update(
+        &self,
+        entity: &mut Discovery,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Discovery, anyhow::Error> {
+        Self::validate_timezone(&entity.base.run_type)?;
+
+        let current = self
+            .get_by_id(&entity.id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Could not find discovery {}", entity))?;
+
+        // Preserve server-managed fields from current DB state
+        // (the API client may send stale values for these read-only fields)
+        if let RunType::Scheduled {
+            ref mut last_run, ..
+        } = entity.base.run_type
+            && let RunType::Scheduled {
+                last_run: current_last_run,
+                ..
+            } = &current.base.run_type
+        {
+            *last_run = *current_last_run;
+        }
+
+        // If it's a scheduled discovery and schedule or timezone has changed, need to reschedule
+        let schedule_changed = if let RunType::Scheduled {
+            cron_schedule: new_cron,
+            timezone: new_tz,
+            ..
+        } = &entity.base.run_type
+            && let RunType::Scheduled {
+                cron_schedule: current_cron,
+                timezone: current_tz,
+                ..
+            } = &current.base.run_type
+        {
+            current_cron != new_cron || current_tz != new_tz
+        } else {
+            false
+        };
+
+        // Detect enabled state transitions (disabled→enabled or enabled→disabled)
+        let enabled_changed = if let RunType::Scheduled {
+            enabled: new_enabled,
+            ..
+        } = &entity.base.run_type
+            && let RunType::Scheduled {
+                enabled: current_enabled,
+                ..
+            } = &current.base.run_type
+        {
+            current_enabled != new_enabled
+        } else {
+            false
+        };
+
+        let needs_reschedule = schedule_changed || enabled_changed;
+
+        let updated = if needs_reschedule
+            && matches!(entity.base.run_type, RunType::Scheduled { .. })
+        {
+            tracing::debug!(
+                discovery_id = %entity.id,
+                "Rescheduling discovery (schedule_changed={}, enabled_changed={})",
+                schedule_changed, enabled_changed
+            );
+
+            // Remove old schedule first
+            self.remove_scheduled_job(&entity.id).await;
+
+            // Update in DB
+            let mut updated = self.discovery_storage.update(entity).await?;
+
+            // Re-add cron job (schedule_discovery guards on !enabled, so disabling skips re-add)
+            if let Some(arc_self) = self.self_ref.upgrade()
+                && let Err(e) = Self::schedule_discovery(&arc_self, &updated).await
+            {
+                // Only disable if we were trying to enable/reschedule (not if already disabling)
+                if matches!(
+                    updated.base.run_type,
+                    RunType::Scheduled { enabled: true, .. }
+                ) {
+                    updated.disable();
+                    let disabled_discovery = self.discovery_storage.update(&mut updated).await?;
+
+                    tracing::error!(
+                        "Failed to reschedule discovery {}. Discovery updated but disabled. Error: {}",
+                        disabled_discovery.id,
+                        e
+                    );
+                }
+            }
+
+            updated
+        } else {
+            // For non-scheduled or no reschedule needed, just update
+            self.discovery_storage.update(entity).await?
+        };
+
+        // Update tags in junction table
+        if let Some(entity_tag_service) = self.entity_tag_service()
+            && let Some(org_id) = authentication.organization_id()
+            && let Some(tags) = updated.get_tags()
+        {
+            entity_tag_service
+                .set_tags(
+                    updated.id(),
+                    EntityDiscriminants::Discovery,
+                    tags.clone(),
+                    org_id,
+                )
+                .await?;
+        }
+
+        let trigger_stale = updated.triggers_staleness(Some(current));
+        let suppress_logs = self.suppress_logs(None, None);
+
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: updated.id(),
+                network_id: self.get_network_id(&updated),
+                organization_id: self.get_organization_id(&updated),
+                entity_type: updated.clone().into(),
+                operation: EntityOperation::Updated,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale,
+                    "suppress_logs": suppress_logs
+                }),
+                authentication,
+            })
+            .await?;
+
+        Ok(updated)
+    }
 }
 
 impl DiscoveryService {
@@ -80,8 +225,10 @@ impl DiscoveryService {
     ) -> Result<Arc<Self>> {
         let (tx, _rx) = broadcast::channel(100); // Buffer 100 messages
         let scheduler = JobScheduler::new().await?;
+        let scheduler = Some(Arc::new(scheduler));
 
-        Ok(Arc::new(Self {
+        Ok(Arc::new_cyclic(|weak| Self {
+            self_ref: weak.clone(),
             discovery_storage,
             sessions: RwLock::new(HashMap::new()),
             daemon_sessions: RwLock::new(HashMap::new()),
@@ -89,14 +236,25 @@ impl DiscoveryService {
             daemon_pull_cancellations: RwLock::new(HashMap::new()),
             session_last_updated: RwLock::new(HashMap::new()),
             update_tx: tx,
-            scheduler: Some(Arc::new(RwLock::new(scheduler))),
+            scheduler,
             job_ids: RwLock::new(HashMap::new()),
             event_bus,
             entity_tag_service,
             snmp_credential_service,
             network_service,
             organization_service,
+            daemon_service: std::sync::OnceLock::new(),
         }))
+    }
+
+    /// Set the daemon service dependency after construction.
+    /// This breaks the circular dependency: DaemonService holds Arc<DiscoveryService>,
+    /// and DiscoveryService holds OnceLock<Arc<DaemonService>>.
+    pub fn set_daemon_service(
+        &self,
+        service: Arc<DaemonService>,
+    ) -> Result<(), Arc<DaemonService>> {
+        self.daemon_service.set(service)
     }
 
     /// Expose stream to handler
@@ -162,8 +320,8 @@ impl DiscoveryService {
         daemon_pull_cancellations.remove(daemon_id);
     }
 
-    /// Check if daemon has an active (non-terminal, non-pending) discovery session.
-    /// This is used to prevent dispatching new work while a session is in progress.
+    /// Check if daemon has an active (dispatched, non-terminal) discovery session.
+    /// Both Queued and Pending are excluded — neither has been dispatched yet.
     pub async fn has_active_session_for_daemon(&self, daemon_id: &Uuid) -> bool {
         let daemon_session_ids = self.daemon_sessions.read().await;
         let session_ids = daemon_session_ids
@@ -176,7 +334,11 @@ impl DiscoveryService {
         session_ids.iter().any(|session_id| {
             all_sessions
                 .get(session_id)
-                .map(|s| !s.phase.is_terminal() && s.phase != DiscoveryPhase::Pending)
+                .map(|s| {
+                    !s.phase.is_terminal()
+                        && s.phase != DiscoveryPhase::Queued
+                        && s.phase != DiscoveryPhase::Pending
+                })
                 .unwrap_or(false)
         })
     }
@@ -293,113 +455,6 @@ impl DiscoveryService {
         Ok(created_discovery)
     }
 
-    /// Update discovery
-    pub async fn update_discovery(
-        self: &Arc<Self>,
-        mut discovery: Discovery,
-        authentication: AuthenticatedEntity,
-    ) -> Result<Discovery, Error> {
-        Self::validate_timezone(&discovery.base.run_type)?;
-
-        let current = self
-            .get_by_id(&discovery.id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Could not find discovery {}", discovery))?;
-
-        // If it's a scheduled discovery and schedule or timezone has changed, need to reschedule
-        let schedule_changed = if let RunType::Scheduled {
-            cron_schedule: new_cron,
-            timezone: new_tz,
-            ..
-        } = &discovery.base.run_type
-            && let RunType::Scheduled {
-                cron_schedule: current_cron,
-                timezone: current_tz,
-                ..
-            } = &current.base.run_type
-        {
-            current_cron != new_cron || current_tz != new_tz
-        } else {
-            false
-        };
-
-        let updated = if schedule_changed
-            && matches!(discovery.base.run_type, RunType::Scheduled { .. })
-        {
-            // Remove old schedule first using the actual job_id
-            if let Some(scheduler) = &self.scheduler
-                && let Some(job_id) = self.job_ids.read().await.get(&discovery.id).copied()
-            {
-                if let Err(e) = scheduler.write().await.remove(&job_id).await {
-                    tracing::warn!(
-                        discovery_id = %discovery.id,
-                        job_id = %job_id,
-                        error = ?e,
-                        "Failed to remove old scheduled job"
-                    );
-                } else {
-                    self.job_ids.write().await.remove(&discovery.id);
-                }
-            }
-
-            // Update in DB first
-            let mut updated = self.discovery_storage.update(&mut discovery).await?;
-
-            // Try to reschedule with new cron expression
-            if let Err(e) = Self::schedule_discovery(self, &updated).await {
-                // Disable and save again
-                updated.disable();
-                let disabled_discovery = self.discovery_storage.update(&mut updated).await?;
-
-                tracing::error!(
-                    "Failed to reschedule discovery {}. Discovery updated but disabled. Error: {}",
-                    disabled_discovery.id,
-                    e
-                );
-            }
-
-            updated
-        } else {
-            // For non-scheduled, just update
-            self.discovery_storage.update(&mut discovery).await?
-        };
-
-        // Update tags in junction table
-        if let Some(entity_tag_service) = self.entity_tag_service()
-            && let Some(org_id) = authentication.organization_id()
-        {
-            entity_tag_service
-                .set_tags(
-                    updated.id,
-                    EntityDiscriminants::Discovery,
-                    discovery.base.tags,
-                    org_id,
-                )
-                .await?;
-        }
-
-        let trigger_stale = updated.triggers_staleness(Some(current));
-
-        self.event_bus()
-            .publish_entity(EntityEvent {
-                id: Uuid::new_v4(),
-                entity_id: updated.id(),
-                network_id: self.get_network_id(&updated),
-                organization_id: self.get_organization_id(&updated),
-                entity_type: updated.clone().into(),
-                operation: EntityOperation::Updated,
-                timestamp: Utc::now(),
-                metadata: serde_json::json!({
-                    "trigger_stale": trigger_stale
-                }),
-
-                authentication,
-            })
-            .await?;
-
-        Ok(updated)
-    }
-
     /// Delete group
     pub async fn delete_discovery(
         self: &Arc<Self>,
@@ -411,22 +466,9 @@ impl DiscoveryService {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Discovery not found"))?;
 
-        // If it's scheduled, remove from scheduler first using the actual job_id
-        if matches!(discovery.base.run_type, RunType::Scheduled { .. })
-            && let Some(scheduler) = &self.scheduler
-        {
-            if let Some(job_id) = self.job_ids.read().await.get(id).copied() {
-                if let Err(e) = scheduler.write().await.remove(&job_id).await {
-                    tracing::warn!(
-                        discovery_id = %id,
-                        job_id = %job_id,
-                        error = ?e,
-                        "Failed to remove scheduled job during deletion"
-                    );
-                } else {
-                    self.job_ids.write().await.remove(id);
-                }
-            }
+        // If it's scheduled, remove from scheduler first (with timeout to prevent deadlock)
+        if matches!(discovery.base.run_type, RunType::Scheduled { .. }) {
+            self.remove_scheduled_job(id).await;
             tracing::debug!("Removed scheduled job for discovery {}", id);
         }
 
@@ -491,7 +533,7 @@ impl DiscoveryService {
             }
         }
 
-        scheduler.write().await.start().await?;
+        scheduler.start().await?;
 
         if failed_count == 0 {
             tracing::info!(target: LOG_TARGET, "Discovery scheduler started with {} jobs", count);
@@ -555,11 +597,66 @@ impl DiscoveryService {
             .with_cron_job_type()
             .with_schedule(cron_schedule.as_str())?
             .with_run_async(Box::new(move |_uuid, _lock| {
-                let mut discovery = discovery.clone();
+                let discovery = discovery.clone();
                 let storage = storage.clone();
                 let service = service_clone.clone();
 
                 Box::pin(async move {
+                    // Check if discovery is still enabled before running — cron jobs
+                    // may linger after failed removals
+                    let fresh = match storage.get_by_id(&discovery_id).await {
+                        Ok(Some(fresh))
+                            if matches!(
+                                fresh.base.run_type,
+                                RunType::Scheduled { enabled: true, .. }
+                            ) =>
+                        {
+                            fresh
+                        }
+                        _ => {
+                            tracing::debug!("Skipping disabled/deleted discovery {}", discovery_id);
+                            return;
+                        }
+                    };
+
+                    // Check if daemon is reachable before starting session
+                    if let Some(daemon_service) = service.daemon_service.get() {
+                        match daemon_service
+                            .storage()
+                            .get_by_id(&fresh.base.daemon_id)
+                            .await
+                        {
+                            Ok(Some(daemon))
+                                if daemon.base.is_unreachable || daemon.base.standby =>
+                            {
+                                tracing::debug!(
+                                    discovery_id = %discovery_id,
+                                    daemon_id = %fresh.base.daemon_id,
+                                    is_unreachable = daemon.base.is_unreachable,
+                                    standby = daemon.base.standby,
+                                    "Skipping scheduled discovery — daemon is not available"
+                                );
+                                return;
+                            }
+                            Ok(None) => {
+                                tracing::debug!(
+                                    discovery_id = %discovery_id,
+                                    daemon_id = %fresh.base.daemon_id,
+                                    "Skipping scheduled discovery — daemon not found"
+                                );
+                                return;
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    discovery_id = %discovery_id,
+                                    error = %e,
+                                    "Failed to check daemon status, proceeding with discovery"
+                                );
+                            }
+                            _ => {} // daemon is reachable, proceed
+                        }
+                    }
+
                     tracing::info!("Running scheduled discovery {}", &discovery.id);
 
                     match service
@@ -567,15 +664,27 @@ impl DiscoveryService {
                         .await
                     {
                         Ok(_) => {
-                            // Update last_run
-                            if let RunType::Scheduled {
-                                last_run: mut _last_run,
-                                ..
-                            } = discovery.base.run_type
-                            {
-                                _last_run = Some(Utc::now());
-                                if let Err(e) = storage.update(&mut discovery).await {
-                                    tracing::error!("Failed to update schedule times: {}", e);
+                            // Reload fresh discovery from DB to avoid overwriting fields
+                            match storage.get_by_id(&discovery_id).await {
+                                Ok(Some(mut fresh)) => {
+                                    if let RunType::Scheduled {
+                                        ref mut last_run, ..
+                                    } = fresh.base.run_type
+                                    {
+                                        *last_run = Some(Utc::now());
+                                        if let Err(e) = storage.update(&mut fresh).await {
+                                            tracing::error!(
+                                                "Failed to update schedule times: {}",
+                                                e
+                                            );
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    tracing::warn!(
+                                        "Failed to reload discovery {} for last_run update",
+                                        discovery_id
+                                    );
                                 }
                             };
                         }
@@ -587,7 +696,21 @@ impl DiscoveryService {
             }))
             .build()?;
 
-        let job_id = scheduler.write().await.add(job).await?;
+        let job_id = tokio::time::timeout(std::time::Duration::from_secs(5), scheduler.add(job))
+            .await
+            .map_err(|_| {
+                anyhow!(
+                    "Timed out adding scheduled job for discovery {}",
+                    discovery_id
+                )
+            })?
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to add scheduled job for discovery {}: {}",
+                    discovery_id,
+                    e
+                )
+            })?;
 
         // Store the mapping so we can remove the job later when the schedule is updated
         service.job_ids.write().await.insert(discovery_id, job_id);
@@ -643,18 +766,12 @@ impl DiscoveryService {
             discovery.base.discovery_type
         };
 
-        let session_payload = DiscoveryUpdatePayload::new(
+        let mut session_payload = DiscoveryUpdatePayload::new(
             session_id,
             discovery.base.daemon_id,
             discovery.base.network_id,
             discovery_type,
         );
-
-        // Add to session map
-        self.sessions
-            .write()
-            .await
-            .insert(session_id, session_payload.clone());
 
         // Track discovery -> session mapping
         self.discovery_sessions
@@ -674,6 +791,21 @@ impl DiscoveryService {
             false
         };
 
+        // Promote Queued → Pending if daemon has no other sessions
+        if !daemon_is_running_discovery {
+            session_payload.phase = DiscoveryPhase::Pending;
+            self.session_last_updated
+                .write()
+                .await
+                .insert(session_id, Utc::now());
+        }
+
+        // Add to session map
+        self.sessions
+            .write()
+            .await
+            .insert(session_id, session_payload.clone());
+
         // Add session to queue
         self.daemon_sessions
             .write()
@@ -682,7 +814,7 @@ impl DiscoveryService {
             .or_default()
             .push(session_id);
 
-        // Publish Started event if no other sessions are running for daemon
+        // Publish event if no other sessions are running for daemon
         // DaemonService subscribes to this event and sends the request to the daemon.
         if !daemon_is_running_discovery {
             self.event_bus()
@@ -755,6 +887,32 @@ impl DiscoveryService {
             "Updated session",
         );
 
+        // Publish onboarding milestone BEFORE SSE update so it's
+        // in the DB when the SSE-triggered org refetch arrives
+        if update.phase == DiscoveryPhase::Complete
+            && matches!(update.discovery_type, DiscoveryType::Network { .. })
+            && let Ok(Some(network)) = self.network_service.get_by_id(&network_id).await
+            && let Ok(Some(org)) = self
+                .organization_service
+                .get_by_id(&network.base.organization_id)
+                .await
+            && org.not_onboarded(&OnboardingOperation::FirstDiscoveryCompleted)
+        {
+            let _ = self
+                .event_bus
+                .publish_onboarding(OnboardingEvent::new(
+                    Uuid::new_v4(),
+                    org.id,
+                    OnboardingOperation::FirstDiscoveryCompleted,
+                    Utc::now(),
+                    AuthenticatedEntity::System,
+                    serde_json::json!({
+                        "discovery_type": update.discovery_type.to_string(),
+                    }),
+                ))
+                .await;
+        }
+
         let _ = self.update_tx.send(update.clone());
 
         *session = update.clone();
@@ -763,31 +921,6 @@ impl DiscoveryService {
             self.event_bus()
                 .publish_discovery(session.into_discovery_event())
                 .await?;
-
-            // Emit FirstDiscoveryCompleted telemetry if this is the org's first completed discovery
-            if session.phase == DiscoveryPhase::Complete
-                && matches!(session.discovery_type, DiscoveryType::Network { .. })
-                && let Ok(Some(network)) = self.network_service.get_by_id(&network_id).await
-                && let Ok(Some(org)) = self
-                    .organization_service
-                    .get_by_id(&network.base.organization_id)
-                    .await
-                && org.not_onboarded(&OnboardingOperation::FirstDiscoveryCompleted)
-            {
-                let _ = self
-                    .event_bus
-                    .publish_onboarding(OnboardingEvent::new(
-                        Uuid::new_v4(),
-                        org.id,
-                        OnboardingOperation::FirstDiscoveryCompleted,
-                        Utc::now(),
-                        AuthenticatedEntity::System,
-                        serde_json::json!({
-                            "discovery_type": session.discovery_type.to_string(),
-                        }),
-                    ))
-                    .await;
-            }
 
             // If user cancelled session, but it finished before we could send cancellation, remove key so it doesn't cancel upcoming sessions
             self.pull_cancellation_for_daemon(&session.daemon_id).await;
@@ -846,12 +979,13 @@ impl DiscoveryService {
             {
                 daemon_sessions.retain(|s| *s != session.session_id);
 
-                // Get info about next session if it exists
+                // Promote next Queued session to Pending and start its stall clock
                 daemon_sessions
                     .first()
                     .and_then(|next_session_id| sessions.get_mut(next_session_id))
                     .map(|next_session| {
                         next_session.phase = DiscoveryPhase::Pending;
+                        last_updated.insert(next_session.session_id, Utc::now());
                         (next_session.discovery_type.clone(), next_session.session_id)
                     })
             } else {
@@ -867,14 +1001,15 @@ impl DiscoveryService {
                 .await
                 .retain(|_, sid| *sid != update.session_id);
 
-            // Drop the sessions lock before sending the request
             drop(sessions);
+            drop(last_updated);
 
             // Publish event which will trigger notifying any daemons in ServerPoll to start session
             // If daemon is daemon_poll mode, it will request next session on its next poll
             if let Some((discovery_type, session_id)) = next_session_info {
-                let started_payload =
+                let mut started_payload =
                     DiscoveryUpdatePayload::new(session_id, daemon_id, network_id, discovery_type);
+                started_payload.phase = DiscoveryPhase::Pending;
 
                 self.event_bus()
                     .publish_discovery(started_payload.into_discovery_event())
@@ -912,14 +1047,18 @@ impl DiscoveryService {
             started_at: session.started_at,
             finished_at: Some(Utc::now()),
             discovery_type: session.discovery_type,
+            hosts_discovered: None,
+            estimated_remaining_secs: None,
         };
 
         // Handle based on current phase
         match phase {
-            // Pending sessions: just remove from queue
-            DiscoveryPhase::Pending => {
+            // Queued/Pending sessions: just remove from queue
+            DiscoveryPhase::Queued | DiscoveryPhase::Pending => {
                 let mut sessions = self.sessions.write().await;
                 let mut daemon_sessions = self.daemon_sessions.write().await;
+
+                let was_pending = phase == DiscoveryPhase::Pending;
 
                 // Remove from sessions map
                 sessions.remove(&session_id);
@@ -927,6 +1066,18 @@ impl DiscoveryService {
                 // Remove from daemon queue
                 if let Some(queue) = daemon_sessions.get_mut(&daemon_id) {
                     queue.retain(|id| *id != session_id);
+
+                    // If we removed the Pending session, promote next Queued → Pending
+                    if was_pending
+                        && let Some(next_session) =
+                            queue.first().and_then(|next_id| sessions.get_mut(next_id))
+                    {
+                        next_session.phase = DiscoveryPhase::Pending;
+                        self.session_last_updated
+                            .write()
+                            .await
+                            .insert(next_session.session_id, Utc::now());
+                    }
                 }
 
                 // Remove from discovery_sessions map
@@ -941,7 +1092,7 @@ impl DiscoveryService {
                 // Broadcast cancellation update so frontend knows
                 let _ = self.update_tx.send(cancelled_update);
 
-                tracing::info!("Cancelled pending session {} from queue", session_id);
+                tracing::info!("Cancelled {} session {} from queue", phase, session_id);
                 Ok(())
             }
 
@@ -1032,8 +1183,8 @@ impl DiscoveryService {
             sessions
                 .iter()
                 .filter_map(|(session_id, session)| {
-                    // Skip terminal states
-                    if session.phase.is_terminal() {
+                    // Only check phases that are subject to stall cleanup
+                    if !session.phase.can_be_cleaned_up() {
                         return None;
                     }
 
@@ -1042,12 +1193,8 @@ impl DiscoveryService {
                         now.signed_duration_since(*last_update_time) > stall_threshold
                     } else if let Some(started_at) = session.started_at {
                         now.signed_duration_since(started_at) > stall_threshold
-                    } else if session.phase == DiscoveryPhase::Pending {
-                        // Pending sessions with no timestamps are normal — just created,
-                        // waiting for dispatch. Not stalled.
-                        false
                     } else {
-                        // Non-Pending session with no tracking timestamps at all —
+                        // Session with no tracking timestamps at all —
                         // it was dispatched but never reported back. Treat as stalled.
                         tracing::warn!(
                             session_id = %session_id,
@@ -1094,6 +1241,8 @@ impl DiscoveryService {
                 started_at: session.started_at,
                 finished_at: Some(Utc::now()),
                 discovery_type: session.discovery_type.clone(),
+                hosts_discovered: None,
+                estimated_remaining_secs: None,
             };
 
             if let Err(e) = self
@@ -1151,9 +1300,18 @@ impl DiscoveryService {
                 );
                 session.finished_at = Some(now);
 
-                // Remove from daemon sessions queue
+                // Remove from daemon sessions queue and promote next Queued → Pending
                 if let Some(queue) = daemon_sessions.get_mut(&daemon_id) {
                     queue.retain(|id| *id != session_id);
+
+                    // Promote next Queued session to Pending
+                    if let Some(next_session) =
+                        queue.first().and_then(|next_id| sessions.get_mut(next_id))
+                        && next_session.phase == DiscoveryPhase::Queued
+                    {
+                        next_session.phase = DiscoveryPhase::Pending;
+                        last_updated.insert(next_session.session_id, Utc::now());
+                    }
                 }
 
                 // Remove from discovery_sessions map
@@ -1219,6 +1377,45 @@ impl DiscoveryService {
 
         if stalled_count > 0 {
             tracing::info!("Cleaned up {} stalled discovery sessions", stalled_count);
+        }
+    }
+
+    /// Remove a scheduled job using fire-and-forget to prevent deadlocks.
+    /// The scheduler's `remove()` can hang indefinitely if the background task is blocked.
+    /// We clean up the job_id mapping immediately and spawn the actual removal as a
+    /// background task so it never blocks the critical path.
+    async fn remove_scheduled_job(&self, discovery_id: &Uuid) {
+        // Read the job_id first, then drop the read lock before acquiring write lock.
+        // Holding a RwLock read guard while awaiting .write() deadlocks.
+        let job_id = self.job_ids.read().await.get(discovery_id).copied();
+        if let Some(scheduler) = &self.scheduler
+            && let Some(job_id) = job_id
+        {
+            // Always clean up the mapping immediately
+            self.job_ids.write().await.remove(discovery_id);
+
+            // Fire-and-forget the actual scheduler removal — it may hang
+            // but won't block the current task
+            let scheduler = Arc::clone(scheduler);
+            tokio::spawn(async move {
+                match tokio::time::timeout(
+                    std::time::Duration::from_secs(5),
+                    scheduler.remove(&job_id),
+                )
+                .await
+                {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => tracing::warn!(
+                        job_id = %job_id,
+                        error = ?e,
+                        "Failed to remove scheduled job"
+                    ),
+                    Err(_) => tracing::warn!(
+                        job_id = %job_id,
+                        "Timed out removing scheduled job"
+                    ),
+                }
+            });
         }
     }
 }

@@ -3781,6 +3781,8 @@ fn generate_discoveries(
                         error: None,
                         started_at: Some(three_weeks_ago),
                         finished_at: Some(three_weeks_ago + Duration::minutes(12)),
+                        hosts_discovered: None,
+                        estimated_remaining_secs: None,
                     },
                 },
                 name: "HQ Scan - Historical 1".to_string(),
@@ -3824,6 +3826,8 @@ fn generate_discoveries(
                         error: None,
                         started_at: Some(one_week_ago),
                         finished_at: Some(one_week_ago + Duration::minutes(8)),
+                        hosts_discovered: None,
+                        estimated_remaining_secs: None,
                     },
                 },
                 name: "HQ Scan - Historical 2".to_string(),
@@ -3870,6 +3874,8 @@ fn generate_discoveries(
                         error: Some("Connection timeout: daemon lost connectivity to subnet 172.16.20.0/24 during scan".to_string()),
                         started_at: Some(two_weeks_ago),
                         finished_at: Some(two_weeks_ago + Duration::minutes(3)),
+                        hosts_discovered: None,
+                        estimated_remaining_secs: None,
                     },
                 },
                 name: "DC Scan - Historical (Failed)".to_string(),
@@ -3900,27 +3906,55 @@ fn generate_shares(
     let mut shares = Vec::new();
 
     if let (Some(network), Some(topology)) = (hq_network, hq_topology) {
-        shares.push(Share {
-            // Fixed UUID for demo share — used in onboarding embed
-            id: Uuid::parse_str("a1b2c3d4-e5f6-7890-abcd-ef1234567890").unwrap(),
-            created_at: now,
-            updated_at: now,
-            base: ShareBase {
-                topology_id: topology.id,
-                network_id: network.id,
-                created_by: user_id,
-                name: "HQ Public View".to_string(),
-                is_enabled: true,
-                expires_at: None,
-                password_hash: None,
-                allowed_domains: None,
-                options: ShareOptions {
-                    show_inspect_panel: false,
-                    show_zoom_controls: false,
-                    show_export_button: false,
+        if let Ok(id) = Uuid::parse_str("a1b2c3d4-e5f6-7890-abcd-ef1234567890") {
+            shares.push(Share {
+                // Fixed UUID for demo share — used in onboarding embed
+                id,
+                created_at: now,
+                updated_at: now,
+                base: ShareBase {
+                    topology_id: topology.id,
+                    network_id: network.id,
+                    created_by: user_id,
+                    name: "HQ Public View".to_string(),
+                    is_enabled: true,
+                    expires_at: None,
+                    password_hash: None,
+                    allowed_domains: None,
+                    options: ShareOptions {
+                        show_inspect_panel: false,
+                        show_zoom_controls: false,
+                        show_export_button: false,
+                        show_minimap: false,
+                    },
                 },
-            },
-        });
+            });
+        }
+
+        if let Ok(id) = Uuid::parse_str("b1b2c3d4-e5f6-7890-abcd-ef1234567890") {
+            shares.push(Share {
+                // Fixed UUID for demo share — used on website
+                id,
+                created_at: now,
+                updated_at: now,
+                base: ShareBase {
+                    topology_id: topology.id,
+                    network_id: network.id,
+                    created_by: user_id,
+                    name: "HQ Public View - With Inspect Panel".to_string(),
+                    is_enabled: true,
+                    expires_at: None,
+                    password_hash: None,
+                    allowed_domains: None,
+                    options: ShareOptions {
+                        show_inspect_panel: true,
+                        show_zoom_controls: false,
+                        show_export_button: false,
+                        show_minimap: false,
+                    },
+                },
+            });
+        }
     }
 
     shares

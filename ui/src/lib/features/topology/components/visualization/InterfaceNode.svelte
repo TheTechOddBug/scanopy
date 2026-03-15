@@ -4,6 +4,7 @@
 	import {
 		selectedEdge as globalSelectedEdge,
 		selectedNode as globalSelectedNode,
+		selectedNodes as globalSelectedNodes,
 		selectedTopologyId,
 		topologyOptions,
 		useTopologiesQuery
@@ -18,9 +19,12 @@
 	import {
 		connectedNodeIds,
 		isExporting,
+		newNodeIds,
 		tagHiddenNodeIds,
 		tagHiddenServiceIds,
+		searchHiddenNodeIds,
 		hoveredTag,
+		hoveredServiceCategory,
 		UNTAGGED_SENTINEL
 	} from '../../interactions';
 	import { createColorHelper } from '$lib/shared/utils/styling';
@@ -47,10 +51,34 @@
 		hiddenServices = value;
 	});
 
+	// Subscribe to search filter store for reactivity
+	let searchHiddenNodes = $state(get(searchHiddenNodeIds));
+	searchHiddenNodeIds.subscribe((value) => {
+		searchHiddenNodes = value;
+	});
+
+	// Subscribe to new node highlight store
+	let highlightedNewNodes = $state(get(newNodeIds));
+	newNodeIds.subscribe((value) => {
+		highlightedNewNodes = value;
+	});
+
+	// Subscribe to multi-select store
+	let multiSelectedNodes = $state(get(globalSelectedNodes));
+	globalSelectedNodes.subscribe((value) => {
+		multiSelectedNodes = value;
+	});
+
 	// Subscribe to tag hover state
 	let currentHoveredTag = $state(get(hoveredTag));
 	hoveredTag.subscribe((value) => {
 		currentHoveredTag = value;
+	});
+
+	// Subscribe to service category hover state
+	let currentHoveredCategory = $state(get(hoveredServiceCategory));
+	hoveredServiceCategory.subscribe((value) => {
+		currentHoveredCategory = value;
 	});
 
 	// Try to get topology from context (for share/embed pages), fallback to TanStack query
@@ -138,7 +166,12 @@
 			: null
 	);
 
-	let isNodeSelected = $derived(selectedNode?.id === nodeRenderData?.interface_id);
+	let isNewNode = $derived(nodeRenderData ? highlightedNewNodes.has(id) : false);
+
+	let isNodeSelected = $derived(
+		selectedNode?.id === nodeRenderData?.interface_id ||
+			multiSelectedNodes.some((n) => n.id === nodeRenderData?.interface_id)
+	);
 
 	// Calculate if this node should fade out when another node is selected or hidden by tag filter
 	let shouldFadeOut = $derived.by(() => {
@@ -149,8 +182,13 @@
 			return true;
 		}
 
+		// Search filter: fade if this node is hidden by search
+		if (nodeRenderData && searchHiddenNodes.has(nodeRenderData.interface_id)) {
+			return true;
+		}
+
 		// Selection-based fading
-		if (!selectedNode && !selectedEdge) return false;
+		if (!selectedNode && !selectedEdge && multiSelectedNodes.length < 2) return false;
 		if (!nodeRenderData) return false;
 
 		// Check if this node is in the connected set
@@ -161,6 +199,7 @@
 
 	const hostColorHelper = entities.getColorHelper('Host');
 	const virtualizationColorHelper = concepts.getColorHelper('Virtualization');
+	const discoveryColorHelper = entities.getColorHelper('Discovery');
 
 	// Check if this host should be highlighted by tag hover
 	let tagHoverRingStyle = $derived.by(() => {
@@ -171,6 +210,35 @@
 		if (!hasTag) return '';
 		const colorHelper = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
 		return `box-shadow: 0 0 0 3px ${colorHelper.rgb};`;
+	});
+
+	// Check if any service in this node matches the hovered tag/category — for card shadow
+	let serviceHoverShadowStyle = $derived.by(() => {
+		if (!nodeRenderData?.showServices) return '';
+		const services = nodeRenderData.services;
+		if (currentHoveredTag && currentHoveredTag.entityType === 'service') {
+			const { tagId, color } = currentHoveredTag;
+			for (const service of services) {
+				const isUntagged = service.tags.length === 0;
+				const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : service.tags.includes(tagId);
+				if (hasTag) {
+					const colorHelper = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
+					return `--pulse-color: ${colorHelper.rgb};`;
+				}
+			}
+		}
+		if (currentHoveredCategory) {
+			for (const service of services) {
+				const serviceCategory = serviceDefinitions.getCategory(service.service_definition);
+				if (serviceCategory === currentHoveredCategory.category) {
+					const colorHelper = createColorHelper(
+						currentHoveredCategory.color as Parameters<typeof createColorHelper>[0]
+					);
+					return `--pulse-color: ${colorHelper.rgb};`;
+				}
+			}
+		}
+		return '';
 	});
 
 	let cardClass = $derived(
@@ -199,8 +267,8 @@
 
 {#if nodeRenderData}
 	<div
-		class={cardClass}
-		style={`width: ${effectiveWidth}px; height: ${effectiveHeight}px; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out, box-shadow 0.15s ease-in-out; ${tagHoverRingStyle}`}
+		class={`${cardClass} ${isNewNode ? 'animate-pulse-highlight' : ''} ${serviceHoverShadowStyle ? 'animate-pulse-highlight-once' : ''}`}
+		style={`width: ${effectiveWidth}px; height: ${effectiveHeight}px; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out, box-shadow 0.15s ease-in-out; ${isNewNode ? `--pulse-color: ${discoveryColorHelper.rgb};` : ''} ${serviceHoverShadowStyle} ${tagHoverRingStyle}`}
 	>
 		<!-- Rest of component stays the same -->
 		<!-- Header section with gradient transition to body -->
@@ -227,7 +295,7 @@
 				>
 					{#each nodeRenderData.services as service (service.id)}
 						{@const ServiceIcon = serviceDefinitions.getIconComponent(service.service_definition)}
-						{@const serviceTagUnderline = (() => {
+						{@const serviceTagHighlight = (() => {
 							if (!currentHoveredTag || currentHoveredTag.entityType !== 'service') return '';
 							const { tagId, color } = currentHoveredTag;
 							const isUntagged = service.tags.length === 0;
@@ -237,7 +305,16 @@
 							const colorHelper = createColorHelper(
 								color as Parameters<typeof createColorHelper>[0]
 							);
-							return `text-decoration: underline; text-decoration-color: ${colorHelper.rgb}; text-underline-offset: 2px;`;
+							return `color: ${colorHelper.rgb}; --text-pulse-color: ${colorHelper.rgb};`;
+						})()}
+						{@const serviceCategoryHighlight = (() => {
+							if (!currentHoveredCategory) return '';
+							const serviceCategory = serviceDefinitions.getCategory(service.service_definition);
+							if (serviceCategory !== currentHoveredCategory.category) return '';
+							const colorHelper = createColorHelper(
+								currentHoveredCategory.color as Parameters<typeof createColorHelper>[0]
+							);
+							return `color: ${colorHelper.rgb}; --text-pulse-color: ${colorHelper.rgb};`;
 						})()}
 						<div
 							class="flex flex-1 flex-col items-center justify-center"
@@ -249,7 +326,13 @@
 								title={service.name}
 							>
 								<ServiceIcon class="h-5 w-5 flex-shrink-0 {hostColorHelper.icon}" />
-								<span class="text-m text-secondary truncate" style={serviceTagUnderline}>
+								<span
+									class="text-m text-secondary truncate {serviceTagHighlight ||
+									serviceCategoryHighlight
+										? 'animate-text-pulse-highlight'
+										: ''}"
+									style="transition: color 0.15s; {serviceTagHighlight || serviceCategoryHighlight}"
+								>
 									{service.name}
 								</span>
 							</div>

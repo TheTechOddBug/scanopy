@@ -4,7 +4,6 @@
 	import { required, max } from '$lib/shared/components/forms/validators';
 	import { Info, Palette, ArrowRight } from 'lucide-svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
-	import SectionPanel from '$lib/shared/components/layout/SectionPanel.svelte';
 	import { createEmptyGroupFormData } from '../../queries';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import type { Group, EdgeStyle } from '../../types/base';
@@ -48,7 +47,9 @@
 		groups_noBindingsYet,
 		groups_selectBinding,
 		groups_serviceBindings,
-		groups_serviceBindingsHelp
+		groups_serviceBindingsHelp,
+		groups_serviceBindingsInfoTitle,
+		groups_serviceBindingsInfoBody
 	} from '$lib/paraglide/messages';
 
 	interface Props {
@@ -401,11 +402,11 @@
 			{#if activeTab === 'bindings'}
 				<div class="space-y-4 p-6">
 					<InlineInfo
-						title="Service bindings describe how services communicate across your network."
-						body="A binding is a service on a specific host, interface, and port. By ordering bindings, you define the path requests take — which service sends them and which service receives them. For Request Path groups, bindings are connected in sequence. For Hub and Spoke, the first binding is the central service."
+						title={groups_serviceBindingsInfoTitle()}
+						body={groups_serviceBindingsInfoBody()}
 						dismissableKey="group-bindings-info"
 					/>
-					<SectionPanel>
+					<div class="card">
 						<ListManager
 							label={groups_serviceBindings()}
 							helpText={groups_serviceBindingsHelp()}
@@ -425,7 +426,7 @@
 							onMoveUp={(index) => handleServiceBindingsReorder(index, index - 1)}
 							onMoveDown={(index) => handleServiceBindingsReorder(index, index + 1)}
 						/>
-					</SectionPanel>
+					</div>
 				</div>
 			{/if}
 

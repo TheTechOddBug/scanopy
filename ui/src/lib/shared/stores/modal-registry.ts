@@ -9,6 +9,7 @@ export interface ModalState {
 	subEntityId: string | null;
 	returnUrl: string | null;
 	returnTitle: string | null;
+	entityData?: Record<string, unknown>;
 }
 
 const EMPTY_STATE: ModalState = {
@@ -33,6 +34,7 @@ export function openModal(
 		subEntityId?: string;
 		returnUrl?: string;
 		returnTitle?: string;
+		entityData?: Record<string, unknown>;
 	}
 ): void {
 	const state: ModalState = {
@@ -41,7 +43,8 @@ export function openModal(
 		tab: opts?.tab ?? null,
 		subEntityId: opts?.subEntityId ?? null,
 		returnUrl: opts?.returnUrl ?? null,
-		returnTitle: opts?.returnTitle ?? null
+		returnTitle: opts?.returnTitle ?? null,
+		entityData: opts?.entityData
 	};
 	modalState.set(state);
 	syncToUrl(state);
@@ -128,7 +131,7 @@ export function navigateToEntity(
 
 	if (config.modalName) {
 		window.location.hash = config.tabId;
-		openModal(config.modalName, { id: entityId, returnUrl, returnTitle });
+		openModal(config.modalName, { id: entityId, returnUrl, returnTitle, entityData: data });
 	} else if (config.parentType && config.parentIdField && data) {
 		const parentConfig = entityUIConfig[config.parentType];
 		const parentId = data[config.parentIdField] as string | undefined;
@@ -164,13 +167,17 @@ export function resolveModalDeepLink<T extends { id: string }>(
 
 	if (!isOpen) {
 		if (state.id) {
-			const entity = data.find((e) => e.id === state.id);
+			const entity =
+				data.find((e) => e.id === state.id) ??
+				(state.entityData?.id === state.id ? (state.entityData as T) : undefined);
 			if (entity && (!validate || validate(entity))) return entity;
 		} else {
 			return null; // Create mode
 		}
 	} else if (state.id && state.id !== editingId) {
-		const entity = data.find((e) => e.id === state.id);
+		const entity =
+			data.find((e) => e.id === state.id) ??
+			(state.entityData?.id === state.id ? (state.entityData as T) : undefined);
 		if (entity && (!validate || validate(entity))) return entity;
 	}
 

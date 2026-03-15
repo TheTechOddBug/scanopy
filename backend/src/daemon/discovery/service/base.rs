@@ -2,11 +2,12 @@ use std::{
     net::IpAddr,
     sync::{
         Arc,
-        atomic::{AtomicU8, AtomicU64, Ordering},
+        atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering},
     },
     time::Duration,
 };
 
+use crate::server::shared::types::api::ApiErrorResponse;
 use crate::{
     daemon::{
         discovery::{
@@ -96,6 +97,8 @@ pub struct DiscoverySession {
     pub gateway_ips: Vec<IpAddr>,
     pub last_progress: Arc<AtomicU8>,
     pub last_progress_report_time: Arc<AtomicU64>,
+    pub hosts_discovered: Arc<AtomicU32>,
+    pub estimated_remaining_secs: Arc<AtomicU32>,
 }
 
 impl DiscoverySession {
@@ -105,6 +108,8 @@ impl DiscoverySession {
             gateway_ips,
             last_progress: Arc::new(AtomicU8::new(0)),
             last_progress_report_time: Arc::new(AtomicU64::new(0)),
+            hosts_discovered: Arc::new(AtomicU32::new(0)),
+            estimated_remaining_secs: Arc::new(AtomicU32::new(u32::MAX)),
         }
     }
 }
@@ -210,11 +215,21 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
         let session = self.as_ref().get_session().await?;
         let discovery_type = self.discovery_type();
 
-        let payload = DiscoveryUpdatePayload::from_state_and_update(
+        let mut payload = DiscoveryUpdatePayload::from_state_and_update(
             discovery_type,
             session.info.clone(),
             update,
         );
+
+        // Populate estimation fields from session atomics
+        let hosts = session.hosts_discovered.load(Ordering::Relaxed);
+        if hosts > 0 {
+            payload.hosts_discovered = Some(hosts);
+        }
+        let estimate = session.estimated_remaining_secs.load(Ordering::Relaxed);
+        if estimate != u32::MAX {
+            payload.estimated_remaining_secs = Some(estimate);
+        }
 
         let path = format!("/api/v1/discovery/{}/update", session.info.session_id);
 
@@ -661,6 +676,10 @@ pub trait CreatesDiscoveredEntities:
                         .with_max_delay(Duration::from_secs(30))
                         .with_max_times(ENTITY_CREATION_MAX_RETRIES),
                 )
+                .when(|e| {
+                    // Don't retry structured API errors (e.g. billing limit reached)
+                    e.downcast_ref::<ApiErrorResponse>().is_none()
+                })
                 .notify(|e, dur| tracing::warn!("Retrying host creation after {:?}: {}", dur, e))
                 .await?;
 

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
+	import EmailVerificationBanner from '$lib/shared/components/feedback/EmailVerificationBanner.svelte';
+	import DemoBanner from '$lib/shared/components/feedback/DemoBanner.svelte';
 	import Sidebar from '$lib/shared/components/layout/Sidebar.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { discoverySSEManager } from '$lib/features/discovery/queries';
@@ -9,6 +11,7 @@
 	import { topologySSEManager } from '$lib/features/topology/queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import BillingPlanModal from '$lib/features/billing/BillingPlanModal.svelte';
+	import DaemonPromptModal from '$lib/features/daemons/components/DaemonPromptModal.svelte';
 	import { useConfigQuery } from '$lib/shared/stores/config-query';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
@@ -49,6 +52,9 @@
 		(needsPlanSelection && !planJustActivated) || $modalState.name === 'billing-plan'
 	);
 
+	// Daemon prompt: driven by modal registry
+	let showDaemonPrompt = $derived($modalState.name === 'daemon-prompt');
+
 	let activeTab = $state(initialHash || 'home');
 	let appInitialized = $state(false);
 	let sidebarCollapsed = $state(false);
@@ -79,7 +85,8 @@
 	let initialTabSet = $state(false);
 	$effect(() => {
 		if (!initialHash && !initialTabSet && daemonsQuery.isSuccess && !showBillingModal) {
-			const wantsDaemonSetup = $modalState.name === 'create-daemon';
+			const wantsDaemonSetup =
+				$modalState.name === 'create-daemon' || $modalState.name === 'daemon-prompt';
 			activeTab = wantsDaemonSetup ? 'daemons' : 'home';
 			initialTabSet = true;
 		}
@@ -161,6 +168,12 @@
 			class:ml-16={sidebarCollapsed}
 			class:ml-64={!sidebarCollapsed}
 		>
+			{#if currentUserQuery.data && !currentUserQuery.data.email_verified}
+				<EmailVerificationBanner email={currentUserQuery.data.email} />
+			{/if}
+			{#if organization?.plan?.type === 'Demo'}
+				<DemoBanner />
+			{/if}
 			<div class="p-8 [&_.sticky]:sticky [&_.sticky]:top-0">
 				<!-- Programmatically render all tabs based on sidebar config -->
 				{#each allTabs as tab (tab.id)}
@@ -196,7 +209,19 @@
 			if ($reopenSettingsAfterBilling) {
 				reopenSettingsAfterBilling.set(false);
 				openModal('settings', { tab: 'billing' });
+			} else if (daemonsQuery.data?.length === 0) {
+				openModal('daemon-prompt');
 			}
+		}}
+	/>
+
+	<DaemonPromptModal
+		isOpen={showDaemonPrompt}
+		onInstall={() => {
+			openModal('create-daemon');
+		}}
+		onSkip={() => {
+			closeModal();
 		}}
 	/>
 {:else}

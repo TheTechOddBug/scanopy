@@ -2,18 +2,13 @@
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
 	import type { FormValue } from '$lib/shared/components/forms/validators';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
-	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
+
+	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
 	import DocsHint from '$lib/shared/components/feedback/DocsHint.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
-	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
 	import RadioGroup from '$lib/shared/components/forms/input/RadioGroup.svelte';
-	import {
-		SimpleOptionDisplay,
-		type SimpleOption
-	} from '$lib/shared/components/forms/selection/display/SimpleOptionDisplay';
-	import { ArrowUpCircle } from 'lucide-svelte';
-	import { openModal } from '$lib/shared/stores/modal-registry';
 	import { fieldDefs } from '../../../config';
 	import {
 		common_apiKey,
@@ -28,7 +23,6 @@
 		daemons_generateNewKeyHelp,
 		daemons_networkCannotChange,
 		daemons_pasteApiKey,
-		daemons_portForwardingHint,
 		daemons_docsPollingMode,
 		daemons_docsPollingModeLinkText,
 		daemons_httpDaemonUrlWarning,
@@ -44,10 +38,11 @@
 		selectedNetworkId: string;
 		onNetworkChange: (id: string) => void;
 		onNameInput?: () => void;
-		hasDaemonPoll: boolean;
 		keySet: boolean;
 		isFirstDaemon?: boolean;
 		onUseExistingKey?: () => void;
+		onReachabilityChange?: (reachable: boolean | null) => void;
+		reachabilityResult?: { reachable: boolean; error?: string } | null;
 	}
 
 	let {
@@ -56,10 +51,11 @@
 		selectedNetworkId,
 		onNetworkChange,
 		onNameInput,
-		hasDaemonPoll,
 		keySet,
 		isFirstDaemon = false,
-		onUseExistingKey
+		onUseExistingKey,
+		onReachabilityChange,
+		reachabilityResult = $bindable(null)
 	}: Props = $props();
 
 	// Get validators for a field
@@ -85,6 +81,7 @@
 
 	let isServerPoll = $derived(formValues.mode === 'server_poll');
 	let daemonUrl = $derived(String(formValues.daemonUrl ?? ''));
+	let daemonPort = $derived(Number(formValues.daemonPort) || 60073);
 	let showHttpWarning = $derived.by(() => {
 		try {
 			const parsed = new URL(daemonUrl);
@@ -99,15 +96,28 @@
 			return false;
 		}
 	});
+
+	// Reset reachability when URL or port changes
+	let prevUrlPort = $state('');
+	$effect(() => {
+		const key = `${daemonUrl}:${daemonPort}`;
+		if (key !== prevUrlPort) {
+			prevUrlPort = key;
+			reachabilityResult = null;
+			onReachabilityChange?.(null);
+		}
+	});
 </script>
 
 <div class="space-y-4">
-	<SelectNetwork
-		{selectedNetworkId}
-		onNetworkChange={(id) => onNetworkChange(id)}
-		disabled={keySet}
-		disabledReason={daemons_networkCannotChange()}
-	/>
+	{#if !isFirstDaemon}
+		<SelectNetwork
+			{selectedNetworkId}
+			onNetworkChange={(id) => onNetworkChange(id)}
+			disabled={keySet}
+			disabledReason={daemons_networkCannotChange()}
+		/>
+	{/if}
 
 	<!-- Name -->
 	<div oninput={() => onNameInput?.()}>
@@ -127,26 +137,25 @@
 	<!-- Mode -->
 	<form.Field name={modeDef.id}>
 		{#snippet children(field: AnyFieldApi)}
-			<RichSelect
+			<RadioGroup
 				label={daemons_config_mode()}
-				selectedValue={String(field.state.value ?? '')}
+				id="daemon-mode"
+				{field}
+				options={[
+					{
+						value: 'daemon_poll',
+						label: (modeDef.options ?? [])[0]?.label() ?? 'Daemon Poll',
+						helpText:
+							'Recommended. Daemon connects to the server — works behind NAT/firewalls without opening ports.'
+					},
+					{
+						value: 'server_poll',
+						label: (modeDef.options ?? [])[1]?.label() ?? 'Server Poll',
+						helpText:
+							'Server connects to the daemon — requires the daemon to be reachable at a public URL.'
+					}
+				]}
 				disabled={keySet}
-				options={(modeDef.options ?? []).map((opt): SimpleOption => {
-					const needsUpgrade = opt.value === 'daemon_poll' && !hasDaemonPoll;
-					return {
-						value: opt.value,
-						label: opt.label(),
-						description:
-							opt.value === 'daemon_poll'
-								? 'Daemon connects to server; works behind NAT/firewall without opening ports'
-								: 'Server connects to daemon; requires providing Daemon URL',
-						disabled: needsUpgrade,
-						tags: needsUpgrade ? [{ label: 'Upgrade', color: 'Yellow', icon: ArrowUpCircle }] : []
-					};
-				})}
-				onSelect={(value) => field.handleChange(value)}
-				onDisabledClick={() => openModal('billing-plan')}
-				displayComponent={SimpleOptionDisplay}
 			/>
 		{/snippet}
 	</form.Field>
@@ -197,16 +206,17 @@
 			<InlineWarning title="" body={daemons_httpDaemonUrlWarning()} />
 		{/if}
 
-		<InlineInfo title="" body={daemons_portForwardingHint()} />
-	{/if}
-
-	<!-- API key info: auto-generated when no key source choice is shown -->
-	{#if isFirstDaemon || isServerPoll}
-		<InlineInfo
-			title=""
-			body="An API key will be automatically generated for this daemon when you proceed to the next step."
-			dismissableKey="daemon-auto-key-hint"
-		/>
+		<!-- Reachability result (driven by parent) -->
+		{#if reachabilityResult}
+			{#if reachabilityResult.reachable}
+				<InlineSuccess title="Port is reachable" />
+			{:else}
+				<InlineDanger
+					title={reachabilityResult.error ?? 'Port is not reachable'}
+					body="Ensure the port is open and forwarded to the host the daemon will run on."
+				/>
+			{/if}
+		{/if}
 	{/if}
 
 	<!-- Inline API key source for DaemonPoll (subsequent daemons only) -->

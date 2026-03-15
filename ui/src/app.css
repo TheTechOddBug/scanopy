@@ -464,3 +464,47 @@
 .animate-float {
 	animation: float 3s ease-in-out infinite;
 }
+
+@keyframes pulse-highlight {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 var(--pulse-color);
+	}
+	50% {
+		box-shadow: 0 0 8px 4px var(--pulse-color);
+	}
+}
+
+.animate-pulse-highlight {
+	animation: pulse-highlight 1s ease-in-out 2;
+}
+
+.animate-pulse-highlight-once {
+	animation: pulse-highlight-subtle 1s ease-in-out 1;
+}
+
+@keyframes pulse-highlight-subtle {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse-color) 0%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pulse-color) 40%, transparent);
+	}
+}
+
+@keyframes text-pulse-highlight {
+	0%,
+	100% {
+		text-shadow: 0 0 0 transparent;
+	}
+	50% {
+		text-shadow:
+			0 0 8px var(--text-pulse-color),
+			0 0 16px var(--text-pulse-color);
+	}
+}
+
+.animate-text-pulse-highlight {
+	animation: text-pulse-highlight 1s ease-in-out 1;
+}

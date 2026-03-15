@@ -216,17 +216,17 @@ export function createStyle(color: Color | null, icon: string | null) {
  * Converts a Tailwind color string (e.g. "text-blue-400", "bg-blue-900/50", "blue-500")
  * to an rgba() string with optional alpha override.
  */
-export function twColorToRgba(twColor: string, alphaOverride?: number): string | null {
+export function twColorToRgba(twColor: string, alphaOverride?: number): string {
 	const match = twColor.match(/([a-zA-Z]+)-(\d{2,3})(?:\/(\d{1,3}))?/);
-	if (!match) return null;
+	if (!match) return 'rgba(0,0,0,0)';
 
 	const [, colorName, shade, opacityRaw] = match;
 
 	const palette = (colors as unknown as Record<string, Record<number, string>>)[colorName];
-	if (!palette) return null;
+	if (!palette) return 'rgba(0,0,0,0)';
 
 	const hex = palette[parseInt(shade)];
-	if (!hex) return null;
+	if (!hex) return 'rgba(0,0,0,0)';
 
 	const alpha =
 		typeof alphaOverride === 'number'

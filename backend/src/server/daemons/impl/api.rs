@@ -113,6 +113,10 @@ pub struct DiscoveryUpdatePayload {
     pub error: Option<String>,
     pub started_at: Option<DateTime<Utc>>,
     pub finished_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub hosts_discovered: Option<u32>,
+    #[serde(default)]
+    pub estimated_remaining_secs: Option<u32>,
 }
 
 impl DiscoveryUpdatePayload {
@@ -126,12 +130,14 @@ impl DiscoveryUpdatePayload {
             session_id,
             daemon_id,
             network_id,
-            phase: DiscoveryPhase::Pending,
+            phase: DiscoveryPhase::Queued,
             progress: 0,
             discovery_type,
             error: None,
             started_at: None,
             finished_at: None,
+            hosts_discovered: None,
+            estimated_remaining_secs: None,
         }
     }
 
@@ -150,6 +156,8 @@ impl DiscoveryUpdatePayload {
             error: update.error,
             started_at: info.started_at,
             finished_at: update.finished_at,
+            hosts_discovered: None,
+            estimated_remaining_secs: None,
         }
     }
 
@@ -271,4 +279,27 @@ pub struct ProvisionDaemonResponse {
     /// The API key (plaintext) for daemon authentication.
     /// This is shown only once - store it securely.
     pub daemon_api_key: String,
+}
+
+/// Request to test reachability of a daemon URL.
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct TestReachabilityRequest {
+    /// Full URL of the daemon (e.g. "https://daemon.example.com:60073")
+    pub url: String,
+    /// If true, also perform an HTTP GET to {url}/health after the TCP check
+    #[serde(default)]
+    pub check_health: bool,
+}
+
+/// Response from a reachability test.
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct TestReachabilityResponse {
+    /// Whether the TCP connection succeeded
+    pub reachable: bool,
+    /// Error message if not reachable
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// Health check result (only present when check_health was true)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub health: Option<bool>,
 }

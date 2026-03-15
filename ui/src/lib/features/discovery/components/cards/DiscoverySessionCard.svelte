@@ -11,6 +11,7 @@
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { entityRef } from '$lib/shared/components/data/types';
+	import DiscoveryEstimation from '../DiscoveryEstimation.svelte';
 
 	// Props
 	let {
@@ -106,6 +107,13 @@
 					>{isCancelling ? 'Cancelling' : session.phase}</span
 				>
 			</div>
+
+			<DiscoveryEstimation
+				phase={isCancelling ? 'Cancelling' : session.phase}
+				hosts_discovered={session.hosts_discovered}
+				estimated_remaining_secs={session.estimated_remaining_secs}
+				class="mb-1"
+			/>
 
 			<div class="flex items-center gap-2">
 				<ProgressTrack class="flex-1">

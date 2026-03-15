@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Discovery } from '../../types/base';
-	import SectionPanel from '$lib/shared/components/layout/SectionPanel.svelte';
 	import { generateDayTimeCronSchedule } from '../../queries';
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
@@ -252,27 +251,25 @@
 	</div>
 {:else}
 	<!-- Ad-hoc info box (safety fallback if rendered in AdHoc mode) -->
-	<SectionPanel>
-		<div class="flex items-start gap-3">
-			<svg
-				class="text-tertiary mt-0.5 h-5 w-5 flex-shrink-0"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-				/>
-			</svg>
-			<div>
-				<h4 class="mb-1 text-sm font-medium text-gray-300">{discovery_manualDiscovery()}</h4>
-				<p class="text-sm text-gray-400">
-					{discovery_manualDiscoveryHelp()}
-				</p>
-			</div>
+	<div class="card flex items-start gap-3">
+		<svg
+			class="text-tertiary mt-0.5 h-5 w-5 flex-shrink-0"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				stroke-width="2"
+				d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+			/>
+		</svg>
+		<div>
+			<h4 class="mb-1 text-sm font-medium text-gray-300">{discovery_manualDiscovery()}</h4>
+			<p class="text-sm text-gray-400">
+				{discovery_manualDiscoveryHelp()}
+			</p>
 		</div>
-	</SectionPanel>
+	</div>
 {/if}

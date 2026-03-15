@@ -311,10 +311,8 @@ impl<'a> TopologyContext<'a> {
     // Node Existence Checks
     // ============================================================================
 
-    pub fn interface_will_have_node(&self, interface_id: &Uuid) -> bool {
-        !self
-            .get_services_bound_to_interface(*interface_id)
-            .is_empty()
+    pub fn interface_will_have_node(&self, _interface_id: &Uuid) -> bool {
+        true
     }
 
     pub fn service_will_have_node(&self, service_id: &Uuid) -> bool {

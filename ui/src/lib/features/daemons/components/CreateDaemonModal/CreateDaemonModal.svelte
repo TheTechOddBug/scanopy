@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { get } from 'svelte/store';
 	import { createForm } from '@tanstack/svelte-form';
 	import { validateForm } from '$lib/shared/components/forms/form-context';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
@@ -14,10 +15,11 @@
 		createEmptyApiKeyFormData,
 		useCreateApiKeyMutation
 	} from '$lib/features/daemon_api_keys/queries';
-	import { useProvisionDaemonMutation } from '../../queries';
-	import { useConfigQuery } from '$lib/shared/stores/config-query';
+	import { useProvisionDaemonMutation, useDaemonQuery, useDaemonsQuery } from '../../queries';
+	import { useConfigQuery, isCloud } from '$lib/shared/stores/config-query';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { useTestReachabilityMutation } from '../../queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
 	import { getVisibleFieldIds } from '../../config';
 	import {
@@ -35,7 +37,6 @@
 	import InstallStep from './steps/InstallStep.svelte';
 	import AdvancedStep from './steps/AdvancedStep.svelte';
 	import {
-		common_back,
 		common_close,
 		common_configure,
 		common_failedGenerateApiKey,
@@ -63,12 +64,9 @@
 
 	// Derived data
 	let serverUrl = $derived(configQuery.data?.public_url ?? '');
+	let isCloudDeployment = $derived(configQuery.data ? isCloud(configQuery.data) : false);
 	let currentUserId = $derived(currentUserQuery.data?.id ?? null);
 	let org = $derived(organizationQuery.data);
-	let hasDaemonPoll = $derived.by(() => {
-		if (!org?.plan?.type) return true;
-		return billingPlans.getMetadata(org.plan.type).features.daemon_poll;
-	});
 	let isFirstDaemon = $derived(!org?.onboarding?.includes('FirstDaemonRegistered'));
 	// Snapshot: tracks whether wizard was opened as first-daemon flow.
 	// Prevents reactivity from flipping showWaitingUI when FirstDaemonRegistered appears.
@@ -102,10 +100,28 @@
 		isDockerInstall ? "I've started the Docker container" : "I've run the install command"
 	);
 
+	// ServerPoll reachability state
+	let serverPollReachable = $state<boolean | null>(null);
+	let isTestingReachability = $state(false);
+	let serverPollReachabilityResult = $state<{ reachable: boolean; error?: string } | null>(null);
+	const testReachabilityMutation = useTestReachabilityMutation();
+
 	// Connection waiting state
+	let provisionedDaemonId = $state('');
 	let connectionStatus = $state<DaemonConnectionStatus>('idle');
 	let troubleTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
 	let showTroubleshootingPanel = $state(false);
+	let daemonIdsAtWaitStart = $state<Set<string>>(new Set());
+
+	// Daemon-specific queries for connection detection
+	const provisionedDaemonQuery = useDaemonQuery(() => provisionedDaemonId || null, {
+		enabled: () =>
+			(connectionStatus === 'waiting' || connectionStatus === 'trouble') && !!provisionedDaemonId
+	});
+	const daemonsQuery = useDaemonsQuery({
+		enabled: () =>
+			(connectionStatus === 'waiting' || connectionStatus === 'trouble') && !provisionedDaemonId
+	});
 
 	function getDefaultDaemonName(networkId: string): string {
 		const network = networksData.find((n) => n.id === networkId);
@@ -115,6 +131,13 @@
 		}
 		return 'scanopy-daemon';
 	}
+
+	// Auto-select first network when SelectNetwork is hidden (first daemon)
+	$effect(() => {
+		if (isFirstDaemon && !selectedNetworkId && networksData.length > 0) {
+			selectedNetworkId = networksData[0].id;
+		}
+	});
 
 	$effect(() => {
 		if (selectedNetworkId && !nameManuallyEdited) {
@@ -186,13 +209,6 @@
 		}
 	}
 
-	function previousTab() {
-		const idx = (mainFlow as readonly string[]).indexOf(activeTab);
-		if (idx > 0) {
-			activeTab = mainFlow[idx - 1];
-		}
-	}
-
 	function handleTabChange(tabId: string) {
 		showAdvanced = false;
 		activeTab = tabId;
@@ -221,6 +237,7 @@
 					url: fullDaemonUrl
 				});
 				keyState = result.daemon_api_key;
+				provisionedDaemonId = result.daemon.id;
 			} catch {
 				pushError(common_failedGenerateApiKey());
 			}
@@ -257,6 +274,36 @@
 
 			if (!isValid) return;
 
+			// ServerPoll: run reachability test from Next button (cloud only — self-hosted doesn't need port forwarding)
+			if (formValues.mode === 'server_poll' && isCloudDeployment && serverPollReachable !== true) {
+				const daemonUrlBase = String(formValues.daemonUrl ?? '');
+				if (!daemonUrlBase) return;
+				const port = Number(formValues.daemonPort) || 60073;
+				const fullUrl = constructDaemonUrl(daemonUrlBase, port);
+				isTestingReachability = true;
+				try {
+					const result = await testReachabilityMutation.mutateAsync({
+						url: fullUrl,
+						check_health: false
+					});
+					serverPollReachable = result.reachable;
+					serverPollReachabilityResult = {
+						reachable: result.reachable,
+						error: result.error ?? undefined
+					};
+					if (!result.reachable) return; // stay on step, result shown inline
+				} catch {
+					serverPollReachable = false;
+					serverPollReachabilityResult = {
+						reachable: false,
+						error: 'Failed to test reachability'
+					};
+					return;
+				} finally {
+					isTestingReachability = false;
+				}
+			}
+
 			trackEvent('daemon_wizard_step_completed', { step: 'configure' });
 
 			// Auto-generate key for: first daemon (any mode), or server_poll, or daemon_poll with generate source
@@ -287,20 +334,32 @@
 	}
 
 	// --- Connection waiting ---
-	function handleInstalled() {
-		if (!startedAsFirstDaemon) return;
-		connectionStatus = 'waiting';
-		daemonSetupState.set({ connectionStatus: 'waiting' });
-		trackEvent('daemon_install_confirmed');
-
-		// Set 2-minute timeout for trouble state
+	function startWaitingTimeout() {
+		if (troubleTimeoutId) return; // already started
 		troubleTimeoutId = setTimeout(() => {
 			if (connectionStatus === 'waiting') {
 				connectionStatus = 'trouble';
 				daemonSetupState.set({ connectionStatus: 'trouble' });
 				trackEvent('daemon_connection_timeout');
 			}
-		}, 120_000);
+		}, 60_000);
+	}
+
+	function handleInstalled() {
+		// Snapshot daemon IDs for DaemonPoll detection before entering waiting state
+		if (formValues.mode !== 'server_poll') {
+			const currentDaemons = daemonsQuery.data ?? [];
+			daemonIdsAtWaitStart = new Set(currentDaemons.map((d) => d.id));
+		}
+
+		connectionStatus = 'waiting';
+		daemonSetupState.set({ connectionStatus: 'waiting' });
+		trackEvent('daemon_install_confirmed');
+
+		// DaemonPoll: start timeout immediately. ServerPoll: wait for health check to pass.
+		if (formValues.mode !== 'server_poll') {
+			startWaitingTimeout();
+		}
 	}
 
 	function handleReviewCommands() {
@@ -318,30 +377,63 @@
 		trackEvent('daemon_install_trouble');
 	}
 
-	// Poll org query for FirstDaemonRegistered when waiting
+	function markConnected() {
+		connectionStatus = 'connected';
+		daemonSetupState.set({ connectionStatus: 'connected' });
+		if (troubleTimeoutId) {
+			clearTimeout(troubleTimeoutId);
+			troubleTimeoutId = null;
+		}
+		confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+		trackEvent('daemon_connected');
+	}
+
+	// ServerPoll: poll provisionedDaemonQuery every 5s when waiting/trouble
 	$effect(() => {
-		if (connectionStatus === 'waiting' || connectionStatus === 'trouble') {
+		if ((connectionStatus === 'waiting' || connectionStatus === 'trouble') && provisionedDaemonId) {
 			const interval = setInterval(() => {
-				organizationQuery.refetch();
+				provisionedDaemonQuery.refetch();
 			}, 5000);
 			return () => clearInterval(interval);
 		}
 	});
 
-	// Detect connection via org onboarding
+	// ServerPoll: detect connection when last_seen becomes non-null
 	$effect(() => {
 		if (
 			(connectionStatus === 'waiting' || connectionStatus === 'trouble') &&
-			org?.onboarding?.includes('FirstDaemonRegistered')
+			provisionedDaemonId &&
+			provisionedDaemonQuery.data?.last_seen
 		) {
-			connectionStatus = 'connected';
-			daemonSetupState.set({ connectionStatus: 'connected' });
-			if (troubleTimeoutId) {
-				clearTimeout(troubleTimeoutId);
-				troubleTimeoutId = null;
+			markConnected();
+		}
+	});
+
+	// DaemonPoll: poll daemonsQuery every 5s when waiting/trouble
+	$effect(() => {
+		if (
+			(connectionStatus === 'waiting' || connectionStatus === 'trouble') &&
+			!provisionedDaemonId
+		) {
+			const interval = setInterval(() => {
+				daemonsQuery.refetch();
+			}, 5000);
+			return () => clearInterval(interval);
+		}
+	});
+
+	// DaemonPoll: detect connection when a new daemon ID appears
+	$effect(() => {
+		if (
+			(connectionStatus === 'waiting' || connectionStatus === 'trouble') &&
+			!provisionedDaemonId &&
+			daemonsQuery.data
+		) {
+			const currentIds = daemonsQuery.data.map((d) => d.id);
+			const hasNewDaemon = currentIds.some((id) => !daemonIdsAtWaitStart.has(id));
+			if (hasNewDaemon) {
+				markConnected();
 			}
-			confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-			trackEvent('daemon_connected');
 		}
 	});
 
@@ -367,6 +459,10 @@
 		showAdvanced = false;
 		connectionStatus = 'idle';
 		showTroubleshootingPanel = false;
+		serverPollReachable = null;
+		isTestingReachability = false;
+		serverPollReachabilityResult = null;
+		daemonIdsAtWaitStart = new Set();
 		onClose();
 	}
 
@@ -376,9 +472,12 @@
 		activeTab = 'configure';
 		furthestReached = 0;
 		showAdvanced = false;
-		connectionStatus = 'idle';
+		connectionStatus = get(daemonSetupState).connectionStatus;
 		startedAsFirstDaemon = isFirstDaemon;
 		showTroubleshootingPanel = false;
+		serverPollReachable = null;
+		serverPollReachabilityResult = null;
+		daemonIdsAtWaitStart = new Set();
 	}
 
 	let colorHelper = entities.getColorHelper('Daemon');
@@ -413,10 +512,14 @@
 					{selectedNetworkId}
 					onNetworkChange={(id) => (selectedNetworkId = id)}
 					onNameInput={() => (nameManuallyEdited = true)}
-					{hasDaemonPoll}
 					{keySet}
 					{isFirstDaemon}
 					onUseExistingKey={handleUseExistingKey}
+					onReachabilityChange={(r) => {
+						serverPollReachable = r;
+						if (r === null) serverPollReachabilityResult = null;
+					}}
+					bind:reachabilityResult={serverPollReachabilityResult}
 				/>
 			{:else if activeTab === 'install'}
 				<InstallStep
@@ -429,11 +532,18 @@
 					{hasErrors}
 					isFirstDaemon={startedAsFirstDaemon}
 					{connectionStatus}
-					onReviewCommands={handleReviewCommands}
 					onViewDiscovery={handleViewDiscovery}
 					{hasEmailSupport}
 					{showTroubleshootingPanel}
 					onAdvanced={() => (showAdvanced = true)}
+					daemonMode={String(formValues.mode ?? 'daemon_poll')}
+					daemonUrl={constructDaemonUrl(
+						String(formValues.daemonUrl ?? ''),
+						Number(formValues.daemonPort) || 60073
+					)}
+					{provisionedDaemonId}
+					onTroubleshoot={handleTrouble}
+					onStartWaitingTimeout={startWaitingTimeout}
 				/>
 			{/if}
 		</div>
@@ -451,9 +561,12 @@
 						type="button"
 						class="btn-primary btn-primary-lg"
 						onclick={handleNext}
-						disabled={isAutoGenerating}
+						disabled={isAutoGenerating || isTestingReachability}
 					>
-						{#if isAutoGenerating}
+						{#if isTestingReachability}
+							<Loader2 class="h-4 w-4 animate-spin" />
+							Testing connection to {formValues.daemonUrl}:{formValues.daemonPort || 60073}...
+						{:else if isAutoGenerating}
 							<Loader2 class="h-4 w-4 animate-spin" />
 						{:else}
 							{common_next()}
@@ -466,22 +579,18 @@
 							{common_close()}
 						</button>
 					{:else if connectionStatus === 'waiting' || connectionStatus === 'trouble'}
+						<button type="button" class="btn-secondary" onclick={handleReviewCommands}>
+							Return to install commands
+						</button>
 						<button type="button" class="btn-secondary" onclick={handleOnClose}>
 							{common_close()}
 						</button>
-					{:else if startedAsFirstDaemon}
+					{:else}
 						<button type="button" class="btn-secondary" onclick={handleTrouble}>
 							I'm having trouble
 						</button>
 						<button type="button" class="btn-primary" onclick={handleInstalled}>
 							{installCtaLabel}
-						</button>
-					{:else}
-						<button type="button" class="btn-secondary" onclick={previousTab}>
-							{common_back()}
-						</button>
-						<button type="button" class="btn-secondary" onclick={handleOnClose}>
-							{common_close()}
 						</button>
 					{/if}
 				{/if}

@@ -8,6 +8,13 @@
 		interfaces?: Interface[];
 		ports?: Port[];
 		services?: Service[];
+		showEntityTagPicker?: boolean;
+		tagPickerDisabled?: boolean;
+		entityTags?: import('$lib/features/tags/types/base').Tag[];
+		showEditableEntityDescription?: boolean;
+		entityDescription?: string | null;
+		entityDescriptionDisabled?: boolean;
+		onEntityDescriptionSave?: (value: string | null) => void;
 	}
 
 	export const HostDisplay: EntityDisplayComponent<Host, HostDisplayContext> = {
@@ -31,6 +38,15 @@
 				color: entities.getColorHelper('Service').color,
 				entityRef: entityRef('Service', service.id, service)
 			}));
+		},
+		getTagPickerProps: (host: Host, context: HostDisplayContext) => {
+			if (!context.showEntityTagPicker) return null;
+			return {
+				selectedTagIds: host.tags,
+				entityId: host.id,
+				entityType: 'Host' as const,
+				availableTags: context.entityTags
+			};
 		}
 	};
 </script>

@@ -1,19 +1,19 @@
 {
-  "version": "0.14.17",
+  "version": "0.14.19",
   "exchanges": [
     {
       "method": "POST",
       "path": "/api/initialize",
       "request_body": {
-        "api_key": "scp_d_stK7ugyugvVGCTkDzfUKwQjmLluKS80N",
-        "network_id": "3995f704-6ebb-4f48-9c17-a030bd622caf"
+        "api_key": "scp_d_o5llwx89a3xBJUMwHqCbWCHnnyrcSVI0",
+        "network_id": "b65ffc8a-61eb-4918-9b1b-46e506d73e70"
       },
       "response_status": 200,
       "response_body": {
         "data": "Daemon initialized successfully",
         "meta": {
           "api_version": 1,
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         },
         "success": true
       }
@@ -22,10 +22,10 @@
       "method": "POST",
       "path": "/api/first-contact",
       "request_body": {
-        "daemon_id": "bdeb3c01-ed65-43c1-b780-888c11d06a50",
+        "daemon_id": "b453522c-394d-497d-89a9-b762cff1df8b",
         "server_capabilities": {
           "minimum_daemon_version": "0.12.0",
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         }
       },
       "response_status": 200,
@@ -38,11 +38,11 @@
           "mode": "server_poll",
           "name": "scanopy-daemon-serverpoll",
           "ready_for_work": true,
-          "version": "0.14.17"
+          "version": "0.14.19"
         },
         "meta": {
           "api_version": 1,
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         },
         "success": true
       }
@@ -62,7 +62,7 @@
         },
         "meta": {
           "api_version": 1,
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         },
         "success": true
       }
@@ -81,16 +81,16 @@
           "subnet_ids": null,
           "type": "Network"
         },
-        "session_id": "5e741620-3de9-476c-86e7-7ce656d0a5a8"
+        "session_id": "34c804c2-c01c-4104-a3b3-e31ae6dd0b6f"
       },
       "response_status": 200,
       "response_body": {
         "data": {
-          "session_id": "5e741620-3de9-476c-86e7-7ce656d0a5a8"
+          "session_id": "34c804c2-c01c-4104-a3b3-e31ae6dd0b6f"
         },
         "meta": {
           "api_version": 1,
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         },
         "success": true
       }
@@ -109,11 +109,11 @@
           "mode": "server_poll",
           "name": "scanopy-daemon-serverpoll",
           "ready_for_work": false,
-          "version": "0.14.17"
+          "version": "0.14.19"
         },
         "meta": {
           "api_version": 1,
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         },
         "success": true
       }
@@ -125,19 +125,19 @@
         "hosts": [],
         "subnets": [
           [
-            "bb701da0-aaa2-4ee0-96fe-d68bab078ff2",
+            "ad5bca9f-9f1b-4b5c-b892-809049103443",
             {
               "cidr": "172.25.0.0/28",
-              "created_at": "2026-03-09T05:22:29.819901727Z",
+              "created_at": "2026-03-15T19:40:56.309778388Z",
               "description": null,
-              "id": "bb701da0-aaa2-4ee0-96fe-d68bab078ff2",
+              "id": "ad5bca9f-9f1b-4b5c-b892-809049103443",
               "name": "172.25.0.0/28",
-              "network_id": "3995f704-6ebb-4f48-9c17-a030bd622caf",
+              "network_id": "b65ffc8a-61eb-4918-9b1b-46e506d73e70",
               "source": {
                 "metadata": [
                   {
-                    "daemon_id": "bdeb3c01-ed65-43c1-b780-888c11d06a50",
-                    "date": "2026-03-09T05:22:29.819897910Z",
+                    "daemon_id": "b453522c-394d-497d-89a9-b762cff1df8b",
+                    "date": "2026-03-15T19:40:56.309774721Z",
                     "host_naming_fallback": "BestService",
                     "probe_raw_socket_ports": false,
                     "snmp_credentials": {
@@ -152,7 +152,7 @@
               },
               "subnet_type": "Lan",
               "tags": [],
-              "updated_at": "2026-03-09T05:22:29.819901727Z"
+              "updated_at": "2026-03-15T19:40:56.309778388Z"
             }
           ]
         ]
@@ -162,7 +162,7 @@
         "data": "Created entities acknowledged",
         "meta": {
           "api_version": 1,
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         },
         "success": true
       }
@@ -176,7 +176,7 @@
         "error": "Discovery session not currently running",
         "meta": {
           "api_version": 1,
-          "server_version": "0.14.17"
+          "server_version": "0.14.19"
         },
         "success": false
       }

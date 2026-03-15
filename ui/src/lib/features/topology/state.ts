@@ -3,6 +3,10 @@ import type { Topology } from './types/base';
 import type { IconComponent } from '$lib/shared/utils/types';
 import type { Color } from '$lib/shared/utils/styling';
 import { hasConflicts } from './queries';
+import {
+	topology_optionDisabledRebuildRequired,
+	topology_optionDisabledUnlockRequired
+} from '$lib/paraglide/messages';
 
 export type TopologyStateType = 'locked' | 'fresh' | 'stale_safe' | 'stale_conflicts';
 
@@ -85,6 +89,32 @@ export function getTopologyStateInfo(topology: Topology, autoRebuild: boolean): 
 		buttonText: 'Rebuild',
 		label: 'Stale'
 	};
+}
+
+export interface TopologyEditState {
+	isReadonly: boolean;
+	isEditable: boolean;
+	disabledReason: 'readonly' | 'locked' | 'stale' | null;
+}
+
+export function getTopologyEditState(
+	topology: Topology | undefined,
+	autoRebuild: boolean,
+	isReadonly: boolean
+): TopologyEditState {
+	if (isReadonly) return { isReadonly: true, isEditable: false, disabledReason: 'readonly' };
+	if (!topology) return { isReadonly: false, isEditable: false, disabledReason: null };
+	const stateInfo = getTopologyStateInfo(topology, autoRebuild);
+	const isEditable = stateInfo.type === 'fresh';
+	let disabledReason: TopologyEditState['disabledReason'] = null;
+	if (topology.is_locked) disabledReason = 'locked';
+	else if (stateInfo.type !== 'fresh') disabledReason = 'stale';
+	return { isReadonly: false, isEditable, disabledReason };
+}
+
+export function getOptionDisabledTooltip(reason: TopologyEditState['disabledReason']): string {
+	if (reason === 'locked') return topology_optionDisabledUnlockRequired();
+	return topology_optionDisabledRebuildRequired();
 }
 
 /**

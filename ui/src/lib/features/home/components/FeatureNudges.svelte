@@ -4,9 +4,16 @@
 	import { openModal } from '$lib/shared/stores/modal-registry';
 	import { upgradeContext } from '$lib/features/billing/stores';
 	import { optionsPanelExpanded } from '$lib/features/topology/queries';
-	import { entities } from '$lib/shared/stores/metadata';
+	import { entities, billingPlans } from '$lib/shared/stores/metadata';
+	import { useServicesCacheQuery } from '$lib/features/services/queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import type { IconComponent } from '$lib/shared/utils/types';
 	import { onMount } from 'svelte';
+	import {
+		home_nudges_unclaimedPortsAction,
+		home_nudges_unclaimedPortsDescription,
+		home_nudges_unclaimedPortsTitle
+	} from '$lib/paraglide/messages';
 
 	type Organization = components['schemas']['Organization'];
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
@@ -22,6 +29,15 @@
 		onNavigate: (tab: string) => void;
 	} = $props();
 
+	const servicesQuery = useServicesCacheQuery();
+	const daemonsQuery = useDaemonsQuery();
+	let hasUnclaimedPorts = $derived(
+		(servicesQuery.data ?? []).some((s) => s.service_definition === 'Unclaimed Open Ports')
+	);
+	let hasUnreachableDaemons = $derived(
+		(daemonsQuery.data ?? []).some((d) => d.standby === true || d.is_unreachable === true)
+	);
+
 	let mounted = $state(false);
 	let dismissCount = $state(0);
 	onMount(() => {
@@ -36,10 +52,8 @@
 	const onboarding = $derived(organization.onboarding ?? []);
 	const has = (op: OnboardingOperation) => onboarding.includes(op);
 
-	const isPaidPlan = $derived(planType != null && planType !== 'Free' && planType !== 'Demo');
-	const isProPlus = $derived(isPaidPlan && planType !== 'Starter');
-	const isTeamPlus = $derived(isProPlus && planType !== 'Pro');
-
+	const planMetadata = $derived(billingPlans.getMetadata(planType));
+	const features = $derived(planMetadata?.features ?? {});
 	interface Nudge {
 		id: string;
 		title: string;
@@ -53,6 +67,34 @@
 
 	let nudges = $derived.by((): Nudge[] => {
 		const all: Nudge[] = [
+			{
+				id: 'unclaimed-ports',
+				title: home_nudges_unclaimedPortsTitle(),
+				description: home_nudges_unclaimedPortsDescription(),
+				actionLabel: home_nudges_unclaimedPortsAction(),
+				action: () => {
+					window.open(
+						'https://scanopy.net/docs/using-scanopy/network-data/#unclaimed-open-ports',
+						'_blank'
+					);
+				},
+				visible: has('FirstDiscoveryCompleted') && hasUnclaimedPorts,
+				icon: entities.getIconComponent('Port'),
+				iconColor: entities.getColorHelper('Port').icon
+			},
+			{
+				id: 'daemon-attention',
+				title: 'Daemon needs attention',
+				description:
+					'One or more daemons are offline or unreachable. Scheduled scans targeting these daemons will be skipped until connectivity is restored.',
+				actionLabel: 'View Daemons',
+				action: () => {
+					onNavigate('daemons');
+				},
+				visible: hasUnreachableDaemons,
+				icon: entities.getIconComponent('Daemon'),
+				iconColor: entities.getColorHelper('Daemon').icon
+			},
 			{
 				id: 'tags',
 				title: 'Organize with Tags',
@@ -116,7 +158,7 @@
 					upgradeContext.set(null);
 					openModal('billing-plan');
 				},
-				visible: planType === 'Free',
+				visible: !features.scheduled_discovery,
 				icon: entities.getIconComponent('Discovery'),
 				iconColor: entities.getColorHelper('Discovery').icon
 			},
@@ -129,7 +171,8 @@
 					onNavigate('api-keys');
 					openModal('user-api-key');
 				},
-				visible: isProPlus && has('FirstDiscoveryCompleted') && !has('FirstUserApiKeyCreated'),
+				visible:
+					features.api_access && has('FirstDiscoveryCompleted') && !has('FirstUserApiKeyCreated'),
 				icon: entities.getIconComponent('UserApiKey'),
 				iconColor: entities.getColorHelper('UserApiKey').icon
 			},
@@ -142,7 +185,11 @@
 					onNavigate('networks');
 					openModal('network-editor');
 				},
-				visible: isProPlus && dashboard.networks.length === 1,
+				visible:
+					(organization.plan?.included_networks === null ||
+						(organization.plan?.included_networks ?? 0) > 1 ||
+						(organization.plan?.network_cents ?? 0) > 0) &&
+					dashboard.networks.length === 1,
 				icon: entities.getIconComponent('Network'),
 				iconColor: entities.getColorHelper('Network').icon
 			},
@@ -155,7 +202,7 @@
 					onNavigate('topology');
 					openModal('topology-share');
 				},
-				visible: isProPlus && has('FirstTopologyRebuild'),
+				visible: features.share_views && has('FirstTopologyRebuild'),
 				icon: entities.getIconComponent('Share'),
 				iconColor: entities.getColorHelper('Share').icon
 			},
@@ -168,7 +215,10 @@
 					onNavigate('users');
 					openModal('invite-user');
 				},
-				visible: isTeamPlus && !has('InviteSent'),
+				visible:
+					((organization.plan?.included_seats ?? 0) > 1 ||
+						(organization.plan?.seat_cents ?? 0) > 0) &&
+					!has('InviteSent'),
 				icon: entities.getIconComponent('User'),
 				iconColor: entities.getColorHelper('User').icon
 			}

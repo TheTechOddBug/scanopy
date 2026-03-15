@@ -1,6 +1,9 @@
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::{Admin, Authorized, Member, Viewer};
 use crate::server::shared::entities::{EntityDiscriminants, is_entity_taggable};
-use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
+use crate::server::shared::events::types::{
+    EntityEvent, EntityOperation, OnboardingEvent, OnboardingOperation,
+};
 use crate::server::shared::handlers::ordering::OrderField;
 use crate::server::shared::handlers::query::{
     FilterQueryExtractor, OrderDirection, PaginationParams,
@@ -258,6 +261,107 @@ pub async fn create_tag(
     Ok(response)
 }
 
+/// Resolve network_id and organization_id for an entity by looking it up via its service.
+async fn resolve_scope<T>(
+    service: &(impl CrudService<T> + Sync),
+    id: &Uuid,
+) -> (Option<Uuid>, Option<Uuid>)
+where
+    T: Entity
+        + Into<crate::server::shared::entities::Entity>
+        + std::fmt::Display
+        + crate::server::shared::entities::ChangeTriggersTopologyStaleness<T>,
+{
+    service
+        .get_by_id(id)
+        .await
+        .ok()
+        .flatten()
+        .map(|e| (e.network_id(), e.organization_id()))
+        .unwrap_or((None, None))
+}
+
+/// Resolve network_id and organization_id for any entity type.
+async fn resolve_entity_scope(
+    state: &AppState,
+    entity_id: &Uuid,
+    entity_type: EntityDiscriminants,
+) -> (Option<Uuid>, Option<Uuid>) {
+    let s = &state.services;
+    match entity_type {
+        EntityDiscriminants::Host => resolve_scope(s.host_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Service => resolve_scope(s.service_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Subnet => resolve_scope(s.subnet_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Group => resolve_scope(s.group_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Network => resolve_scope(s.network_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Discovery => {
+            resolve_scope(s.discovery_service.as_ref(), entity_id).await
+        }
+        EntityDiscriminants::Daemon => resolve_scope(s.daemon_service.as_ref(), entity_id).await,
+        EntityDiscriminants::DaemonApiKey => {
+            resolve_scope(s.daemon_api_key_service.as_ref(), entity_id).await
+        }
+        EntityDiscriminants::UserApiKey => {
+            resolve_scope(s.user_api_key_service.as_ref(), entity_id).await
+        }
+        EntityDiscriminants::SnmpCredential => {
+            resolve_scope(s.snmp_credential_service.as_ref(), entity_id).await
+        }
+        EntityDiscriminants::Tag => resolve_scope(s.tag_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Organization => {
+            resolve_scope(s.organization_service.as_ref(), entity_id).await
+        }
+        EntityDiscriminants::User => resolve_scope(s.user_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Invite => resolve_scope(s.invite_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Share => resolve_scope(s.share_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Topology => {
+            resolve_scope(s.topology_service.as_ref(), entity_id).await
+        }
+        EntityDiscriminants::Port => resolve_scope(s.port_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Binding => resolve_scope(s.binding_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Interface => {
+            resolve_scope(s.interface_service.as_ref(), entity_id).await
+        }
+        EntityDiscriminants::IfEntry => resolve_scope(s.if_entry_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Unknown => (None, None),
+    }
+}
+
+/// Emit EntityEvent::Updated for each entity whose tags changed.
+/// This triggers subscribers (like topology) to refresh their snapshots.
+async fn emit_tag_change_events(
+    state: &AppState,
+    auth: &AuthenticatedEntity,
+    entity_ids: &[Uuid],
+    entity_type: EntityDiscriminants,
+) {
+    let default_entity: crate::server::shared::entities::Entity = entity_type.into();
+
+    for entity_id in entity_ids {
+        let (network_id, organization_id) =
+            resolve_entity_scope(state, entity_id, entity_type).await;
+
+        let _ = state
+            .services
+            .event_bus
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: *entity_id,
+                network_id,
+                organization_id: organization_id.or(auth.organization_id()),
+                entity_type: default_entity.clone(),
+                operation: EntityOperation::Updated,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": false,
+                    "suppress_logs": true
+                }),
+                authentication: auth.clone(),
+            })
+            .await;
+    }
+}
+
 /// Request body for bulk tag operations
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct BulkTagRequest {
@@ -336,6 +440,16 @@ pub async fn bulk_add_tag(
         )
         .await?;
 
+    if affected_count > 0 {
+        emit_tag_change_events(
+            &state,
+            &auth.entity,
+            &request.entity_ids,
+            request.entity_type,
+        )
+        .await;
+    }
+
     Ok(Json(ApiResponse::success(BulkTagResponse {
         affected_count,
     })))
@@ -362,7 +476,7 @@ pub async fn bulk_add_tag(
 )]
 pub async fn bulk_remove_tag(
     State(state): State<Arc<AppState>>,
-    _auth: Authorized<Member>,
+    auth: Authorized<Member>,
     Json(request): Json<BulkTagRequest>,
 ) -> ApiResult<Json<ApiResponse<BulkTagResponse>>> {
     // Validate entity type is taggable
@@ -378,6 +492,16 @@ pub async fn bulk_remove_tag(
         .entity_tag_service
         .bulk_remove_tag(&request.entity_ids, request.entity_type, request.tag_id)
         .await?;
+
+    if affected_count > 0 {
+        emit_tag_change_events(
+            &state,
+            &auth.entity,
+            &request.entity_ids,
+            request.entity_type,
+        )
+        .await;
+    }
 
     Ok(Json(ApiResponse::success(BulkTagResponse {
         affected_count,
@@ -431,6 +555,14 @@ pub async fn set_entity_tags(
             organization_id,
         )
         .await?;
+
+    emit_tag_change_events(
+        &state,
+        &auth.entity,
+        &[request.entity_id],
+        request.entity_type,
+    )
+    .await;
 
     Ok(Json(ApiResponse::success(())))
 }

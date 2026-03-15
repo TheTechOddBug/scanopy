@@ -12,7 +12,6 @@
 		flushStoredEvents
 	} from '$lib/shared/utils/analytics';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
-	import EmailVerificationBanner from '$lib/shared/components/feedback/EmailVerificationBanner.svelte';
 	import { resolve } from '$app/paths';
 	import { resetTopologyOptions } from '$lib/features/topology/queries';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
@@ -247,9 +246,6 @@
 		<Loading />
 	</div>
 {:else}
-	{#if currentUser && !currentUser.email_verified}
-		<EmailVerificationBanner email={currentUser.email} />
-	{/if}
 	{@render children()}
 {/if}
 

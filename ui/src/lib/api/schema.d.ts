@@ -129,23 +129,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auth/profile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Update user profile with deferred marketing fields */
-        post: operations["update_profile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -918,6 +901,27 @@ export interface paths {
          *     Returns the daemon record and an API key that must be configured on the daemon.
          */
         post: operations["provision_daemon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/daemons/test-reachability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test reachability of a daemon URL
+         * @description Performs a TCP connection test and optionally an HTTP health check
+         *     to verify that a daemon URL is reachable from the server.
+         */
+        post: operations["test_daemon_reachability"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1705,6 +1709,40 @@ export interface paths {
         get: operations["get_organization"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update user profile with deferred marketing fields */
+        post: operations["update_profile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/referral-source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit referral source (how did you hear about us) */
+        post: operations["submit_referral_source"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2762,7 +2800,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.14.16"
+         *       "server_version": "0.14.18"
          *     }
          */
         ApiMeta: {
@@ -2773,7 +2811,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.14.16
+             * @example 0.14.18
              */
             server_version: string;
         };
@@ -2787,14 +2825,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-03-09T04:32:54.934519Z",
-             *       "id": "4a1a9f26-0c00-4fbb-b057-bb980c7501f3",
+             *       "created_at": "2026-03-15T02:51:16.558676Z",
+             *       "id": "0ae24fec-a689-4d06-af2f-9e3d1439a86a",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-03-09T04:32:54.934519Z"
+             *       "updated_at": "2026-03-15T02:51:16.558676Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2923,8 +2961,12 @@ export interface components {
                 daemon_id: string;
                 discovery_type: components["schemas"]["DiscoveryType"];
                 error?: string | null;
+                /** Format: int32 */
+                estimated_remaining_secs?: number | null;
                 /** Format: date-time */
                 finished_at?: string | null;
+                /** Format: int32 */
+                hosts_discovered?: number | null;
                 /** Format: uuid */
                 network_id: string;
                 phase: components["schemas"]["DiscoveryPhase"];
@@ -3042,14 +3084,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-03-09T04:32:54.914110Z",
-             *               "id": "45d0563e-f81d-4cda-8720-5b4042d993c3",
+             *               "created_at": "2026-03-15T02:51:16.541115Z",
+             *               "id": "22881fa3-8831-4172-8782-6c65d10f5da1",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-03-09T04:32:54.914110Z"
+             *               "updated_at": "2026-03-15T02:51:16.541115Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3058,7 +3100,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Gatus",
+             *           "service_definition": "Jaeger",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3314,14 +3356,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-03-09T04:32:54.928959Z",
-             *           "id": "e771badb-0b58-4936-9727-5574c473c697",
+             *           "created_at": "2026-03-15T02:51:16.553956Z",
+             *           "id": "ee950848-69ed-4995-88a8-a9ad439cd2dc",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-03-09T04:32:54.928959Z"
+             *           "updated_at": "2026-03-15T02:51:16.553956Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3330,7 +3372,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Gatus",
+             *       "service_definition": "Jaeger",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3446,6 +3488,20 @@ export interface components {
             meta: components["schemas"]["ApiMeta"];
             success: boolean;
         };
+        ApiResponse_TestReachabilityResponse: {
+            /** @description Response from a reachability test. */
+            data?: {
+                /** @description Error message if not reachable */
+                error?: string | null;
+                /** @description Health check result (only present when check_health was true) */
+                health?: boolean | null;
+                /** @description Whether the TCP connection succeeded */
+                reachable: boolean;
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
         ApiResponse_Topology: {
             data?: components["schemas"]["TopologyBase"] & {
                 /** Format: date-time */
@@ -3538,8 +3594,12 @@ export interface components {
                 daemon_id: string;
                 discovery_type: components["schemas"]["DiscoveryType"];
                 error?: string | null;
+                /** Format: int32 */
+                estimated_remaining_secs?: number | null;
                 /** Format: date-time */
                 finished_at?: string | null;
+                /** Format: int32 */
+                hosts_discovered?: number | null;
                 /** Format: uuid */
                 network_id: string;
                 phase: components["schemas"]["DiscoveryPhase"];
@@ -3633,14 +3693,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-03-09T04:32:54.914530Z",
-         *       "id": "8fd30344-9894-47a6-a3f4-ae3f0011254d",
+         *       "created_at": "2026-03-15T02:51:16.541322Z",
+         *       "id": "e1c7e60d-d555-4fb5-a443-caff77467f74",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-03-09T04:32:54.914530Z"
+         *       "updated_at": "2026-03-15T02:51:16.541322Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3822,7 +3882,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Gatus",
+         *           "service_definition": "Jaeger",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4117,7 +4177,7 @@ export interface components {
             date: string;
         };
         /** @enum {string} */
-        DiscoveryPhase: "Pending" | "Starting" | "Started" | "Scanning" | "Complete" | "Failed" | "Cancelled";
+        DiscoveryPhase: "Queued" | "Pending" | "Starting" | "Started" | "Scanning" | "Complete" | "Failed" | "Cancelled";
         /**
          * @description Protocol that discovered the physical link between network devices
          * @enum {string}
@@ -4156,8 +4216,12 @@ export interface components {
             daemon_id: string;
             discovery_type: components["schemas"]["DiscoveryType"];
             error?: string | null;
+            /** Format: int32 */
+            estimated_remaining_secs?: number | null;
             /** Format: date-time */
             finished_at?: string | null;
+            /** Format: int32 */
+            hosts_discovered?: number | null;
             /** Format: uuid */
             network_id: string;
             phase: components["schemas"]["DiscoveryPhase"];
@@ -4466,14 +4530,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-03-09T04:32:54.913512Z",
-         *               "id": "3f2708c4-dafa-4029-8be0-835331d7ca6a",
+         *               "created_at": "2026-03-15T02:51:16.540834Z",
+         *               "id": "26f9e7a5-b838-4bd6-98b5-972182bb78c2",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-03-09T04:32:54.913512Z"
+         *               "updated_at": "2026-03-15T02:51:16.540834Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4482,7 +4546,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Gatus",
+         *           "service_definition": "Jaeger",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -4961,7 +5025,7 @@ export interface components {
             snmp_version?: string | null;
         };
         /** @enum {string} */
-        OnboardingOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstGroupCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted" | "ProfileCompleted";
+        OnboardingOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstGroupCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted" | "ProfileCompleted" | "ReferralSourceCompleted";
         /** @description Response from onboarding state endpoint */
         OnboardingStateResponse: {
             network?: null | components["schemas"]["OnboardingNetworkState"];
@@ -5008,6 +5072,8 @@ export interface components {
             readonly plan_status: string | null;
             /** Format: date-time */
             readonly trial_end_date?: string | null;
+            /** @description Use case selection (homelab, company, msp) */
+            use_case?: string | null;
         };
         /**
          * @description API metadata for paginated list responses (pagination is always present)
@@ -5019,7 +5085,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.14.16"
+         *       "server_version": "0.14.18"
          *     }
          */
         PaginatedApiMeta: {
@@ -5032,7 +5098,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.14.16
+             * @example 0.14.18
              */
             server_version: string;
         };
@@ -5400,6 +5466,11 @@ export interface components {
             options: components["schemas"]["ShareOptions"];
             requires_password: boolean;
         };
+        /** @description Request to submit referral source */
+        ReferralSourceRequest: {
+            referral_source: string;
+            referral_source_other?: string | null;
+        };
         /** @description Registration request from client */
         RegisterRequest: {
             /** Format: email */
@@ -5460,14 +5531,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-03-09T04:32:54.914382Z",
-         *           "id": "9936581a-5f73-44e7-8e79-8e10e63fb285",
+         *           "created_at": "2026-03-15T02:51:16.541254Z",
+         *           "id": "f53f8b3e-77e2-4516-b7a5-6375429d85ad",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-03-09T04:32:54.914382Z"
+         *           "updated_at": "2026-03-15T02:51:16.541254Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5476,7 +5547,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Gatus",
+         *       "service_definition": "Jaeger",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5604,6 +5675,7 @@ export interface components {
         ShareOptions: {
             show_export_button: boolean;
             show_inspect_panel: boolean;
+            show_minimap: boolean;
             show_zoom_controls: boolean;
         };
         SnmpCredential: components["schemas"]["SnmpCredentialBase"] & {
@@ -5738,6 +5810,22 @@ export interface components {
          * @enum {string}
          */
         TagOrderField: "created_at" | "name" | "color" | "updated_at";
+        /** @description Request to test reachability of a daemon URL. */
+        TestReachabilityRequest: {
+            /** @description If true, also perform an HTTP GET to {url}/health after the TCP check */
+            check_health?: boolean;
+            /** @description Full URL of the daemon (e.g. "https://daemon.example.com:60073") */
+            url: string;
+        };
+        /** @description Response from a reachability test. */
+        TestReachabilityResponse: {
+            /** @description Error message if not reachable */
+            error?: string | null;
+            /** @description Health check result (only present when check_health was true) */
+            health?: boolean | null;
+            /** @description Whether the TCP connection succeeded */
+            reachable: boolean;
+        };
         Topology: components["schemas"]["TopologyBase"] & {
             /** Format: date-time */
             readonly created_at: string;
@@ -5810,6 +5898,7 @@ export interface components {
             hide_resize_handles: boolean;
             left_zone_title: string;
             no_fade_edges: boolean;
+            show_minimap?: boolean;
             tag_filter?: components["schemas"]["TopologyTagFilter"];
         };
         /**
@@ -6297,30 +6386,6 @@ export interface operations {
         };
         responses: {
             /** @description Step saved */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse"];
-                };
-            };
-        };
-    };
-    update_profile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProfileUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description Profile updated */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8040,6 +8105,39 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    test_daemon_reachability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestReachabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Reachability test result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TestReachabilityResponse"];
+                };
+            };
+            /** @description Invalid URL */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10001,6 +10099,54 @@ export interface operations {
             };
         };
     };
+    update_profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Profile updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+        };
+    };
+    submit_referral_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferralSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Referral source recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+        };
+    };
     update_org_name: {
         parameters: {
             query?: never;
@@ -10379,6 +10525,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */
@@ -10476,6 +10624,8 @@ export interface operations {
                 order_by?: null | components["schemas"]["ServiceOrderField"];
                 /** @description Direction for order_by field (group_by always uses ASC). */
                 order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Exclude services belonging to these categories. */
+                exclude_categories?: components["schemas"]["ServiceCategory"][] | null;
                 /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
                 limit?: number | null;
                 /** @description Number of results to skip. Default: 0. */

@@ -67,6 +67,8 @@
 		type EntityDiscriminants
 	} from '$lib/features/tags/queries';
 	import type { Color } from '$lib/shared/utils/styling';
+	import { scrollFade } from '$lib/shared/utils/scrollFade';
+	import { computeCommonTags } from '$lib/shared/utils/tags';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import type { components } from '$lib/api/schema';
 
@@ -91,6 +93,9 @@
 		// Server-side tag filtering callback (optional)
 		// Called when tag filter selection changes, with array of selected tag IDs
 		onTagFilterChange = null,
+		// Server-side exclude filter callback (optional)
+		// Called when an exclude-mode filter changes, with field key and excluded values
+		onExcludeFilterChange = null,
 		// CSV export callback (optional, default behavior)
 		// Called when user clicks export button; parent handles the actual export
 		onCsvExport = null,
@@ -119,6 +124,9 @@
 		// Server-side tag filtering: called when tag filter changes
 		// Args: array of tag IDs to filter by
 		onTagFilterChange?: ((tagIds: string[]) => void) | null;
+		// Server-side exclude filter: called when exclude-mode filter changes
+		// Args: (fieldKey, array of excluded values)
+		onExcludeFilterChange?: ((fieldKey: string, values: string[]) => void) | null;
 		// CSV export: default behavior when user clicks export button
 		onCsvExport?: (() => void | Promise<void>) | null;
 		// Export button click override: if provided, replaces onCsvExport entirely
@@ -308,7 +316,7 @@
 				} else {
 					filterState[key] = {
 						type: 'string',
-						values: new SvelteSet()
+						values: new SvelteSet(field.filterDefaults)
 					};
 				}
 			}
@@ -334,6 +342,19 @@
 		const tagFilter = filterState['tags'];
 		if (onTagFilterChange && tagFilter && tagFilter.values.size > 0) {
 			onTagFilterChange(Array.from(tagFilter.values));
+		}
+
+		// Notify parent of restored exclude filter state
+		if (onExcludeFilterChange) {
+			for (const field of fields) {
+				if (field.filterable && field.filterMode === 'exclude') {
+					const key = getFieldKey(field);
+					const filter = filterState[key];
+					if (filter && filter.values.size > 0) {
+						onExcludeFilterChange(key, Array.from(filter.values));
+					}
+				}
+			}
 		}
 
 		// Set up reactive save (debounced)
@@ -447,6 +468,11 @@
 					return true;
 				}
 
+				// Skip client-side exclude filtering when server-side filtering is enabled
+				if (field.filterMode === 'exclude' && onExcludeFilterChange) {
+					return true;
+				}
+
 				const value = getFieldValue(item, field);
 
 				if (field.type === 'boolean') {
@@ -462,6 +488,10 @@
 					return value.some((v) => filterConfig.values.has(String(v)));
 				} else if (field.type === 'string') {
 					if (filterConfig.values.size === 0) return true;
+					if (field.filterMode === 'exclude') {
+						// Exclude mode: checked values are hidden
+						return value == null || !filterConfig.values.has(String(value));
+					}
 					if (value === null || value === undefined) return false;
 					return filterConfig.values.has(String(value));
 				}
@@ -580,6 +610,20 @@
 				values: newValues
 			}
 		};
+
+		// Notify parent of exclude filter changes
+		if (onExcludeFilterChange) {
+			const field = fields.find((f) => getFieldKey(f) === fieldKey);
+			if (field?.filterMode === 'exclude') {
+				onExcludeFilterChange(fieldKey, Array.from(newValues));
+				// Reset pagination
+				if (useServerPagination && onPageChange) {
+					onPageChange(1, pageSize);
+				} else {
+					currentPage = 1;
+				}
+			}
+		}
 	}
 
 	// Toggle boolean filter
@@ -617,7 +661,7 @@
 		};
 	}
 
-	// Clear all filters
+	// Clear all filters (restores defaults for exclude filters)
 	function clearFilters() {
 		const newFilterState: FilterState = {};
 
@@ -646,6 +690,15 @@
 		});
 
 		filterState = newFilterState;
+
+		// Notify parent that exclude filters were cleared
+		if (onExcludeFilterChange) {
+			fields.forEach((field) => {
+				if (field.filterable && field.filterMode === 'exclude') {
+					onExcludeFilterChange(getFieldKey(field), []);
+				}
+			});
+		}
 	}
 
 	// Clear search
@@ -721,14 +774,7 @@
 		const selectedItems = items.filter((item) => selectedIds.has(getItemId(item)));
 		if (selectedItems.length === 0) return [];
 
-		// Start with first item's tags, then intersect with others
-		let common = new Set(getItemTags(selectedItems[0]));
-		for (let i = 1; i < selectedItems.length; i++) {
-			const itemTags = new Set(getItemTags(selectedItems[i]));
-			common = new Set([...common].filter((tag) => itemTags.has(tag)));
-		}
-
-		return Array.from(common);
+		return computeCommonTags(selectedItems.map((item) => ({ tags: getItemTags!(item) })));
 	});
 
 	// Check if bulk tagging is enabled
@@ -1167,7 +1213,10 @@
 							{:else if fieldKey === 'tags'}
 								<!-- Special tag filter with colored tags (stores tag IDs for server-side filtering) -->
 								{@const filter = filterState[fieldKey]}
-								<div class="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+								<div
+									use:scrollFade
+									class="flex max-h-32 flex-wrap gap-1.5 overflow-y-scroll rounded-md bg-black/5 p-2 dark:bg-white/5"
+								>
 									{#if allTags.length === 0}
 										<p class="text-tertiary text-xs">{common_noTagsAvailable()}</p>
 									{:else}
@@ -1185,9 +1234,12 @@
 									{/if}
 								</div>
 							{:else}
-								{@const uniqueValues = getUniqueValues(field)}
+								{@const uniqueValues = field.filterOptions ?? getUniqueValues(field)}
 								{@const filter = filterState[fieldKey]}
-								<div class="max-h-32 space-y-1.5 overflow-y-auto">
+								<div
+									use:scrollFade
+									class="max-h-32 space-y-1.5 overflow-y-scroll rounded-md bg-black/5 p-2 dark:bg-white/5"
+								>
 									{#if uniqueValues.length === 0}
 										<p class="text-tertiary text-xs">{common_noValuesAvailable()}</p>
 									{:else}

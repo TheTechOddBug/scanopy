@@ -23,7 +23,7 @@ use scanopy::server::{
 };
 use tower::ServiceBuilder;
 use tower_http::{
-    cors::{AllowCredentials, AllowOrigin, CorsLayer},
+    cors::{AllowOrigin, CorsLayer},
     services::{ServeDir, ServeFile},
     set_header::SetResponseHeaderLayer,
     trace::TraceLayer,
@@ -135,8 +135,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Start daemon polling loop for ServerPoll mode daemons
     let daemon_service = state.services.daemon_service.clone();
+    let poll_email_service = state.services.email_service.clone();
     tokio::spawn(async move {
-        daemon_service.start_polling_loop().await;
+        daemon_service.start_polling_loop(poll_email_service).await;
     });
 
     // Check for inactive daemons and put them on standby (daily)
@@ -197,9 +198,8 @@ async fn main() -> anyhow::Result<()> {
             .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
             .allow_credentials(true)
     } else {
-        // Production: Reflect any origin, but only send credentials for app origins.
-        // - Session users from app/demo origins: credentials=true → cookies work
-        // - API key users from any domain: origin reflected, no credentials → Bearer works
+        // Production: Only allow app and demo origins. API keys are server-side only;
+        // browser clients should proxy through their own backend.
         let parsed_url = url::Url::parse(&public_url).expect("Invalid public_url");
         let origin_str = format!("{}://{}", parsed_url.scheme(), parsed_url.authority());
         let public_origin: HeaderValue =
@@ -207,7 +207,7 @@ async fn main() -> anyhow::Result<()> {
         let demo_origin: HeaderValue = "https://demo.scanopy.net".parse().unwrap();
 
         CorsLayer::new()
-            .allow_origin(AllowOrigin::mirror_request())
+            .allow_origin(AllowOrigin::list([public_origin, demo_origin]))
             .allow_methods([
                 Method::GET,
                 Method::POST,
@@ -216,11 +216,7 @@ async fn main() -> anyhow::Result<()> {
                 Method::OPTIONS,
             ])
             .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
-            .allow_credentials(AllowCredentials::predicate(
-                move |origin: &HeaderValue, _parts: &_| {
-                    origin == public_origin || origin == demo_origin
-                },
-            ))
+            .allow_credentials(true)
     };
 
     // Permissive CORS for public share routes (used by embeds on customer domains)

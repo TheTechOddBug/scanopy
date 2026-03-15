@@ -3,13 +3,16 @@
 	import { useDashboardQuery } from '$lib/features/home/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
+	import { useActiveSessionsQuery } from '$lib/features/discovery/queries';
 	import GettingStartedChecklist from './GettingStartedChecklist.svelte';
+	import ActiveDiscoveries from './ActiveDiscoveries.svelte';
 	import NetworkMetrics from './NetworkMetrics.svelte';
 	import DaemonHealthPanel from './DaemonHealthPanel.svelte';
 	import RecentDiscoveries from './RecentDiscoveries.svelte';
 	import FeatureNudges from './FeatureNudges.svelte';
 	import PlanUsage from './PlanUsage.svelte';
 	import ProfilePrompt from './ProfilePrompt.svelte';
+	import ReferralSourcePrompt from './ReferralSourcePrompt.svelte';
 	import type { TabProps } from '$lib/shared/types';
 	import type { components } from '$lib/api/schema';
 	import { onMount } from 'svelte';
@@ -25,10 +28,12 @@
 	const organizationQuery = useOrganizationQuery();
 	const currentUserQuery = useCurrentUserQuery();
 	const configQuery = useConfigQuery();
+	const sessionsQuery = useActiveSessionsQuery();
 
 	let dashboard = $derived(dashboardQuery.data);
 	let organization = $derived(organizationQuery.data);
 	let currentUser = $derived(currentUserQuery.data);
+	let activeSessions = $derived(sessionsQuery.data ?? []);
 
 	let onboarding = $derived((organization?.onboarding ?? []) as OnboardingOperation[]);
 	let isOwner = $derived(currentUser?.permissions === 'Owner');
@@ -58,6 +63,15 @@
 	const has = (op: OnboardingOperation) => onboarding.includes(op);
 	let showNudges = $derived(dashboard != null && organization != null);
 
+	// One prompt at a time: referral source first, then profile
+	let showReferralSource = $derived(
+		configData &&
+			configData.deployment_type === 'cloud' &&
+			has('FirstDaemonRegistered') &&
+			!has('ReferralSourceCompleted')
+	);
+	let showProfile = $derived(!showReferralSource);
+
 	// Navigation handler — sets the active tab via the URL hash
 	function navigateTo(tab: string) {
 		if (typeof window !== 'undefined') {
@@ -81,11 +95,15 @@
 	{:else if dashboard && organization}
 		<!-- Getting Started Checklist -->
 		{#if !checklistDismissed}
-			<GettingStartedChecklist {onboarding} onNavigate={navigateTo} />
+			<GettingStartedChecklist {onboarding} {organization} onNavigate={navigateTo} {isActive} />
 		{/if}
 
-		<!-- Profile Prompt — shown after discovery for company/msp cloud users -->
-		<ProfilePrompt {organization} {configData} />
+		<!-- Onboarding prompts — one at a time -->
+		{#if showReferralSource}
+			<ReferralSourcePrompt {organization} {configData} />
+		{:else if showProfile}
+			<ProfilePrompt {organization} {configData} />
+		{/if}
 
 		<!-- Demo Topology Embed — shown before first topology rebuild -->
 		{#if configData && isCloud(configData) && !has('FirstDiscoveryCompleted') && !demoTopologyDismissed}
@@ -127,6 +145,14 @@
 			</section>
 		{/if}
 
+		<!-- Active Discoveries — shown when sessions exist, after first discovery completed -->
+		{#if has('FirstDiscoveryCompleted') && activeSessions.length > 0}
+			<ActiveDiscoveries
+				sessions={activeSessions}
+				onNavigate={() => navigateTo('discovery-sessions')}
+			/>
+		{/if}
+
 		<!-- Feature Nudges — shown after checklist is complete/dismissed -->
 		{#if showNudges}
 			<FeatureNudges {organization} {dashboard} onNavigate={navigateTo} />
@@ -150,11 +176,13 @@
 			/>
 		{/if}
 
-		<!-- Plan Usage — always visible if limits are approaching -->
-		<PlanUsage planUsage={dashboard.plan_usage} plan={organization.plan} {isOwner} />
+		<!-- Plan Usage — hidden pre-daemon since limits can't be hit -->
+		{#if has('FirstDaemonRegistered')}
+			<PlanUsage planUsage={dashboard.plan_usage} plan={organization.plan} {isOwner} />
+		{/if}
 
-		<!-- Network Metrics — last since large plans can have many networks -->
-		{#if dashboard.networks.length > 0}
+		<!-- Network Metrics — hidden pre-daemon since no meaningful data yet -->
+		{#if has('FirstDaemonRegistered') && dashboard.networks.length > 0}
 			<NetworkMetrics networks={dashboard.networks} />
 		{/if}
 	{/if}

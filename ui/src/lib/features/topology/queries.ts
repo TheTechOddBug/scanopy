@@ -9,6 +9,7 @@ import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-qu
 import { queryClient, queryKeys } from '$lib/api/query-client';
 import { apiClient } from '$lib/api/client';
 import type { Topology, TopologyOptions } from './types/base';
+import type { Organization } from '$lib/features/organizations/types';
 import { uuidv4Sentinel, utcTimeZoneSentinel } from '$lib/shared/utils/formatting';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
 import { writable, get } from 'svelte/store';
@@ -24,7 +25,8 @@ export const defaultTopologyOptions: TopologyOptions = {
 			hidden_host_tag_ids: [],
 			hidden_service_tag_ids: [],
 			hidden_subnet_tag_ids: []
-		}
+		},
+		show_minimap: true
 	},
 	request: {
 		group_docker_bridges_by_host: true,
@@ -170,6 +172,8 @@ export function useRefreshTopologyMutation() {
  * (network_id, options, nodes/edges for position preservation)
  */
 export function useRebuildTopologyMutation() {
+	const queryClient = useQueryClient();
+
 	return createMutation(() => ({
 		mutationFn: async (topology: Topology) => {
 			await apiClient.POST('/api/v1/topology/{id}/rebuild', {
@@ -182,6 +186,12 @@ export function useRebuildTopologyMutation() {
 				}
 			});
 			return topology.id;
+		},
+		onSuccess: () => {
+			const org = queryClient.getQueryData<Organization>(queryKeys.organizations.current());
+			if (org && !org.onboarding.includes('FirstTopologyRebuild')) {
+				queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
+			}
 		}
 	}));
 }
@@ -422,6 +432,8 @@ const PREFERRED_NETWORK_KEY = 'scanopy_preferred_network_id';
 export const selectedTopologyId = writable<string | null>(null);
 export const selectedNode = writable<Node | null>(null);
 export const selectedEdge = writable<Edge | null>(null);
+export const selectedNodes = writable<Node[]>([]);
+export const previewEdges = writable<Edge[]>([]);
 export const autoRebuild = writable<boolean>(loadAutoRebuildFromStorage());
 export const topologyOptions = writable<TopologyOptions>(loadOptionsFromStorage());
 export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage());
@@ -667,6 +679,12 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 			if (!old) return [update];
 			return old.map((topo) => (topo.id === update.id ? update : topo));
 		});
+
+		// Invalidate org cache until FirstTopologyRebuild milestone appears
+		const org = queryClient.getQueryData<Organization>(queryKeys.organizations.current());
+		if (org && !org.onboarding.includes('FirstTopologyRebuild')) {
+			queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
+		}
 	}
 
 	private applyPartialUpdate(topologyId: string, updates: Partial<Topology>) {

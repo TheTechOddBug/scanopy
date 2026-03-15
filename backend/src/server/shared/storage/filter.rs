@@ -145,7 +145,7 @@ impl<T: Storable> StorableFilter<T> {
     }
 
     pub fn new_for_active_daemons() -> Self {
-        Self::new().standby(false)
+        Self::new().standby(false).is_unreachable(false)
     }
 
     /// Qualify a column name with the table name.
@@ -363,6 +363,24 @@ impl<T: Storable> StorableFilter<T> {
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
         self.values.push(SqlValue::String(name));
+        self
+    }
+
+    pub fn service_definition_not_in(mut self, definitions: &[String]) -> Self {
+        if definitions.is_empty() {
+            return self;
+        }
+        let col = self.qualify_column("service_definition");
+        let placeholders: Vec<String> = definitions
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("${}", self.values.len() + i + 1))
+            .collect();
+        self.conditions
+            .push(format!("{} NOT IN ({})", col, placeholders.join(", ")));
+        for def in definitions {
+            self.values.push(SqlValue::String(def.clone()));
+        }
         self
     }
 

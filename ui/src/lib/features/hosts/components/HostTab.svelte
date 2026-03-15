@@ -8,6 +8,7 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
+	import PreDaemonEmptyState from '$lib/shared/components/layout/PreDaemonEmptyState.svelte';
 	import HostEditor from './HostEditModal/HostEditor.svelte';
 	import HostConsolidationModal from './HostConsolidationModal.svelte';
 	import HostExportModal from './HostExportModal.svelte';
@@ -56,7 +57,9 @@
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { modalState, resolveModalDeepLink } from '$lib/shared/stores/modal-registry';
 	import type { components } from '$lib/api/schema';
+	import { hasDaemon } from '$lib/shared/onboarding/checklist';
 
+	type OnboardingOperation = components['schemas']['OnboardingOperation'];
 	type HostOrderField = components['schemas']['HostOrderField'];
 	type OrderDirection = components['schemas']['OrderDirection'];
 
@@ -76,6 +79,7 @@
 	const organizationQuery = useOrganizationQuery();
 	let org = $derived(organizationQuery.data);
 	let hostLimit = $derived(org?.plan?.included_hosts ?? null);
+	let onboarding = $derived((org?.onboarding ?? []) as OnboardingOperation[]);
 
 	const tagsQuery = useTagsQuery();
 	// Paginated hosts with server-side pagination, ordering, and tag filtering
@@ -343,36 +347,40 @@
 	<!-- Header -->
 	<TabHeader title={common_hosts()}>
 		<svelte:fragment slot="actions">
-			<div class="flex items-center gap-3">
-				{#if hostLimit !== null}
-					<span
-						class="text-sm {isAtHostLimit
-							? 'text-amber-400'
-							: isNearHostLimit
-								? 'text-yellow-400'
-								: 'text-tertiary'}"
-					>
-						{totalHostCount} / {hostLimit}
-					</span>
-				{/if}
-				{#if !isReadOnly}
-					{#if isAtHostLimit}
-						<UpgradeButton feature="hosts" />
-					{:else}
-						{#if isNearHostLimit}
-							<UpgradeButton feature="hosts" />
-						{/if}
-						<button class="btn-primary flex items-center" onclick={handleCreateHost}
-							><Plus class="h-5 w-5" />{common_create()}</button
+			{#if hasDaemon(onboarding)}
+				<div class="flex items-center gap-3">
+					{#if hostLimit !== null}
+						<span
+							class="text-sm {isAtHostLimit
+								? 'text-amber-400'
+								: isNearHostLimit
+									? 'text-yellow-400'
+									: 'text-tertiary'}"
 						>
+							{totalHostCount} / {hostLimit}
+						</span>
 					{/if}
-				{/if}
-			</div>
+					{#if !isReadOnly}
+						{#if isAtHostLimit}
+							<UpgradeButton feature="hosts" />
+						{:else}
+							{#if isNearHostLimit}
+								<UpgradeButton feature="hosts" />
+							{/if}
+							<button class="btn-primary flex items-center" onclick={handleCreateHost}
+								><Plus class="h-5 w-5" />{common_create()}</button
+							>
+						{/if}
+					{/if}
+				</div>
+			{/if}
 		</svelte:fragment>
 	</TabHeader>
 
-	<!-- Loading state (only on initial load) -->
-	{#if isInitialLoading}
+	{#if !hasDaemon(onboarding)}
+		<PreDaemonEmptyState title="Install a daemon to start discovering hosts on your network." />
+	{:else if isInitialLoading}
+		<!-- Loading state (only on initial load) -->
 		<Loading />
 	{:else if hostsData.length === 0 && !hostsPagination}
 		<!-- Empty state -->

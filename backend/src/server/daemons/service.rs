@@ -30,18 +30,20 @@ use crate::server::daemons::r#impl::api::{
     DaemonCapabilities, DaemonDiscoveryRequest, DaemonRegistrationRequest,
     DaemonRegistrationResponse, DiscoveryUpdatePayload, FirstContactRequest, ServerCapabilities,
 };
-use crate::server::daemons::r#impl::base::{Daemon, DaemonBase, DaemonMode};
+use crate::server::daemons::r#impl::base::{Daemon, DaemonBase};
 use crate::server::daemons::r#impl::version::DaemonVersionPolicy;
 use crate::server::discovery::r#impl::base::{Discovery, DiscoveryBase};
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback, RunType};
 use crate::server::discovery::service::DiscoveryService;
 use crate::server::hosts::r#impl::base::{Host, HostBase};
-use crate::server::hosts::service::HostService;
+use crate::server::hosts::service::{HostLimitContext, HostService};
 use crate::server::networks::r#impl::Network;
 use crate::server::networks::service::NetworkService;
 use crate::server::organizations::service::OrganizationService;
 use crate::server::shared::events::bus::EventBus;
-use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
+use crate::server::shared::events::types::{
+    BillingEvent, BillingOperation, OnboardingEvent, OnboardingOperation,
+};
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
@@ -783,17 +785,47 @@ impl DaemonService {
         &self,
         entities: BufferedEntities,
         auth: AuthenticatedEntity,
-        host_limit: Option<u64>,
     ) -> Result<CreatedEntitiesPayload, ApiError> {
         let host_service = self
             .host_service
             .get()
             .ok_or_else(|| ApiError::internal_error("HostService not initialized"))?;
 
+        // Compute host limit context from the first host's network → org → plan
+        let limit_ctx = if let Some(first_host) = entities.hosts.first() {
+            let network_id = first_host.host.base.network_id;
+            if let Ok(Some(network)) = self.network_service.get_by_id(&network_id).await
+                && let Ok(Some(org)) = self
+                    .organization_service
+                    .get_by_id(&network.base.organization_id)
+                    .await
+                && let Some(plan) = &org.base.plan
+                && let Some(limit) = plan.host_limit()
+            {
+                let org_networks = self
+                    .network_service
+                    .get_all(StorableFilter::<Network>::new_from_org_id(&org.id))
+                    .await
+                    .unwrap_or_default();
+                let org_network_ids: Vec<Uuid> = org_networks.iter().map(|n| n.id).collect();
+                Some(HostLimitContext {
+                    limit,
+                    org_id: org.id,
+                    org_network_ids,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let mut created_hosts = Vec::new();
         let mut created_subnets = Vec::new();
         let mut host_failures = 0;
         let mut subnet_failures = 0;
+        let mut limit_event_emitted = false;
+        let mut billing_limit_reached: Option<(u64, Uuid)> = None;
 
         // Process each discovered host - continue on failure to avoid blocking entire batch
         for host_request in entities.hosts {
@@ -807,7 +839,7 @@ impl DaemonService {
                     host_request.services,
                     host_request.if_entries,
                     auth.clone(),
-                    host_limit,
+                    limit_ctx.as_ref(),
                 )
                 .await
             {
@@ -816,6 +848,32 @@ impl DaemonService {
                 }
                 Err(e) => {
                     host_failures += 1;
+
+                    // Emit billing event once when host limit is hit
+                    if !limit_event_emitted
+                        && e.to_string().contains("Host limit reached")
+                        && let Some(ctx) = &limit_ctx
+                    {
+                        limit_event_emitted = true;
+                        billing_limit_reached = Some((ctx.limit, ctx.org_id));
+                        let _ = self
+                            .event_bus
+                            .publish_billing(BillingEvent::new(
+                                Uuid::new_v4(),
+                                ctx.org_id,
+                                BillingOperation::FeatureLimitHit,
+                                Utc::now(),
+                                auth.clone(),
+                                serde_json::json!({
+                                    "limit_type": "hosts",
+                                    "current_count": ctx.limit,
+                                    "limit": ctx.limit,
+                                    "source": "discovery",
+                                }),
+                            ))
+                            .await;
+                    }
+
                     tracing::warn!(
                         pending_id = %pending_id,
                         host_name = %host_name,
@@ -882,6 +940,7 @@ impl DaemonService {
         Ok(CreatedEntitiesPayload {
             subnets: created_subnets,
             hosts: created_hosts,
+            billing_limit_hit: billing_limit_reached,
         })
     }
 
@@ -1097,7 +1156,10 @@ impl DaemonService {
     // ========================================================================
 
     /// Start the ServerPoll polling loop. Should be called once from main.
-    pub async fn start_polling_loop(self: Arc<Self>) {
+    pub async fn start_polling_loop(
+        self: Arc<Self>,
+        email_service: Option<Arc<crate::server::email::traits::EmailService>>,
+    ) {
         let poll_interval = Duration::from_secs(DEFAULT_POLL_INTERVAL_SECS);
         let mut interval = tokio::time::interval(poll_interval);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -1105,7 +1167,7 @@ impl DaemonService {
         loop {
             interval.tick().await;
 
-            if let Err(e) = self.poll_all_daemons().await {
+            if let Err(e) = self.poll_all_daemons(email_service.as_deref()).await {
                 tracing::warn!("Daemon poller cycle failed: {}", e);
             }
         }
@@ -1113,7 +1175,10 @@ impl DaemonService {
 
     /// Poll all ServerPoll-mode daemons in parallel with semaphore-limited concurrency.
     /// Uses backon for per-daemon retries - daemon is marked unreachable after exhausting retries.
-    async fn poll_all_daemons(&self) -> Result<()> {
+    async fn poll_all_daemons(
+        &self,
+        email_service: Option<&crate::server::email::traits::EmailService>,
+    ) -> Result<()> {
         let daemons = self.get_server_poll_daemons().await?;
 
         if daemons.is_empty() {
@@ -1139,7 +1204,7 @@ impl DaemonService {
                     let _permit = sem.acquire().await.expect("Semaphore closed");
                     // poll_daemon handles retries internally via backon
                     // Errors are logged inside poll_daemon, but log unexpected ones here too
-                    if let Err(e) = self.poll_daemon(&daemon).await {
+                    if let Err(e) = self.poll_daemon(&daemon, email_service).await {
                         tracing::debug!(
                             daemon_id = %daemon_id,
                             daemon_name = %daemon_name,
@@ -1166,17 +1231,37 @@ impl DaemonService {
         Ok(reachable_server_poll_daemons)
     }
 
-    /// Mark a daemon as unreachable in the database
-    async fn mark_daemon_unreachable(&self, daemon_id: Uuid) -> Result<()> {
+    /// Mark a daemon as unreachable in the database and send notification
+    async fn mark_daemon_unreachable(
+        &self,
+        daemon_id: Uuid,
+        email_service: Option<&crate::server::email::traits::EmailService>,
+    ) -> Result<()> {
         let mut daemon = self
             .get_by_id(&daemon_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Daemon {} not found", daemon_id))?;
 
+        // Only notify if daemon was previously connected (skip if never seen = still setting up)
+        let should_notify = daemon.base.last_seen.is_some();
+
         daemon.base.is_unreachable = true;
 
         self.update(&mut daemon, AuthenticatedEntity::System)
             .await?;
+
+        if should_notify
+            && let Some(email_service) = email_service
+            && let Err(e) = self
+                .send_unreachable_notification(&daemon, email_service)
+                .await
+        {
+            tracing::warn!(
+                daemon_id = %daemon.id,
+                error = %e,
+                "Failed to send daemon unreachable notification email"
+            );
+        }
 
         Ok(())
     }
@@ -1189,7 +1274,11 @@ impl DaemonService {
     /// the polling endpoints (/api/status, /api/poll, /api/first-contact,
     /// /api/discovery/entities-created). Legacy daemons stay alive via their
     /// own heartbeat calls to the server's backward-compat endpoint.
-    async fn poll_daemon(&self, daemon: &Daemon) -> Result<()> {
+    async fn poll_daemon(
+        &self,
+        daemon: &Daemon,
+        email_service: Option<&crate::server::email::traits::EmailService>,
+    ) -> Result<()> {
         Self::warn_if_insecure_daemon_url(&daemon.base.url);
 
         // Skip polling for legacy daemons - they don't have the new endpoints
@@ -1259,7 +1348,9 @@ impl DaemonService {
                         "Marking daemon unreachable after {} failures",
                         UNREACHABLE_THRESHOLD
                     );
-                    if let Err(mark_err) = self.mark_daemon_unreachable(daemon.id).await {
+                    if let Err(mark_err) =
+                        self.mark_daemon_unreachable(daemon.id, email_service).await
+                    {
                         tracing::error!(
                             daemon_id = %daemon.id,
                             "Failed to mark daemon as unreachable: {}",
@@ -1281,7 +1372,9 @@ impl DaemonService {
                         "Marking daemon unreachable after {} failures",
                         UNREACHABLE_THRESHOLD
                     );
-                    if let Err(mark_err) = self.mark_daemon_unreachable(daemon.id).await {
+                    if let Err(mark_err) =
+                        self.mark_daemon_unreachable(daemon.id, email_service).await
+                    {
                         tracing::error!(
                             daemon_id = %daemon.id,
                             "Failed to mark daemon as unreachable: {}",
@@ -1417,7 +1510,7 @@ impl DaemonService {
                 // Process entities if any
                 if !poll_response.entities.is_empty() {
                     match self
-                        .process_discovery_entities(poll_response.entities, auth.clone(), None)
+                        .process_discovery_entities(poll_response.entities, auth.clone())
                         .await
                     {
                         Ok(created_entities) => {
@@ -1577,7 +1670,6 @@ impl DaemonService {
         let org_id = network.base.organization_id;
         let network_name = &network.base.name;
         let daemon_name = &daemon.base.name;
-        let is_daemon_poll = daemon.base.mode == DaemonMode::DaemonPoll;
 
         // Send to org owner
         let owners = email_service
@@ -1588,12 +1680,7 @@ impl DaemonService {
             .first()
             .ok_or_else(|| anyhow::anyhow!("No owner found for organization {}", org_id))?;
         email_service
-            .send_daemon_standby_email(
-                owner.base.email.clone(),
-                daemon_name,
-                network_name,
-                is_daemon_poll,
-            )
+            .send_daemon_standby_email(owner.base.email.clone(), daemon_name, network_name)
             .await?;
 
         // Also send to daemon installer if different from owner
@@ -1604,12 +1691,50 @@ impl DaemonService {
                 .await?
         {
             email_service
-                .send_daemon_standby_email(
-                    user.base.email,
-                    daemon_name,
-                    network_name,
-                    is_daemon_poll,
-                )
+                .send_daemon_standby_email(user.base.email, daemon_name, network_name)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Send unreachable notification email to org owner and daemon installer
+    async fn send_unreachable_notification(
+        &self,
+        daemon: &Daemon,
+        email_service: &crate::server::email::traits::EmailService,
+    ) -> Result<()> {
+        let network = self
+            .network_service
+            .get_by_id(&daemon.base.network_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Network not found"))?;
+
+        let org_id = network.base.organization_id;
+        let network_name = &network.base.name;
+        let daemon_name = &daemon.base.name;
+
+        // Send to org owner
+        let owners = email_service
+            .user_service
+            .get_organization_owners(&org_id)
+            .await?;
+        let owner = owners
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("No owner found for organization {}", org_id))?;
+        email_service
+            .send_daemon_unreachable_email(owner.base.email.clone(), daemon_name, network_name)
+            .await?;
+
+        // Also send to daemon installer if different from owner
+        if daemon.base.user_id != owner.id
+            && let Some(user) = email_service
+                .user_service
+                .get_by_id(&daemon.base.user_id)
+                .await?
+        {
+            email_service
+                .send_daemon_unreachable_email(user.base.email, daemon_name, network_name)
                 .await?;
         }
 

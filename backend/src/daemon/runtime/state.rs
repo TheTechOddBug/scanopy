@@ -88,6 +88,9 @@ pub struct CreatedEntitiesPayload {
     pub subnets: Vec<(Uuid, Subnet)>,
     /// Hosts: (pending_id, actual_host_response) pairs - includes children (interfaces, ports, services)
     pub hosts: Vec<(Uuid, HostResponse)>,
+    /// Set when a host was skipped due to billing host limit (limit value, org_id)
+    #[serde(skip)]
+    pub billing_limit_hit: Option<(u64, Uuid)>,
 }
 
 /// Daemon state for handlers.
@@ -176,6 +179,18 @@ impl DaemonState {
                 error: None,
                 started_at: s.info.started_at,
                 finished_at: None,
+                hosts_discovered: {
+                    let v = s
+                        .hosts_discovered
+                        .load(std::sync::atomic::Ordering::Relaxed);
+                    if v > 0 { Some(v) } else { None }
+                },
+                estimated_remaining_secs: {
+                    let v = s
+                        .estimated_remaining_secs
+                        .load(std::sync::atomic::Ordering::Relaxed);
+                    if v != u32::MAX { Some(v) } else { None }
+                },
             });
         }
         drop(session);

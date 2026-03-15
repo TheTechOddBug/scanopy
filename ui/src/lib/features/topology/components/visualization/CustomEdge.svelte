@@ -19,14 +19,15 @@
 		useTopologiesQuery
 	} from '../../queries';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
-	import { createColorHelper } from '$lib/shared/utils/styling';
+	import { createColorHelper, type Color } from '$lib/shared/utils/styling';
 	import type { Topology, TopologyEdge } from '../../types/base';
 	import {
 		getEdgeDisplayState,
 		edgeHoverState,
 		groupHoverState,
 		isExporting,
-		tagHiddenNodeIds
+		tagHiddenNodeIds,
+		hoveredEdgeType
 	} from '../../interactions';
 	import type { Node, Edge as FlowEdge } from '@xyflow/svelte';
 
@@ -118,6 +119,11 @@
 		if (group?.color) {
 			return createColorHelper(group.color);
 		}
+		// Preview edges carry their own color since they have no real group
+		const anyData = edgeData as Record<string, unknown> | undefined;
+		if (anyData?.is_preview && anyData?.preview_color) {
+			return createColorHelper(anyData.preview_color as Color);
+		}
 		if (!edgeData) {
 			return createColorHelper('Gray');
 		}
@@ -126,12 +132,28 @@
 
 	// Determine if this edge should use the two-color dashed effect
 	let isGroupEdge = $derived(edgeTypeMetadata?.is_group_edge ?? false);
-	let useMultiColorDash = $derived(isGroupEdge && shouldShowFull);
+	let isPreview = $derived(!!(edgeData as Record<string, unknown> | undefined)?.is_preview);
+	let useMultiColorDash = $derived((isGroupEdge && shouldShowFull) || isPreview);
+
+	// Edge type hover highlight
+	let isEdgeTypeHovered = $derived(
+		$hoveredEdgeType !== null && edgeData?.edge_type === $hoveredEdgeType.edgeType
+	);
+	let isAnotherEdgeTypeHovered = $derived($hoveredEdgeType !== null && !isEdgeTypeHovered);
 
 	// Calculate base edge properties
-	let baseStrokeWidth = $derived(!$topologyOptions.local.no_fade_edges && shouldShowFull ? 3 : 2);
+	let baseStrokeWidth = $derived.by(() => {
+		if (isEdgeTypeHovered) return 3;
+		if (!$topologyOptions.local.no_fade_edges && (shouldShowFull || isPreview)) return 3;
+		return 2;
+	});
 	let baseOpacity = $derived.by(() => {
 		if ($isExporting) return 1;
+		// Preview edges always full opacity
+		if (isPreview) return 1;
+		// Edge type hover: matching edges full opacity, non-matching fade
+		if (isEdgeTypeHovered) return 1;
+		if (isAnotherEdgeTypeHovered) return 0.2;
 		// Fade if either endpoint is hidden by tag filter
 		if (isEndpointHiddenByTagFilter) return 0.4;
 		// Fade based on selection state
@@ -141,6 +163,8 @@
 	// Labels stay fully visible unless there's an active selection causing edges to fade
 	let labelOpacity = $derived.by(() => {
 		if ($isExporting) return 1;
+		if (isEdgeTypeHovered) return 1;
+		if (isAnotherEdgeTypeHovered) return 0.2;
 		if (isEndpointHiddenByTagFilter) return 0.4;
 		if (!$topologyOptions.local.no_fade_edges && (selectedNode || selectedEdge) && !shouldShowFull)
 			return 0.4;
@@ -267,8 +291,11 @@
 
 	// Calculate edge path and label position - DRY approach
 	let pathData = $derived.by(() => {
-		// Use group edge_style if available, otherwise use edge type metadata
-		const edge_style = group ? group.edge_style : (edgeTypeMetadata?.edge_style ?? 'SmoothStep');
+		// Use group edge_style if available, then preview edge style, otherwise edge type metadata
+		const anyData = edgeData as Record<string, unknown> | undefined;
+		const edge_style = group
+			? group.edge_style
+			: ((anyData?.preview_edge_style as string) ?? edgeTypeMetadata?.edge_style ?? 'SmoothStep');
 		return getPathFunction(edge_style);
 	});
 

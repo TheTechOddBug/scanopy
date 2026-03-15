@@ -1,7 +1,17 @@
 <script lang="ts" module>
 	import { isContainerSubnet } from '$lib/features/subnets/queries';
 
-	export const SubnetDisplay: EntityDisplayComponent<Subnet, object> = {
+	export interface SubnetDisplayContext {
+		showEntityTagPicker?: boolean;
+		tagPickerDisabled?: boolean;
+		entityTags?: import('$lib/features/tags/types/base').Tag[];
+		showEditableEntityDescription?: boolean;
+		entityDescription?: string | null;
+		entityDescriptionDisabled?: boolean;
+		onEntityDescriptionSave?: (value: string | null) => void;
+	}
+
+	export const SubnetDisplay: EntityDisplayComponent<Subnet, SubnetDisplayContext> = {
 		getId: (subnet: Subnet) => subnet.id,
 		getLabel: (subnet: Subnet) => subnet.name,
 		getDescription: (subnet: Subnet) => {
@@ -19,6 +29,15 @@
 				}
 			];
 		},
+		getTagPickerProps: (subnet: Subnet, context: SubnetDisplayContext) => {
+			if (!context.showEntityTagPicker) return null;
+			return {
+				selectedTagIds: subnet.tags,
+				entityId: subnet.id,
+				entityType: 'Subnet' as const,
+				availableTags: context.entityTags
+			};
+		},
 		getCategory: () => null
 	};
 </script>
@@ -31,7 +50,7 @@
 
 	interface Props {
 		item: Subnet;
-		context?: object;
+		context?: SubnetDisplayContext;
 	}
 
 	let { item, context = {} }: Props = $props();

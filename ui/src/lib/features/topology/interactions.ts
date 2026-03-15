@@ -16,10 +16,17 @@ export const groupHoverState = writable<Map<string, boolean>>(new Map());
 export const edgeHoverState = writable<Map<string, boolean>>(new Map());
 export const connectedNodeIds = writable<Set<string>>(new Set());
 export const isExporting = writable(false);
+export const newNodeIds = writable<Set<string>>(new Set());
 
 // Tag filter stores - nodes/services hidden by tag filter
 export const tagHiddenNodeIds = writable<Set<string>>(new Set());
 export const tagHiddenServiceIds = writable<Set<string>>(new Set());
+
+// Search stores
+export const searchHiddenNodeIds = writable<Set<string>>(new Set());
+export const searchMatchNodeIds = writable<string[]>([]);
+export const searchActiveIndex = writable<number>(0);
+export const searchOpen = writable<boolean>(false);
 
 // Special sentinel value for "Untagged" pseudo-tag
 export const UNTAGGED_SENTINEL = '__untagged__';
@@ -31,6 +38,20 @@ export interface HoveredTag {
 	entityType: 'host' | 'service' | 'subnet';
 }
 export const hoveredTag = writable<HoveredTag | null>(null);
+
+// Service category hover state for highlighting services in the same category
+export interface HoveredServiceCategory {
+	category: string;
+	color: string;
+}
+export const hoveredServiceCategory = writable<HoveredServiceCategory | null>(null);
+
+// Edge type hover state for highlighting edges of a specific type
+export interface HoveredEdgeType {
+	edgeType: string;
+	color: string;
+}
+export const hoveredEdgeType = writable<HoveredEdgeType | null>(null);
 
 interface TagFilter {
 	hidden_host_tag_ids?: string[];
@@ -183,6 +204,7 @@ function getVirtualizedContainerNodes(
 /**
  * Update connected nodes when a node or edge is selected
  * @param topology - Optional topology data for direct lookups (used in share views where cache is empty)
+ * @param multiSelectedNodes - Optional array of multi-selected nodes
  */
 export function updateConnectedNodes(
 	selectedNode: Node | null,
@@ -190,9 +212,30 @@ export function updateConnectedNodes(
 	allEdges: Edge[],
 	allNodes: Node[],
 	queryClient: QueryClient,
-	topology?: Topology
+	topology?: Topology,
+	multiSelectedNodes?: Node[]
 ) {
 	const connected = new Set<string>();
+
+	// If multiple nodes are selected
+	if (multiSelectedNodes && multiSelectedNodes.length >= 2) {
+		for (const node of multiSelectedNodes) {
+			connected.add(node.id);
+			// Add direct neighbors of each selected node
+			for (const edge of allEdges) {
+				const edgeData = edge.data as TopologyEdge | undefined;
+				if (!edgeData) continue;
+				if (edgeData.source === node.id) {
+					connected.add(edgeData.target as string);
+				}
+				if (edgeData.target === node.id) {
+					connected.add(edgeData.source as string);
+				}
+			}
+		}
+		connectedNodeIds.set(connected);
+		return;
+	}
 
 	// If a node is selected
 	if (selectedNode) {
@@ -407,4 +450,173 @@ export function getEdgeDisplayState(
 	}
 
 	return { shouldShowFull, shouldAnimate };
+}
+
+/**
+ * Add interface nodes for a service based on its bindings.
+ * If binding.interface_id is set, add that interface.
+ * If binding.interface_id is null (all-interfaces binding), add all host interfaces.
+ */
+function addBoundInterfaces(
+	topology: Topology,
+	service: Topology['services'][number],
+	matchingNodeIds: string[]
+) {
+	const getNonContainerHostInterfaces = () =>
+		topology.interfaces.filter((i) => {
+			if (i.host_id !== service.host_id) return false;
+			const subnet = topology.subnets.find((s) => s.id === i.subnet_id);
+			if (!subnet) return true;
+			return !subnetTypes.getMetadata(subnet.subnet_type).is_for_containers;
+		});
+
+	for (const binding of service.bindings) {
+		if (binding.interface_id) {
+			if (!matchingNodeIds.includes(binding.interface_id)) {
+				matchingNodeIds.push(binding.interface_id);
+			}
+		} else {
+			// null interface_id = bound to all host interfaces (exclude container subnets)
+			getNonContainerHostInterfaces().forEach((i) => {
+				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+			});
+		}
+	}
+	// If service has no bindings, fall back to all host interfaces (exclude container subnets)
+	if (service.bindings.length === 0) {
+		getNonContainerHostInterfaces().forEach((i) => {
+			if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+		});
+	}
+}
+
+/**
+ * Update search filter: find nodes matching query, set non-matching nodes to fade.
+ * Searches hosts (name/hostname), interfaces (ip_address/name), services (name),
+ * subnets (name/cidr), and tags (name matched to entities).
+ */
+export function updateSearchFilter(topology: Topology | undefined, query: string) {
+	if (!topology || !query.trim()) {
+		searchHiddenNodeIds.set(new Set());
+		searchMatchNodeIds.set([]);
+		searchActiveIndex.set(0);
+		return;
+	}
+
+	const q = query.toLowerCase().trim();
+	const matchingNodeIds: string[] = [];
+	const allNodeIds = new Set<string>();
+
+	// Collect all node IDs (interfaces + subnets)
+	for (const iface of topology.interfaces) {
+		allNodeIds.add(iface.id);
+	}
+	for (const subnet of topology.subnets) {
+		allNodeIds.add(subnet.id);
+	}
+
+	// Search hosts -> match their interface nodes
+	for (const host of topology.hosts) {
+		const nameMatch = host.name.toLowerCase().includes(q);
+		const hostnameMatch = host.hostname?.toLowerCase().includes(q) ?? false;
+		if (nameMatch || hostnameMatch) {
+			const hostInterfaces = topology.interfaces.filter((i) => {
+				if (i.host_id !== host.id) return false;
+				const subnet = topology.subnets.find((s) => s.id === i.subnet_id);
+				if (!subnet) return true;
+				return !subnetTypes.getMetadata(subnet.subnet_type).is_for_containers;
+			});
+			hostInterfaces.forEach((i) => {
+				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+			});
+		}
+	}
+
+	// Search interfaces -> match by ip_address or name
+	for (const iface of topology.interfaces) {
+		const ipMatch = iface.ip_address?.toLowerCase().includes(q) ?? false;
+		const nameMatch = iface.name?.toLowerCase().includes(q) ?? false;
+		if (ipMatch || nameMatch) {
+			if (!matchingNodeIds.includes(iface.id)) matchingNodeIds.push(iface.id);
+		}
+	}
+
+	// Search services -> match bound interface nodes (binding-aware)
+	for (const service of topology.services) {
+		if (service.name.toLowerCase().includes(q)) {
+			addBoundInterfaces(topology, service, matchingNodeIds);
+		}
+	}
+
+	// Search subnets -> match subnet nodes
+	for (const subnet of topology.subnets) {
+		const nameMatch = subnet.name.toLowerCase().includes(q);
+		const cidrMatch = subnet.cidr.toLowerCase().includes(q);
+		if (nameMatch || cidrMatch) {
+			if (!matchingNodeIds.includes(subnet.id)) matchingNodeIds.push(subnet.id);
+		}
+	}
+
+	// Search tags -> match entities with matching tag names
+	const entityTags = topology.entity_tags ?? [];
+	for (const host of topology.hosts) {
+		for (const tagId of host.tags) {
+			const tag = entityTags.find((t) => t.id === tagId);
+			if (tag && tag.name.toLowerCase().includes(q)) {
+				const hostInterfaces = topology.interfaces.filter((i) => {
+					if (i.host_id !== host.id) return false;
+					const subnet = topology.subnets.find((s) => s.id === i.subnet_id);
+					if (!subnet) return true;
+					return !subnetTypes.getMetadata(subnet.subnet_type).is_for_containers;
+				});
+				hostInterfaces.forEach((i) => {
+					if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
+				});
+				break;
+			}
+		}
+	}
+
+	// Service tag search -> match bound interfaces (binding-aware)
+	for (const service of topology.services) {
+		for (const tagId of service.tags) {
+			const tag = entityTags.find((t) => t.id === tagId);
+			if (tag && tag.name.toLowerCase().includes(q)) {
+				addBoundInterfaces(topology, service, matchingNodeIds);
+				break;
+			}
+		}
+	}
+
+	for (const subnet of topology.subnets) {
+		for (const tagId of subnet.tags) {
+			const tag = entityTags.find((t) => t.id === tagId);
+			if (tag && tag.name.toLowerCase().includes(q)) {
+				if (!matchingNodeIds.includes(subnet.id)) matchingNodeIds.push(subnet.id);
+				break;
+			}
+		}
+	}
+
+	// Hidden = all nodes NOT in the matching set
+	const hiddenIds = new Set<string>();
+	for (const nodeId of allNodeIds) {
+		if (!matchingNodeIds.includes(nodeId)) {
+			hiddenIds.add(nodeId);
+		}
+	}
+
+	searchHiddenNodeIds.set(hiddenIds);
+	searchMatchNodeIds.set(matchingNodeIds);
+	searchActiveIndex.set(0);
+}
+
+/**
+ * Clear all search state.
+ */
+export function clearSearch() {
+	searchHiddenNodeIds.set(new Set());
+	searchMatchNodeIds.set([]);
+	searchActiveIndex.set(0);
+	searchOpen.set(false);
 }

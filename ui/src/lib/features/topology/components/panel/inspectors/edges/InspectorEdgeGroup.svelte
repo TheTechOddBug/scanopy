@@ -1,6 +1,9 @@
 <script lang="ts">
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
-	import { useUpdateGroupMutation } from '$lib/features/groups/queries';
+	import {
+		useUpdateGroupMutation,
+		useUpdateGroupDescriptionMutation
+	} from '$lib/features/groups/queries';
 	import {
 		BindingWithServiceDisplay,
 		type BindingWithServiceContext
@@ -16,7 +19,7 @@
 		selectedTopologyId
 	} from '$lib/features/topology/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
-	import { getTopologyStateInfo } from '$lib/features/topology/state';
+	import { getTopologyEditState } from '$lib/features/topology/state';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
@@ -36,11 +39,13 @@
 		topologyContext ? $topologyContext : topologiesData.find((t) => t.id === $selectedTopologyId)
 	);
 
-	// Check if we're in readonly mode (context exists means we're on share page)
+	// Unified edit state
 	let isReadonly = $derived(!!topologyContext);
+	let editState = $derived(getTopologyEditState(topology, $autoRebuild, isReadonly));
 
 	// TanStack Query mutation for updating groups
 	const updateGroupMutation = useUpdateGroupMutation();
+	const descriptionMutation = useUpdateGroupDescriptionMutation();
 	let isMutationPending = $derived(updateGroupMutation.isPending);
 
 	let group = $derived(topology ? topology.groups.find((g) => g.id == groupId) : null);
@@ -54,10 +59,6 @@
 			localGroup = { ...group };
 		}
 	});
-
-	let liveEditsEnabled = $derived(
-		!isReadonly && topology && getTopologyStateInfo(topology, $autoRebuild).type == 'fresh'
-	);
 
 	// Auto-save when styling changes (only in non-readonly mode)
 	// Guard against calling mutate while a mutation is already pending to prevent infinite loops
@@ -115,25 +116,41 @@
 		ports: topology?.ports ?? [],
 		isContainerSubnet: isContainerSubnetFn
 	});
+
+	// Context for group display with description
+	let groupContext = $derived({
+		showEditableEntityDescription: true,
+		entityDescription: group?.description ?? null,
+		entityDescriptionDisabled: !editState.isEditable,
+		onEntityDescriptionSave: (desc: string | null) => {
+			if (group) {
+				descriptionMutation.mutate({ groupId: group.id, description: desc });
+			}
+		}
+	});
 </script>
 
 <div class="space-y-3">
 	{#if group && localGroup}
 		<span class="text-secondary mb-2 block text-sm font-medium">Group</span>
 		<div class="card card-static">
-			<EntityDisplayWrapper context={{}} item={group} displayComponent={GroupDisplay} />
+			<EntityDisplayWrapper context={groupContext} item={group} displayComponent={GroupDisplay} />
 		</div>
 
 		{#if !isReadonly}
 			<span class="text-secondary mb-2 block text-sm font-medium">Edge Style</span>
-			{#if topology && getTopologyStateInfo(topology, $autoRebuild).type != 'fresh'}
+			{#if !editState.isEditable && editState.disabledReason}
 				<InlineWarning
 					title="Editing disabled"
 					body="Editing is only available when topology is unlocked and up-to-date."
 				/>
 			{/if}
-			<div class={`card p-4 ${liveEditsEnabled ? '' : 'card-static'}`}>
-				<EdgeStyleForm bind:formData={localGroup} collapsed={true} editable={liveEditsEnabled} />
+			<div class={`card p-4 ${editState.isEditable ? '' : 'card-static'}`}>
+				<EdgeStyleForm
+					bind:formData={localGroup}
+					collapsed={true}
+					editable={editState.isEditable}
+				/>
 			</div>
 		{/if}
 

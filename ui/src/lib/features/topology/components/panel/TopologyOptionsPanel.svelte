@@ -1,24 +1,45 @@
 <script lang="ts">
-	import { optionsPanelExpanded, selectedNode, selectedEdge } from '../../queries';
-	import { ChevronLeft, ChevronRight, Settings, Info } from 'lucide-svelte';
+	import {
+		optionsPanelExpanded,
+		selectedNode,
+		selectedEdge,
+		selectedNodes,
+		previewEdges
+	} from '../../queries';
+	import { get } from 'svelte/store';
+	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import OptionsContent from './options/OptionsContent.svelte';
 	import InspectorNode from './inspectors/InspectorNode.svelte';
 	import InspectorEdge from './inspectors/InspectorEdge.svelte';
-	import {
-		common_inspector,
-		common_options,
-		topology_clickToInspect,
-		topology_collapsePanel,
-		topology_expandPanel
-	} from '$lib/paraglide/messages';
+	import InspectorMultiSelect from './inspectors/InspectorMultiSelect.svelte';
+	import { topology_collapsePanel, topology_expandPanel } from '$lib/paraglide/messages';
 
-	// Add tab state
-	let activeTab: 'options' | 'inspector' = $state('options');
+	let {
+		isReadOnly = false,
+		onClearSelection,
+		onGroupCreated
+	}: {
+		isReadOnly?: boolean;
+		onClearSelection?: () => void;
+		onGroupCreated?: (groupId: string) => void;
+	} = $props();
 
-	// Automatically switch to inspector when something is selected
+	let multiSelectedNodes = $state(get(selectedNodes));
+	selectedNodes.subscribe((value) => {
+		multiSelectedNodes = value;
+	});
+
+	// Auto-expand panel when something is selected
 	$effect(() => {
-		if ($selectedNode || $selectedEdge) {
-			activeTab = 'inspector';
+		if ($selectedNode || $selectedEdge || multiSelectedNodes.length >= 2) {
+			optionsPanelExpanded.set(true);
+		}
+	});
+
+	// Clear preview edges when multi-selection drops below 2
+	$effect(() => {
+		if (multiSelectedNodes.length < 2) {
+			previewEdges.set([]);
 		}
 	});
 </script>
@@ -31,55 +52,35 @@
 >
 	<div class="card card-static p-0 shadow-lg">
 		{#if $optionsPanelExpanded}
-			<!-- Header with tabs and collapse button -->
-			<div class="flex items-center border-b border-gray-700">
-				<!-- Collapse button -->
+			<!-- Header with collapse button -->
+			<div class="flex items-center justify-start border-b border-gray-700">
 				<button
-					class="btn-icon rounded-xl p-3"
+					class="btn-icon flex-shrink-0 rounded-xl p-3"
 					onclick={() => optionsPanelExpanded.set(false)}
 					aria-label={topology_collapsePanel()}
 				>
 					<ChevronLeft class="text-secondary h-5 w-5" />
 				</button>
-				<!-- Tab buttons -->
-				<button
-					class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'options'
-						? 'text-primary border-b-2 border-blue-500'
-						: 'text-secondary hover:text-primary'}"
-					onclick={() => (activeTab = 'options')}
-				>
-					<Settings class="mr-1 inline h-4 w-4" />
-					{common_options()}
-				</button>
-				<button
-					class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'inspector'
-						? 'text-primary border-b-2 border-blue-500'
-						: 'text-secondary hover:text-primary'}"
-					onclick={() => (activeTab = 'inspector')}
-				>
-					<Info class="mr-1 inline h-4 w-4" />
-					{common_inspector()}
-				</button>
 			</div>
 
-			<!-- Tab content -->
+			<!-- Content area -->
 			<div class="overflow-y-auto p-3" style="max-height: calc(100vh - 250px);">
-				{#if activeTab === 'options'}
+				{#if multiSelectedNodes.length >= 2}
+					<InspectorMultiSelect
+						{isReadOnly}
+						onClearSelection={onClearSelection ?? (() => selectedNodes.set([]))}
+						{onGroupCreated}
+					/>
+				{:else if $selectedNode}
+					{#key $selectedNode.id}
+						<InspectorNode node={$selectedNode} />
+					{/key}
+				{:else if $selectedEdge}
+					{#key $selectedEdge.id}
+						<InspectorEdge edge={$selectedEdge} />
+					{/key}
+				{:else}
 					<OptionsContent />
-				{:else if activeTab === 'inspector'}
-					{#if $selectedNode}
-						{#key $selectedNode.id}
-							<InspectorNode node={$selectedNode} />
-						{/key}
-					{:else if $selectedEdge}
-						{#key $selectedEdge.id}
-							<InspectorEdge edge={$selectedEdge} />
-						{/key}
-					{:else}
-						<div class="text-tertiary py-8 text-center text-sm">
-							{topology_clickToInspect()}
-						</div>
-					{/if}
 				{/if}
 			</div>
 		{:else}

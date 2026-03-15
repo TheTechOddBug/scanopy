@@ -13,7 +13,13 @@
 	import AnimatedProgressBar from '$lib/features/discovery/components/cards/AnimatedProgressBar.svelte';
 	import ProgressTrack from '$lib/shared/components/data/ProgressTrack.svelte';
 	import OsSelector from '../../OsSelector.svelte';
-	import { Loader2, CheckCircle2, AlertTriangle, SlidersHorizontal } from 'lucide-svelte';
+	import {
+		Loader2,
+		CheckCircle2,
+		AlertTriangle,
+		SlidersHorizontal,
+		ExternalLink
+	} from 'lucide-svelte';
 	import type { DaemonConnectionStatus } from '../../../stores/daemon-setup';
 	import {
 		common_advanced,
@@ -251,10 +257,11 @@
 						</button>
 						<button
 							type="button"
-							class="text-sm text-blue-400 hover:text-blue-300"
+							class="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300"
 							onclick={() => onTroubleshoot?.()}
 						>
 							Troubleshoot
+							<ExternalLink class="h-3.5 w-3.5" />
 						</button>
 					{/if}
 				{:else}
@@ -313,6 +320,14 @@
 					<li>Verify the server URL in the daemon config matches this server</li>
 					<li>Check that no firewall is blocking the connection</li>
 				</ol>
+				<button
+					type="button"
+					class="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300"
+					onclick={() => onTroubleshoot?.()}
+				>
+					Troubleshoot
+					<ExternalLink class="h-3.5 w-3.5" />
+				</button>
 				{#if isServerPoll && daemonUrl}
 					<div class="flex max-w-md flex-col items-center gap-2 text-left">
 						{#if healthResult}

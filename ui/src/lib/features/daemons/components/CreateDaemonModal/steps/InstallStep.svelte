@@ -220,7 +220,9 @@
 							>
 						</div>
 						<div class="max-w-md text-left">
-							<InlineSuccess title="Daemon is reachable and healthy" />
+							<InlineSuccess
+								title="Daemon is reachable and healthy — the server will register it on its next polling cycle"
+							/>
 						</div>
 					{:else if healthResult}
 						<!-- Health check failed -->
@@ -265,7 +267,7 @@
 					</div>
 					<div>
 						<h3 class="text-primary text-base font-semibold">
-							Waiting for your daemon to connect...
+							Waiting for your daemon to connect to the server...
 						</h3>
 						<p class="text-secondary mt-1 text-sm">
 							This usually takes less than a minute. Make sure the daemon is running.
@@ -301,13 +303,29 @@
 			<div class="flex flex-col items-center gap-4 py-8 text-center">
 				<AlertTriangle class="h-10 w-10 text-yellow-400" />
 				<div>
-					<h3 class="text-primary text-base font-semibold">Your daemon hasn't connected yet</h3>
+					{#if isServerPoll}
+						<h3 class="text-primary text-base font-semibold">
+							The server hasn't been able to connect to your daemon
+						</h3>
+					{:else}
+						<h3 class="text-primary text-base font-semibold">
+							Your daemon hasn't connected to this server
+						</h3>
+					{/if}
 				</div>
-				<ol class="text-secondary list-decimal space-y-1 pl-5 text-left text-sm">
-					<li>Check that the daemon process is running</li>
-					<li>Verify the server URL in the daemon config matches this server</li>
-					<li>Check that no firewall is blocking the connection</li>
-				</ol>
+				{#if isServerPoll}
+					<ol class="text-secondary list-decimal space-y-1 pl-5 text-left text-sm">
+						<li>Check that the daemon process is running</li>
+						<li>Verify the daemon is listening on the configured port</li>
+						<li>Check that no firewall is blocking inbound connections to the daemon</li>
+					</ol>
+				{:else}
+					<ol class="text-secondary list-decimal space-y-1 pl-5 text-left text-sm">
+						<li>Check that the daemon process is running</li>
+						<li>Verify the server URL in the daemon config matches this server</li>
+						<li>Check that no firewall is blocking outbound connections from the daemon</li>
+					</ol>
+				{/if}
 				<button
 					type="button"
 					class="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300"
@@ -320,7 +338,10 @@
 					<div class="flex max-w-md flex-col items-center gap-2 text-left">
 						{#if healthResult}
 							{#if healthResult.reachable && healthResult.health}
-								<InlineSuccess title="Daemon is reachable and healthy" />
+								<InlineSuccess
+									title="Daemon is reachable and healthy"
+									body="The server should register it on its next polling cycle. If this persists, try restarting the daemon."
+								/>
 							{:else if healthResult.reachable}
 								<InlineWarning
 									title="Port open but health check failed"

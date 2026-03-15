@@ -220,7 +220,9 @@
 							>
 						</div>
 						<div class="max-w-md text-left">
-							<InlineSuccess title="Daemon is reachable and healthy" />
+							<InlineSuccess
+								title="Daemon is reachable and healthy — the server will register it on its next polling cycle"
+							/>
 						</div>
 					{:else if healthResult}
 						<!-- Health check failed -->

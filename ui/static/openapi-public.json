@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-02T21:32:15.163837Z",
-              "id": "87060625-64b6-4c15-b158-c9e5ff92be1a",
+              "created_at": "2026-04-02T23:02:19.949213Z",
+              "id": "6dc1afad-4cc0-490f-99ec-551a973a6983",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-02T21:32:15.163837Z"
+              "updated_at": "2026-04-02T23:02:19.949213Z"
             }
           },
           "error": {
@@ -10731,14 +10731,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-02T21:32:15.145163Z",
-                      "id": "bd20fe9c-c261-45bb-8c10-a167b1c684c1",
+                      "created_at": "2026-04-02T23:02:19.930980Z",
+                      "id": "7c265791-c9b9-4984-8066-6c53ca06d4ea",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-02T21:32:15.145163Z"
+                      "updated_at": "2026-04-02T23:02:19.930980Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10747,7 +10747,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Elastic APM",
+                  "service_definition": "Bamboo",
                   "source": {
                     "type": "Manual"
                   },
@@ -11450,14 +11450,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-02T21:32:15.158768Z",
-                  "id": "e55e2719-f23c-4b5c-b908-5c21cd8dc173",
+                  "created_at": "2026-04-02T23:02:19.943832Z",
+                  "id": "c7e1fe8e-4694-46a9-ab81-3b6f8beac5fc",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-02T21:32:15.158768Z"
+                  "updated_at": "2026-04-02T23:02:19.943832Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11466,7 +11466,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Elastic APM",
+              "service_definition": "Bamboo",
               "source": {
                 "type": "Manual"
               },
@@ -12740,14 +12740,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-02T21:32:15.145557Z",
-          "id": "3e1f0d51-f414-487f-a082-34eb1e5b77e4",
+          "created_at": "2026-04-02T23:02:19.931193Z",
+          "id": "b0db8ac9-d0dc-415d-940d-81df12734a7e",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-02T21:32:15.145557Z"
+          "updated_at": "2026-04-02T23:02:19.931193Z"
         }
       },
       "BindingBase": {
@@ -13260,7 +13260,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Elastic APM",
+              "service_definition": "Bamboo",
               "tags": [],
               "virtualization": null
             }
@@ -15565,14 +15565,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-02T21:32:15.144622Z",
-                  "id": "1eaf97a7-6b5a-41c5-84ad-381a8483347e",
+                  "created_at": "2026-04-02T23:02:19.930698Z",
+                  "id": "a8465464-daef-40ed-af29-6c4e9ec56717",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-02T21:32:15.144622Z"
+                  "updated_at": "2026-04-02T23:02:19.930698Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15581,7 +15581,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Elastic APM",
+              "service_definition": "Bamboo",
               "source": {
                 "type": "Manual"
               },
@@ -17556,14 +17556,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-02T21:32:15.132241Z",
-                        "id": "278ee725-bca5-4edc-af34-6e2939128111",
+                        "created_at": "2026-04-02T23:02:19.919147Z",
+                        "id": "a47e3600-e95c-42ca-a617-efebbae5197e",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-02T21:32:15.132241Z"
+                        "updated_at": "2026-04-02T23:02:19.919147Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17572,7 +17572,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Elastic APM",
+                    "service_definition": "Bamboo",
                     "source": {
                       "type": "Manual"
                     },
@@ -17649,14 +17649,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-02T21:32:15.157305Z",
-                    "id": "10ff7333-e982-4f9c-9483-5c19519ab243",
+                    "created_at": "2026-04-02T23:02:19.942786Z",
+                    "id": "5f23917b-8925-493e-bfbf-00d791dd579f",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-02T21:32:15.157305Z"
+                    "updated_at": "2026-04-02T23:02:19.942786Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -17665,7 +17665,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Elastic APM",
+                "service_definition": "Bamboo",
                 "source": {
                   "type": "Manual"
                 },
@@ -18824,14 +18824,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-02T21:32:15.145421Z",
-              "id": "e4dbdca5-5957-4064-adfd-24ae5c3424a6",
+              "created_at": "2026-04-02T23:02:19.931111Z",
+              "id": "29034417-3999-4adc-8b65-4b043fb4a975",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-02T21:32:15.145421Z"
+              "updated_at": "2026-04-02T23:02:19.931111Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -18840,7 +18840,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Elastic APM",
+          "service_definition": "Bamboo",
           "source": {
             "type": "Manual"
           },
@@ -19776,6 +19776,9 @@
           "hide_edge_types"
         ],
         "properties": {
+          "bundle_edges": {
+            "type": "boolean"
+          },
           "hide_edge_types": {
             "type": "array",
             "items": {

@@ -54,6 +54,25 @@ export interface HoveredEdgeType {
 }
 export const hoveredEdgeType = writable<HoveredEdgeType | null>(null);
 
+// Edge bundle expand/collapse state (transient, not persisted)
+export const expandedBundles = writable<Set<string>>(new Set());
+
+export function toggleBundleExpanded(bundleId: string): void {
+	expandedBundles.update((set) => {
+		const next = new Set(set);
+		if (next.has(bundleId)) {
+			next.delete(bundleId);
+		} else {
+			next.add(bundleId);
+		}
+		return next;
+	});
+}
+
+export function collapseAllBundles(): void {
+	expandedBundles.set(new Set());
+}
+
 interface TagFilter {
 	hidden_host_tag_ids?: string[];
 	hidden_service_tag_ids?: string[];
@@ -299,6 +318,18 @@ export function updateConnectedNodes(
 			connectedNodeIds.set(new Set());
 			return;
 		}
+
+		// Bundle edge: highlight all bundled edges' source/target nodes
+		const anyData = selectedEdge.data as Record<string, unknown> | undefined;
+		if (anyData?.isBundle && Array.isArray(anyData.bundleEdges)) {
+			for (const bundledEdge of anyData.bundleEdges as TopologyEdge[]) {
+				connected.add(bundledEdge.source as string);
+				connected.add(bundledEdge.target as string);
+			}
+			connectedNodeIds.set(connected);
+			return;
+		}
+
 		const edgeTypeMetadata = edgeTypes.getMetadata(edgeData.edge_type);
 
 		// For group edges

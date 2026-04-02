@@ -25,6 +25,8 @@
 		common_subnets,
 		common_title,
 		common_visual,
+		topology_bundleEdges,
+		topology_bundleEdgesHelp,
 		topology_dontFadeEdges,
 		topology_dontFadeEdgesHelp,
 		topology_groupDockerBridges,
@@ -287,6 +289,15 @@
 
 	const fieldDefs: TopologyFieldDef[] = [
 		// Visual section
+		{
+			id: 'bundle_edges',
+			label: () => topology_bundleEdges(),
+			type: 'boolean',
+			path: 'local',
+			key: 'bundle_edges',
+			helpText: () => topology_bundleEdgesHelp(),
+			section: () => common_visual()
+		},
 		{
 			id: 'no_fade_edges',
 			label: () => topology_dontFadeEdges(),

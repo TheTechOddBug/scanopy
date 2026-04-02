@@ -41,7 +41,14 @@
 		buildContainerChildCounts,
 		computeCollapsedEdges
 	} from '../../collapse';
-	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
+	import {
+		updateConnectedNodes,
+		toggleEdgeHover,
+		getEdgeDisplayState,
+		expandedBundles
+	} from '../../interactions';
+	import { bundleEdges } from '../../layout/edge-bundling';
+	import { isOverlayEdge } from '../../layout/edge-classification';
 	import { onMount, tick, setContext } from 'svelte';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
@@ -136,9 +143,11 @@
 	// Store pending edges until nodes are ready
 	let pendingEdges: Edge[] = [];
 
-	// Load topology data when it changes or collapse state changes
+	// Load topology data when it changes, collapse state changes, or bundle state changes
 	$: if (topology && (topology.edges || topology.nodes)) {
 		void $collapsedContainers;
+		void $expandedBundles;
+		void $topologyOptions.local.bundle_edges;
 		void loadTopologyData();
 	}
 
@@ -258,27 +267,26 @@
 				// Set nodes
 				nodes.set(sortedNodes);
 
-				// Build flow edges — use aggregated edges when containers are collapsed
-				let flowEdges: Edge[];
+				// Build base edges: filter out edges with collapsed endpoints
+				let baseEdges: TopologyEdge[];
+				const extraFlowEdges: Edge[] = [];
 
 				if (collapsed.size > 0 && aggregatedEdges.length > 0) {
-					// Mix: regular edges for non-collapsed endpoints + aggregated edges
-					const regularEdges: Edge[] = topology.edges
-						.filter((edge) => {
-							const srcContainer = leafToContainer.get(edge.source as string);
-							const tgtContainer = leafToContainer.get(edge.target as string);
-							const srcCollapsed = srcContainer && collapsed.has(srcContainer);
-							const tgtCollapsed = tgtContainer && collapsed.has(tgtContainer);
-							return !srcCollapsed && !tgtCollapsed;
-						})
-						.map((edge: TopologyEdge, index: number) => {
-							return createFlowEdge(edge, index, layoutResult, animatedStates);
-						});
+					// Filter out edges where source or target is inside a collapsed container
+					baseEdges = topology.edges.filter((edge) => {
+						const srcContainer = leafToContainer.get(edge.source as string);
+						const tgtContainer = leafToContainer.get(edge.target as string);
+						const srcCollapsed = srcContainer && collapsed.has(srcContainer);
+						const tgtCollapsed = tgtContainer && collapsed.has(tgtContainer);
+						return !srcCollapsed && !tgtCollapsed;
+					});
 
-					const aggFlowEdges: Edge[] = aggregatedEdges.map((agg, index) => {
+					// Create aggregated flow edges for collapsed containers
+					for (let index = 0; index < aggregatedEdges.length; index++) {
+						const agg = aggregatedEdges[index];
 						const edgeKey = `${agg.source}->${agg.target}`;
 						const handles = layoutResult.edgeHandles.get(edgeKey);
-						return {
+						extraFlowEdges.push({
 							id: agg.id,
 							source: agg.source,
 							target: agg.target,
@@ -294,16 +302,73 @@
 							},
 							animated: false,
 							interactionWidth: 50
-						};
-					});
-
-					flowEdges = [...regularEdges, ...aggFlowEdges];
+						});
+					}
 				} else {
-					// No collapsed containers — standard edge creation
-					flowEdges = topology.edges.map((edge: TopologyEdge, index: number) => {
-						return createFlowEdge(edge, index, layoutResult, animatedStates);
-					});
+					// No collapsed containers — all edges are base edges
+					baseEdges = topology.edges;
 				}
+
+				// Filter visible edges (hidden types excluded before bundling)
+				const visibleEdges = baseEdges.filter((e) => !hiddenEdgeTypes.includes(e.edge_type));
+
+				let flowEdges: Edge[];
+				const currentExpandedBundles = get(expandedBundles);
+
+				if ($topologyOptions.local.bundle_edges) {
+					const { bundles, unbundled } = bundleEdges(visibleEdges, leafToContainer);
+					flowEdges = [];
+					let edgeIndex = 0;
+
+					// Unbundled edges render normally
+					for (const edge of unbundled) {
+						flowEdges.push(createFlowEdge(edge, edgeIndex++, layoutResult, animatedStates));
+					}
+
+					for (const bundle of bundles) {
+						if (currentExpandedBundles.has(bundle.id)) {
+							// Expanded: render individual edges with fan offset
+							const fanTotal = bundle.edges.length;
+							for (let i = 0; i < fanTotal; i++) {
+								flowEdges.push(
+									createFlowEdge(bundle.edges[i], edgeIndex++, layoutResult, animatedStates, {
+										bundleId: bundle.id,
+										bundleFanIndex: i,
+										bundleFanTotal: fanTotal
+									})
+								);
+							}
+						} else {
+							// Collapsed: render single bundle edge
+							const representative = bundle.edges[0];
+							const bundleStrokeWidth = Math.min(2 + 0.5 * (bundle.count - 1), 6);
+							flowEdges.push(
+								createFlowEdge(representative, edgeIndex++, layoutResult, animatedStates, {
+									isBundle: true,
+									bundleId: bundle.id,
+									bundleCount: bundle.count,
+									bundleEdges: bundle.edges,
+									bundleStrokeWidth,
+									bundleIsOverlay: isOverlayEdge(representative)
+								})
+							);
+						}
+					}
+				} else {
+					// Bundling disabled: render all visible edges individually
+					flowEdges = visibleEdges.map((edge, index) =>
+						createFlowEdge(edge, index, layoutResult, animatedStates)
+					);
+				}
+
+				// Add hidden edges (they get filtered by CustomEdge's hideEdge logic)
+				const hiddenEdges = baseEdges.filter((e) => hiddenEdgeTypes.includes(e.edge_type));
+				for (const edge of hiddenEdges) {
+					flowEdges.push(createFlowEdge(edge, flowEdges.length, layoutResult, animatedStates));
+				}
+
+				// Add aggregated collapse edges
+				flowEdges.push(...extraFlowEdges);
 
 				pendingEdges = flowEdges;
 
@@ -323,7 +388,8 @@
 		edge: TopologyEdge,
 		index: number,
 		layoutResult: import('../../layout/elk-layout').ElkLayoutResult,
-		animatedStates: Map<string, boolean | undefined>
+		animatedStates: Map<string, boolean | undefined>,
+		extraData?: Record<string, unknown>
 	): Edge {
 		const edgeType = edge.edge_type as string;
 		const edgeMetadata = edgeTypes.getMetadata(edgeType);
@@ -360,7 +426,7 @@
 			).toString(),
 			type: 'custom',
 			label: edge.label ?? undefined,
-			data: { ...edge, edgeIndex: index },
+			data: { ...edge, edgeIndex: index, ...extraData },
 			animated: animatedStates.get(edgeId) ?? false,
 			interactionWidth: 50
 		};

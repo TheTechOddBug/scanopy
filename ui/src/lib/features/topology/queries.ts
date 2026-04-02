@@ -48,6 +48,7 @@ export const defaultTopologyOptions: TopologyOptions = {
 		],
 		no_fade_edges: false,
 		hide_resize_handles: false,
+		bundle_edges: true,
 		tag_filter: {
 			hidden_host_tag_ids: [],
 			hidden_service_tag_ids: [],

@@ -27,6 +27,7 @@
 	import CustomEdge from './CustomEdge.svelte';
 	import type { TopologyEdge, Topology } from '../../types/base';
 	import { resolveLeafNode } from '../../resolvers';
+	import { computeElkLayout } from '../../layout/elk-layout';
 	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
 	import { onMount, tick, setContext } from 'svelte';
 	import { useQueryClient } from '@tanstack/svelte-query';
@@ -171,23 +172,34 @@
 	async function loadTopologyData() {
 		try {
 			if (topology && (topology.edges || topology.nodes)) {
-				// Create nodes FIRST
-				const allNodes: Node[] = topology.nodes.map((node) => ({
-					id: node.id,
-					type: node.node_type,
-					position: { x: node.position.x, y: node.position.y },
-					width: node.size.x,
-					height: node.size.y,
-					expandParent: true,
-					deletable: false,
-					selectable: node.node_type !== 'ContainerNode',
-					parentId:
-						node.node_type == 'LeafNode'
-							? resolveLeafNode(node.id, node, topology).subnetId
-							: undefined,
-					extent: node.node_type == 'LeafNode' ? 'parent' : undefined,
-					data: node
-				}));
+				// Compute client-side layout with elkjs
+				const layoutResult = await computeElkLayout({
+					nodes: topology.nodes,
+					edges: topology.edges,
+					topology: topology
+				});
+
+				// Create nodes using ELK-computed positions (fallback to server positions)
+				const allNodes: Node[] = topology.nodes.map((node) => {
+					const elkPos = layoutResult.nodePositions.get(node.id);
+					const elkSize = layoutResult.containerSizes.get(node.id);
+					return {
+						id: node.id,
+						type: node.node_type,
+						position: elkPos ?? { x: node.position.x, y: node.position.y },
+						width: elkSize?.width ?? node.size.x,
+						height: elkSize?.height ?? node.size.y,
+						expandParent: true,
+						deletable: false,
+						selectable: node.node_type !== 'ContainerNode',
+						parentId:
+							node.node_type == 'LeafNode'
+								? resolveLeafNode(node.id, node, topology).subnetId
+								: undefined,
+						extent: node.node_type == 'LeafNode' ? 'parent' : undefined,
+						data: node
+					};
+				});
 
 				// Save current edge animated states before clearing
 				const currentEdges = get(edges);

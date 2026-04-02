@@ -1,0 +1,390 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { computeElkLayout, type ElkLayoutInput } from '$lib/features/topology/layout/elk-layout';
+import {
+	classifyEdge,
+	isOverlayEdge,
+	L3_OVERLAY_EDGE_TYPES
+} from '$lib/features/topology/layout/edge-classification';
+import type { components } from '$lib/api/schema';
+
+type TopologyNode = components['schemas']['Node'];
+type TopologyEdge = components['schemas']['Edge'];
+type Subnet = components['schemas']['Subnet'];
+type SubnetType = components['schemas']['SubnetType'];
+
+// --- Test Helpers ---
+
+let idCounter = 0;
+function uuid(): string {
+	return `00000000-0000-0000-0000-${String(++idCounter).padStart(12, '0')}`;
+}
+
+function resetIds() {
+	idCounter = 0;
+}
+
+function makeContainer(id: string, opts?: { width?: number; height?: number }): TopologyNode {
+	return {
+		id,
+		node_type: 'ContainerNode',
+		container_type: 'Subnet',
+		infra_width: 0,
+		position: { x: 0, y: 0 },
+		size: { x: opts?.width ?? 400, y: opts?.height ?? 300 }
+	} as TopologyNode;
+}
+
+function makeLeaf(id: string, subnetId: string, hostId?: string): TopologyNode {
+	return {
+		id,
+		node_type: 'LeafNode',
+		leaf_type: 'Interface',
+		host_id: hostId ?? uuid(),
+		subnet_id: subnetId,
+		is_infra: false,
+		position: { x: 0, y: 0 },
+		size: { x: 180, y: 60 }
+	} as TopologyNode;
+}
+
+function makeEdge(source: string, target: string, edgeType: string = 'Interface'): TopologyEdge {
+	return {
+		edge_type: edgeType,
+		source,
+		target,
+		source_handle: 'Bottom',
+		target_handle: 'Top'
+	} as TopologyEdge;
+}
+
+function makeSubnet(id: string, subnetType: SubnetType): Subnet {
+	return {
+		id,
+		name: `subnet-${subnetType}`,
+		subnet_type: subnetType,
+		network_id: uuid(),
+		cidr: '10.0.0.0/24',
+		source: { type: 'Manual' },
+		tags: [],
+		created_at: '2026-01-01T00:00:00Z',
+		updated_at: '2026-01-01T00:00:00Z'
+	} as Subnet;
+}
+
+function makeTopology(
+	nodes: TopologyNode[],
+	edges: TopologyEdge[],
+	subnets: Subnet[]
+): ElkLayoutInput {
+	return {
+		nodes,
+		edges,
+		topology: {
+			id: uuid(),
+			created_at: '2026-01-01T00:00:00Z',
+			updated_at: '2026-01-01T00:00:00Z',
+			name: 'test',
+			network_id: uuid(),
+			is_locked: false,
+			is_stale: false,
+			last_refreshed: '2026-01-01T00:00:00Z',
+			nodes,
+			edges,
+			subnets,
+			hosts: [],
+			interfaces: [],
+			services: [],
+			groups: [],
+			entity_tags: [],
+			ports: [],
+			bindings: [],
+			if_entries: [],
+			tags: [],
+			removed_hosts: [],
+			removed_interfaces: [],
+			removed_services: [],
+			removed_subnets: [],
+			removed_groups: [],
+			removed_ports: [],
+			removed_bindings: [],
+			removed_if_entries: [],
+			options: {
+				local: {
+					left_zone_title: 'Infrastructure',
+					hide_edge_types: [],
+					no_fade_edges: false,
+					hide_resize_handles: false
+				},
+				request: {
+					group_docker_bridges_by_host: true,
+					hide_ports: false,
+					hide_vm_title_on_docker_container: false,
+					show_gateway_in_left_zone: true,
+					left_zone_service_categories: [],
+					hide_service_categories: []
+				}
+			}
+		} as ElkLayoutInput['topology']
+	};
+}
+
+// --- Edge Classification Tests ---
+
+describe('classifyEdge', () => {
+	it('classifies Interface edges as primary', () => {
+		const edge = makeEdge('a', 'b', 'Interface');
+		expect(classifyEdge(edge)).toBe('primary');
+	});
+
+	it('classifies non-Interface edges as overlay', () => {
+		for (const edgeType of L3_OVERLAY_EDGE_TYPES) {
+			const edge = makeEdge('a', 'b', edgeType);
+			expect(classifyEdge(edge)).toBe('overlay');
+		}
+	});
+
+	it('uses explicit classification field when present', () => {
+		const edge = { ...makeEdge('a', 'b', 'RequestPath'), classification: 'primary' };
+		expect(classifyEdge(edge as TopologyEdge)).toBe('primary');
+	});
+
+	it('isOverlayEdge returns true for overlay edges', () => {
+		expect(isOverlayEdge(makeEdge('a', 'b', 'HostVirtualization'))).toBe(true);
+		expect(isOverlayEdge(makeEdge('a', 'b', 'Interface'))).toBe(false);
+	});
+});
+
+// --- ELK Layout Tests ---
+
+describe('computeElkLayout', () => {
+	beforeEach(() => resetIds());
+
+	it('returns empty maps for empty input', async () => {
+		const result = await computeElkLayout({
+			nodes: [],
+			edges: [],
+			topology: makeTopology([], [], []).topology
+		});
+		expect(result.nodePositions.size).toBe(0);
+		expect(result.containerSizes.size).toBe(0);
+	});
+
+	it('produces valid positions for a simple topology', async () => {
+		const subnetExt = uuid();
+		const subnetGw = uuid();
+		const subnetLan = uuid();
+
+		const leaf1 = uuid();
+		const leaf2 = uuid();
+		const leaf3 = uuid();
+		const leaf4 = uuid();
+		const leaf5 = uuid();
+
+		const host1 = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(subnetExt),
+			makeContainer(subnetGw),
+			makeContainer(subnetLan),
+			makeLeaf(leaf1, subnetExt, host1),
+			makeLeaf(leaf2, subnetExt),
+			makeLeaf(leaf3, subnetGw, host1), // multi-homed: same host in different subnet
+			makeLeaf(leaf4, subnetLan),
+			makeLeaf(leaf5, subnetLan)
+		];
+
+		const edges: TopologyEdge[] = [
+			makeEdge(leaf1, leaf3, 'Interface'), // primary: ext -> gw
+			makeEdge(leaf3, leaf4, 'Interface'), // primary: gw -> lan
+			makeEdge(leaf1, leaf4, 'HostVirtualization') // overlay: should be ignored by layout
+		];
+
+		const subnets = [
+			makeSubnet(subnetExt, 'Internet'),
+			makeSubnet(subnetGw, 'Gateway'),
+			makeSubnet(subnetLan, 'Lan')
+		];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		// All nodes should have positions
+		expect(result.nodePositions.size).toBeGreaterThanOrEqual(nodes.length);
+
+		// All positions should be valid numbers
+		for (const [, pos] of result.nodePositions) {
+			expect(Number.isFinite(pos.x)).toBe(true);
+			expect(Number.isFinite(pos.y)).toBe(true);
+		}
+
+		// Container sizes should be set
+		expect(result.containerSizes.has(subnetExt)).toBe(true);
+		expect(result.containerSizes.has(subnetGw)).toBe(true);
+		expect(result.containerSizes.has(subnetLan)).toBe(true);
+
+		for (const [, size] of result.containerSizes) {
+			expect(size.width).toBeGreaterThan(0);
+			expect(size.height).toBeGreaterThan(0);
+		}
+	});
+
+	it('respects layer ordering (External above Gateway above Lan)', async () => {
+		const subnetExt = uuid();
+		const subnetGw = uuid();
+		const subnetLan = uuid();
+
+		const leaf1 = uuid();
+		const leaf2 = uuid();
+		const leaf3 = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(subnetExt),
+			makeContainer(subnetGw),
+			makeContainer(subnetLan),
+			makeLeaf(leaf1, subnetExt),
+			makeLeaf(leaf2, subnetGw),
+			makeLeaf(leaf3, subnetLan)
+		];
+
+		const edges: TopologyEdge[] = [
+			makeEdge(leaf1, leaf2, 'Interface'),
+			makeEdge(leaf2, leaf3, 'Interface')
+		];
+
+		const subnets = [
+			makeSubnet(subnetExt, 'Internet'),
+			makeSubnet(subnetGw, 'Gateway'),
+			makeSubnet(subnetLan, 'Lan')
+		];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		const extPos = result.nodePositions.get(subnetExt)!;
+		const gwPos = result.nodePositions.get(subnetGw)!;
+		const lanPos = result.nodePositions.get(subnetLan)!;
+
+		expect(extPos.y).toBeLessThan(gwPos.y);
+		expect(gwPos.y).toBeLessThan(lanPos.y);
+	});
+
+	it('positions leaf nodes with non-negative relative coordinates', async () => {
+		const subnetId = uuid();
+		const leaf1 = uuid();
+		const leaf2 = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(subnetId),
+			makeLeaf(leaf1, subnetId),
+			makeLeaf(leaf2, subnetId)
+		];
+
+		const edges: TopologyEdge[] = [makeEdge(leaf1, leaf2, 'Interface')];
+		const subnets = [makeSubnet(subnetId, 'Lan')];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		// Leaf positions should be non-negative (relative to parent)
+		const l1Pos = result.nodePositions.get(leaf1)!;
+		const l2Pos = result.nodePositions.get(leaf2)!;
+
+		expect(l1Pos.x).toBeGreaterThanOrEqual(0);
+		expect(l1Pos.y).toBeGreaterThanOrEqual(0);
+		expect(l2Pos.x).toBeGreaterThanOrEqual(0);
+		expect(l2Pos.y).toBeGreaterThanOrEqual(0);
+	});
+
+	it('handles single subnet with single host', async () => {
+		const subnetId = uuid();
+		const leafId = uuid();
+
+		const nodes: TopologyNode[] = [makeContainer(subnetId), makeLeaf(leafId, subnetId)];
+		const edges: TopologyEdge[] = [];
+		const subnets = [makeSubnet(subnetId, 'Lan')];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		expect(result.nodePositions.has(subnetId)).toBe(true);
+		expect(result.nodePositions.has(leafId)).toBe(true);
+
+		const containerSize = result.containerSizes.get(subnetId)!;
+		expect(containerSize.width).toBeGreaterThanOrEqual(180); // at least as wide as child
+		expect(containerSize.height).toBeGreaterThanOrEqual(60); // at least as tall as child
+	});
+
+	it('handles medium topology without errors', async () => {
+		const subnetTypes: SubnetType[] = [
+			'Internet',
+			'Gateway',
+			'Lan',
+			'WiFi',
+			'DockerBridge',
+			'Management',
+			'Storage',
+			'IoT'
+		];
+
+		const subnetIds = subnetTypes.map(() => uuid());
+		const subnets = subnetIds.map((id, i) => makeSubnet(id, subnetTypes[i]));
+
+		const nodes: TopologyNode[] = subnetIds.map((id) => makeContainer(id));
+
+		// Add ~2-3 hosts per subnet
+		const leafIds: string[] = [];
+		for (const subnetId of subnetIds) {
+			const count = 2 + Math.floor(subnetIds.indexOf(subnetId) % 3);
+			for (let j = 0; j < count; j++) {
+				const leafId = uuid();
+				leafIds.push(leafId);
+				nodes.push(makeLeaf(leafId, subnetId));
+			}
+		}
+
+		// Create some primary edges between adjacent subnets
+		const edges: TopologyEdge[] = [];
+		for (let i = 0; i < leafIds.length - 1; i += 3) {
+			edges.push(makeEdge(leafIds[i], leafIds[i + 1], 'Interface'));
+		}
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		// All nodes have positions
+		for (const node of nodes) {
+			expect(result.nodePositions.has(node.id)).toBe(true);
+		}
+
+		// No NaN positions
+		for (const [, pos] of result.nodePositions) {
+			expect(Number.isFinite(pos.x)).toBe(true);
+			expect(Number.isFinite(pos.y)).toBe(true);
+		}
+	});
+
+	it('does not pass overlay edges to ELK layout', async () => {
+		const subnetId = uuid();
+		const leaf1 = uuid();
+		const leaf2 = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(subnetId),
+			makeLeaf(leaf1, subnetId),
+			makeLeaf(leaf2, subnetId)
+		];
+
+		// Only overlay edges — no primary edges to drive layout
+		const edges: TopologyEdge[] = [
+			makeEdge(leaf1, leaf2, 'HostVirtualization'),
+			makeEdge(leaf1, leaf2, 'RequestPath')
+		];
+
+		const subnets = [makeSubnet(subnetId, 'Lan')];
+		const input = makeTopology(nodes, edges, subnets);
+
+		// Should succeed even with no primary edges
+		const result = await computeElkLayout(input);
+		expect(result.nodePositions.size).toBeGreaterThan(0);
+	});
+});

@@ -191,21 +191,23 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 	}
 	const sortedLayers = Array.from(containersByLayer.entries()).sort((a, b) => a[0] - b[0]);
 
-	// Chain adjacent layers with invisible edges to enforce vertical ordering
+	// Chain adjacent layers with edges to enforce vertical ordering.
+	// Connect every container to a container in the next layer so disconnected
+	// containers (e.g., VPN at layer 1 with no edges) still respect ordering.
 	for (let i = 0; i < sortedLayers.length - 1; i++) {
 		const currentLayerContainers = sortedLayers[i][1];
 		const nextLayerContainers = sortedLayers[i + 1][1];
-		// Connect first container of each layer to first of next layer
-		const src = currentLayerContainers[0];
-		const tgt = nextLayerContainers[0];
-		const key = `${src}->${tgt}`;
-		if (!seenContainerEdges.has(key)) {
-			seenContainerEdges.add(key);
-			edges.push({
-				id: `elk-edge-${edgeIndex++}`,
-				sources: [src],
-				targets: [tgt]
-			});
+		for (const src of currentLayerContainers) {
+			const tgt = nextLayerContainers[0];
+			const key = `${src}->${tgt}`;
+			if (!seenContainerEdges.has(key)) {
+				seenContainerEdges.add(key);
+				edges.push({
+					id: `elk-edge-${edgeIndex++}`,
+					sources: [src],
+					targets: [tgt]
+				});
+			}
 		}
 	}
 

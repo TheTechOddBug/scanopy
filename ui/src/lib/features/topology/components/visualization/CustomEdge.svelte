@@ -81,6 +81,8 @@
 	let hasFanOffset = $derived(anyEdgeData?.bundleFanTotal != null);
 	let fanIndex = $derived((anyEdgeData?.bundleFanIndex as number) ?? 0);
 	let fanTotal = $derived((anyEdgeData?.bundleFanTotal as number) ?? 0);
+	let isExpandedBundleEdge = $derived(!isBundle && !!bundleId && hasFanOffset);
+	let showCollapseBadge = $derived(isExpandedBundleEdge && fanIndex === 0);
 
 	// Check if either endpoint is hidden by tag filter
 	let isEndpointHiddenByTagFilter = $derived.by(() => {
@@ -212,10 +214,8 @@
 		} else if (useMultiColorDash && !isSelected) {
 			// Other group edges, subtler highlight
 			strokeColor = isDark ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.4)';
-		} else if (!isGroupEdge && edgeTypeMetadata?.is_dashed) {
-			dashArray = 'stroke-dasharray: 5 5;';
 		} else if (!isGroupEdge && isOverlay) {
-			dashArray = 'stroke-dasharray: 4 4;';
+			dashArray = 'stroke-dasharray: 6 3;';
 		}
 
 		return `stroke: ${strokeColor}; stroke-width: ${baseStrokeWidth}px; opacity: ${baseOpacity}; ${dashArray} transition: opacity 0.2s ease-in-out, stroke-width 0.2s ease-in-out;`;
@@ -433,6 +433,28 @@
 					tabindex="0"
 				>
 					&times;{bundleCount}
+				</div>
+			</EdgeLabel>
+		{:else if showCollapseBadge}
+			<!-- Collapse badge for expanded bundle (shown on first fanned edge) -->
+			<EdgeLabel x={labelX} y={labelY} style="background: none; pointer-events: none;">
+				<div
+					class="nopan"
+					style="background: {edgeColorHelper.rgb}; color: white; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 10px; cursor: pointer; pointer-events: auto; opacity: {labelOpacity}; transition: opacity 0.2s ease-in-out; user-select: none;"
+					onclick={(e) => {
+						e.stopPropagation();
+						toggleBundleExpanded(bundleId);
+					}}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							toggleBundleExpanded(bundleId);
+						}
+					}}
+					role="button"
+					tabindex="0"
+				>
+					&times;{fanTotal} &#9652;
 				</div>
 			</EdgeLabel>
 		{:else if label}

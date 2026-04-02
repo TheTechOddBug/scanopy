@@ -45,7 +45,8 @@
 		updateConnectedNodes,
 		toggleEdgeHover,
 		getEdgeDisplayState,
-		expandedBundles
+		expandedBundles,
+		collapseAllBundles
 	} from '../../interactions';
 	import { bundleEdges } from '../../layout/edge-bundling';
 	import { isOverlayEdge } from '../../layout/edge-classification';
@@ -143,6 +144,22 @@
 	// Store pending edges until nodes are ready
 	let pendingEdges: Edge[] = [];
 
+	// Track ELK layout state — only re-run when topology structure changes
+	let elkLayoutComputed = false;
+	let lastStructureKey = '';
+
+	function getStructureKey(topo: Topology): string {
+		return `${topo.nodes.length}:${topo.edges.length}:${topo.nodes
+			.map((n) => n.id)
+			.sort()
+			.join(',')}`;
+	}
+
+	// Clear expanded bundles when bundling is toggled off
+	$: if (!$topologyOptions.local.bundle_edges) {
+		collapseAllBundles();
+	}
+
 	// Load topology data when it changes, collapse state changes, or bundle state changes
 	$: if (topology && (topology.edges || topology.nodes)) {
 		void $collapsedContainers;
@@ -217,18 +234,28 @@
 					return true;
 				});
 
-				// Compute client-side layout with elkjs
-				const layoutResult = await computeElkLayout({
-					nodes: visibleNodes,
-					edges: topology.edges,
-					topology: topology,
-					collapsedContainers: collapsed
-				});
+				// Only run elkjs when topology structure or collapse state changes
+				const structureKey = getStructureKey(topology) + ':' + Array.from(collapsed).sort().join(',');
+				const needsElkLayout = !elkLayoutComputed || structureKey !== lastStructureKey;
 
-				// Create nodes using ELK-computed positions (fallback to server positions)
+				const layoutResult = needsElkLayout
+					? await computeElkLayout({
+							nodes: visibleNodes,
+							edges: topology.edges,
+							topology: topology,
+							collapsedContainers: collapsed
+						})
+					: null;
+
+				if (needsElkLayout) {
+					elkLayoutComputed = true;
+					lastStructureKey = structureKey;
+				}
+
+				// Create nodes: use ELK positions on first layout, server positions after
 				const allNodes: Node[] = visibleNodes.map((node) => {
-					const elkPos = layoutResult.nodePositions.get(node.id);
-					const elkSize = layoutResult.containerSizes.get(node.id);
+					const elkPos = layoutResult?.nodePositions.get(node.id);
+					const elkSize = layoutResult?.containerSizes.get(node.id);
 					const isCollapsed = collapsed.has(node.id);
 					return {
 						id: node.id,
@@ -530,10 +557,12 @@
 			.filter((n) => n.node_type === 'ContainerNode')
 			.map((n) => n.id);
 		collapseAll(containerIds);
+		setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 100);
 	}
 
 	function handleExpandAll() {
 		expandAll();
+		setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 100);
 	}
 
 	// Merge preview edges into the edge store when they change

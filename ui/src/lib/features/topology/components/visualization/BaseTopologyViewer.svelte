@@ -28,7 +28,14 @@
 	import type { TopologyEdge, Topology } from '../../types/base';
 	import { resolveLeafNode } from '../../resolvers';
 	import { computeElkLayout } from '../../layout/elk-layout';
-	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
+	import {
+		updateConnectedNodes,
+		toggleEdgeHover,
+		getEdgeDisplayState,
+		expandedBundles
+	} from '../../interactions';
+	import { bundleEdges } from '../../layout/edge-bundling';
+	import { isOverlayEdge } from '../../layout/edge-classification';
 	import { onMount, tick, setContext } from 'svelte';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
@@ -123,8 +130,11 @@
 	// Store pending edges until nodes are ready
 	let pendingEdges: Edge[] = [];
 
-	// Load topology data when it changes
+	// Load topology data when it changes, or when bundle state changes
 	$: if (topology && (topology.edges || topology.nodes)) {
+		// Subscribe to bundle-related reactive state
+		void $expandedBundles;
+		void $topologyOptions.local.bundle_edges;
 		void loadTopologyData();
 	}
 
@@ -218,8 +228,28 @@
 				// Set nodes
 				nodes.set(sortedNodes);
 
-				// Create edges with markers
-				const flowEdges: Edge[] = topology.edges.map((edge: TopologyEdge, index: number) => {
+				// Build leaf→container map for edge bundling (local computation, not reactive state)
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity
+				const leafToContainer = new Map<string, string>();
+				const containerIds = new Set(
+					topology.nodes.filter((n) => n.node_type === 'ContainerNode').map((n) => n.id)
+				);
+				for (const node of topology.nodes) {
+					if (node.node_type === 'LeafNode') {
+						const parentId = node.container_id ?? node.subnet_id;
+						if (containerIds.has(parentId)) {
+							leafToContainer.set(node.id, parentId);
+						}
+					}
+				}
+
+				// Helper to create a flow edge from a topology edge
+				const hiddenEdgeTypes = $topologyOptions.local.hide_edge_types;
+				const makeFlowEdge = (
+					edge: TopologyEdge,
+					index: number,
+					extraData?: Record<string, unknown>
+				): Edge => {
 					const edgeType = edge.edge_type as string;
 					const edgeMetadata = edgeTypes.getMetadata(edgeType);
 					const edgeColorHelper = edgeTypes.getColorHelper(edgeType);
@@ -240,7 +270,7 @@
 					const edgeId = `edge-${index}`;
 
 					return {
-						id: `edge-${index}`,
+						id: edgeId,
 						source: edge.source,
 						target: edge.target,
 						markerEnd,
@@ -255,11 +285,67 @@
 						).toString(),
 						type: 'custom',
 						label: edge.label ?? undefined,
-						data: { ...edge, edgeIndex: index },
+						data: { ...edge, edgeIndex: index, ...extraData },
 						animated: animatedStates.get(edgeId) ?? false,
 						interactionWidth: 50
 					};
-				});
+				};
+
+				// Filter visible edges (hidden types excluded before bundling)
+				const visibleEdges = topology.edges.filter((e) => !hiddenEdgeTypes.includes(e.edge_type));
+
+				let flowEdges: Edge[];
+				const currentExpandedBundles = get(expandedBundles);
+
+				if ($topologyOptions.local.bundle_edges) {
+					const { bundles, unbundled } = bundleEdges(visibleEdges, leafToContainer);
+					flowEdges = [];
+					let edgeIndex = 0;
+
+					// Unbundled edges render normally
+					for (const edge of unbundled) {
+						flowEdges.push(makeFlowEdge(edge, edgeIndex++));
+					}
+
+					for (const bundle of bundles) {
+						if (currentExpandedBundles.has(bundle.id)) {
+							// Expanded: render individual edges with fan offset
+							const fanTotal = bundle.edges.length;
+							for (let i = 0; i < fanTotal; i++) {
+								flowEdges.push(
+									makeFlowEdge(bundle.edges[i], edgeIndex++, {
+										bundleId: bundle.id,
+										bundleFanIndex: i,
+										bundleFanTotal: fanTotal
+									})
+								);
+							}
+						} else {
+							// Collapsed: render single bundle edge
+							const representative = bundle.edges[0];
+							const bundleStrokeWidth = Math.min(2 + 0.5 * (bundle.count - 1), 6);
+							flowEdges.push(
+								makeFlowEdge(representative, edgeIndex++, {
+									isBundle: true,
+									bundleId: bundle.id,
+									bundleCount: bundle.count,
+									bundleEdges: bundle.edges,
+									bundleStrokeWidth,
+									bundleIsOverlay: isOverlayEdge(representative)
+								})
+							);
+						}
+					}
+				} else {
+					// Bundling disabled: render all visible edges individually
+					flowEdges = visibleEdges.map((edge, index) => makeFlowEdge(edge, index));
+				}
+
+				// Also add hidden edges (they get filtered by CustomEdge's hideEdge logic)
+				const hiddenEdges = topology.edges.filter((e) => hiddenEdgeTypes.includes(e.edge_type));
+				for (const edge of hiddenEdges) {
+					flowEdges.push(makeFlowEdge(edge, flowEdges.length));
+				}
 
 				pendingEdges = flowEdges;
 

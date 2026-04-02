@@ -228,6 +228,8 @@ pub struct TopologyLocalOptions {
     pub tag_filter: TopologyTagFilter,
     #[serde(default = "default_true")]
     pub show_minimap: bool,
+    #[serde(default = "default_true")]
+    pub bundle_edges: bool,
 }
 
 fn default_true() -> bool {
@@ -243,6 +245,7 @@ impl Default for TopologyLocalOptions {
             hide_edge_types: vec![EdgeTypeDiscriminants::HostVirtualization],
             tag_filter: TopologyTagFilter::default(),
             show_minimap: true,
+            bundle_edges: true,
         }
     }
 }

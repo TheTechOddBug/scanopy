@@ -27,7 +27,8 @@
 		groupHoverState,
 		isExporting,
 		tagHiddenNodeIds,
-		hoveredEdgeType
+		hoveredEdgeType,
+		toggleBundleExpanded
 	} from '../../interactions';
 	import { isOverlayEdge } from '../../layout/edge-classification';
 	import type { Node, Edge as FlowEdge } from '@xyflow/svelte';
@@ -70,6 +71,17 @@
 
 	const edgeData = $derived(data as TopologyEdge | undefined);
 
+	// Bundle detection
+	const anyEdgeData = $derived(data as Record<string, unknown> | undefined);
+	let isBundle = $derived(!!anyEdgeData?.isBundle);
+	let bundleCount = $derived((anyEdgeData?.bundleCount as number) ?? 0);
+	let bundleId = $derived((anyEdgeData?.bundleId as string) ?? '');
+	let bundleStrokeWidth = $derived((anyEdgeData?.bundleStrokeWidth as number) ?? 2);
+	let bundleIsOverlay = $derived(!!anyEdgeData?.bundleIsOverlay);
+	let hasFanOffset = $derived(anyEdgeData?.bundleFanTotal != null);
+	let fanIndex = $derived((anyEdgeData?.bundleFanIndex as number) ?? 0);
+	let fanTotal = $derived((anyEdgeData?.bundleFanTotal as number) ?? 0);
+
 	// Check if either endpoint is hidden by tag filter
 	let isEndpointHiddenByTagFilter = $derived.by(() => {
 		const hiddenNodes = $tagHiddenNodeIds;
@@ -91,7 +103,7 @@
 		edgeData ? $topologyOptions.local.hide_edge_types.includes(edgeData.edge_type) : false
 	);
 
-	let isOverlay = $derived(edgeData ? isOverlayEdge(edgeData) : false);
+	let isOverlay = $derived(isBundle ? bundleIsOverlay : edgeData ? isOverlayEdge(edgeData) : false);
 
 	// Get display state from helper - Make reactive to hover stores
 	let displayState = $derived.by(() => {
@@ -146,6 +158,7 @@
 
 	// Calculate base edge properties
 	let baseStrokeWidth = $derived.by(() => {
+		if (isBundle) return bundleStrokeWidth;
 		if (isEdgeTypeHovered) return 3;
 		if (!$topologyOptions.local.no_fade_edges && (shouldShowFull || isPreview)) return 3;
 		if (isOverlay) return 1.5;
@@ -260,12 +273,27 @@
 		const isMultiHop = (edgeData?.is_multi_hop as boolean) || false;
 		const offset = calculateDynamicOffset(isMultiHop);
 
+		// Apply fan offset for expanded bundle edges
+		let fanOffsetX = 0;
+		let fanOffsetY = 0;
+		if (hasFanOffset && fanTotal > 1) {
+			const spacing = 8;
+			const fanOffset = (fanIndex - (fanTotal - 1) / 2) * spacing;
+			// Offset perpendicular to edge direction
+			const dx = targetX - sourceX;
+			const dy = targetY - sourceY;
+			const len = Math.sqrt(dx * dx + dy * dy) || 1;
+			// Perpendicular unit vector
+			fanOffsetX = (-dy / len) * fanOffset;
+			fanOffsetY = (dx / len) * fanOffset;
+		}
+
 		const basePathProperties = {
-			sourceX,
-			sourceY,
+			sourceX: sourceX + fanOffsetX,
+			sourceY: sourceY + fanOffsetY,
 			sourcePosition,
-			targetX,
-			targetY,
+			targetX: targetX + fanOffsetX,
+			targetY: targetY + fanOffsetY,
 			targetPosition
 		};
 
@@ -378,7 +406,29 @@
 			class={useMultiColorDash ? 'dashed-overlay' : ''}
 		/>
 
-		{#if label}
+		{#if isBundle}
+			<!-- Bundle count badge -->
+			<EdgeLabel x={labelX} y={labelY} style="background: none; pointer-events: none;">
+				<div
+					class="nopan"
+					style="background: {edgeColorHelper.rgb}; color: white; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 10px; cursor: pointer; pointer-events: auto; opacity: {labelOpacity}; transition: opacity 0.2s ease-in-out; user-select: none;"
+					onclick={(e) => {
+						e.stopPropagation();
+						toggleBundleExpanded(bundleId);
+					}}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							toggleBundleExpanded(bundleId);
+						}
+					}}
+					role="button"
+					tabindex="0"
+				>
+					&times;{bundleCount}
+				</div>
+			</EdgeLabel>
+		{:else if label}
 			<EdgeLabel
 				x={labelX + labelOffsetX}
 				y={labelY + labelOffsetY}

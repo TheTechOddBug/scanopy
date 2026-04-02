@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-02T21:32:15.163834Z",
-             *       "id": "8738a8dd-6316-4aad-88de-28bd69f5c965",
+             *       "created_at": "2026-04-02T23:02:19.949214Z",
+             *       "id": "4b8e6266-822e-4279-8b86-2346b8120d43",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-02T21:32:15.163834Z"
+             *       "updated_at": "2026-04-02T23:02:19.949214Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3153,14 +3153,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-02T21:32:15.145068Z",
-             *               "id": "02df3435-dd6e-4edd-bd89-62833f465ca2",
+             *               "created_at": "2026-04-02T23:02:19.930990Z",
+             *               "id": "f7e254f2-f2ba-4f1b-a05d-3e4d2a9c54f9",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-02T21:32:15.145068Z"
+             *               "updated_at": "2026-04-02T23:02:19.930990Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3169,7 +3169,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Elastic APM",
+             *           "service_definition": "Bamboo",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3425,14 +3425,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-02T21:32:15.158749Z",
-             *           "id": "c93d7afd-5edf-43d2-b3f3-cd68b029c5d7",
+             *           "created_at": "2026-04-02T23:02:19.943821Z",
+             *           "id": "1f47d65f-d721-4761-a7d3-eb4f0b168d78",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-02T21:32:15.158749Z"
+             *           "updated_at": "2026-04-02T23:02:19.943821Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3441,7 +3441,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Elastic APM",
+             *       "service_definition": "Bamboo",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3768,14 +3768,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-02T21:32:15.145452Z",
-         *       "id": "515bb95c-a9df-443f-81fa-a355cde4d459",
+         *       "created_at": "2026-04-02T23:02:19.931183Z",
+         *       "id": "de6be5bd-352c-48f9-897a-cb7f06a7e2cb",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-02T21:32:15.145452Z"
+         *       "updated_at": "2026-04-02T23:02:19.931183Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3960,7 +3960,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Elastic APM",
+         *           "service_definition": "Bamboo",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4740,14 +4740,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-02T21:32:15.144536Z",
-         *               "id": "7e12defd-e7fe-4258-b2e6-c1b16eadcb15",
+         *               "created_at": "2026-04-02T23:02:19.930705Z",
+         *               "id": "8229013b-429d-4f17-a551-c00c70f141b4",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-02T21:32:15.144536Z"
+         *               "updated_at": "2026-04-02T23:02:19.930705Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4756,7 +4756,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Elastic APM",
+         *           "service_definition": "Bamboo",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5817,14 +5817,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-02T21:32:15.145313Z",
-         *           "id": "9ab0398b-379f-4040-9b79-20bd3d0d1952",
+         *           "created_at": "2026-04-02T23:02:19.931117Z",
+         *           "id": "8063e408-6f6b-4529-ba25-ac3b6014d08a",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-02T21:32:15.145313Z"
+         *           "updated_at": "2026-04-02T23:02:19.931117Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5833,7 +5833,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Elastic APM",
+         *       "service_definition": "Bamboo",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6131,6 +6131,7 @@ export interface components {
             target_handle: components["schemas"]["EdgeHandle"];
         };
         TopologyLocalOptions: {
+            bundle_edges?: boolean;
             hide_edge_types: components["schemas"]["EdgeTypeDiscriminants"][];
             hide_resize_handles: boolean;
             left_zone_title: string;

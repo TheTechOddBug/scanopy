@@ -147,6 +147,7 @@
 	// Track ELK layout state — only re-run when topology structure changes
 	let elkLayoutComputed = false;
 	let lastStructureKey = '';
+	let cachedLayoutResult: import('../../layout/elk-layout').ElkLayoutResult | null = null;
 
 	function getStructureKey(topo: Topology): string {
 		return `${topo.nodes.length}:${topo.edges.length}:${topo.nodes
@@ -238,19 +239,18 @@
 				const structureKey = getStructureKey(topology) + ':' + Array.from(collapsed).sort().join(',');
 				const needsElkLayout = !elkLayoutComputed || structureKey !== lastStructureKey;
 
-				const layoutResult = needsElkLayout
-					? await computeElkLayout({
-							nodes: visibleNodes,
-							edges: topology.edges,
-							topology: topology,
-							collapsedContainers: collapsed
-						})
-					: null;
-
 				if (needsElkLayout) {
+					cachedLayoutResult = await computeElkLayout({
+						nodes: visibleNodes,
+						edges: topology.edges,
+						topology: topology,
+						collapsedContainers: collapsed
+					});
 					elkLayoutComputed = true;
 					lastStructureKey = structureKey;
 				}
+
+				const layoutResult = cachedLayoutResult;
 
 				// Create nodes: use ELK positions on first layout, server positions after
 				const allNodes: Node[] = visibleNodes.map((node) => {

@@ -245,8 +245,14 @@
 						target: edge.target,
 						markerEnd,
 						markerStart,
-						sourceHandle: edge.source_handle.toString(),
-						targetHandle: edge.target_handle.toString(),
+						sourceHandle: (
+							layoutResult.edgeHandles.get(`${edge.source}->${edge.target}`)?.sourceHandle ??
+							edge.source_handle
+						).toString(),
+						targetHandle: (
+							layoutResult.edgeHandles.get(`${edge.source}->${edge.target}`)?.targetHandle ??
+							edge.target_handle
+						).toString(),
 						type: 'custom',
 						label: edge.label ?? undefined,
 						data: { ...edge, edgeIndex: index },

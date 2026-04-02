@@ -11,9 +11,17 @@ export interface ElkLayoutInput {
 	topology: Topology;
 }
 
+export type HandleSide = 'Top' | 'Bottom' | 'Left' | 'Right';
+
+export interface EdgeHandles {
+	sourceHandle: HandleSide;
+	targetHandle: HandleSide;
+}
+
 export interface ElkLayoutResult {
 	nodePositions: Map<string, { x: number; y: number }>;
 	containerSizes: Map<string, { width: number; height: number }>;
+	edgeHandles: Map<string, EdgeHandles>;
 }
 
 let elkPromise: Promise<import('elkjs')['default']> | null = null;
@@ -175,40 +183,108 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 }
 
 /**
+ * Compute optimal handle sides based on relative position of source and target.
+ * Picks the pair of sides (Top/Bottom/Left/Right) that minimizes edge distance.
+ */
+function computeOptimalHandles(
+	srcPos: { x: number; y: number },
+	srcSize: { w: number; h: number },
+	tgtPos: { x: number; y: number },
+	tgtSize: { w: number; h: number }
+): EdgeHandles {
+	const srcCx = srcPos.x + srcSize.w / 2;
+	const srcCy = srcPos.y + srcSize.h / 2;
+	const tgtCx = tgtPos.x + tgtSize.w / 2;
+	const tgtCy = tgtPos.y + tgtSize.h / 2;
+
+	const dx = tgtCx - srcCx;
+	const dy = tgtCy - srcCy;
+
+	// Pick handle based on predominant direction
+	if (Math.abs(dy) >= Math.abs(dx)) {
+		// Vertical: target is below source → source Bottom, target Top (and vice versa)
+		if (dy >= 0) {
+			return { sourceHandle: 'Bottom', targetHandle: 'Top' };
+		} else {
+			return { sourceHandle: 'Top', targetHandle: 'Bottom' };
+		}
+	} else {
+		// Horizontal: target is right of source → source Right, target Left
+		if (dx >= 0) {
+			return { sourceHandle: 'Right', targetHandle: 'Left' };
+		} else {
+			return { sourceHandle: 'Left', targetHandle: 'Right' };
+		}
+	}
+}
+
+/**
  * Extract positions from ELK result. Leaf positions are made relative to their
  * parent container (as @xyflow expects when parentId is set).
  */
-function mapElkResults(layoutResult: ElkNode, containerIds: Set<string>): ElkLayoutResult {
+function mapElkResults(
+	layoutResult: ElkNode,
+	containerIds: Set<string>,
+	input: ElkLayoutInput
+): ElkLayoutResult {
 	const nodePositions = new Map<string, { x: number; y: number }>();
 	const containerSizes = new Map<string, { width: number; height: number }>();
 
+	// Track absolute positions for handle computation (leaves need container offset)
+	const absolutePositions = new Map<string, { x: number; y: number }>();
+
 	// Map container positions and sizes
-	const containerPositions = new Map<string, { x: number; y: number }>();
 	if (layoutResult.children) {
 		for (const container of layoutResult.children) {
 			if (!containerIds.has(container.id)) continue;
 			const cx = container.x ?? 0;
 			const cy = container.y ?? 0;
-			containerPositions.set(container.id, { x: cx, y: cy });
 			nodePositions.set(container.id, { x: cx, y: cy });
+			absolutePositions.set(container.id, { x: cx, y: cy });
 			containerSizes.set(container.id, {
 				width: container.width ?? 0,
 				height: container.height ?? 0
 			});
 
-			// Map leaf node positions (relative to parent)
+			// Map leaf node positions (relative to parent for SvelteFlow)
 			if (container.children) {
 				for (const leaf of container.children) {
-					nodePositions.set(leaf.id, {
-						x: leaf.x ?? 0,
-						y: leaf.y ?? 0
-					});
+					const lx = leaf.x ?? 0;
+					const ly = leaf.y ?? 0;
+					nodePositions.set(leaf.id, { x: lx, y: ly });
+					// Absolute = container pos + leaf offset
+					absolutePositions.set(leaf.id, { x: cx + lx, y: cy + ly });
 				}
 			}
 		}
 	}
 
-	return { nodePositions, containerSizes };
+	// Compute optimal edge handles using absolute positions
+	const edgeHandles = new Map<string, EdgeHandles>();
+	const nodeSizes = new Map<string, { w: number; h: number }>();
+	for (const node of input.nodes) {
+		// Use ELK-computed size for containers, original size for leaves
+		const elkSize = containerSizes.get(node.id);
+		nodeSizes.set(node.id, {
+			w: elkSize?.width ?? node.size.x,
+			h: elkSize?.height ?? node.size.y
+		});
+	}
+
+	for (const edge of input.edges) {
+		const srcPos = absolutePositions.get(edge.source);
+		const tgtPos = absolutePositions.get(edge.target);
+		const srcSize = nodeSizes.get(edge.source);
+		const tgtSize = nodeSizes.get(edge.target);
+		if (srcPos && tgtPos && srcSize && tgtSize) {
+			edgeHandles.set(
+				`${edge.source}->${edge.target}`,
+				computeOptimalHandles(srcPos, srcSize, tgtPos, tgtSize)
+			);
+		}
+	}
+
+	return { nodePositions, containerSizes, edgeHandles };
 }
 
 /**
@@ -217,11 +293,11 @@ function mapElkResults(layoutResult: ElkNode, containerIds: Set<string>): ElkLay
  */
 export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayoutResult> {
 	if (input.nodes.length === 0) {
-		return { nodePositions: new Map(), containerSizes: new Map() };
+		return { nodePositions: new Map(), containerSizes: new Map(), edgeHandles: new Map() };
 	}
 
 	const { graph, containerIds } = buildElkGraph(input);
 	const elk = await getElk();
 	const result = await elk.layout(graph);
-	return mapElkResults(result, containerIds);
+	return mapElkResults(result, containerIds, input);
 }

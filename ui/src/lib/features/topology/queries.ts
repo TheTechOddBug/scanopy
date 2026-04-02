@@ -39,7 +39,13 @@ export function sanitizeOptionsForApi(options: TopologyOptions): TopologyOptions
 export const defaultTopologyOptions: TopologyOptions = {
 	local: {
 		left_zone_title: 'Infrastructure',
-		hide_edge_types: ['HostVirtualization'],
+		hide_edge_types: [
+			'HostVirtualization',
+			'ServiceVirtualization',
+			'RequestPath',
+			'HubAndSpoke',
+			'PhysicalLink'
+		],
 		no_fade_edges: false,
 		hide_resize_handles: false,
 		tag_filter: {

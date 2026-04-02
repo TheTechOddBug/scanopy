@@ -1,4 +1,4 @@
-import ELK, { type ElkNode, type ElkExtendedEdge } from 'elkjs/lib/elk.bundled.js';
+import type { ElkNode, ElkExtendedEdge } from 'elkjs';
 import type { TopologyNode, TopologyEdge, Topology } from '../types/base';
 import type { components } from '$lib/api/schema';
 import { classifyEdge } from './edge-classification';
@@ -16,7 +16,17 @@ export interface ElkLayoutResult {
 	containerSizes: Map<string, { width: number; height: number }>;
 }
 
-const elk = new ELK();
+let elkPromise: Promise<import('elkjs')['default']> | null = null;
+
+async function getElk(): Promise<import('elkjs/lib/elk-api')['default']> {
+	if (!elkPromise) {
+		elkPromise = import('elkjs/lib/elk.bundled.js').then((mod) => {
+			const ELK = mod.default;
+			return new ELK();
+		});
+	}
+	return elkPromise;
+}
 
 /** Map SubnetType to vertical layer order (lower = higher on screen). */
 const SUBNET_TYPE_LAYER: Record<SubnetType, number> = {
@@ -42,18 +52,21 @@ const SUBNET_TYPE_LAYER: Record<SubnetType, number> = {
 const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 	'elk.algorithm': 'layered',
 	'elk.direction': 'DOWN',
-	'elk.layered.spacing.nodeNodeBetweenLayers': '80',
-	'elk.layered.spacing.edgeNodeBetweenLayers': '40',
-	'elk.spacing.componentComponent': '40',
+	'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+	'elk.layered.spacing.edgeNodeBetweenLayers': '50',
+	'elk.spacing.componentComponent': '80',
+	'elk.spacing.nodeNode': '60',
 	'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
 	'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-	'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+	'elk.hierarchyHandling': 'SEPARATE_CHILDREN',
 	'elk.layered.layering.strategy': 'INTERACTIVE',
+	'elk.layered.compaction.postCompaction.strategy': 'LEFT_RIGHT_CONSTRAINT_LOCKING',
+	'elk.aspectRatio': '1.6',
 	'elk.padding': '[top=20,left=20,bottom=20,right=20]'
 };
 
 /** Container node padding (extra top for header). */
-const CONTAINER_PADDING = '[top=50,left=20,bottom=20,right=20]';
+const CONTAINER_PADDING = '[top=50,left=25,bottom=25,right=25]';
 
 function getLayerHint(node: TopologyNode, topology: Topology): number {
 	// Future: use layer_hint if present
@@ -85,11 +98,13 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 			const layerId = getLayerHint(node, input.topology);
 			containers.set(node.id, {
 				id: node.id,
-				width: node.size.x,
-				height: node.size.y,
 				children: [],
 				layoutOptions: {
+					'elk.algorithm': 'rectpacking',
 					'elk.padding': CONTAINER_PADDING,
+					'elk.nodeSize.constraints': 'MINIMUM_SIZE',
+					'elk.rectpacking.desiredAspectRatio': '2.5',
+					'elk.spacing.nodeNode': '20',
 					'elk.layered.layering.layerId': String(layerId)
 				}
 			});
@@ -115,16 +130,37 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 		}
 	}
 
-	// Collect only primary edges
+	// Build leaf→container mapping
+	const leafToContainer = new Map<string, string>();
+	for (const node of input.nodes) {
+		if (node.node_type === 'LeafNode') {
+			const parentId = node.container_id ?? node.subnet_id;
+			if (containers.has(parentId)) {
+				leafToContainer.set(node.id, parentId);
+			}
+		}
+	}
+
+	// With SEPARATE_CHILDREN, create container-level edges from cross-container
+	// leaf edges so the root layered algorithm can order containers properly.
 	const edges: ElkExtendedEdge[] = [];
+	const seenContainerEdges = new Set<string>();
 	let edgeIndex = 0;
 	for (const edge of input.edges) {
-		if (classifyEdge(edge) === 'primary') {
-			edges.push({
-				id: `elk-edge-${edgeIndex++}`,
-				sources: [edge.source],
-				targets: [edge.target]
-			});
+		if (classifyEdge(edge) !== 'primary') continue;
+
+		const srcContainer = leafToContainer.get(edge.source);
+		const tgtContainer = leafToContainer.get(edge.target);
+		if (srcContainer && tgtContainer && srcContainer !== tgtContainer) {
+			const key = `${srcContainer}->${tgtContainer}`;
+			if (!seenContainerEdges.has(key)) {
+				seenContainerEdges.add(key);
+				edges.push({
+					id: `elk-edge-${edgeIndex++}`,
+					sources: [srcContainer],
+					targets: [tgtContainer]
+				});
+			}
 		}
 	}
 
@@ -185,6 +221,7 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 	}
 
 	const { graph, containerIds } = buildElkGraph(input);
+	const elk = await getElk();
 	const result = await elk.layout(graph);
 	return mapElkResults(result, containerIds);
 }

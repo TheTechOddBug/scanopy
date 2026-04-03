@@ -256,18 +256,45 @@
 					edgeHandles: new Map()
 				};
 
-				// Use ELK positions only on structure change; otherwise use server
-				// positions (which reflect user drags saved to the backend)
+				// Save current state before rebuilding
+				const currentEdges = get(edges);
+				const currentNodes = get(nodes);
+				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
+
+				// Build a map of current @xyflow positions (includes ELK + user drags)
+				const currentPositions = new Map(currentNodes.map((n) => [n.id, n.position]));
+				const currentSizes = new Map(
+					currentNodes.map((n) => [n.id, { width: n.width ?? n.computed?.width, height: n.height ?? n.computed?.height }])
+				);
+
 				const allNodes: Node[] = visibleNodes.map((node) => {
-					const elkPos = isNewStructure ? layoutResult?.nodePositions.get(node.id) : undefined;
-					const elkSize = isNewStructure ? layoutResult?.containerSizes.get(node.id) : undefined;
 					const isCollapsed = collapsed.has(node.id);
+
+					// Position priority: ELK (if new structure) > current @xyflow > server
+					let position: { x: number; y: number };
+					let width: number;
+					let height: number;
+
+					if (isNewStructure) {
+						const elkPos = layoutResult.nodePositions.get(node.id);
+						const elkSize = layoutResult.containerSizes.get(node.id);
+						position = elkPos ?? { x: node.position.x, y: node.position.y };
+						width = isCollapsed ? 200 : (elkSize?.width ?? node.size.x);
+						height = isCollapsed ? 80 : (elkSize?.height ?? node.size.y);
+					} else {
+						const curPos = currentPositions.get(node.id);
+						const curSize = currentSizes.get(node.id);
+						position = curPos ?? { x: node.position.x, y: node.position.y };
+						width = isCollapsed ? 200 : (curSize?.width ?? node.size.x);
+						height = isCollapsed ? 80 : (curSize?.height ?? node.size.y);
+					}
+
 					return {
 						id: node.id,
 						type: node.node_type,
-						position: elkPos ?? { x: node.position.x, y: node.position.y },
-						width: isCollapsed ? 200 : (elkSize?.width ?? node.size.x),
-						height: isCollapsed ? 80 : (elkSize?.height ?? node.size.y),
+						position,
+						width,
+						height,
 						expandParent: true,
 						deletable: false,
 						selectable: node.node_type !== 'ContainerNode',
@@ -281,10 +308,6 @@
 							: node
 					};
 				});
-
-				// Save current edge animated states before clearing
-				const currentEdges = get(edges);
-				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
 
 				// Clear edges FIRST
 				edges.set([]);

@@ -33,11 +33,10 @@ use crate::server::{
     topology::{
         service::{
             context::TopologyContext, edge_builder::EdgeBuilder,
-            legacy::optimizer::main::TopologyOptimizer,
             legacy::planner::subnet_layout_planner::SubnetLayoutPlanner,
         },
         types::{
-            base::{LayoutMode, SetEntitiesParams, Topology, TopologyOptions},
+            base::{SetEntitiesParams, Topology, TopologyOptions},
             edges::{Edge, EdgeHandle},
             grouping::GroupingConfig,
             layout::Ixy,
@@ -401,20 +400,11 @@ impl TopologyService {
 
         let mut all_nodes: Vec<Node> = subnet_nodes.into_iter().chain(child_nodes).collect();
 
-        let final_edges = match options.request.layout_mode {
-            LayoutMode::ClientSide => {
-                // Zero out positions — client will compute layout via elkjs
-                for node in &mut all_nodes {
-                    node.position = Ixy { x: 0, y: 0 };
-                }
-                all_edges
-            }
-            LayoutMode::Legacy => {
-                // Optimize node positions and handle edge adjustments
-                let optimizer = TopologyOptimizer::new(&ctx);
-                optimizer.optimize_graph(&mut all_nodes, &all_edges)
-            }
-        };
+        // Zero out positions — client computes layout via elkjs
+        for node in &mut all_nodes {
+            node.position = Ixy { x: 0, y: 0 };
+        }
+        let final_edges = all_edges;
 
         // Build graph
         let mut graph: Graph<Node, Edge> = Graph::new();

@@ -17,7 +17,6 @@ use crate::server::{
             },
         },
         types::{
-            base::LayoutMode,
             edges::Edge,
             grouping::{GroupingConfig, GroupingRule},
             layout::{Ixy, NodeLayout, SubnetLayout, Uxy},
@@ -337,10 +336,8 @@ impl SubnetLayoutPlanner {
             }
         }
 
-        // For ClientSide layout, create nested group containers for ByServiceCategory and ByTag rules
-        if ctx.options.request.layout_mode == LayoutMode::ClientSide {
-            self.create_nested_group_containers(subnet_id, children, ctx, child_nodes);
-        }
+        // Create nested group containers for ByServiceCategory and ByTag rules
+        self.create_nested_group_containers(subnet_id, children, ctx, child_nodes);
 
         grid_size
     }

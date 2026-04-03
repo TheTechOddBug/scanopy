@@ -249,17 +249,6 @@ impl Default for TopologyLocalOptions {
     }
 }
 
-/// Whether the server computes layout positions or returns graph structure for client-side layout
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum LayoutMode {
-    /// Server computes positions (current behavior)
-    #[default]
-    Legacy,
-    /// Server returns graph structure + hints, no positions
-    ClientSide,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]
 pub struct TopologyRequestOptions {
     pub hide_vm_title_on_docker_container: bool,
@@ -269,8 +258,6 @@ pub struct TopologyRequestOptions {
     pub grouping_rules: Vec<GroupingRule>,
     #[serde(default)]
     pub perspective: TopologyPerspective,
-    #[serde(default)]
-    pub layout_mode: LayoutMode,
 }
 
 fn default_grouping_rules() -> Vec<GroupingRule> {
@@ -292,7 +279,6 @@ impl Default for TopologyRequestOptions {
             hide_service_categories: vec![ServiceCategory::OpenPorts],
             grouping_rules: default_grouping_rules(),
             perspective: TopologyPerspective::default(),
-            layout_mode: LayoutMode::default(),
         }
     }
 }

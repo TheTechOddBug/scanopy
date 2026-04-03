@@ -42,7 +42,7 @@ SET options = jsonb_set(
 )
 WHERE options IS NOT NULL;
 
--- Step 2: Remove left_zone_title from local options
+-- Step 2: Remove left_zone_title from local options and layout_mode from request
 UPDATE topologies
-SET options = options #- '{local,left_zone_title}'
+SET options = options #- '{local,left_zone_title}' #- '{request,layout_mode}'
 WHERE options IS NOT NULL;

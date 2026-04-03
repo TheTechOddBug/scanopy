@@ -289,7 +289,11 @@
 					}
 				}
 
-				const layoutResult = cachedLayoutResult;
+				const layoutResult = cachedLayoutResult ?? {
+					nodePositions: new Map(),
+					containerSizes: new Map(),
+					edgeHandles: new Map()
+				};
 
 				// Create nodes: use ELK positions on first layout, server positions after
 				const allNodes: Node[] = visibleNodes.map((node) => {

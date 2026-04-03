@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use uuid::Uuid;
 
-use crate::server::{bindings::r#impl::base::Binding, services::r#impl::base::Service};
+use crate::server::services::r#impl::base::Service;
 
 const SUBNET_CHILD_HEADER_HEIGHT: usize = 25;
 const SUBNET_CHILD_FOOTER_HEIGHT: usize = 25;
@@ -16,36 +15,13 @@ pub struct Uxy {
 }
 
 impl Uxy {
-    pub fn subnet_child_size_from_service_count(
-        services: &[&Service],
-        interface_id: Uuid,
-        has_header: bool,
-        hide_ports: bool,
-    ) -> Self {
+    pub fn subnet_child_size_from_service_count(services: &[&Service], has_header: bool) -> Self {
+        // Always compute height as if ports are shown — this is just a
+        // MINIMUM_SIZE hint for elkjs; the frontend handles display options.
         let service_area_height: usize = if services.is_empty() {
             HEIGHT_PER_SERVICE_IN_SUBNET_CHILD
         } else {
-            services
-                .iter()
-                .map(|s| {
-                    let bindings_with_ports = s
-                        .base
-                        .bindings
-                        .iter()
-                        .filter(|b| {
-                            b.interface_id().map(|i| i == interface_id).unwrap_or(true)
-                                && b.port_id().is_some()
-                        })
-                        .collect::<Vec<&Binding>>()
-                        .len();
-                    HEIGHT_PER_SERVICE_IN_SUBNET_CHILD
-                        + if hide_ports && bindings_with_ports > 0 {
-                            0
-                        } else {
-                            25
-                        }
-                })
-                .sum()
+            services.len() * (HEIGHT_PER_SERVICE_IN_SUBNET_CHILD + 25)
         };
 
         Self {

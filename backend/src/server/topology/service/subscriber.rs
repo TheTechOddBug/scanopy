@@ -164,9 +164,7 @@ impl EventSubscriber for TopologyService {
 
             if let Some(changes) = topology_updates.get(&network_id) {
                 for mut topology in topologies {
-                    let services = self
-                        .get_service_data(network_id, &topology.base.options)
-                        .await?;
+                    let services = self.get_service_data(network_id).await?;
 
                     // Apply removed entities
                     for host_id in &changes.removed_hosts {

@@ -96,9 +96,7 @@ impl CrudService<Topology> for TopologyService {
         let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
             self.get_entity_data(topology.base.network_id).await?;
 
-        let services = self
-            .get_service_data(topology.base.network_id, &topology.base.options)
-            .await?;
+        let services = self.get_service_data(topology.base.network_id).await?;
 
         // Fetch tag definitions for all tags used by entities
         let entity_tags = self.get_entity_tags(&hosts, &services, &subnets).await?;
@@ -268,26 +266,12 @@ impl TopologyService {
         ))
     }
 
-    pub async fn get_service_data(
-        &self,
-        network_id: Uuid,
-        options: &TopologyOptions,
-    ) -> Result<Vec<Service>, Error> {
-        Ok(self
-            .service_service
+    pub async fn get_service_data(&self, network_id: Uuid) -> Result<Vec<Service>, Error> {
+        self.service_service
             .get_all(StorableFilter::<Service>::new_from_network_ids(&[
                 network_id,
             ]))
-            .await?
-            .iter()
-            .filter(|s| {
-                !options
-                    .request
-                    .hide_service_categories
-                    .contains(&s.base.service_definition.category())
-            })
-            .cloned()
-            .collect())
+            .await
     }
 
     /// Fetch tag definitions for all tags used by hosts, services, and subnets.
@@ -336,9 +320,7 @@ impl TopologyService {
         let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
             self.get_entity_data(topology.base.network_id).await?;
 
-        let services = self
-            .get_service_data(topology.base.network_id, &topology.base.options)
-            .await?;
+        let services = self.get_service_data(topology.base.network_id).await?;
 
         let entity_tags = self.get_entity_tags(&hosts, &services, &subnets).await?;
 

@@ -95,41 +95,36 @@ impl GraphBuilder {
                 .cloned()
                 .collect();
 
-            let hide_docker_bridge_vm_header = *subnet_type == SubnetType::DockerBridge
-                && ctx.options.request.hide_vm_title_on_docker_container;
+            // Always include VM header text — frontend handles suppression
+            // via hide_vm_title_on_docker_container option
+            match intersection.first() {
+                Some(first) => {
+                    if let Some(interface) =
+                        host_interfaces.iter().find(|i| i.base.subnet_id == **first)
+                        && host_interface_subnet_ids
+                            .iter()
+                            .filter(|i| i == first)
+                            .count()
+                            == 1
+                        && virtualization_service_interface_subnet_ids
+                            .iter()
+                            .filter(|i| i == first)
+                            .count()
+                            == 1
+                    {
+                        let on = virtualization_service_host
+                            .map(|h| h.base.name.clone())
+                            .unwrap_or(interface.base.ip_address.to_string());
 
-            if !hide_docker_bridge_vm_header {
-                // If they have at least one interface on a common subnet
-                // Use the IP address from that interface in the header text
-                match intersection.first() {
-                    Some(first) => {
-                        if let Some(interface) =
-                            host_interfaces.iter().find(|i| i.base.subnet_id == **first)
-                            && host_interface_subnet_ids
-                                .iter()
-                                .filter(|i| i == first)
-                                .count()
-                                == 1
-                            && virtualization_service_interface_subnet_ids
-                                .iter()
-                                .filter(|i| i == first)
-                                .count()
-                                == 1
-                        {
-                            let on = virtualization_service_host
-                                .map(|h| h.base.name.clone())
-                                .unwrap_or(interface.base.ip_address.to_string());
-
-                            if on == service.base.name {
-                                return Some(format!("VM: {}", service.base.name));
-                            } else {
-                                return Some(format!("VM: {} on {}", service.base.name, on));
-                            }
+                        if on == service.base.name {
+                            return Some(format!("VM: {}", service.base.name));
+                        } else {
+                            return Some(format!("VM: {} on {}", service.base.name, on));
                         }
-                        return Some(format!("VM: {}", service.base.name));
                     }
-                    _ => return Some(format!("VM: {}", service.base.name)),
+                    return Some(format!("VM: {}", service.base.name));
                 }
+                _ => return Some(format!("VM: {}", service.base.name)),
             }
         }
 
@@ -237,9 +232,7 @@ impl GraphBuilder {
                 host_id: host.id,
                 size: Uxy::subnet_child_size_from_service_count(
                     &interface_bound_services,
-                    interface.id,
                     header_text.is_some(),
-                    ctx.options.request.hide_ports,
                 ),
                 header: header_text,
                 interface_id: Some(interface.id),

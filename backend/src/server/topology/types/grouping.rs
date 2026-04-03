@@ -132,35 +132,17 @@ impl TypeMetadataProvider for LeafRule {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NodeFilter {
-    HideServiceCategories(Vec<ServiceCategory>),
-}
-
 #[derive(Debug, Clone)]
 pub struct GroupingConfig {
     pub container_rules: Vec<ContainerRule>,
     pub leaf_rules: Vec<LeafRule>,
-    pub filters: Vec<NodeFilter>,
 }
 
 impl GroupingConfig {
     pub fn from_request_options(options: &TopologyRequestOptions) -> Self {
-        let container_rules = options.container_rules.clone();
-        let leaf_rules = options.leaf_rules.clone();
-
-        let filters = if !options.hide_service_categories.is_empty() {
-            vec![NodeFilter::HideServiceCategories(
-                options.hide_service_categories.clone(),
-            )]
-        } else {
-            vec![]
-        };
-
         GroupingConfig {
-            container_rules,
-            leaf_rules,
-            filters,
+            container_rules: options.container_rules.clone(),
+            leaf_rules: options.leaf_rules.clone(),
         }
     }
 
@@ -184,7 +166,6 @@ mod tests {
         assert!(config.should_group_docker_bridges());
         assert_eq!(config.container_rules.len(), 2); // BySubnet + ByVirtualizingService
         assert_eq!(config.leaf_rules.len(), 1); // ByServiceCategory
-        assert_eq!(config.filters.len(), 1); // HideServiceCategories(OpenPorts)
     }
 
     #[test]
@@ -216,16 +197,6 @@ mod tests {
             _ => false,
         });
         assert!(has_category_rule);
-    }
-
-    #[test]
-    fn test_no_filters_when_empty() {
-        let options = TopologyRequestOptions {
-            hide_service_categories: vec![],
-            ..Default::default()
-        };
-        let config = GroupingConfig::from_request_options(&options);
-        assert!(config.filters.is_empty());
     }
 
     #[test]

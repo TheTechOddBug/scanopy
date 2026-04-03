@@ -28,6 +28,7 @@
 	import { getContext } from 'svelte';
 	import type { Port } from '$lib/features/hosts/types/base';
 	import type { Node, Edge } from '@xyflow/svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let { id, data, width, height }: NodeProps = $props();
 
@@ -104,6 +105,9 @@
 	let effectiveHeight = $derived(height ? height : 0);
 	let effectiveWidth = $derived(width ? width : 0);
 
+	// Per-card toggle for expanding hidden open ports
+	let expandedOpenPorts = $state(false);
+
 	// Filter out services hidden by tag filter
 	let visibleServicesForHost = $derived(servicesForHost.filter((s) => !hiddenServices.has(s.id)));
 
@@ -120,8 +124,10 @@
 	let nodeRenderData: NodeRenderData | null = $derived(
 		host && resolved?.hostId
 			? (() => {
-					// Use visibleServicesForHost to exclude services hidden by tag filter
-					const servicesOnInterface = visibleServicesForHost
+					const hiddenCategories = $topologyOptions.request.hide_service_categories ?? [];
+
+					// All services bound to this interface (after tag filtering)
+					const allServicesOnInterface = visibleServicesForHost
 						? visibleServicesForHost.filter((s) =>
 								s.bindings.some(
 									(b) => b.interface_id == null || (iface && b.interface_id == iface.id)
@@ -129,22 +135,37 @@
 							)
 						: [];
 
+					// Split into visible services and hidden open ports
+					type CategoryType = (typeof hiddenCategories)[number];
+					const servicesOnInterface = allServicesOnInterface.filter(
+						(s) =>
+							!hiddenCategories.includes(
+								serviceDefinitions.getCategory(s.service_definition) as CategoryType
+							)
+					);
+
+					const hiddenOpenPorts = allServicesOnInterface.filter((s) => {
+						const category = serviceDefinitions.getCategory(s.service_definition);
+						return hiddenCategories.includes(category as CategoryType) && category === 'OpenPorts';
+					});
+
 					let bodyText: string | null = null;
 					let footerText: string | null = null;
 					let headerText: string | null = (data as TopologyNode).header ?? null;
-					let showServices = servicesOnInterface.length != 0;
+					let showServices = servicesOnInterface.length != 0 || hiddenOpenPorts.length != 0;
 
 					if (iface && !isContainerSubnetValue) {
 						footerText = (iface.name ? iface.name + ': ' : '') + iface.ip_address;
 					}
 
-					if (servicesOnInterface.length == 0) {
+					if (!showServices) {
 						bodyText = host.name;
 					}
 
 					return {
 						footerText,
 						services: servicesOnInterface,
+						hiddenOpenPorts,
 						headerText,
 						bodyText,
 						showServices,
@@ -261,7 +282,7 @@
 	>
 		<!-- Rest of component stays the same -->
 		<!-- Header section with gradient transition to body -->
-		{#if nodeRenderData.headerText}
+		{#if nodeRenderData.headerText && !($topologyOptions.request.hide_vm_title_on_docker_container && nodeRenderData.headerText.startsWith('VM:'))}
 			<div class="relative flex-shrink-0 px-2 pt-2 text-center">
 				<div
 					class={`truncate text-xs font-medium leading-none ${nodeRenderData.isVirtualized ? virtualizationColorHelper.text : 'text-tertiary'}`}
@@ -348,6 +369,63 @@
 							{/if}
 						</div>
 					{/each}
+					{#if nodeRenderData.hiddenOpenPorts.length > 0}
+						{#if expandedOpenPorts}
+							{#each nodeRenderData.hiddenOpenPorts as service (service.id)}
+								{@const ServiceIcon = serviceDefinitions.getIconComponent(
+									service.service_definition
+								)}
+								<div
+									class="flex flex-1 flex-col items-center justify-center"
+									style="min-width: 0; max-width: 100%; width: 100%;"
+								>
+									<div
+										class="flex items-center justify-center gap-1"
+										style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
+										title={service.name}
+									>
+										<ServiceIcon class="h-5 w-5 flex-shrink-0 {hostColorHelper.icon}" />
+										<span class="text-m text-secondary truncate" style="transition: color 0.15s;">
+											{service.name}
+										</span>
+									</div>
+									{#if !$topologyOptions.request.hide_ports && service.bindings.filter((b) => b.type == 'Port').length > 0}
+										<span class="text-tertiary mt-1 text-center text-xs"
+											>{service.bindings
+												.map((b) => {
+													if (
+														(b.interface_id == nodeRenderData.interface_id ||
+															b.interface_id == null) &&
+														b.type == 'Port' &&
+														b.port_id
+													) {
+														const port = getPortById(b.port_id);
+														if (port) {
+															return formatPort(port);
+														}
+													}
+												})
+												.filter((p) => p !== undefined)
+												.join(', ')}</span
+										>
+									{/if}
+								</div>
+							{/each}
+							<button
+								class="text-tertiary hover:text-secondary mt-1 cursor-pointer text-xs"
+								onclick={() => (expandedOpenPorts = false)}
+							>
+								{m.topology_hideOpenPorts()}
+							</button>
+						{:else}
+							<button
+								class="bg-surface-secondary text-tertiary hover:text-secondary mt-1 cursor-pointer rounded-full px-2 py-0.5 text-xs"
+								onclick={() => (expandedOpenPorts = true)}
+							>
+								{m.topology_openPortsSummary({ count: nodeRenderData.hiddenOpenPorts.length })}
+							</button>
+						{/if}
+					{/if}
 				</div>
 			{:else}
 				<!-- Show host name as body text -->

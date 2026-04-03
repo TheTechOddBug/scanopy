@@ -10,7 +10,6 @@ export interface ElkLayoutInput {
 	edges: TopologyEdge[];
 	topology: Topology;
 	collapsedContainers?: Set<string>;
-	hiddenEdgeTypes?: string[];
 }
 
 export type HandleSide = 'Top' | 'Bottom' | 'Left' | 'Right';
@@ -202,18 +201,14 @@ function buildElkGraph(input: ElkLayoutInput): {
 		);
 	}
 
-	// Build cross-container edge metadata per leaf node for edge-aware positioning
+	// Build cross-container edge metadata per leaf node for edge-aware positioning.
+	// Uses ALL edges (not just visible) — even hidden edge types like ServiceVirtualization
+	// represent real structural relationships that should influence node placement.
 	const leafExternalEdgeInfo = new Map<
 		string,
 		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
 	>();
-	// Consider all VISIBLE edge types for positioning metadata (not just primary).
-	// Primary/overlay classification only matters for container-level ELK edges —
-	// for leaf positioning, any visible cross-container edge indicates the node
-	// should be near the boundary (e.g., ServiceVirtualization edges to Docker Bridge).
-	const hiddenEdgeSet = new Set(input.hiddenEdgeTypes ?? []);
 	for (const edge of input.edges) {
-		if (hiddenEdgeSet.has(edge.edge_type)) continue;
 		const srcContainer = leafToContainer.get(edge.source);
 		const tgtContainer = leafToContainer.get(edge.target);
 		if (srcContainer && tgtContainer && srcContainer !== tgtContainer) {

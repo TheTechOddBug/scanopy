@@ -185,7 +185,14 @@ export function computeLeafNodeSizes(
  * Containers become parent nodes; leaves become children inside their container.
  * Only primary edges are included (overlay edges don't affect layout).
  */
-function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: Set<string> } {
+function buildElkGraph(input: ElkLayoutInput): {
+	graph: ElkNode;
+	containerIds: Set<string>;
+	leafExternalEdgeInfo: Map<
+		string,
+		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
+	>;
+} {
 	const containers: Map<string, ElkNode> = new Map();
 	const containerIds = new Set<string>();
 
@@ -225,10 +232,10 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 						id: node.id,
 						children: [],
 						layoutOptions: {
-							'elk.algorithm': 'rectpacking',
+							'elk.algorithm': 'box',
+							'elk.box.packingMode': 'SIMPLE',
 							'elk.padding': padding,
 							'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-							'elk.rectpacking.desiredAspectRatio': '2.5',
 							'elk.spacing.nodeNode': '20',
 							...(layerId !== undefined && {
 								'elk.layered.layering.layerId': String(layerId)
@@ -245,6 +252,62 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 		const child = containers.get(childId);
 		if (parent && child && parent.children) {
 			parent.children.push(child);
+		}
+	}
+
+	// Sort sub-group children within each parent for deterministic placement
+	for (const [, parent] of containers) {
+		if (parent.children && parent.children.length > 0) {
+			parent.children.sort((a, b) => a.id.localeCompare(b.id));
+		}
+	}
+
+	// Build leaf→container mapping
+	const leafToContainer = new Map<string, string>();
+	for (const node of input.nodes) {
+		if (node.node_type === 'LeafNode') {
+			const parentId = node.container_id ?? node.subnet_id;
+			if (containers.has(parentId)) {
+				leafToContainer.set(node.id, parentId);
+			}
+		}
+	}
+
+	// Build container layerId lookup for edge direction enforcement
+	const containerLayerId = new Map<string, number>();
+	for (const [id, container] of containers) {
+		containerLayerId.set(
+			id,
+			parseInt(container.layoutOptions?.['elk.layered.layering.layerId'] ?? '999')
+		);
+	}
+
+	// Build cross-container edge metadata per leaf node for edge-aware positioning
+	const leafExternalEdgeInfo = new Map<
+		string,
+		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
+	>();
+	for (const edge of input.edges) {
+		if (classifyEdge(edge) !== 'primary') continue;
+		const srcContainer = leafToContainer.get(edge.source);
+		const tgtContainer = leafToContainer.get(edge.target);
+		if (srcContainer && tgtContainer && srcContainer !== tgtContainer) {
+			const srcLayer = containerLayerId.get(srcContainer) ?? 999;
+			const tgtLayer = containerLayerId.get(tgtContainer) ?? 999;
+			for (const [leafId, myLayer, otherLayer] of [
+				[edge.source, srcLayer, tgtLayer],
+				[edge.target, tgtLayer, srcLayer]
+			] as [string, number, number][]) {
+				const info = leafExternalEdgeInfo.get(leafId) ?? {
+					hasUpwardEdge: false,
+					hasDownwardEdge: false,
+					externalEdgeCount: 0
+				};
+				info.externalEdgeCount++;
+				if (otherLayer < myLayer) info.hasUpwardEdge = true;
+				if (otherLayer > myLayer) info.hasDownwardEdge = true;
+				leafExternalEdgeInfo.set(leafId, info);
+			}
 		}
 	}
 
@@ -267,26 +330,6 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 				});
 			}
 		}
-	}
-
-	// Build leaf→container mapping
-	const leafToContainer = new Map<string, string>();
-	for (const node of input.nodes) {
-		if (node.node_type === 'LeafNode') {
-			const parentId = node.container_id ?? node.subnet_id;
-			if (containers.has(parentId)) {
-				leafToContainer.set(node.id, parentId);
-			}
-		}
-	}
-
-	// Build container layerId lookup for edge direction enforcement
-	const containerLayerId = new Map<string, number>();
-	for (const [id, container] of containers) {
-		containerLayerId.set(
-			id,
-			parseInt(container.layoutOptions?.['elk.layered.layering.layerId'] ?? '999')
-		);
 	}
 
 	// With SEPARATE_CHILDREN, create container-level edges from cross-container
@@ -369,7 +412,7 @@ function buildElkGraph(input: ElkLayoutInput): { graph: ElkNode; containerIds: S
 		edges
 	};
 
-	return { graph, containerIds };
+	return { graph, containerIds, leafExternalEdgeInfo };
 }
 
 /**
@@ -409,13 +452,81 @@ function computeOptimalHandles(
 }
 
 /**
- * Extract positions from ELK result. Leaf positions are made relative to their
- * parent container (as @xyflow expects when parentId is set).
+ * Post-layout swap: move nodes with external edges to container boundary positions.
+ * Groups children by x-coordinate (column), then swaps edge-aware nodes to top/bottom.
  */
+function applyEdgeAwareSwaps(
+	container: ElkNode,
+	leafExternalEdgeInfo: Map<
+		string,
+		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
+	>,
+	containerIds: Set<string>
+): void {
+	if (!container.children || container.children.length < 2) return;
+
+	// Only consider leaf nodes (not nested sub-group containers)
+	const leaves = container.children.filter((c) => !containerIds.has(c.id));
+	if (leaves.length < 2) return;
+
+	// Group leaves by x-coordinate (same column)
+	const columns = new Map<number, ElkNode[]>();
+	for (const leaf of leaves) {
+		const x = leaf.x ?? 0;
+		if (!columns.has(x)) columns.set(x, []);
+		columns.get(x)!.push(leaf);
+	}
+
+	for (const [, colNodes] of columns) {
+		if (colNodes.length < 2) continue;
+
+		// Sort by y to find top/bottom positions
+		colNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
+
+		// Find nodes that want to be at top (upward edges)
+		const upwardNodes = colNodes.filter((n) => leafExternalEdgeInfo.get(n.id)?.hasUpwardEdge);
+		// Find nodes that want to be at bottom (downward-only edges)
+		const downwardNodes = colNodes.filter((n) => {
+			const info = leafExternalEdgeInfo.get(n.id);
+			return info?.hasDownwardEdge && !info?.hasUpwardEdge;
+		});
+
+		// Swap upward nodes toward top of column
+		for (let i = 0; i < upwardNodes.length && i < colNodes.length; i++) {
+			const target = upwardNodes[i];
+			const current = colNodes[i];
+			if (target.id !== current.id) {
+				const tmpY = current.y;
+				current.y = target.y;
+				target.y = tmpY;
+				// Re-sort after swap
+				colNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
+			}
+		}
+
+		// Swap downward nodes toward bottom of column
+		for (let i = 0; i < downwardNodes.length && i < colNodes.length; i++) {
+			const target = downwardNodes[i];
+			const bottomIdx = colNodes.length - 1 - i;
+			const current = colNodes[bottomIdx];
+			if (target.id !== current.id) {
+				const tmpY = current.y;
+				current.y = target.y;
+				target.y = tmpY;
+				colNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
+			}
+		}
+	}
+}
+
 function mapElkResults(
 	layoutResult: ElkNode,
 	containerIds: Set<string>,
-	input: ElkLayoutInput
+	input: ElkLayoutInput,
+	leafExternalEdgeInfo: Map<
+		string,
+		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
+	>
 ): ElkLayoutResult {
 	const nodePositions = new Map<string, { x: number; y: number }>();
 	const containerSizes = new Map<string, { width: number; height: number }>();
@@ -452,6 +563,20 @@ function mapElkResults(
 	}
 
 	if (layoutResult.children) {
+		// Apply edge-aware position swaps before extracting positions
+		for (const child of layoutResult.children) {
+			if (containerIds.has(child.id)) {
+				applyEdgeAwareSwaps(child, leafExternalEdgeInfo, containerIds);
+				// Also apply to nested sub-group containers
+				if (child.children) {
+					for (const subChild of child.children) {
+						if (containerIds.has(subChild.id)) {
+							applyEdgeAwareSwaps(subChild, leafExternalEdgeInfo, containerIds);
+						}
+					}
+				}
+			}
+		}
 		processChildren(layoutResult.children, 0, 0);
 	}
 
@@ -493,8 +618,8 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 		return { nodePositions: new Map(), containerSizes: new Map(), edgeHandles: new Map() };
 	}
 
-	const { graph, containerIds } = buildElkGraph(input);
+	const { graph, containerIds, leafExternalEdgeInfo } = buildElkGraph(input);
 	const elk = await getElk();
 	const result = await elk.layout(graph);
-	return mapElkResults(result, containerIds, input);
+	return mapElkResults(result, containerIds, input, leafExternalEdgeInfo);
 }

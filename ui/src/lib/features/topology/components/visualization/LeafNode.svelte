@@ -28,7 +28,7 @@
 	import { getContext } from 'svelte';
 	import type { Port } from '$lib/features/hosts/types/base';
 	import type { Node, Edge } from '@xyflow/svelte';
-	import * as m from '$lib/paraglide/messages';
+	import { topology_hideOpenPorts, topology_openPortsSummary } from '$lib/paraglide/messages';
 
 	let { id, data, width, height }: NodeProps = $props();
 
@@ -415,14 +415,14 @@
 								class="text-tertiary hover:text-secondary mb-2 mt-1 cursor-pointer text-xs underline"
 								onclick={() => (expandedOpenPorts = false)}
 							>
-								{m.topology_hideOpenPorts()}
+								{topology_hideOpenPorts()}
 							</button>
 						{:else}
 							<button
 								class="bg-surface-secondary text-tertiary hover:text-secondary mb-2 mt-1 cursor-pointer rounded-full px-2 py-0.5 text-xs underline"
 								onclick={() => (expandedOpenPorts = true)}
 							>
-								{m.topology_openPortsSummary({ count: nodeRenderData.hiddenOpenPorts.length })}
+								{topology_openPortsSummary({ count: nodeRenderData.hiddenOpenPorts.length })}
 							</button>
 						{/if}
 					{/if}

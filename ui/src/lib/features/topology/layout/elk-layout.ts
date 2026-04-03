@@ -77,7 +77,7 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 };
 
 /** Container node padding (extra top for header). */
-const CONTAINER_PADDING = '[top=50,left=25,bottom=25,right=25]';
+const CONTAINER_PADDING = '[top=25,left=25,bottom=25,right=25]';
 
 /** Sub-group container padding (smaller header). */
 const SUBGROUP_PADDING = '[top=30,left=15,bottom=15,right=15]';

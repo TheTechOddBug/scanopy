@@ -90,7 +90,7 @@
 	let viewportMoved = false;
 	let viewportMoveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const { fitView } = useSvelteFlow();
+	const { fitView, getNodes } = useSvelteFlow();
 	const queryClient = useQueryClient();
 	let containerElement: HTMLDivElement;
 
@@ -258,13 +258,14 @@
 
 				// Save current state before rebuilding
 				const currentEdges = get(edges);
-				const currentNodes = get(nodes);
 				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
 
-				// Build a map of current @xyflow positions (includes ELK + user drags)
-				const currentPositions = new Map(currentNodes.map((n) => [n.id, n.position]));
+				// Get live @xyflow positions (includes ELK layout + user drags)
+				// getNodes() returns actual rendered state, not the stale store value
+				const liveNodes = getNodes();
+				const currentPositions = new Map(liveNodes.map((n) => [n.id, n.position]));
 				const currentSizes = new Map(
-					currentNodes.map((n) => [n.id, { width: n.width ?? n.computed?.width, height: n.height ?? n.computed?.height }])
+					liveNodes.map((n) => [n.id, { width: n.computed?.width ?? n.width, height: n.computed?.height ?? n.height }])
 				);
 
 				const allNodes: Node[] = visibleNodes.map((node) => {

@@ -21,7 +21,7 @@
 	} from '$lib/paraglide/messages';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { edgeTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { previewEdges, selectedNodes, topologyOptions } from '../../queries';
 	import { isExporting } from '../../interactions';
@@ -32,7 +32,7 @@
 	import CustomEdge from './CustomEdge.svelte';
 	import type { TopologyEdge, Topology } from '../../types/base';
 	import { resolveLeafNode } from '../../resolvers';
-	import { computeElkLayout, computeLeafNodeSizes } from '../../layout/elk-layout';
+	import { computeElkLayout } from '../../layout/elk-layout';
 	import {
 		collapsedContainers,
 		collapseAll,
@@ -241,14 +241,102 @@
 					getStructureKey(topology) + ':' + Array.from(collapsed).sort().join(',') + ':' + sizeKey;
 				const isNewStructure = sessionStructureKey !== structureKey;
 
-				if (isNewStructure) {
-					const leafNodeSizes = computeLeafNodeSizes(
-						visibleNodes,
-						topology,
-						opts.request.hide_service_categories ?? [],
-						opts.request.hide_ports ?? false,
-						(sd) => serviceDefinitions.getCategory(sd)
+				// Helper: build SvelteFlow node array from topology nodes
+				const buildFlowNodes = (
+					layoutResult?: import('../../layout/elk-layout').ElkLayoutResult
+				): Node[] => {
+					// Get live @xyflow positions (includes ELK layout + user drags)
+					const liveNodes = getNodes();
+					const currentPositions = new Map(liveNodes.map((n) => [n.id, n.position]));
+					const currentSizes = new Map(
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any -- @xyflow Node has runtime .computed not in type defs
+						(liveNodes as Record<string, any>[]).map((n) => [
+							n.id,
+							{
+								width: n.computed?.width ?? n.width,
+								height: n.computed?.height ?? n.height
+							}
+						])
 					);
+
+					return visibleNodes.map((node) => {
+						const isCollapsed = collapsed.has(node.id);
+						let position: { x: number; y: number };
+						let width: number | undefined;
+						let height: number | undefined;
+
+						if (layoutResult) {
+							const elkPos = layoutResult.nodePositions.get(node.id);
+							const elkSize = layoutResult.containerSizes.get(node.id);
+							const leafSize = layoutResult.leafNodeSizes.get(node.id);
+							position = elkPos ?? { x: node.position.x, y: node.position.y };
+							width = isCollapsed ? 200 : (elkSize?.width ?? leafSize?.x ?? undefined);
+							height = isCollapsed ? 80 : (elkSize?.height ?? leafSize?.y ?? undefined);
+						} else if (!isNewStructure) {
+							const curPos = currentPositions.get(node.id);
+							const curSize = currentSizes.get(node.id);
+							position = curPos ?? { x: node.position.x, y: node.position.y };
+							width = isCollapsed ? 200 : (curSize?.width ?? undefined);
+							height = isCollapsed ? 80 : (curSize?.height ?? undefined);
+						} else {
+							// Measurement pass: place at origin, let content determine size
+							position = { x: 0, y: 0 };
+							width = node.node_type === 'ContainerNode' ? undefined : 250;
+							height = undefined;
+						}
+
+						return {
+							id: node.id,
+							type: node.node_type,
+							position,
+							...(width !== undefined && { width }),
+							...(height !== undefined && { height }),
+							expandParent: true,
+							deletable: false,
+							selectable: node.node_type !== 'ContainerNode',
+							parentId:
+								node.node_type == 'LeafNode'
+									? (node.container_id ?? resolveLeafNode(node.id, node, topology).subnetId)
+									: node.node_type == 'ContainerNode' && node.parent_container_id
+										? (node.parent_container_id as string)
+										: undefined,
+							extent: node.node_type == 'LeafNode' ? 'parent' : undefined,
+							data: isCollapsed
+								? { ...node, isCollapsed: true, childCount: childCounts.get(node.id) ?? 0 }
+								: node
+						};
+					});
+				};
+
+				// Sort helper: parents before children (SvelteFlow requirement)
+				const depthOf = (n: Node) => {
+					if (!n.parentId) return 0;
+					if (n.type === 'ContainerNode') return 1;
+					return 2;
+				};
+				const sortFlowNodes = (flowNodes: Node[]) =>
+					flowNodes.sort((a, b) => depthOf(a) - depthOf(b));
+
+				if (isNewStructure) {
+					// Phase 1: Render nodes for DOM measurement (no ELK yet)
+					edges.set([]);
+					const measureNodes = sortFlowNodes(buildFlowNodes());
+					nodes.set(measureNodes);
+					await tick();
+
+					// Phase 2: Read measured sizes from SvelteFlow
+					const measuredNodes = getNodes();
+					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
+					const leafNodeSizes = new Map<string, { x: number; y: number }>();
+					for (const n of measuredNodes) {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						const computed = (n as Record<string, any>).computed;
+						const w = computed?.width ?? n.width ?? 250;
+						const h = computed?.height ?? n.height ?? 100;
+						leafNodeSizes.set(n.id, { x: w, y: h });
+					}
+
+					// Phase 3: Run ELK with real measured sizes
 					cachedLayoutResult = await computeElkLayout({
 						nodes: visibleNodes,
 						edges: topology.edges,
@@ -270,81 +358,14 @@
 				const currentEdges = get(edges);
 				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
 
-				// Get live @xyflow positions (includes ELK layout + user drags)
-				// getNodes() returns actual rendered state, not the stale store value
-				const liveNodes = getNodes();
-				const currentPositions = new Map(liveNodes.map((n) => [n.id, n.position]));
-				const currentSizes = new Map(
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- @xyflow Node has runtime .computed not in type defs
-					(liveNodes as Record<string, any>[]).map((n) => [
-						n.id,
-						{
-							width: n.computed?.width ?? n.width,
-							height: n.computed?.height ?? n.height
-						}
-					])
+				// Build final nodes with ELK positions
+				const allNodes = sortFlowNodes(
+					isNewStructure ? buildFlowNodes(layoutResult) : buildFlowNodes()
 				);
 
-				const allNodes: Node[] = visibleNodes.map((node) => {
-					const isCollapsed = collapsed.has(node.id);
-
-					// Position priority: ELK (if new structure) > current @xyflow > server
-					let position: { x: number; y: number };
-					let width: number;
-					let height: number;
-
-					if (isNewStructure) {
-						const elkPos = layoutResult.nodePositions.get(node.id);
-						const elkSize = layoutResult.containerSizes.get(node.id);
-						const leafSize = layoutResult.leafNodeSizes.get(node.id);
-						position = elkPos ?? { x: node.position.x, y: node.position.y };
-						width = isCollapsed ? 200 : (elkSize?.width ?? leafSize?.x ?? node.size.x);
-						height = isCollapsed ? 80 : (elkSize?.height ?? leafSize?.y ?? node.size.y);
-					} else {
-						const curPos = currentPositions.get(node.id);
-						const curSize = currentSizes.get(node.id);
-						position = curPos ?? { x: node.position.x, y: node.position.y };
-						width = isCollapsed ? 200 : (curSize?.width ?? node.size.x);
-						height = isCollapsed ? 80 : (curSize?.height ?? node.size.y);
-					}
-
-					return {
-						id: node.id,
-						type: node.node_type,
-						position,
-						width,
-						height,
-						expandParent: true,
-						deletable: false,
-						selectable: node.node_type !== 'ContainerNode',
-						parentId:
-							node.node_type == 'LeafNode'
-								? (node.container_id ?? resolveLeafNode(node.id, node, topology).subnetId)
-								: node.node_type == 'ContainerNode' && node.parent_container_id
-									? (node.parent_container_id as string)
-									: undefined,
-						extent: node.node_type == 'LeafNode' ? 'parent' : undefined,
-						data: isCollapsed
-							? { ...node, isCollapsed: true, childCount: childCounts.get(node.id) ?? 0 }
-							: node
-					};
-				});
-
-				// Clear edges FIRST
+				// Clear edges, set positioned nodes
 				edges.set([]);
-
-				// Sort so parents appear before children (SvelteFlow requirement).
-				// Depth: 0 = root containers, 1 = sub-group containers, 2 = leaves
-				const depthOf = (n: (typeof allNodes)[number]) => {
-					if (!n.parentId) return 0;
-					if (n.type === 'ContainerNode') return 1;
-					// Leaf inside sub-group = depth 2, leaf inside subnet = depth 1
-					return allNodes.some((p) => p.id === n.parentId && p.parentId) ? 2 : 1;
-				};
-				const sortedNodes = allNodes.sort((a, b) => depthOf(a) - depthOf(b));
-
-				// Set nodes
-				nodes.set(sortedNodes);
+				nodes.set(allNodes);
 
 				// Build base edges: filter out edges with collapsed endpoints
 				let baseEdges: TopologyEdge[];

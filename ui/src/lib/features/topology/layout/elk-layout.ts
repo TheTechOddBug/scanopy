@@ -3,8 +3,6 @@ import type { TopologyNode, TopologyEdge, Topology } from '../types/base';
 import type { components } from '$lib/api/schema';
 import { classifyEdge } from './edge-classification';
 
-type ServiceCategory = components['schemas']['ServiceCategory'];
-
 type SubnetType = components['schemas']['SubnetType'];
 
 export interface ElkLayoutInput {
@@ -102,86 +100,6 @@ function getLayerHint(node: TopologyNode, topology: Topology): number {
 		return SUBNET_TYPE_LAYER[subnet.subnet_type as SubnetType] ?? 999;
 	}
 	return 999;
-}
-
-// Leaf node size constants (px) — slightly generous estimates for ELK spacing.
-// Cards auto-size to content; these only affect space allocation between nodes.
-const LEAF_WIDTH = 250;
-const HEADER_HEIGHT = 26;
-const FOOTER_HEIGHT = 26;
-const BODY_PADDING = 16;
-const SERVICE_ROW_HEIGHT = 38;
-const PORT_LINE_HEIGHT = 22;
-const OPEN_PORTS_PILL_HEIGHT = 26;
-
-/**
- * Compute leaf node sizes based on visible services and display options.
- * This replaces the backend size computation — the frontend knows which
- * services are actually visible after category filtering.
- */
-export function computeLeafNodeSizes(
-	nodes: TopologyNode[],
-	topology: Topology,
-	hiddenCategories: ServiceCategory[],
-	hidePorts: boolean,
-	getCategory: (serviceDefinition: string) => string
-): Map<string, { x: number; y: number }> {
-	const sizes = new Map<string, { x: number; y: number }>();
-
-	for (const node of nodes) {
-		if (node.node_type !== 'LeafNode') continue;
-		const interfaceId = node.interface_id ?? node.id;
-
-		// Find services bound to this interface
-		const boundServices = topology.services.filter((s) =>
-			s.bindings.some((b) => b.interface_id == null || b.interface_id === interfaceId)
-		);
-
-		// Split by visibility
-		const visibleServices = boundServices.filter(
-			(s) => !hiddenCategories.includes(getCategory(s.service_definition) as ServiceCategory)
-		);
-		const hiddenOpenPorts = boundServices.filter((s) => {
-			const cat = getCategory(s.service_definition);
-			return hiddenCategories.includes(cat as ServiceCategory) && cat === 'OpenPorts';
-		});
-
-		const hasHeader = node.header != null;
-		const hasFooter = true; // leaf nodes always have a footer area
-
-		let height = BODY_PADDING; // py-2 on body section
-		if (hasFooter) height += FOOTER_HEIGHT;
-		if (hasHeader) height += HEADER_HEIGHT;
-
-		if (visibleServices.length === 0 && hiddenOpenPorts.length === 0) {
-			// Body text only (host name)
-			height += SERVICE_ROW_HEIGHT;
-		} else {
-			// Service rows
-			for (const service of visibleServices) {
-				height += SERVICE_ROW_HEIGHT;
-				if (
-					!hidePorts &&
-					service.bindings.some(
-						(b) =>
-							(b.interface_id === interfaceId || b.interface_id == null) &&
-							b.type === 'Port' &&
-							b.port_id
-					)
-				) {
-					height += PORT_LINE_HEIGHT;
-				}
-			}
-			// Open ports pill (when hidden ports exist)
-			if (hiddenOpenPorts.length > 0) {
-				height += OPEN_PORTS_PILL_HEIGHT;
-			}
-		}
-
-		sizes.set(node.id, { x: LEAF_WIDTH, y: height });
-	}
-
-	return sizes;
 }
 
 /**

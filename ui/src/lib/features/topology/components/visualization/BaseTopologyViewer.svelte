@@ -236,7 +236,11 @@
 
 				// Run ELK on structure/collapse changes, skip for edge-only re-renders
 				const structureKey =
-					getStructureKey(topology) + ':' + Array.from(collapsed).sort().join(',');
+					getStructureKey(topology) +
+					':' +
+					Array.from(collapsed).sort().join(',') +
+					':' +
+					hiddenEdgeTypes.join(',');
 				const isNewStructure = sessionStructureKey !== structureKey;
 
 				if (isNewStructure) {
@@ -244,7 +248,8 @@
 						nodes: visibleNodes,
 						edges: topology.edges,
 						topology: topology,
-						collapsedContainers: collapsed
+						collapsedContainers: collapsed,
+						hiddenEdgeTypes: hiddenEdgeTypes
 					});
 					sessionStructureKey = structureKey;
 				}

@@ -13,34 +13,14 @@ var TEST_PLANS = [
   "branch": "feat/topology-open-ports-summary",
   "tests": [
     {
-      "id": "node-resize-on-category-filter",
-      "category": "Node Sizing",
-      "description": "Verify leaf nodes resize when services are hidden/shown by category filter",
+      "id": "no-measurement-flash",
+      "category": "Page Load",
+      "description": "Verify no flash of unstyled/piled-up nodes on page load",
       "steps": [
-        "Open the topology page with default options (OpenPorts hidden)",
-        "Note the size of a leaf node with many services",
-        "Unhide OpenPorts in the category filter options",
-        "Check the same leaf node"
+        "Hard-refresh the topology page",
+        "Watch for any brief flash of nodes at wrong positions"
       ],
-      "setup": "Ensure at least one host has both regular services and OpenPorts services.",
-      "expected": "The leaf node should be taller when OpenPorts are visible (more services shown) and shorter when they are hidden. The node size should tightly match the visible content.",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "vm-header-suppression",
-      "category": "VM Header Suppression",
-      "description": "Verify hide_vm_title_on_docker_container works from the frontend",
-      "steps": [
-        "Open topology with a Docker container that runs on a VM",
-        "Verify VM header text is shown (e.g. 'VM: Proxmox')",
-        "Toggle 'Hide VM provider on containers' option ON",
-        "Check the same container node"
-      ],
-      "setup": "Ensure there is a host that is both a Docker host and a VM, so it shows a VM header on its container nodes.",
-      "expected": "With the option OFF, the VM header (starting with 'VM:') should be visible. With the option ON, the VM header should be hidden but other headers (like 'Docker @...') should remain.",
+      "expected": "Topology renders smoothly without a visible flash of nodes piled at the top-left.",
       "status": null,
       "feedback": null
     }
@@ -73,11 +53,12 @@ var TEST_PLANS = [
       "steps": [
         "Navigate to the Topology page",
         "Identify nodes that have edges connecting to other subnets (cross-container edges)",
-        "Check whether those nodes are positioned near the top or bottom of their container",
-        "Nodes with upward edges (to subnets higher in the hierarchy like Gateway) should be near the top",
-        "Nodes with downward-only edges (to subnets lower like DockerBridge) should be near the bottom"
+        "For nodes with ONLY upward edges (to subnets higher like Gateway): check they are near the top of their column",
+        "For nodes with ONLY downward edges (to subnets lower like DockerBridge): check they are near the bottom of their column",
+        "For bridge nodes (edges BOTH up and down): check they are at the left or right edge column of the container",
+        "For bridge nodes: verify their edge handles point outward (Left or Right) from the container boundary, not Top/Bottom"
       ],
-      "expected": "Nodes with cross-container edges should be positioned near the container boundary in the direction of their edge. This should reduce visual edge crossing within containers.",
+      "expected": "Upward-only nodes near top, downward-only near bottom, bridge nodes at left/right container edge with outward-facing handles. No node overlaps from swaps.",
       "flow": "setup",
       "sequence": 2,
       "status": null,
@@ -171,62 +152,16 @@ var TEST_PLANS = [
   "branch": "feat/topology-grouping-split",
   "tests": [
     {
-      "id": "bysubnet-locked",
-      "category": "Container Rules",
-      "description": "BySubnet rule is locked and cannot be removed or reordered — including rules below it cannot move above it",
-      "steps": [
-        "Open topology options panel, expand 'Group by'",
-        "Verify BySubnet has no reorder arrows",
-        "Verify ByVirtualizingService below it cannot move above it (up arrow disabled)"
-      ],
-      "expected": "BySubnet is always first. No rule can be moved above it.",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "reorder-leaf-rules-priority",
-      "category": "Leaf Rules",
-      "description": "First rule in list takes priority for overlapping nodes",
-      "steps": [
-        "Add ByServiceCategory rule with ReverseProxy selected",
-        "Add ByTag rule with a tag assigned to the ReverseProxy host",
-        "Verify the ReverseProxy node appears in the service category group (first rule wins)",
-        "Reorder: move the ByTag rule above ByServiceCategory",
-        "Rebuild topology",
-        "Verify the ReverseProxy node now appears in the tag group (first rule wins)"
-      ],
-      "setup": "Create a tag and assign it to a host that also runs a ReverseProxy service",
-      "expected": "Node appears in whichever group's rule is listed first.",
-      "flow": "setup",
-      "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
       "id": "group-headers-show-names",
       "category": "Visual",
-      "description": "Leaf group container headers show category/tag names",
+      "description": "Leaf group container headers show category/tag names as Tag components",
       "steps": [
         "Create a ByServiceCategory rule with DNS and ReverseProxy, title 'Infrastructure'",
         "Create a ByTag rule with 2 tags selected, no custom title",
-        "Rebuild topology"
+        "Click checkmark to confirm, wait for rebuild"
       ],
-      "setup": "Ensure hosts exist with DNS/ReverseProxy services and tags",
-      "expected": "Service category group header shows 'Infrastructure: DNS, ReverseProxy'. Tag group header shows 'Tag1, Tag2'.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "empty-groups-not-rendered",
-      "category": "Visual",
-      "description": "Groups with no matched nodes should not render at all",
-      "steps": [
-        "Create a ByServiceCategory rule selecting a category no hosts have",
-        "Rebuild topology"
-      ],
-      "expected": "No empty group container appears in the topology.",
+      "setup": "Ensure hosts exist with DNS/ReverseProxy services and tags.",
+      "expected": "Service category group header shows 'Infrastructure:' followed by colored Tag pills for DNS and ReverseProxy. Tag group header shows colored Tag pills for each tag.",
       "status": null,
       "feedback": null
     }

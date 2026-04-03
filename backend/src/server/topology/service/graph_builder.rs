@@ -10,7 +10,7 @@ use crate::server::{
         service::{anchor_planner::ChildAnchorPlanner, context::TopologyContext},
         types::{
             edges::Edge,
-            grouping::{GroupingConfig, LeafRule},
+            grouping::{GraphRule, GroupingConfig, LeafRule},
             layout::{Ixy, Uxy},
             nodes::{ContainerType, LeafEntityType, Node, NodeType, SubnetChild},
         },
@@ -284,6 +284,7 @@ impl GraphBuilder {
                 position: Ixy { x: 0, y: 0 },
                 size: child.size,
                 header: child.header.clone(),
+                leaf_rule_id: None,
             });
         }
 
@@ -303,7 +304,7 @@ impl GraphBuilder {
         let grouping = GroupingConfig::from_request_options(&ctx.options.request);
         let mut claimed: HashSet<Uuid> = HashSet::new();
 
-        for rule in &grouping.leaf_rules {
+        for GraphRule { id: rule_id, rule } in &grouping.leaf_rules {
             match rule {
                 LeafRule::ByServiceCategory { categories, title } => {
                     let matched_child_ids: HashSet<Uuid> = children
@@ -323,17 +324,6 @@ impl GraphBuilder {
                         continue;
                     }
 
-                    // Build header: "{title}: {cat1}, {cat2}" or just "{cat1}, {cat2}"
-                    let cat_names = categories
-                        .iter()
-                        .map(|c| c.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    let header = match title {
-                        Some(t) => Some(format!("{t}: {cat_names}")),
-                        None => Some(cat_names),
-                    };
-
                     let group_id = Uuid::new_v4();
                     child_nodes.push(Node {
                         id: group_id,
@@ -344,7 +334,8 @@ impl GraphBuilder {
                         },
                         position: Ixy { x: 0, y: 0 },
                         size: Uxy { x: 0, y: 0 },
-                        header,
+                        header: title.clone(),
+                        leaf_rule_id: Some(*rule_id),
                     });
 
                     for node in child_nodes.iter_mut() {
@@ -374,18 +365,6 @@ impl GraphBuilder {
                         continue;
                     }
 
-                    // Build header: "{title}: {tag1}, {tag2}" or just "{tag1}, {tag2}"
-                    let tag_names = tag_ids
-                        .iter()
-                        .filter_map(|id| ctx.entity_tags.iter().find(|t| t.id == *id))
-                        .map(|t| t.base.name.clone())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    let header = match title {
-                        Some(t) => Some(format!("{t}: {tag_names}")),
-                        None => Some(tag_names),
-                    };
-
                     let group_id = Uuid::new_v4();
                     child_nodes.push(Node {
                         id: group_id,
@@ -396,7 +375,8 @@ impl GraphBuilder {
                         },
                         position: Ixy { x: 0, y: 0 },
                         size: Uxy { x: 0, y: 0 },
-                        header,
+                        header: title.clone(),
+                        leaf_rule_id: Some(*rule_id),
                     });
 
                     for node in child_nodes.iter_mut() {
@@ -448,6 +428,7 @@ impl GraphBuilder {
                     position: Ixy { x: 0, y: 0 },
                     size: Uxy { x: 0, y: 0 },
                     header,
+                    leaf_rule_id: None,
                 }
             })
             .collect()
@@ -541,6 +522,7 @@ mod tests {
             position: Ixy { x: 0, y: 0 },
             size: Uxy { x: 100, y: 50 },
             header: None,
+            leaf_rule_id: None,
         }
     }
 
@@ -582,14 +564,14 @@ mod tests {
         // Rules: ByServiceCategory first, then ByTag
         let mut options = TopologyOptions::default();
         options.request.leaf_rules = vec![
-            LeafRule::ByServiceCategory {
+            GraphRule::new(LeafRule::ByServiceCategory {
                 categories: vec![ServiceCategory::ReverseProxy],
                 title: Some("Infra".to_string()),
-            },
-            LeafRule::ByTag {
+            }),
+            GraphRule::new(LeafRule::ByTag {
                 tag_ids: vec![tag.id],
                 title: None,
-            },
+            }),
         ];
 
         let hosts = vec![host_both.clone(), host_tag_only.clone()];
@@ -609,7 +591,7 @@ mod tests {
             &options,
         );
 
-        let planner = SubnetLayoutPlanner::new();
+        let planner = GraphBuilder::new();
         planner.create_nested_group_containers(subnet_id, &children, &ctx, &mut child_nodes);
 
         // Find group containers
@@ -663,20 +645,25 @@ mod tests {
             );
         }
 
-        // Verify headers contain names
-        assert!(
-            cat_group.header.as_ref().unwrap().contains("ReverseProxy"),
-            "Category group header should contain 'ReverseProxy', got: {:?}",
-            cat_group.header
+        // Verify headers contain custom titles
+        assert_eq!(
+            cat_group.header.as_deref(),
+            Some("Infra"),
+            "Category group header should be custom title"
         );
         assert!(
-            cat_group.header.as_ref().unwrap().contains("Infra"),
-            "Category group header should contain custom title 'Infra'"
+            tag_group.header.is_none(),
+            "Tag group with no custom title should have no header"
+        );
+
+        // Verify leaf_rule_id is set
+        assert!(
+            cat_group.leaf_rule_id.is_some(),
+            "Category group should have leaf_rule_id"
         );
         assert!(
-            tag_group.header.as_ref().unwrap().contains("MyTag"),
-            "Tag group header should contain tag name 'MyTag', got: {:?}",
-            tag_group.header
+            tag_group.leaf_rule_id.is_some(),
+            "Tag group should have leaf_rule_id"
         );
     }
 
@@ -694,14 +681,14 @@ mod tests {
         // This time: ByTag FIRST, then ByServiceCategory
         let mut options = TopologyOptions::default();
         options.request.leaf_rules = vec![
-            LeafRule::ByTag {
+            GraphRule::new(LeafRule::ByTag {
                 tag_ids: vec![tag.id],
                 title: Some("Tagged".to_string()),
-            },
-            LeafRule::ByServiceCategory {
+            }),
+            GraphRule::new(LeafRule::ByServiceCategory {
                 categories: vec![ServiceCategory::ReverseProxy],
                 title: Some("Infra".to_string()),
-            },
+            }),
         ];
 
         let hosts = vec![host.clone()];
@@ -723,7 +710,7 @@ mod tests {
 
         let mut child_nodes = vec![make_leaf_node(child_id, host.id, subnet_id)];
 
-        let planner = SubnetLayoutPlanner::new();
+        let planner = GraphBuilder::new();
         planner.create_nested_group_containers(subnet_id, &children, &ctx, &mut child_nodes);
 
         // Find the tag group (should be first match now)

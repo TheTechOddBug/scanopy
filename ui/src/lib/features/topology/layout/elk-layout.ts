@@ -399,44 +399,39 @@ function applyEdgeAwareSwaps(
 		columns.get(x)!.push(leaf);
 	}
 
+	// Determine spacing from container layout options (default 20)
+	const spacing = parseInt(container.layoutOptions?.['elk.spacing.nodeNode'] ?? '20');
+
 	for (const [, colNodes] of columns) {
 		if (colNodes.length < 2) continue;
 
-		// Sort by y to find top/bottom positions
+		// Sort by y to establish original column order
 		colNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
+		const startY = colNodes[0].y ?? 0;
 
-		// Find nodes that want to be at top (upward edges)
-		const upwardNodes = colNodes.filter((n) => leafExternalEdgeInfo.get(n.id)?.hasUpwardEdge);
-		// Find nodes that want to be at bottom (downward-only edges)
-		const downwardNodes = colNodes.filter((n) => {
+		// Partition into edge-direction buckets
+		const upward: ElkNode[] = [];
+		const middle: ElkNode[] = [];
+		const downward: ElkNode[] = [];
+		for (const n of colNodes) {
 			const info = leafExternalEdgeInfo.get(n.id);
-			return info?.hasDownwardEdge && !info?.hasUpwardEdge;
-		});
-
-		// Swap upward nodes toward top of column
-		for (let i = 0; i < upwardNodes.length && i < colNodes.length; i++) {
-			const target = upwardNodes[i];
-			const current = colNodes[i];
-			if (target.id !== current.id) {
-				const tmpY = current.y;
-				current.y = target.y;
-				target.y = tmpY;
-				// Re-sort after swap
-				colNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
+			if (info?.hasUpwardEdge) {
+				upward.push(n);
+			} else if (info?.hasDownwardEdge) {
+				downward.push(n);
+			} else {
+				middle.push(n);
 			}
 		}
 
-		// Swap downward nodes toward bottom of column
-		for (let i = 0; i < downwardNodes.length && i < colNodes.length; i++) {
-			const target = downwardNodes[i];
-			const bottomIdx = colNodes.length - 1 - i;
-			const current = colNodes[bottomIdx];
-			if (target.id !== current.id) {
-				const tmpY = current.y;
-				current.y = target.y;
-				target.y = tmpY;
-				colNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
-			}
+		// Reorder: upward at top, middle in between, downward at bottom
+		const reordered = [...upward, ...middle, ...downward];
+
+		// Recompute y-coordinates based on actual node heights to avoid overlaps
+		let y = startY;
+		for (const node of reordered) {
+			node.y = y;
+			y += (node.height ?? 0) + spacing;
 		}
 	}
 }

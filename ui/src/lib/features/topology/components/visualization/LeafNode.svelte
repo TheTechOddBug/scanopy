@@ -421,7 +421,20 @@
 									expandedOpenPorts = true;
 								}}
 							>
-								{topology_openPortsSummary({ count: nodeRenderData.hiddenOpenPorts.length })}
+								{topology_openPortsSummary({
+									count:
+										nodeRenderData.hiddenOpenPorts.reduce(
+											(sum, s) =>
+												sum +
+												s.bindings.filter(
+													(b) =>
+														(b.interface_id == nodeRenderData.interface_id ||
+															b.interface_id == null) &&
+														b.type == 'Port'
+												).length,
+											0
+										) || nodeRenderData.hiddenOpenPorts.length
+								})}
 							</button>
 						{/if}
 					{/if}

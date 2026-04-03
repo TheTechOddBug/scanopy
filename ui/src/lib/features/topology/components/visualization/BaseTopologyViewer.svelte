@@ -239,7 +239,13 @@
 				const opts = get(topologyOptions);
 				const sizeKey = `${(opts.request.hide_service_categories ?? []).join(',')}:${opts.request.hide_ports}`;
 				const structureKey =
-					getStructureKey(topology) + ':' + Array.from(collapsed).sort().join(',') + ':' + sizeKey;
+					getStructureKey(topology) +
+					':' +
+					Array.from(collapsed).sort().join(',') +
+					':' +
+					sizeKey +
+					':' +
+					hiddenEdgeTypes.join(',');
 				const isNewStructure = sessionStructureKey !== structureKey;
 
 				// Helper: build SvelteFlow node array from topology nodes
@@ -355,7 +361,8 @@
 						edges: topology.edges,
 						topology: topology,
 						collapsedContainers: collapsed,
-						leafNodeSizes
+						leafNodeSizes,
+						hiddenEdgeTypes: hiddenEdgeTypes
 					});
 					sessionStructureKey = structureKey;
 				}

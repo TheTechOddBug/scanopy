@@ -12,6 +12,7 @@ export interface ElkLayoutInput {
 	collapsedContainers?: Set<string>;
 	/** Frontend-computed leaf node sizes (overrides backend node.size) */
 	leafNodeSizes?: Map<string, { x: number; y: number }>;
+	hiddenEdgeTypes?: string[];
 }
 
 export type HandleSide = 'Top' | 'Bottom' | 'Left' | 'Right';
@@ -209,8 +210,13 @@ function buildElkGraph(input: ElkLayoutInput): {
 		string,
 		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
 	>();
+	// Consider all VISIBLE edge types for positioning metadata (not just primary).
+	// Primary/overlay classification only matters for container-level ELK edges —
+	// for leaf positioning, any visible cross-container edge indicates the node
+	// should be near the boundary (e.g., ServiceVirtualization edges to Docker Bridge).
+	const hiddenEdgeSet = new Set(input.hiddenEdgeTypes ?? []);
 	for (const edge of input.edges) {
-		if (classifyEdge(edge) !== 'primary') continue;
+		if (hiddenEdgeSet.has(edge.edge_type)) continue;
 		const srcContainer = leafToContainer.get(edge.source);
 		const tgtContainer = leafToContainer.get(edge.target);
 		if (srcContainer && tgtContainer && srcContainer !== tgtContainer) {

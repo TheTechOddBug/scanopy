@@ -238,7 +238,9 @@
 				// Only run elkjs when topology structure or collapse state changes
 				const structureKey = getStructureKey(topology) + ':' + Array.from(collapsed).sort().join(',');
 
-				if (sessionStructureKey !== structureKey) {
+				const isNewStructure = sessionStructureKey !== structureKey;
+
+				if (isNewStructure) {
 					cachedLayoutResult = await computeElkLayout({
 						nodes: visibleNodes,
 						edges: topology.edges,
@@ -254,10 +256,11 @@
 					edgeHandles: new Map()
 				};
 
-				// Create nodes: use ELK positions on first layout, server positions after
+				// Use ELK positions only on structure change; otherwise use server
+				// positions (which reflect user drags saved to the backend)
 				const allNodes: Node[] = visibleNodes.map((node) => {
-					const elkPos = layoutResult?.nodePositions.get(node.id);
-					const elkSize = layoutResult?.containerSizes.get(node.id);
+					const elkPos = isNewStructure ? layoutResult?.nodePositions.get(node.id) : undefined;
+					const elkSize = isNewStructure ? layoutResult?.containerSizes.get(node.id) : undefined;
 					const isCollapsed = collapsed.has(node.id);
 					return {
 						id: node.id,

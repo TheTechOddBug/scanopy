@@ -307,8 +307,10 @@
 						selectable: node.node_type !== 'ContainerNode',
 						parentId:
 							node.node_type == 'LeafNode'
-								? resolveLeafNode(node.id, node, topology).subnetId
-								: undefined,
+								? (node.container_id ?? resolveLeafNode(node.id, node, topology).subnetId)
+								: node.node_type == 'ContainerNode' && node.parent_container_id
+									? (node.parent_container_id as string)
+									: undefined,
 						extent: node.node_type == 'LeafNode' ? 'parent' : undefined,
 						data: isCollapsed
 							? { ...node, isCollapsed: true, childCount: childCounts.get(node.id) ?? 0 }
@@ -319,12 +321,15 @@
 				// Clear edges FIRST
 				edges.set([]);
 
-				// Sort so children come before parents (as per Svelte Flow docs)
-				const sortedNodes = allNodes.sort((a, b) => {
-					if (a.parentId && !b.parentId) return 1; // children first
-					if (!a.parentId && b.parentId) return -1; // parents second
-					return 0;
-				});
+				// Sort so parents appear before children (SvelteFlow requirement).
+				// Depth: 0 = root containers, 1 = sub-group containers, 2 = leaves
+				const depthOf = (n: (typeof allNodes)[number]) => {
+					if (!n.parentId) return 0;
+					if (n.type === 'ContainerNode') return 1;
+					// Leaf inside sub-group = depth 2, leaf inside subnet = depth 1
+					return allNodes.some((p) => p.id === n.parentId && p.parentId) ? 2 : 1;
+				};
+				const sortedNodes = allNodes.sort((a, b) => depthOf(a) - depthOf(b));
 
 				// Set nodes
 				nodes.set(sortedNodes);

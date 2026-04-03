@@ -328,23 +328,25 @@
 					const measureNodes = sortFlowNodes(buildFlowNodes());
 					nodes.set(measureNodes);
 
-					// Wait for SvelteFlow to measure DOM via ResizeObserver.
-					// tick() flushes Svelte updates; two rAF frames ensure browser
-					// layout + ResizeObserver callbacks have fired.
+					// Wait for DOM render: tick flushes Svelte, rAF ensures browser layout
 					await tick();
 					await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-					await tick();
 
-					// Phase 2: Read measured sizes from SvelteFlow
-					const measuredNodes = getNodes();
+					// Phase 2: Read actual DOM sizes directly (bypasses SvelteFlow timing)
 					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
 					const leafNodeSizes = new Map<string, { x: number; y: number }>();
-					for (const n of measuredNodes) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						const computed = (n as Record<string, any>).computed;
-						const w = computed?.width ?? n.width ?? 250;
-						const h = computed?.height ?? n.height ?? 100;
-						leafNodeSizes.set(n.id, { x: w, y: h });
+					if (containerElement) {
+						const nodeEls = containerElement.querySelectorAll('.svelte-flow__node');
+						for (const el of nodeEls) {
+							const id = (el as HTMLElement).dataset.id;
+							if (id) {
+								const htmlEl = el as HTMLElement;
+								leafNodeSizes.set(id, {
+									x: htmlEl.offsetWidth || 250,
+									y: htmlEl.offsetHeight || 100
+								});
+							}
+						}
 					}
 
 					// Phase 3: Run ELK with real measured sizes

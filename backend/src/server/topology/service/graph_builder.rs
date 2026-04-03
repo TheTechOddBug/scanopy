@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::server::{
@@ -8,52 +8,41 @@ use crate::server::{
     services::r#impl::base::Service,
     subnets::r#impl::types::SubnetType,
     topology::{
-        service::{
-            context::TopologyContext,
-            legacy::planner::{
-                anchor_planner::ChildAnchorPlanner,
-                child_planner::ChildNodePlanner,
-                utils::{NODE_PADDING, PlannerUtils, SUBNET_PADDING},
-            },
-        },
+        service::{anchor_planner::ChildAnchorPlanner, context::TopologyContext},
         types::{
             edges::Edge,
             grouping::{GroupingConfig, GroupingRule},
-            layout::{Ixy, NodeLayout, SubnetLayout, Uxy},
+            layout::{Ixy, Uxy},
             nodes::{ContainerType, LeafEntityType, Node, NodeType, SubnetChild},
         },
     },
 };
 
-pub struct SubnetLayoutPlanner {
+pub struct GraphBuilder {
     consolidated_docker_subnets: HashMap<Uuid, Vec<Uuid>>,
 }
 
-impl Default for SubnetLayoutPlanner {
+impl Default for GraphBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl SubnetLayoutPlanner {
+impl GraphBuilder {
     pub fn new() -> Self {
         Self {
             consolidated_docker_subnets: HashMap::new(),
         }
     }
 
-    pub fn get_consolidated_docker_subnets(&self) -> &HashMap<Uuid, Vec<Uuid>> {
-        &self.consolidated_docker_subnets
-    }
-
-    /// Main entry point: calculate subnet layouts and create all child nodes
+    /// Main entry point: group children by subnet and create all child nodes
     pub fn create_subnet_child_nodes(
         &mut self,
         ctx: &TopologyContext,
         all_edges: &mut [Edge],
         grouping: &GroupingConfig,
         docker_bridge_host_subnet_id_to_group_on: HashMap<Uuid, Uuid>,
-    ) -> (HashMap<Uuid, SubnetLayout>, Vec<Node>) {
+    ) -> (HashSet<Uuid>, Vec<Node>) {
         let children_by_subnet = self.group_children_by_subnet(
             ctx,
             all_edges,
@@ -62,15 +51,15 @@ impl SubnetLayoutPlanner {
         );
         let mut child_nodes = Vec::new();
 
-        let subnet_sizes: HashMap<Uuid, SubnetLayout> = children_by_subnet
+        let subnet_ids: HashSet<Uuid> = children_by_subnet
             .iter()
             .map(|(subnet_id, children)| {
-                let size = self.calculate_subnet_size(*subnet_id, children, ctx, &mut child_nodes);
-                (*subnet_id, SubnetLayout { size })
+                self.create_child_nodes(*subnet_id, children, ctx, &mut child_nodes);
+                *subnet_id
             })
             .collect();
 
-        (subnet_sizes, child_nodes)
+        (subnet_ids, child_nodes)
     }
 
     fn determine_subnet_child_header_text(
@@ -298,48 +287,34 @@ impl SubnetLayoutPlanner {
         children_by_subnet
     }
 
-    /// Calculate the size and layout of a subnet, creating child nodes
-    fn calculate_subnet_size(
+    /// Create child (leaf) nodes for a subnet
+    fn create_child_nodes(
         &mut self,
         subnet_id: Uuid,
         children: &[SubnetChild],
         ctx: &TopologyContext,
         child_nodes: &mut Vec<Node>,
-    ) -> Uxy {
-        if children.is_empty() {
-            return Uxy { x: 0, y: 0 };
-        }
-
-        // All children laid out together (no infra partitioning)
-        let positions =
-            ChildNodePlanner::calculate_anchor_based_positions(children, &NODE_PADDING, ctx);
-
-        let grid_size =
-            PlannerUtils::calculate_container_size_from_layouts(&positions, &NODE_PADDING);
-
+    ) {
         // Create leaf nodes for all children
+        // Positions are zeroed — the frontend computes layout via elkjs
         for child in children.iter() {
-            if let Some(layout) = positions.get(&child.id) {
-                child_nodes.push(Node {
-                    id: child.id,
-                    node_type: NodeType::LeafNode {
-                        container_id: subnet_id,
-                        leaf_type: LeafEntityType::Interface,
-                        subnet_id,
-                        host_id: child.host_id,
-                        interface_id: child.interface_id,
-                    },
-                    position: layout.position,
-                    size: child.size,
-                    header: child.header.clone(),
-                });
-            }
+            child_nodes.push(Node {
+                id: child.id,
+                node_type: NodeType::LeafNode {
+                    container_id: subnet_id,
+                    leaf_type: LeafEntityType::Interface,
+                    subnet_id,
+                    host_id: child.host_id,
+                    interface_id: child.interface_id,
+                },
+                position: Ixy { x: 0, y: 0 },
+                size: child.size,
+                header: child.header.clone(),
+            });
         }
 
         // Create nested group containers for ByServiceCategory and ByTag rules
         self.create_nested_group_containers(subnet_id, children, ctx, child_nodes);
-
-        grid_size
     }
 
     /// Create nested ContainerNodes for ByServiceCategory and ByTag grouping rules (ClientSide mode only)
@@ -437,103 +412,40 @@ impl SubnetLayoutPlanner {
         }
     }
 
-    /// Create subnet container nodes with calculated positions
+    /// Create subnet container nodes
+    /// Positions and sizes are zeroed — the frontend computes layout via elkjs
     pub fn create_subnet_nodes(
         &self,
         ctx: &TopologyContext,
-        layouts: &HashMap<Uuid, SubnetLayout>,
+        subnet_ids: &HashSet<Uuid>,
     ) -> Vec<Node> {
-        let subnet_grid_positions = self.calculate_subnet_grid_positions_by_layer(ctx, layouts);
-        let (positions, _) =
-            PlannerUtils::calculate_container_size(subnet_grid_positions, &SUBNET_PADDING);
-
-        layouts
+        subnet_ids
             .iter()
-            .filter_map(|(subnet_id, layout)| {
-                if let Some(position) = positions.get(subnet_id) {
-                    if let Some(consolidated_subnet_ids) =
-                        self.consolidated_docker_subnets.get(subnet_id)
-                    {
-                        let header = "Docker Bridge: (".to_owned()
+            .map(|subnet_id| {
+                let header = self.consolidated_docker_subnets.get(subnet_id).map(
+                    |consolidated_subnet_ids| {
+                        "Docker Bridge: (".to_owned()
                             + &ctx
                                 .subnets
                                 .iter()
                                 .filter(|s| consolidated_subnet_ids.contains(&s.id))
                                 .map(|s| s.base.cidr.to_string())
                                 .join(", ")
-                            + ")";
+                            + ")"
+                    },
+                );
 
-                        return Some(Node {
-                            id: *subnet_id,
-                            node_type: NodeType::ContainerNode {
-                                container_type: ContainerType::Subnet,
-                                parent_container_id: None,
-                                layer_hint: None,
-                            },
-                            position: *position,
-                            size: layout.size,
-                            header: Some(header),
-                        });
-                    }
-
-                    return Some(Node {
-                        id: *subnet_id,
-                        node_type: NodeType::ContainerNode {
-                            container_type: ContainerType::Subnet,
-                            parent_container_id: None,
-                            layer_hint: None,
-                        },
-                        position: *position,
-                        size: layout.size,
-                        header: None,
-                    });
+                Node {
+                    id: *subnet_id,
+                    node_type: NodeType::ContainerNode {
+                        container_type: ContainerType::Subnet,
+                        parent_container_id: None,
+                        layer_hint: None,
+                    },
+                    position: Ixy { x: 0, y: 0 },
+                    size: Uxy { x: 0, y: 0 },
+                    header,
                 }
-                None
-            })
-            .collect()
-    }
-
-    /// Calculate positions of subnets given layer values
-    fn calculate_subnet_grid_positions_by_layer(
-        &self,
-        ctx: &TopologyContext,
-        layouts: &HashMap<Uuid, SubnetLayout>,
-    ) -> Vec<Vec<(Uuid, NodeLayout)>> {
-        let sorted: Vec<_> = ctx
-            .subnets
-            .iter()
-            .sorted_by_key(|s| {
-                (
-                    s.base.subnet_type.vertical_order(),
-                    s.base.subnet_type.horizontal_order(),
-                    s.base.name.clone(),
-                )
-            })
-            .filter_map(|s| layouts.get(&s.id).map(|layout| (s, layout)))
-            .collect();
-
-        let mut subnets_by_layer: BTreeMap<usize, Vec<(&Uuid, &SubnetLayout)>> = BTreeMap::new();
-        for (subnet, layout) in sorted {
-            subnets_by_layer
-                .entry(subnet.base.subnet_type.vertical_order())
-                .or_default()
-                .push((&subnet.id, layout));
-        }
-
-        subnets_by_layer
-            .into_values()
-            .map(|row| {
-                row.into_iter()
-                    .map(|(id, layout)| {
-                        (
-                            *id,
-                            NodeLayout {
-                                size: layout.size,
-                                position: Ixy { x: 0, y: 0 },
-                            },
-                        )
-                    })
-                    .collect()
             })
             .collect()
     }

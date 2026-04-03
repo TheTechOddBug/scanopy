@@ -32,14 +32,12 @@ use crate::server::{
     tags::{entity_tags::EntityTagService, r#impl::base::Tag, service::TagService},
     topology::{
         service::{
-            context::TopologyContext, edge_builder::EdgeBuilder,
-            legacy::planner::subnet_layout_planner::SubnetLayoutPlanner,
+            context::TopologyContext, edge_builder::EdgeBuilder, graph_builder::GraphBuilder,
         },
         types::{
             base::{SetEntitiesParams, Topology, TopologyOptions},
             edges::{Edge, EdgeHandle},
             grouping::GroupingConfig,
-            layout::Ixy,
             nodes::{Node, NodeType},
         },
     },
@@ -422,16 +420,16 @@ impl TopologyService {
             edge.classification = edge.edge_type.classification(perspective);
         }
 
-        // Create nodes with layout
-        let mut layout_planner = SubnetLayoutPlanner::new();
-        let (subnet_layouts, child_nodes) = layout_planner.create_subnet_child_nodes(
+        // Create nodes (positions zeroed — frontend computes layout via elkjs)
+        let mut graph_builder = GraphBuilder::new();
+        let (subnet_ids, child_nodes) = graph_builder.create_subnet_child_nodes(
             &ctx,
             &mut all_edges,
             &grouping,
             docker_bridge_host_subnet_id_to_group_on,
         );
 
-        let mut subnet_nodes = layout_planner.create_subnet_nodes(&ctx, &subnet_layouts);
+        let mut subnet_nodes = graph_builder.create_subnet_nodes(&ctx, &subnet_ids);
 
         // Set layer_hint on container nodes from subnet vertical_order
         let subnet_type_map: HashMap<Uuid, i32> = ctx
@@ -448,12 +446,7 @@ impl TopologyService {
             }
         }
 
-        let mut all_nodes: Vec<Node> = subnet_nodes.into_iter().chain(child_nodes).collect();
-
-        // Zero out positions — client computes layout via elkjs
-        for node in &mut all_nodes {
-            node.position = Ixy { x: 0, y: 0 };
-        }
+        let all_nodes: Vec<Node> = subnet_nodes.into_iter().chain(child_nodes).collect();
         let final_edges = all_edges;
 
         // Build graph

@@ -354,6 +354,8 @@ pub async fn populate_demo_data(
 ) -> ApiResult<Json<ApiResponse<()>>> {
     use crate::server::organizations::demo_data::{DemoData, generate_groups};
     use crate::server::services::r#impl::base::Service;
+    use crate::server::shared::handlers::traits::CrudHandlers;
+    use crate::server::topology::types::base::Topology;
 
     let user_org_id = auth
         .organization_id()
@@ -668,6 +670,14 @@ pub async fn populate_demo_data(
             .create_with_networks(api_key, network_ids, entity.clone())
             .await
             .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+    }
+
+    // 14. Rebuild topologies (compute nodes/edges from seeded entities)
+    let topology_service = Topology::get_service(&state);
+    for mut topology in demo_data.topologies {
+        topology_service
+            .rebuild(&mut topology, entity.clone())
+            .await?;
     }
 
     Ok(Json(ApiResponse::success(())))

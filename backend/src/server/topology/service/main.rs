@@ -328,6 +328,56 @@ impl TopologyService {
         Ok(tags)
     }
 
+    /// Rebuild a topology: fetch entities from DB, compute nodes/edges, persist.
+    /// Used by the rebuild handler and demo data seeder.
+    pub async fn rebuild(
+        &self,
+        topology: &mut Topology,
+        authentication: AuthenticatedEntity,
+    ) -> Result<(), Error> {
+        let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
+            self.get_entity_data(topology.base.network_id).await?;
+
+        let services = self
+            .get_service_data(topology.base.network_id, &topology.base.options)
+            .await?;
+
+        let entity_tags = self.get_entity_tags(&hosts, &services, &subnets).await?;
+
+        let (nodes, edges) = self.build_graph(BuildGraphParams {
+            options: &topology.base.options,
+            hosts: &hosts,
+            interfaces: &interfaces,
+            subnets: &subnets,
+            services: &services,
+            groups: &groups,
+            ports: &ports,
+            bindings: &bindings,
+            if_entries: &if_entries,
+            old_nodes: &[],
+            old_edges: &[],
+        });
+
+        topology.set_entities(SetEntitiesParams {
+            hosts,
+            interfaces,
+            services,
+            subnets,
+            groups,
+            ports,
+            bindings,
+            if_entries,
+            entity_tags,
+        });
+
+        topology.set_graph(nodes, edges);
+        topology.clear_stale();
+
+        self.update(topology, authentication).await?;
+
+        Ok(())
+    }
+
     pub fn build_graph(&self, params: BuildGraphParams) -> (Vec<Node>, Vec<Edge>) {
         let BuildGraphParams {
             hosts,

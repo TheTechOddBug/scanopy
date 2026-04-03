@@ -46,12 +46,14 @@
 	// Stable ID tracking for leaf rules
 	let nextLeafId = $state(0);
 	let leafStableIds = $state<number[]>([]);
+	let leafIdsInitialized = $state(false);
 
-	// Initialize stable IDs from current leaf rules on first render
+	// Sync stable IDs when leaf rules load for the first time
 	$effect(() => {
-		if (leafStableIds.length === 0 && leafRules.length > 0) {
+		if (!leafIdsInitialized && leafRules.length > 0) {
 			leafStableIds = leafRules.map((_, i) => i);
 			nextLeafId = leafRules.length;
+			leafIdsInitialized = true;
 		}
 	});
 
@@ -149,8 +151,8 @@
 
 	const leafRuleDisplayComponent = {
 		getId: (_item: LeafRule, index?: number) => {
-			// Use stable IDs to prevent DOM destruction on data changes
-			return `leaf-${leafStableIds[index ?? 0] ?? index}`;
+			const idx = index ?? 0;
+			return `leaf-${leafStableIds[idx] ?? idx}`;
 		},
 		getLabel: (item: LeafRule) => {
 			if ('ByServiceCategory' in item) return 'ByServiceCategory';

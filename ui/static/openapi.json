@@ -12577,14 +12577,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-03T12:12:30.883118Z",
-              "id": "b14cbc23-b222-4cdb-babe-43ab385cdd2e",
+              "created_at": "2026-04-03T13:31:40.687687Z",
+              "id": "083b8384-7122-4181-9be4-8e0f0e11a9f7",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-03T12:12:30.883118Z"
+              "updated_at": "2026-04-03T13:31:40.687687Z"
             }
           },
           "error": {
@@ -13480,14 +13480,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-03T12:12:30.867203Z",
-                      "id": "703ea480-2d88-4018-82f8-55e653658956",
+                      "created_at": "2026-04-03T13:31:40.671670Z",
+                      "id": "72077020-d8ba-49af-a3b4-edb5bce4e104",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-03T12:12:30.867203Z"
+                      "updated_at": "2026-04-03T13:31:40.671670Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -13496,7 +13496,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "ESPHome",
+                  "service_definition": "WordPress",
                   "source": {
                     "type": "Manual"
                   },
@@ -14199,14 +14199,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-03T12:12:30.878744Z",
-                  "id": "62201e75-06a9-4b6d-b20a-f227a209d90a",
+                  "created_at": "2026-04-03T13:31:40.683229Z",
+                  "id": "0e3f12d7-6dff-4688-8967-5b25170b8159",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-03T12:12:30.878744Z"
+                  "updated_at": "2026-04-03T13:31:40.683229Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14215,7 +14215,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "ESPHome",
+              "service_definition": "WordPress",
               "source": {
                 "type": "Manual"
               },
@@ -15489,14 +15489,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-03T12:12:30.867406Z",
-          "id": "bf81c1b6-1586-436a-be67-953cb860a31c",
+          "created_at": "2026-04-03T13:31:40.671965Z",
+          "id": "8d9e3cf6-2b7d-4ba7-b54e-560c16172120",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-03T12:12:30.867406Z"
+          "updated_at": "2026-04-03T13:31:40.671965Z"
         }
       },
       "BindingBase": {
@@ -15777,6 +15777,14 @@
           "Yellow"
         ]
       },
+      "ContainerRule": {
+        "type": "string",
+        "description": "Rules that change which containers exist and how they nest.\nContainer titles are data-driven (subnet CIDR, host names), not user-configurable.",
+        "enum": [
+          "BySubnet",
+          "ByVirtualizingService"
+        ]
+      },
       "ContainerType": {
         "type": "string",
         "enum": [
@@ -16011,7 +16019,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "ESPHome",
+              "service_definition": "WordPress",
               "tags": [],
               "virtualization": null
             }
@@ -17903,105 +17911,6 @@
           "HubAndSpoke"
         ]
       },
-      "GroupingRule": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "BySubnet"
-            ],
-            "properties": {
-              "BySubnet": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          {
-            "type": "object",
-            "required": [
-              "ByServiceCategory"
-            ],
-            "properties": {
-              "ByServiceCategory": {
-                "type": "object",
-                "required": [
-                  "categories"
-                ],
-                "properties": {
-                  "categories": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/ServiceCategory"
-                    }
-                  },
-                  "title": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          {
-            "type": "object",
-            "required": [
-              "ByVirtualizingService"
-            ],
-            "properties": {
-              "ByVirtualizingService": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          {
-            "type": "object",
-            "required": [
-              "ByTag"
-            ],
-            "properties": {
-              "ByTag": {
-                "type": "object",
-                "required": [
-                  "tag_ids"
-                ],
-                "properties": {
-                  "tag_ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "uuid"
-                    }
-                  },
-                  "title": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
       "Host": {
         "allOf": [
           {
@@ -18415,14 +18324,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-03T12:12:30.866921Z",
-                  "id": "f2ccb9d8-2689-4390-8cfe-b72c7a732622",
+                  "created_at": "2026-04-03T13:31:40.671248Z",
+                  "id": "c50e906f-53b1-44d1-bc15-27c9f00fa138",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-03T12:12:30.866921Z"
+                  "updated_at": "2026-04-03T13:31:40.671248Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -18431,7 +18340,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "ESPHome",
+              "service_definition": "WordPress",
               "source": {
                 "type": "Manual"
               },
@@ -19015,6 +18924,68 @@
         "enum": [
           "Interface"
         ]
+      },
+      "LeafRule": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "ByServiceCategory"
+            ],
+            "properties": {
+              "ByServiceCategory": {
+                "type": "object",
+                "required": [
+                  "categories"
+                ],
+                "properties": {
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ServiceCategory"
+                    }
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "ByTag"
+            ],
+            "properties": {
+              "ByTag": {
+                "type": "object",
+                "required": [
+                  "tag_ids"
+                ],
+                "properties": {
+                  "tag_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "description": "Rules that organize nodes within a container into sub-groups."
       },
       "LldpChassisId": {
         "oneOf": [
@@ -20396,14 +20367,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-03T12:12:30.859566Z",
-                        "id": "dfba04b6-d913-4b43-a600-d0061bbf49a2",
+                        "created_at": "2026-04-03T13:31:40.661304Z",
+                        "id": "65fac8cd-50f8-40a6-a29b-aa9e9d6e72cf",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-03T12:12:30.859566Z"
+                        "updated_at": "2026-04-03T13:31:40.661304Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -20412,7 +20383,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "ESPHome",
+                    "service_definition": "WordPress",
                     "source": {
                       "type": "Manual"
                     },
@@ -20489,14 +20460,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-03T12:12:30.877270Z",
-                    "id": "0c885ef3-d420-4af2-a138-7feae3e12595",
+                    "created_at": "2026-04-03T13:31:40.682011Z",
+                    "id": "ff307c10-8d29-4db7-983e-ad3534b61183",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-03T12:12:30.877270Z"
+                    "updated_at": "2026-04-03T13:31:40.682011Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -20505,7 +20476,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "ESPHome",
+                "service_definition": "WordPress",
                 "source": {
                   "type": "Manual"
                 },
@@ -21664,14 +21635,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-03T12:12:30.867332Z",
-              "id": "3a4d858f-389c-430f-a7f7-dfdc533a9857",
+              "created_at": "2026-04-03T13:31:40.671862Z",
+              "id": "6d8b3a95-0603-4419-bb88-4a1d9c93f5c9",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-03T12:12:30.867332Z"
+              "updated_at": "2026-04-03T13:31:40.671862Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -21680,7 +21651,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "ESPHome",
+          "service_definition": "WordPress",
           "source": {
             "type": "Manual"
           },
@@ -22786,10 +22757,10 @@
           "hide_service_categories"
         ],
         "properties": {
-          "grouping_rules": {
+          "container_rules": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GroupingRule"
+              "$ref": "#/components/schemas/ContainerRule"
             }
           },
           "hide_ports": {
@@ -22803,6 +22774,12 @@
           },
           "hide_vm_title_on_docker_container": {
             "type": "boolean"
+          },
+          "leaf_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LeafRule"
+            }
           },
           "perspective": {
             "$ref": "#/components/schemas/TopologyPerspective"

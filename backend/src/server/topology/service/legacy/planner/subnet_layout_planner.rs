@@ -18,7 +18,7 @@ use crate::server::{
         },
         types::{
             edges::Edge,
-            grouping::{GroupingConfig, GroupingRule},
+            grouping::{GroupingConfig, LeafRule},
             layout::{Ixy, NodeLayout, SubnetLayout, Uxy},
             nodes::{ContainerType, LeafEntityType, Node, NodeType, SubnetChild},
         },
@@ -352,9 +352,9 @@ impl SubnetLayoutPlanner {
     ) {
         let grouping = GroupingConfig::from_request_options(&ctx.options.request);
 
-        for rule in &grouping.primary {
+        for rule in &grouping.leaf_rules {
             match rule {
-                GroupingRule::ByServiceCategory { categories, title } => {
+                LeafRule::ByServiceCategory { categories, title } => {
                     // Find children whose host has a service in the specified categories
                     let matched_child_ids: HashSet<Uuid> = children
                         .iter()
@@ -396,7 +396,7 @@ impl SubnetLayoutPlanner {
                         }
                     }
                 }
-                GroupingRule::ByTag { tag_ids, title } => {
+                LeafRule::ByTag { tag_ids, title } => {
                     let matched_host_ids = ctx.get_host_ids_with_tags(tag_ids);
                     let matched_child_ids: HashSet<Uuid> = children
                         .iter()
@@ -432,7 +432,6 @@ impl SubnetLayoutPlanner {
                         }
                     }
                 }
-                _ => {}
             }
         }
     }

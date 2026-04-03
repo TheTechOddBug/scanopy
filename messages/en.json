@@ -1112,6 +1112,8 @@
 	"topology_focusNode": "Focus node",
 	"topology_focusSelection": "Focus selection",
 	"topology_groupBy": "Group by",
+	"topology_leafGrouping": "Leaf grouping",
+	"topology_leafGroupingHelp": "Rules are applied top to bottom. If a node matches multiple rules, the first match takes priority.",
 	"topology_groupRuleTitlePlaceholder": "Optional title",
 	"topology_hideOpenPorts": "Hide open ports",
 	"topology_hidePorts": "Hide Ports",

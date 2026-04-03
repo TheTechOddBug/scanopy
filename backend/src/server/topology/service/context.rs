@@ -10,6 +10,7 @@ use crate::server::{
     ports::r#impl::base::Port,
     services::r#impl::{base::Service, virtualization::ServiceVirtualization},
     subnets::r#impl::base::Subnet,
+    tags::r#impl::base::Tag,
     topology::types::{
         base::TopologyOptions,
         edges::Edge,
@@ -28,6 +29,7 @@ pub struct TopologyContext<'a> {
     pub ports: &'a [Port],
     pub bindings: &'a [Binding],
     pub if_entries: &'a [IfEntry],
+    pub entity_tags: &'a [Tag],
     pub options: &'a TopologyOptions,
 }
 
@@ -42,6 +44,7 @@ impl<'a> TopologyContext<'a> {
         ports: &'a [Port],
         bindings: &'a [Binding],
         if_entries: &'a [IfEntry],
+        entity_tags: &'a [Tag],
         options: &'a TopologyOptions,
     ) -> Self {
         Self {
@@ -53,6 +56,7 @@ impl<'a> TopologyContext<'a> {
             ports,
             bindings,
             if_entries,
+            entity_tags,
             options,
         }
     }

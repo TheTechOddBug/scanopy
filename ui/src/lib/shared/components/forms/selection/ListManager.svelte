@@ -48,6 +48,9 @@
 		itemClickAction?: 'edit' | 'select' | null;
 		allowItemEdit?: (item: T) => boolean;
 		allowItemRemove?: (item: T) => boolean;
+		allowItemReorder?: (item: T) => boolean;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		editIcon?: (item: T, index: number) => any;
 		selectedItems?: T[];
 
 		// Interaction handlers
@@ -107,6 +110,8 @@
 		itemClickAction = null,
 		allowItemEdit = () => true,
 		allowItemRemove = () => true,
+		allowItemReorder = () => true,
+		editIcon = undefined,
 
 		// Interaction handlers
 		onCreateNew = null,
@@ -335,7 +340,7 @@
 						onClick(item, index);
 						if (allowSelection && itemClickAction == 'select') {
 							toggleItemSelection(item);
-						} else if (allowItemEdit(item)) {
+						} else if (!itemSnippet && allowItemEdit(item)) {
 							if (itemDisplayComponent.supportsInlineEdit) {
 								// Toggle inline editing for this item
 								editingIndex = editingIndex === index ? null : index;
@@ -385,6 +390,7 @@
 					<!-- Action Buttons -->
 					<div class="flex items-center gap-1">
 						{#if allowItemEdit(item) && itemClickAction != 'edit'}
+							{@const EditIconComponent = editIcon ? editIcon(item, index) : Edit}
 							<button
 								type="button"
 								onclick={(e) => {
@@ -398,11 +404,11 @@
 								class="btn-icon"
 								title="Edit"
 							>
-								<Edit size={16} />
+								<EditIconComponent size={16} />
 							</button>
 						{/if}
 
-						{#if allowReorder}
+						{#if allowReorder && allowItemReorder(item)}
 							<button
 								type="button"
 								onclick={(e) => {

@@ -310,7 +310,8 @@ impl GraphBuilder {
         self.create_nested_group_containers(subnet_id, children, ctx, child_nodes);
     }
 
-    /// Create nested ContainerNodes for ByServiceCategory and ByTag grouping rules (ClientSide mode only)
+    /// Create nested ContainerNodes for ByServiceCategory and ByTag grouping rules (ClientSide mode only).
+    /// First-match-wins: nodes already claimed by an earlier rule are not reassigned.
     fn create_nested_group_containers(
         &self,
         subnet_id: Uuid,
@@ -319,18 +320,20 @@ impl GraphBuilder {
         child_nodes: &mut Vec<Node>,
     ) {
         let grouping = GroupingConfig::from_request_options(&ctx.options.request);
+        let mut claimed: HashSet<Uuid> = HashSet::new();
 
         for rule in &grouping.leaf_rules {
             match rule {
                 LeafRule::ByServiceCategory { categories, title } => {
-                    // Find children whose host has a service in the specified categories
                     let matched_child_ids: HashSet<Uuid> = children
                         .iter()
                         .filter(|child| {
-                            ctx.services.iter().any(|s| {
-                                s.base.host_id == child.host_id
-                                    && categories.contains(&s.base.service_definition.category())
-                            })
+                            !claimed.contains(&child.id)
+                                && ctx.services.iter().any(|s| {
+                                    s.base.host_id == child.host_id
+                                        && categories
+                                            .contains(&s.base.service_definition.category())
+                                })
                         })
                         .map(|c| c.id)
                         .collect();
@@ -338,6 +341,17 @@ impl GraphBuilder {
                     if matched_child_ids.is_empty() {
                         continue;
                     }
+
+                    // Build header: "{title}: {cat1}, {cat2}" or just "{cat1}, {cat2}"
+                    let cat_names = categories
+                        .iter()
+                        .map(|c| c.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    let header = match title {
+                        Some(t) => Some(format!("{t}: {cat_names}")),
+                        None => Some(cat_names),
+                    };
 
                     let group_id = Uuid::new_v4();
                     child_nodes.push(Node {
@@ -349,10 +363,9 @@ impl GraphBuilder {
                         },
                         position: Ixy { x: 0, y: 0 },
                         size: Uxy { x: 0, y: 0 },
-                        header: title.clone(),
+                        header,
                     });
 
-                    // Reassign matched leaf nodes to the group container
                     for node in child_nodes.iter_mut() {
                         if matched_child_ids.contains(&node.id)
                             && let NodeType::LeafNode {
@@ -363,18 +376,34 @@ impl GraphBuilder {
                             *container_id = group_id;
                         }
                     }
+                    claimed.extend(&matched_child_ids);
                 }
                 LeafRule::ByTag { tag_ids, title } => {
                     let matched_host_ids = ctx.get_host_ids_with_tags(tag_ids);
                     let matched_child_ids: HashSet<Uuid> = children
                         .iter()
-                        .filter(|child| matched_host_ids.contains(&child.host_id))
+                        .filter(|child| {
+                            !claimed.contains(&child.id)
+                                && matched_host_ids.contains(&child.host_id)
+                        })
                         .map(|c| c.id)
                         .collect();
 
                     if matched_child_ids.is_empty() {
                         continue;
                     }
+
+                    // Build header: "{title}: {tag1}, {tag2}" or just "{tag1}, {tag2}"
+                    let tag_names = tag_ids
+                        .iter()
+                        .filter_map(|id| ctx.entity_tags.iter().find(|t| t.id == *id))
+                        .map(|t| t.base.name.clone())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    let header = match title {
+                        Some(t) => Some(format!("{t}: {tag_names}")),
+                        None => Some(tag_names),
+                    };
 
                     let group_id = Uuid::new_v4();
                     child_nodes.push(Node {
@@ -386,7 +415,7 @@ impl GraphBuilder {
                         },
                         position: Ixy { x: 0, y: 0 },
                         size: Uxy { x: 0, y: 0 },
-                        header: title.clone(),
+                        header,
                     });
 
                     for node in child_nodes.iter_mut() {
@@ -399,6 +428,7 @@ impl GraphBuilder {
                             *container_id = group_id;
                         }
                     }
+                    claimed.extend(&matched_child_ids);
                 }
             }
         }

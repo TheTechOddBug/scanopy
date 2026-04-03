@@ -24,7 +24,7 @@
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { previewEdges, selectedNodes, topologyOptions } from '../../queries';
-	import { isExporting } from '../../interactions';
+	import { isExporting, expandedPortNodeIds } from '../../interactions';
 
 	// Import custom node/edge components
 	import ContainerNode from './ContainerNode.svelte';
@@ -161,10 +161,11 @@
 		collapseAllBundles();
 	}
 
-	// Load topology data when it changes, collapse state changes, or bundle state changes
+	// Load topology data when it changes, collapse state changes, bundle state changes, or port expansion changes
 	$: if (topology && (topology.edges || topology.nodes)) {
 		void $collapsedContainers;
 		void $expandedBundles;
+		void $expandedPortNodeIds;
 		void $topologyOptions.local.bundle_edges;
 		void loadTopologyData();
 	}
@@ -238,6 +239,7 @@
 				// Run ELK on structure/collapse changes, skip for edge-only re-renders
 				const opts = get(topologyOptions);
 				const sizeKey = `${(opts.request.hide_service_categories ?? []).join(',')}:${opts.request.hide_ports}`;
+				const expandedPorts = get(expandedPortNodeIds);
 				const structureKey =
 					getStructureKey(topology) +
 					':' +
@@ -245,7 +247,9 @@
 					':' +
 					sizeKey +
 					':' +
-					hiddenEdgeTypes.join(',');
+					hiddenEdgeTypes.join(',') +
+					':' +
+					Array.from(expandedPorts).sort().join(',');
 				const isNewStructure = sessionStructureKey !== structureKey;
 
 				// Helper: build SvelteFlow node array from topology nodes

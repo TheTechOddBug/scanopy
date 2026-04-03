@@ -22,6 +22,8 @@
 		searchHiddenNodeIds,
 		hoveredTag,
 		hoveredServiceCategory,
+		expandedPortNodeIds,
+		toggleExpandedPorts,
 		UNTAGGED_SENTINEL
 	} from '../../interactions';
 	import { createColorHelper } from '$lib/shared/utils/styling';
@@ -104,8 +106,8 @@
 
 	let effectiveWidth = $derived(width ? width : 0);
 
-	// Per-card toggle for expanding hidden open ports
-	let expandedOpenPorts = $state(false);
+	// Per-card toggle for expanding hidden open ports (lifted to topology-level store for re-layout)
+	let expandedOpenPorts = $derived($expandedPortNodeIds.has(id));
 
 	// Filter out services hidden by tag filter
 	let visibleServicesForHost = $derived(servicesForHost.filter((s) => !hiddenServices.has(s.id)));
@@ -408,7 +410,7 @@
 								class="nopan text-tertiary hover:text-secondary mb-2 mt-1 cursor-pointer text-xs underline"
 								onclick={(e) => {
 									e.stopPropagation();
-									expandedOpenPorts = false;
+									toggleExpandedPorts(id);
 								}}
 							>
 								{topology_hideOpenPorts()}
@@ -418,7 +420,7 @@
 								class="nopan bg-surface-secondary text-tertiary hover:text-secondary mb-2 mt-1 cursor-pointer rounded-full px-2 py-0.5 text-xs underline"
 								onclick={(e) => {
 									e.stopPropagation();
-									expandedOpenPorts = true;
+									toggleExpandedPorts(id);
 								}}
 							>
 								{topology_openPortsSummary({

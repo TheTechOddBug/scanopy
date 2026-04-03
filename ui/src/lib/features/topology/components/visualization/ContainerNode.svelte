@@ -258,21 +258,14 @@
 		class="relative"
 		style="{nodeStyle} opacity: {nodeOpacity}; transition: opacity 0.2s ease-in-out;"
 	>
-		{#if groupHeader || groupLabels.length > 0}
+		{#if isCollapsed}
+			<!-- Collapsed subgroup: compact inline header IS the entire representation -->
 			<div
-				class="text-secondary z-100 absolute -top-7 left-0 flex items-center gap-1 rounded-t px-2 py-0.5"
+				class="nopan text-secondary z-100 absolute left-2 top-1 flex cursor-pointer items-center gap-1 rounded px-2 py-1"
+				onclick={handleChevronClick}
+				onmousedown={(e) => e.stopPropagation()}
 			>
-				<button
-					class="nopan flex-shrink-0 cursor-pointer border-none bg-transparent p-0"
-					onclick={handleChevronClick}
-					onmousedown={(e) => e.stopPropagation()}
-				>
-					{#if isCollapsed}
-						<ChevronRight class="text-secondary h-3.5 w-3.5" />
-					{:else}
-						<ChevronDown class="text-secondary h-3.5 w-3.5" />
-					{/if}
-				</button>
+				<ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
 				{#if groupHeader}
 					<span class="text-tertiary whitespace-nowrap text-xs font-medium">
 						{groupHeader}{groupLabels.length > 0 ? ':' : ''}
@@ -281,21 +274,34 @@
 				{#each groupLabels as pill (pill.label)}
 					<Tag label={pill.label} color={pill.color} />
 				{/each}
+				<span class="text-tertiary whitespace-nowrap text-xs">
+					({topology_hostsCount({ count: childCount })})
+				</span>
 			</div>
-		{/if}
-
-		<div
-			class="rounded-lg border border-dashed border-gray-300 transition-all duration-200 dark:border-gray-600"
-			style="background: var(--color-topology-subgroup-bg); width: 100%; height: 100%; position: relative; overflow: hidden;"
-		>
-			{#if isCollapsed}
-				<div class="flex h-full w-full items-center justify-center">
-					<span class="text-tertiary text-xs font-medium">
-						{topology_hostsCount({ count: childCount })}
-					</span>
+		{:else}
+			{#if groupHeader || groupLabels.length > 0}
+				<div
+					class="nopan text-secondary z-100 absolute left-2 top-1 flex cursor-pointer items-center gap-1 rounded-t px-2 py-0.5"
+					onclick={handleChevronClick}
+					onmousedown={(e) => e.stopPropagation()}
+				>
+					<ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
+					{#if groupHeader}
+						<span class="text-tertiary whitespace-nowrap text-xs font-medium">
+							{groupHeader}{groupLabels.length > 0 ? ':' : ''}
+						</span>
+					{/if}
+					{#each groupLabels as pill (pill.label)}
+						<Tag label={pill.label} color={pill.color} />
+					{/each}
 				</div>
 			{/if}
-		</div>
+
+			<div
+				class="rounded-lg border border-dashed border-gray-300 transition-all duration-200 dark:border-gray-600"
+				style="background: var(--color-topology-subgroup-bg); width: 100%; height: 100%; position: relative; overflow: hidden;"
+			></div>
+		{/if}
 	</div>
 {:else if subnetRenderData}
 	<div
@@ -305,20 +311,16 @@
 		<!-- External label in upper left corner -->
 		{#if subnetRenderData.cidr || subnetRenderData.headerText}
 			<div
-				class="card text-secondary z-100 absolute -top-10 left-0 flex items-center gap-1 px-2 py-1 shadow-lg backdrop-blur-sm"
+				class="nopan card text-secondary z-100 absolute -top-10 left-0 flex cursor-pointer items-center gap-1 px-2 py-1 shadow-lg backdrop-blur-sm"
+				onclick={handleChevronClick}
+				onmousedown={(e) => e.stopPropagation()}
 			>
 				<!-- Collapse chevron -->
-				<button
-					class="nopan flex-shrink-0 cursor-pointer border-none bg-transparent p-0"
-					onclick={handleChevronClick}
-					onmousedown={(e) => e.stopPropagation()}
-				>
-					{#if isCollapsed}
-						<ChevronRight class="text-secondary h-4 w-4" />
-					{:else}
-						<ChevronDown class="text-secondary h-4 w-4" />
-					{/if}
-				</button>
+				{#if isCollapsed}
+					<ChevronRight class="text-secondary h-4 w-4 flex-shrink-0" />
+				{:else}
+					<ChevronDown class="text-secondary h-4 w-4 flex-shrink-0" />
+				{/if}
 
 				<!-- Icon -->
 				{#if subnetRenderData.IconComponent}

@@ -84,7 +84,7 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 const CONTAINER_PADDING = '[top=25,left=25,bottom=25,right=25]';
 
 /** Sub-group container padding (smaller header). */
-const SUBGROUP_PADDING = '[top=30,left=15,bottom=15,right=15]';
+const SUBGROUP_PADDING = '[top=30,left=20,bottom=20,right=20]';
 
 /** Container types that represent sub-groups within a subnet. */
 const SUBGROUP_CONTAINER_TYPES = new Set(['TagGroup', 'ServiceCategoryGroup']);
@@ -137,15 +137,17 @@ function buildElkGraph(input: ElkLayoutInput): {
 			const layerId = isSubgroup ? undefined : getLayerHint(node, input.topology);
 			const padding = isSubgroup ? SUBGROUP_PADDING : CONTAINER_PADDING;
 
+			const collapsedWidth = isSubgroup ? 120 : 200;
+			const collapsedHeight = isSubgroup ? 36 : 80;
 			const elkNode: ElkNode = isCollapsed
 				? {
 						id: node.id,
-						width: 200,
-						height: 80,
+						width: collapsedWidth,
+						height: collapsedHeight,
 						children: [],
 						layoutOptions: {
 							'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-							'elk.nodeSize.minimum': '(200,80)',
+							'elk.nodeSize.minimum': `(${collapsedWidth},${collapsedHeight})`,
 							...(layerId !== undefined && {
 								'elk.layered.layering.layerId': String(layerId)
 							})
@@ -159,7 +161,7 @@ function buildElkGraph(input: ElkLayoutInput): {
 							'elk.box.packingMode': 'SIMPLE',
 							'elk.padding': padding,
 							'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-							'elk.spacing.nodeNode': '20',
+							'elk.spacing.nodeNode': '30',
 							...(layerId !== undefined && {
 								'elk.layered.layering.layerId': String(layerId)
 							})

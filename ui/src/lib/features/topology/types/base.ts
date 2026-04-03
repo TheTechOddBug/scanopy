@@ -25,6 +25,7 @@ export interface NodeRenderData {
 	showServices: boolean;
 	isVirtualized: boolean;
 	services: Service[];
+	hiddenOpenPorts: Service[];
 	interface_id: string;
 }
 

@@ -229,9 +229,7 @@ async fn create_topology(
     let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
         service.get_entity_data(topology.base.network_id).await?;
 
-    let services = service
-        .get_service_data(topology.base.network_id, &topology.base.options)
-        .await?;
+    let services = service.get_service_data(topology.base.network_id).await?;
 
     let entity_tags = service.get_entity_tags(&hosts, &services, &subnets).await?;
 
@@ -332,9 +330,7 @@ async fn refresh(
     let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
         service.get_entity_data(request.network_id).await?;
 
-    let services = service
-        .get_service_data(request.network_id, &topology.base.options)
-        .await?;
+    let services = service.get_service_data(request.network_id).await?;
 
     let entity_tags = service.get_entity_tags(&hosts, &services, &subnets).await?;
 
@@ -400,9 +396,7 @@ async fn rebuild(
     let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
         service.get_entity_data(request.network_id).await?;
 
-    let services = service
-        .get_service_data(request.network_id, &topology.base.options)
-        .await?;
+    let services = service.get_service_data(request.network_id).await?;
 
     let entity_tags = service.get_entity_tags(&hosts, &services, &subnets).await?;
 

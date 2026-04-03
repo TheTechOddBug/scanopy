@@ -22,34 +22,17 @@ pub enum GroupingRule {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NodeFilter {
-    HideServiceCategories(Vec<ServiceCategory>),
-}
-
 #[derive(Debug, Clone)]
 pub struct GroupingConfig {
     pub primary: Vec<GroupingRule>,
     pub cross_cutting: Vec<GroupingRule>,
-    pub filters: Vec<NodeFilter>,
 }
 
 impl GroupingConfig {
     pub fn from_request_options(options: &TopologyRequestOptions) -> Self {
-        let primary = options.grouping_rules.clone();
-
-        let filters = if !options.hide_service_categories.is_empty() {
-            vec![NodeFilter::HideServiceCategories(
-                options.hide_service_categories.clone(),
-            )]
-        } else {
-            vec![]
-        };
-
         GroupingConfig {
-            primary,
+            primary: options.grouping_rules.clone(),
             cross_cutting: vec![],
-            filters,
         }
     }
 
@@ -73,7 +56,6 @@ mod tests {
         assert!(config.should_group_docker_bridges());
         assert_eq!(config.primary.len(), 3); // BySubnet + ByVirtualizingService + ByServiceCategory
         assert_eq!(config.cross_cutting.len(), 0);
-        assert_eq!(config.filters.len(), 1); // HideServiceCategories(OpenPorts)
     }
 
     #[test]
@@ -120,16 +102,6 @@ mod tests {
             _ => false,
         });
         assert!(has_category_rule);
-    }
-
-    #[test]
-    fn test_no_filters_when_empty() {
-        let options = TopologyRequestOptions {
-            hide_service_categories: vec![],
-            ..Default::default()
-        };
-        let config = GroupingConfig::from_request_options(&options);
-        assert!(config.filters.is_empty());
     }
 
     #[test]

@@ -114,6 +114,7 @@ impl CrudService<Topology> for TopologyService {
             ports: &ports,
             bindings: &bindings,
             if_entries: &if_entries,
+            entity_tags: &entity_tags,
             old_edges: &[],
             old_nodes: &[],
             options: &topology.base.options,
@@ -169,6 +170,7 @@ pub struct BuildGraphParams<'a> {
     pub ports: &'a [Port],
     pub bindings: &'a [Binding],
     pub if_entries: &'a [IfEntry],
+    pub entity_tags: &'a [Tag],
     pub old_nodes: &'a [Node],
     pub old_edges: &'a [Edge],
 }
@@ -354,6 +356,7 @@ impl TopologyService {
             ports: &ports,
             bindings: &bindings,
             if_entries: &if_entries,
+            entity_tags: &entity_tags,
             old_nodes: &[],
             old_edges: &[],
         });
@@ -388,6 +391,7 @@ impl TopologyService {
             ports,
             bindings,
             if_entries,
+            entity_tags,
             old_edges,
             old_nodes,
             options,
@@ -395,7 +399,16 @@ impl TopologyService {
 
         // Create context to avoid parameter passing
         let ctx = TopologyContext::new(
-            hosts, interfaces, subnets, services, groups, ports, bindings, if_entries, options,
+            hosts,
+            interfaces,
+            subnets,
+            services,
+            groups,
+            ports,
+            bindings,
+            if_entries,
+            entity_tags,
+            options,
         );
 
         // Build grouping config from request options

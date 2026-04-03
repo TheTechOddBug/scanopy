@@ -1108,6 +1108,7 @@
 	"topology_containerGrouping": "Container grouping",
 	"topology_groupBy": "Group by",
 	"topology_leafGrouping": "Leaf grouping",
+	"topology_leafGroupingHelp": "Rules are applied top to bottom. If a node matches multiple rules, the first match takes priority.",
 	"topology_groupRuleTitlePlaceholder": "Optional title",
 	"topology_hideEdgeTypes": "Edge Types",
 	"topology_hidePorts": "Hide Ports",

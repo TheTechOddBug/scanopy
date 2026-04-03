@@ -245,6 +245,7 @@ async fn create_topology(
         ports: &ports,
         bindings: &bindings,
         if_entries: &if_entries,
+        entity_tags: &entity_tags,
         old_edges: &[],
         old_nodes: &[],
     });
@@ -416,6 +417,7 @@ async fn rebuild(
         ports: &ports,
         bindings: &bindings,
         if_entries: &if_entries,
+        entity_tags: &entity_tags,
         old_nodes: &request.nodes,
         old_edges: &request.edges,
     });

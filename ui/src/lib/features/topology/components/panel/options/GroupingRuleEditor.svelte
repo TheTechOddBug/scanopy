@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Edit, Check } from 'lucide-svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import { SimpleOptionDisplay } from '$lib/shared/components/forms/selection/display/SimpleOptionDisplay';
 	import FilterGroup from './FilterGroup.svelte';
@@ -20,6 +21,7 @@
 		topology_leafGrouping,
 		topology_addContainerRule,
 		topology_addLeafRule,
+		topology_leafGroupingHelp,
 		topology_groupRuleTitlePlaceholder
 	} from '$lib/paraglide/messages';
 
@@ -41,8 +43,20 @@
 	// Leaf rules from options
 	let leafRules = $derived(($topologyOptions.request.leaf_rules as LeafRule[] | undefined) ?? []);
 
-	// Editing state for leaf rule expansion
-	let editingLeafIndex = $state<number | null>(null);
+	// Stable ID tracking for leaf rules
+	let nextLeafId = $state(0);
+	let leafStableIds = $state<number[]>([]);
+
+	// Initialize stable IDs from current leaf rules on first render
+	$effect(() => {
+		if (leafStableIds.length === 0 && leafRules.length > 0) {
+			leafStableIds = leafRules.map((_, i) => i);
+			nextLeafId = leafRules.length;
+		}
+	});
+
+	// Editing state tracked by stable ID
+	let editingLeafId = $state<number | null>(null);
 
 	// Metadata lookups
 	const containerRuleMeta = Object.fromEntries(containerRuleTypes.map((m) => [m.id, m]));
@@ -75,7 +89,6 @@
 
 	// --- Container Rules ---
 
-	// Options for container add dropdown (only user-editable rules not already present)
 	let containerAddOptions = $derived.by(() => {
 		return containerRuleTypes
 			.filter(
@@ -135,17 +148,27 @@
 	);
 
 	const leafRuleDisplayComponent = {
-		getId: (item: LeafRule) => {
-			if ('ByServiceCategory' in item)
-				return `ByServiceCategory-${item.ByServiceCategory.categories.join(',')}`;
-			if ('ByTag' in item) return `ByTag-${item.ByTag.tag_ids.join(',')}`;
-			return 'unknown';
+		getId: (_item: LeafRule, index?: number) => {
+			// Use stable IDs to prevent DOM destruction on data changes
+			return `leaf-${leafStableIds[index ?? 0] ?? index}`;
 		},
 		getLabel: (item: LeafRule) => {
 			if ('ByServiceCategory' in item) return 'ByServiceCategory';
 			return 'ByTag';
 		}
 	};
+
+	function getLeafRuleLabel(item: LeafRule): string {
+		const title =
+			'ByServiceCategory' in item
+				? item.ByServiceCategory.title
+				: 'ByTag' in item
+					? item.ByTag.title
+					: null;
+		const typeName =
+			leafRuleMeta['ByServiceCategory' in item ? 'ByServiceCategory' : 'ByTag']?.name ?? '';
+		return title ?? typeName;
+	}
 
 	function updateLeafRules(newRules: LeafRule[]) {
 		topologyOptions.update((opts) => {
@@ -166,34 +189,50 @@
 			default:
 				return;
 		}
-		const newRules = [...leafRules, newRule];
-		updateLeafRules(newRules);
-		editingLeafIndex = newRules.length - 1;
+		const newId = nextLeafId++;
+		leafStableIds = [...leafStableIds, newId];
+		updateLeafRules([...leafRules, newRule]);
+		editingLeafId = newId;
 	}
 
 	function handleLeafRemove(index: number) {
-		const newRules = leafRules.filter((_, i) => i !== index);
-		updateLeafRules(newRules);
-		if (editingLeafIndex === index) editingLeafIndex = null;
-		else if (editingLeafIndex !== null && editingLeafIndex > index) editingLeafIndex--;
+		const removedId = leafStableIds[index];
+		leafStableIds = leafStableIds.filter((_, i) => i !== index);
+		updateLeafRules(leafRules.filter((_, i) => i !== index));
+		if (editingLeafId === removedId) editingLeafId = null;
 	}
 
 	function handleLeafMoveUp(fromIndex: number) {
 		if (fromIndex <= 0) return;
 		const newRules = [...leafRules];
 		[newRules[fromIndex - 1], newRules[fromIndex]] = [newRules[fromIndex], newRules[fromIndex - 1]];
+		const newIds = [...leafStableIds];
+		[newIds[fromIndex - 1], newIds[fromIndex]] = [newIds[fromIndex], newIds[fromIndex - 1]];
+		leafStableIds = newIds;
 		updateLeafRules(newRules);
-		if (editingLeafIndex === fromIndex) editingLeafIndex = fromIndex - 1;
-		else if (editingLeafIndex === fromIndex - 1) editingLeafIndex = fromIndex;
 	}
 
 	function handleLeafMoveDown(fromIndex: number) {
 		if (fromIndex >= leafRules.length - 1) return;
 		const newRules = [...leafRules];
 		[newRules[fromIndex], newRules[fromIndex + 1]] = [newRules[fromIndex + 1], newRules[fromIndex]];
+		const newIds = [...leafStableIds];
+		[newIds[fromIndex], newIds[fromIndex + 1]] = [newIds[fromIndex + 1], newIds[fromIndex]];
+		leafStableIds = newIds;
 		updateLeafRules(newRules);
-		if (editingLeafIndex === fromIndex) editingLeafIndex = fromIndex + 1;
-		else if (editingLeafIndex === fromIndex + 1) editingLeafIndex = fromIndex;
+	}
+
+	function handleLeafEdit(_item: LeafRule, index: number) {
+		const stableId = leafStableIds[index];
+		editingLeafId = editingLeafId === stableId ? null : stableId;
+	}
+
+	function isLeafEditing(index: number): boolean {
+		return leafStableIds[index] === editingLeafId;
+	}
+
+	function getLeafEditIcon(_item: LeafRule, index: number) {
+		return isLeafEditing(index) ? Check : Edit;
 	}
 
 	function handleLeafTitleChange(index: number, title: string | null) {
@@ -228,10 +267,6 @@
 			updateLeafRules(newRules);
 		}
 	}
-
-	function handleLeafRuleClick(_item: LeafRule, index: number) {
-		editingLeafIndex = editingLeafIndex === index ? null : index;
-	}
 </script>
 
 <!-- Container grouping section -->
@@ -247,6 +282,7 @@
 		allowDuplicates={false}
 		allowItemEdit={() => false}
 		allowItemRemove={isContainerRuleEditable}
+		allowItemReorder={isContainerRuleEditable}
 		onAdd={handleContainerAdd}
 		onRemove={handleContainerRemove}
 		onMoveUp={handleContainerMoveUp}
@@ -264,6 +300,7 @@
 <!-- Leaf grouping section -->
 <ListManager
 	label={topology_leafGrouping()}
+	helpText={topology_leafGroupingHelp()}
 	placeholder={topology_addLeafRule()}
 	items={leafRules}
 	options={leafAddOptions}
@@ -271,24 +308,18 @@
 	itemDisplayComponent={leafRuleDisplayComponent}
 	allowReorder={true}
 	allowDuplicates={true}
+	allowItemEdit={() => true}
+	editIcon={getLeafEditIcon}
 	onAdd={handleLeafAdd}
 	onRemove={handleLeafRemove}
 	onMoveUp={handleLeafMoveUp}
 	onMoveDown={handleLeafMoveDown}
-	onClick={handleLeafRuleClick}
+	onEdit={handleLeafEdit}
 >
 	{#snippet itemSnippet({ item, index })}
-		<GroupingRuleItem
-			label={('ByServiceCategory' in item
-				? item.ByServiceCategory.title
-				: 'ByTag' in item
-					? item.ByTag.title
-					: null) ??
-				leafRuleMeta['ByServiceCategory' in item ? 'ByServiceCategory' : 'ByTag']?.name ??
-				''}
-		/>
+		<GroupingRuleItem label={getLeafRuleLabel(item)} />
 		<!-- Expanded edit state -->
-		{#if editingLeafIndex === index}
+		{#if isLeafEditing(index)}
 			<div class="mt-2 space-y-3 border-t pt-2">
 				<!-- Title input -->
 				<input

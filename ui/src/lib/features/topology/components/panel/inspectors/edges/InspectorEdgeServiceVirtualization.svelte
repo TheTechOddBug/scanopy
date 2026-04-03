@@ -19,11 +19,10 @@
 	import OptionToggle from '../../options/OptionToggle.svelte';
 	import OptionsCard from '../../options/OptionsCard.svelte';
 	import {
-		topology_groupDockerBridges,
-		topology_groupDockerBridgesHelp,
 		topology_hideVmOnContainer,
 		topology_hideVmOnContainerHelp
 	} from '$lib/paraglide/messages';
+	import { getGroupingRuleType } from '../../../../types/grouping';
 
 	let { edge, containerizingServiceId }: { edge: Edge; containerizingServiceId: string } = $props();
 
@@ -50,7 +49,11 @@
 	);
 
 	// Target can be either a subnet (grouped) or a service (not grouped)
-	let isGrouped = $derived($topologyOptions.request.group_docker_bridges_by_host);
+	let isGrouped = $derived(
+		($topologyOptions.request.grouping_rules ?? []).some(
+			(r) => getGroupingRuleType(r) === 'ByVirtualizingService'
+		)
+	);
 	// Get containerized services - all if grouped, or just the one in edge.target if not
 	let containerizedServices = $derived(
 		topology
@@ -110,14 +113,6 @@
 <div class="space-y-3">
 	{#if !editState.isReadonly}
 		<OptionsCard>
-			<OptionToggle
-				label={topology_groupDockerBridges()}
-				helpText={topology_groupDockerBridgesHelp()}
-				path="request"
-				optionKey="group_docker_bridges_by_host"
-				disabled={!editState.isEditable}
-				disabledReason={getOptionDisabledTooltip(editState.disabledReason)}
-			/>
 			<OptionToggle
 				label={topology_hideVmOnContainer()}
 				helpText={topology_hideVmOnContainerHelp()}

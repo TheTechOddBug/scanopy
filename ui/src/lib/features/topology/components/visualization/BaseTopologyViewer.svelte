@@ -264,9 +264,13 @@
 				const liveNodes = getNodes();
 				const currentPositions = new Map(liveNodes.map((n) => [n.id, n.position]));
 				const currentSizes = new Map(
-					liveNodes.map((n) => [
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- @xyflow Node has runtime .computed not in type defs
+					(liveNodes as Record<string, any>[]).map((n) => [
 						n.id,
-						{ width: n.computed?.width ?? n.width, height: n.computed?.height ?? n.height }
+						{
+							width: n.computed?.width ?? n.width,
+							height: n.computed?.height ?? n.height
+						}
 					])
 				);
 

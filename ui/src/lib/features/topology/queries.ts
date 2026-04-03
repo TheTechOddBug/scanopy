@@ -46,7 +46,6 @@ export const defaultGroupingRules: GroupingRule[] = [
 
 export const defaultTopologyOptions: TopologyOptions = {
 	local: {
-		left_zone_title: '', // Deprecated — kept for generated type compat
 		hide_edge_types: [
 			'HostVirtualization',
 			'ServiceVirtualization',
@@ -65,15 +64,12 @@ export const defaultTopologyOptions: TopologyOptions = {
 		show_minimap: true
 	},
 	request: {
-		group_docker_bridges_by_host: true, // Deprecated — replaced by grouping_rules
 		hide_ports: false,
 		hide_vm_title_on_docker_container: false,
-		show_gateway_in_left_zone: false, // Deprecated — replaced by grouping_rules
-		left_zone_service_categories: [], // Deprecated — replaced by grouping_rules
 		hide_service_categories: ['OpenPorts'],
 		grouping_rules: defaultGroupingRules
 	}
-} as TopologyOptions; // Type assertion: grouping_rules not yet in generated types
+};
 
 /**
  * Query hook for fetching all topologies

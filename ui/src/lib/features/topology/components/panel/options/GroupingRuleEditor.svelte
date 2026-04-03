@@ -13,6 +13,8 @@
 	import { getTopologyEditState } from '../../../state';
 	import { useTopologiesQuery, selectedTopologyId, autoRebuild } from '../../../queries';
 	import { serviceDefinitions } from '$lib/shared/stores/metadata';
+	import type { components } from '$lib/api/schema';
+	type ServiceCategory = components['schemas']['ServiceCategory'];
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import type { Color } from '$lib/shared/utils/styling';
 	import {
@@ -154,12 +156,12 @@
 		}
 	}
 
-	function toggleCategory(index: number, category: string) {
+	function toggleCategory(index: number, category: ServiceCategory) {
 		const rule = editableRules[index];
 		if ('ByServiceCategory' in rule) {
 			const current = rule.ByServiceCategory.categories;
 			const idx = current.indexOf(category);
-			const newCategories =
+			const newCategories: ServiceCategory[] =
 				idx === -1 ? [...current, category] : current.filter((c) => c !== category);
 			const newRules = [...editableRules];
 			newRules[index] = {
@@ -221,7 +223,7 @@
 						items={serviceCategoriesWithColors}
 						selectedValues={item.ByServiceCategory.categories}
 						mode="include"
-						onToggle={(cat) => toggleCategory(index, cat)}
+						onToggle={(cat) => toggleCategory(index, cat as ServiceCategory)}
 						disabled={!editState.isEditable}
 					/>
 				{/if}

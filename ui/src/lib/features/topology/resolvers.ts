@@ -2,11 +2,8 @@ import type { components } from '$lib/api/schema';
 import type { Topology, TopologyNode } from './types/base';
 
 // Type aliases for the discriminated union variants
-type ContainerType = components['schemas']['ContainerType']; // 'Subnet'
-type LeafEntityType = components['schemas']['LeafEntityType']; // 'Interface'
-
-// Extended container types (stub until generated types include them)
-type ExtendedContainerType = ContainerType | 'TagGroup' | 'ServiceCategoryGroup';
+type ContainerType = components['schemas']['ContainerType'];
+type LeafEntityType = components['schemas']['LeafEntityType'];
 
 // Resolver return types
 export interface LeafRenderContext {
@@ -49,7 +46,7 @@ const leafResolvers: Record<
 };
 
 const containerResolvers: Record<
-	ExtendedContainerType,
+	ContainerType,
 	(nodeId: string, node: TopologyNode, topology: Topology) => ContainerRenderContext
 > = {
 	Subnet: (nodeId, node, topology) => {
@@ -85,7 +82,7 @@ export function resolveContainerNode(
 ): ContainerRenderContext {
 	if (node.node_type !== 'ContainerNode')
 		throw new Error(`Expected ContainerNode, got ${node.node_type}`);
-	const containerType = (node.container_type ?? 'Subnet') as ExtendedContainerType;
+	const containerType = (node.container_type ?? 'Subnet') as ContainerType;
 	const resolver = containerResolvers[containerType];
 	if (!resolver) return containerResolvers['Subnet'](nodeId, node, topology);
 	return resolver(nodeId, node, topology);

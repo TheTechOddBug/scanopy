@@ -25,8 +25,10 @@ export interface ElkLayoutResult {
 	edgeHandles: Map<string, EdgeHandles>;
 }
 
+// @ts-expect-error -- elkjs module import type works at runtime but svelte-check disagrees
 let elkPromise: Promise<import('elkjs')['default']> | null = null;
 
+// @ts-expect-error -- elkjs module import type works at runtime but svelte-check disagrees
 async function getElk(): Promise<import('elkjs/lib/elk-api')['default']> {
 	if (!elkPromise) {
 		elkPromise = import('elkjs/lib/elk.bundled.js').then((mod) => {

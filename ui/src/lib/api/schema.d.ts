@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-02T23:02:19.949214Z",
-             *       "id": "4b8e6266-822e-4279-8b86-2346b8120d43",
+             *       "created_at": "2026-04-03T11:30:11.836318Z",
+             *       "id": "95b117c0-f5ba-43fe-9f6d-559080361beb",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-02T23:02:19.949214Z"
+             *       "updated_at": "2026-04-03T11:30:11.836318Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3153,14 +3153,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-02T23:02:19.930990Z",
-             *               "id": "f7e254f2-f2ba-4f1b-a05d-3e4d2a9c54f9",
+             *               "created_at": "2026-04-03T11:30:11.820798Z",
+             *               "id": "f68a4187-31d0-4217-ab19-c8286bee97fa",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-02T23:02:19.930990Z"
+             *               "updated_at": "2026-04-03T11:30:11.820798Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3169,7 +3169,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Bamboo",
+             *           "service_definition": "Glances",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3425,14 +3425,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-02T23:02:19.943821Z",
-             *           "id": "1f47d65f-d721-4761-a7d3-eb4f0b168d78",
+             *           "created_at": "2026-04-03T11:30:11.832038Z",
+             *           "id": "d18d6c44-0d70-4292-a9ba-83f1fe8d9a4e",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-02T23:02:19.943821Z"
+             *           "updated_at": "2026-04-03T11:30:11.832038Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3441,7 +3441,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Bamboo",
+             *       "service_definition": "Glances",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3768,14 +3768,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-02T23:02:19.931183Z",
-         *       "id": "de6be5bd-352c-48f9-897a-cb7f06a7e2cb",
+         *       "created_at": "2026-04-03T11:30:11.821013Z",
+         *       "id": "42e39403-70f2-4021-b861-b093f868c7cd",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-02T23:02:19.931183Z"
+         *       "updated_at": "2026-04-03T11:30:11.821013Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3895,7 +3895,7 @@ export interface components {
         /** @enum {string} */
         Color: "Pink" | "Rose" | "Red" | "Orange" | "Green" | "Emerald" | "Teal" | "Cyan" | "Blue" | "Indigo" | "Purple" | "Gray" | "Yellow";
         /** @enum {string} */
-        ContainerType: "Subnet";
+        ContainerType: "Subnet" | "TagGroup" | "ServiceCategoryGroup";
         /**
          * @description Input for creating a binding with a service.
          *     `service_id` and `network_id` are assigned by the server after the service is created.
@@ -3960,7 +3960,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Bamboo",
+         *           "service_definition": "Glances",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4597,6 +4597,25 @@ export interface components {
         GroupOrderField: "created_at" | "name" | "group_type" | "updated_at" | "network_id";
         /** @enum {string} */
         GroupType: "RequestPath" | "HubAndSpoke";
+        GroupingRule: {
+            BySubnet: {
+                title?: string | null;
+            };
+        } | {
+            ByServiceCategory: {
+                categories: components["schemas"]["ServiceCategory"][];
+                title?: string | null;
+            };
+        } | {
+            ByVirtualizingService: {
+                title?: string | null;
+            };
+        } | {
+            ByTag: {
+                tag_ids: string[];
+                title?: string | null;
+            };
+        };
         /**
          * @example {
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -4740,14 +4759,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-02T23:02:19.930705Z",
-         *               "id": "8229013b-429d-4f17-a551-c00c70f141b4",
+         *               "created_at": "2026-04-03T11:30:11.820498Z",
+         *               "id": "acc4010d-a4ef-44b9-9f04-42b85a1fc20b",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-02T23:02:19.930705Z"
+         *               "updated_at": "2026-04-03T11:30:11.820498Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4756,7 +4775,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Bamboo",
+         *           "service_definition": "Glances",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5209,7 +5228,6 @@ export interface components {
         };
         NodeType: {
             container_type?: components["schemas"]["ContainerType"];
-            infra_width: number;
             /**
              * Format: int32
              * @description Sugiyama layer assignment for compound layout (from SubnetType::vertical_order)
@@ -5217,6 +5235,8 @@ export interface components {
             layer_hint?: number | null;
             /** @enum {string} */
             node_type: "ContainerNode";
+            /** Format: uuid */
+            parent_container_id?: string | null;
         } | {
             /** Format: uuid */
             container_id?: string;
@@ -5224,7 +5244,6 @@ export interface components {
             host_id: string;
             /** Format: uuid */
             interface_id?: string | null;
-            is_infra: boolean;
             leaf_type?: components["schemas"]["LeafEntityType"];
             /** @enum {string} */
             node_type: "LeafNode";
@@ -5817,14 +5836,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-02T23:02:19.931117Z",
-         *           "id": "8063e408-6f6b-4529-ba25-ac3b6014d08a",
+         *           "created_at": "2026-04-03T11:30:11.820934Z",
+         *           "id": "eb5b0f88-bc57-4504-9bbe-cc07755447b5",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-02T23:02:19.931117Z"
+         *           "updated_at": "2026-04-03T11:30:11.820934Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5833,7 +5852,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Bamboo",
+         *       "service_definition": "Glances",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6134,7 +6153,6 @@ export interface components {
             bundle_edges?: boolean;
             hide_edge_types: components["schemas"]["EdgeTypeDiscriminants"][];
             hide_resize_handles: boolean;
-            left_zone_title: string;
             no_fade_edges: boolean;
             show_minimap?: boolean;
             tag_filter?: components["schemas"]["TopologyTagFilter"];
@@ -6235,14 +6253,12 @@ export interface components {
             options: components["schemas"]["TopologyOptions"];
         };
         TopologyRequestOptions: {
-            group_docker_bridges_by_host: boolean;
+            grouping_rules?: components["schemas"]["GroupingRule"][];
             hide_ports: boolean;
             hide_service_categories: components["schemas"]["ServiceCategory"][];
             hide_vm_title_on_docker_container: boolean;
             layout_mode?: components["schemas"]["LayoutMode"];
-            left_zone_service_categories: components["schemas"]["ServiceCategory"][];
             perspective?: components["schemas"]["TopologyPerspective"];
-            show_gateway_in_left_zone: boolean;
         };
         /** @description Filter settings for hiding entities by tag in topology visualization. */
         TopologyTagFilter: {

@@ -1,11 +1,6 @@
-// Stub types matching the backend GroupingRule shape.
-// These will be replaced by generated types after `make generate-types` runs post-merge.
+import type { components } from '$lib/api/schema';
 
-export type GroupingRule =
-	| { BySubnet: { title: string | null } }
-	| { ByServiceCategory: { categories: string[]; title: string | null } }
-	| { ByVirtualizingService: { title: string | null } }
-	| { ByTag: { tag_ids: string[]; title: string | null } };
+export type GroupingRule = components['schemas']['GroupingRule'];
 
 export type GroupingRuleType = 'BySubnet' | 'ByServiceCategory' | 'ByVirtualizingService' | 'ByTag';
 
@@ -16,7 +11,7 @@ export function getGroupingRuleType(rule: GroupingRule): GroupingRuleType {
 	return 'ByTag';
 }
 
-export function getGroupingRuleTitle(rule: GroupingRule): string | null {
+export function getGroupingRuleTitle(rule: GroupingRule): string | null | undefined {
 	if ('BySubnet' in rule) return rule.BySubnet.title;
 	if ('ByServiceCategory' in rule) return rule.ByServiceCategory.title;
 	if ('ByVirtualizingService' in rule) return rule.ByVirtualizingService.title;

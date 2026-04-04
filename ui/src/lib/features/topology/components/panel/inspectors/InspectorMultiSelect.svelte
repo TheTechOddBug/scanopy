@@ -45,9 +45,9 @@
 		common_clearSelection,
 		common_tags,
 		dependencies_createDependency,
-		groups_serviceBindings,
-		groups_serviceBindingsInfoTitle,
-		groups_serviceBindingsInfoBody,
+		dependencies_serviceBindings,
+		dependencies_serviceBindingsInfoTitle,
+		dependencies_serviceBindingsInfoBody,
 		topology_multiSelectPreviewEdge,
 		topology_focusSelection
 	} from '$lib/paraglide/messages';
@@ -538,10 +538,10 @@
 
 				<!-- Binding selection -->
 				<div class="space-y-2">
-					<span class="text-secondary block text-xs font-medium">{groups_serviceBindings()}</span>
+					<span class="text-secondary block text-xs font-medium">{dependencies_serviceBindings()}</span>
 					<InlineInfo
-						title={groups_serviceBindingsInfoTitle()}
-						body={groups_serviceBindingsInfoBody()}
+						title={dependencies_serviceBindingsInfoTitle()}
+						body={dependencies_serviceBindingsInfoBody()}
 						dismissableKey="group-bindings-info"
 					/>
 					{#each interfaceBindingChoices as choice (choice.interfaceId)}

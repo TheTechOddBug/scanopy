@@ -336,7 +336,8 @@
 								? {
 										...node,
 										isCollapsed: true,
-										childCount: layoutGraph?.getChildCount(node.id) ?? 0
+										childCount: layoutGraph?.getChildCount(node.id) ?? 0,
+										subgroupSummaries: layoutGraph?.getSubgroupSummaries(node.id) ?? []
 									}
 								: node
 						};

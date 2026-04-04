@@ -58,7 +58,13 @@ export class LayoutContainer {
 	}
 
 	get collapsedSize(): { width: number; height: number } {
-		return this.isSubgroup ? { width: 250, height: 40 } : { width: 200, height: 80 };
+		if (this.isSubgroup) return { width: 250, height: 40 };
+		// Root containers: grow height to fit subgroup summary lines
+		const subgroupCount = this.childContainers.length;
+		const baseHeight = 80;
+		const lineHeight = 24; // per subgroup summary line
+		const height = subgroupCount > 0 ? baseHeight + subgroupCount * lineHeight : baseHeight;
+		return { width: 250, height };
 	}
 
 	get size(): { width: number; height: number } {
@@ -81,10 +87,12 @@ export class LayoutContainer {
 
 	/**
 	 * Reflow children within this container after a size change.
-	 * Groups children by x-position (column) and restacks vertically.
+	 * If changedChildId is provided, that child keeps its position and only
+	 * siblings below it shift by the height delta (stable local adjustment).
+	 * Otherwise, restacks all children from their current positions.
 	 * Returns the height delta so callers can propagate.
 	 */
-	reflowChildren(): number {
+	reflowChildren(changedChildId?: string): number {
 		const children = this.allChildren;
 		if (children.length === 0) return 0;
 
@@ -101,16 +109,36 @@ export class LayoutContainer {
 			columns.get(x)!.push({ child, y: pos.y, height });
 		}
 
-		// Restack each column
+		if (changedChildId) {
+			// Stable reflow: find the changed child, shift only siblings below it
+			for (const [, colNodes] of columns) {
+				colNodes.sort((a, b) => a.y - b.y);
+				const changedIdx = colNodes.findIndex((n) => n.child.id === changedChildId);
+				if (changedIdx === -1) continue;
+
+				// Restack from the changed node downward
+				let y = colNodes[changedIdx].child.position.y + colNodes[changedIdx].height + CHILD_SPACING;
+				for (let i = changedIdx + 1; i < colNodes.length; i++) {
+					colNodes[i].child.position = { x: colNodes[i].child.position.x, y };
+					y += colNodes[i].height + CHILD_SPACING;
+				}
+			}
+		} else {
+			// Full reflow: restack each column from the first node's position
+			for (const [, colNodes] of columns) {
+				colNodes.sort((a, b) => a.y - b.y);
+				const startY = colNodes[0].y;
+				let y = startY;
+				for (const entry of colNodes) {
+					entry.child.position = { x: entry.child.position.x, y };
+					y += entry.height + CHILD_SPACING;
+				}
+			}
+		}
+
+		// Recompute container height from all columns
 		let maxColumnBottom = 0;
 		for (const [, colNodes] of columns) {
-			colNodes.sort((a, b) => a.y - b.y);
-			const startY = colNodes[0].y;
-			let y = startY;
-			for (const entry of colNodes) {
-				entry.child.position = { x: entry.child.position.x, y };
-				y += entry.height + CHILD_SPACING;
-			}
 			const last = colNodes[colNodes.length - 1];
 			const bottom = last.child.position.y + last.height;
 			if (bottom > maxColumnBottom) maxColumnBottom = bottom;
@@ -239,10 +267,9 @@ export class LayoutGraph {
 			}
 		}
 
-		// Reflow parent if this is a subgroup
+		// Reflow parent if this is a subgroup — keep this container in place, shift siblings
 		if (container.parent && !container.parent.collapsed) {
-			const delta = container.parent.reflowChildren();
-			// Propagate parent resize if needed
+			const delta = container.parent.reflowChildren(containerId);
 			if (delta !== 0 && container.parent.parent) {
 				this.propagateResize(container.parent);
 			}
@@ -270,9 +297,9 @@ export class LayoutGraph {
 			}
 		}
 
-		// Reflow parent if this is a subgroup
+		// Reflow parent if this is a subgroup — keep this container in place, shift siblings
 		if (container.parent && !container.parent.collapsed) {
-			const delta = container.parent.reflowChildren();
+			const delta = container.parent.reflowChildren(containerId);
 			if (delta !== 0 && container.parent.parent) {
 				this.propagateResize(container.parent);
 			}
@@ -290,10 +317,10 @@ export class LayoutGraph {
 		if (!element) return;
 		element.size = { ...newSize };
 
-		// Reflow the element's container
+		// Reflow the element's container — keep this element in place, shift siblings below
 		const container = element.container;
 		if (container && !container.collapsed) {
-			const delta = container.reflowChildren();
+			const delta = container.reflowChildren(elementId);
 			if (delta !== 0) {
 				this.propagateResize(container);
 			}
@@ -334,6 +361,18 @@ export class LayoutGraph {
 			}
 			return true;
 		});
+	}
+
+	/**
+	 * Get subgroup summaries for a container (for collapsed subnet display).
+	 */
+	getSubgroupSummaries(containerId: string): { groupId: string; childCount: number }[] {
+		const container = this.containers.get(containerId);
+		if (!container) return [];
+		return container.childContainers.map((child) => ({
+			groupId: child.id,
+			childCount: child.childCount
+		}));
 	}
 
 	/**

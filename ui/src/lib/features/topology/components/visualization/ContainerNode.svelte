@@ -142,6 +142,12 @@
 
 	let isCollapsed = $derived(collapsedNodes.has(id));
 	let childCount = $derived(((data as Record<string, unknown>)?.childCount as number) ?? 0);
+	let subgroupSummaries = $derived(
+		((data as Record<string, unknown>)?.subgroupSummaries as Array<{
+			groupId: string;
+			childCount: number;
+		}>) ?? []
+	);
 
 	let nodeStyle = $derived(`width: ${width}px; height: ${height}px;`);
 
@@ -221,6 +227,9 @@
 				})()
 			: null
 	);
+	// Track pointer position to distinguish clicks from drags
+	let pointerDownPos: { x: number; y: number } | null = null;
+
 	function handleChevronClick(event: MouseEvent | KeyboardEvent) {
 		event.stopPropagation();
 		toggleCollapse(id, topology?.nodes);
@@ -260,9 +269,19 @@
 	<div
 		class="relative"
 		style="{nodeStyle} opacity: {nodeOpacity}; transition: opacity 0.2s ease-in-out; cursor: pointer;"
+		onpointerdown={(e) => {
+			pointerDownPos = { x: e.clientX, y: e.clientY };
+		}}
 		onpointerup={(e) => {
-			e.stopPropagation();
-			handleChevronClick(e);
+			if (pointerDownPos) {
+				const dx = Math.abs(e.clientX - pointerDownPos.x);
+				const dy = Math.abs(e.clientY - pointerDownPos.y);
+				if (dx < 5 && dy < 5) {
+					e.stopPropagation();
+					handleChevronClick(e);
+				}
+			}
+			pointerDownPos = null;
 		}}
 	>
 		{#if isCollapsed}
@@ -354,11 +373,60 @@
 			style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: hidden; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
 		>
 			{#if isCollapsed}
-				<!-- Collapsed summary badge -->
-				<div class="flex h-full w-full items-center justify-center">
+				<!-- Collapsed summary -->
+				<div class="flex h-full w-full flex-col items-center justify-center gap-1 px-4 py-3">
 					<span class="text-secondary text-sm font-medium">
 						{topology_hostsCount({ count: childCount })}
 					</span>
+					{#each subgroupSummaries as summary (summary.groupId)}
+						{@const groupNode = topology?.nodes.find((n) => n.id === summary.groupId)}
+						{@const header = groupNode?.header ?? ''}
+						{@const ruleId = (groupNode as Record<string, unknown>)?.element_rule_id as
+							| string
+							| undefined}
+						{@const rule = ruleId
+							? ($topologyOptions.request.element_rules ?? []).find(
+									(r) => (r as { id: string }).id === ruleId
+								)
+							: null}
+						{@const labels = (() => {
+							if (!rule) return [];
+							const r = (rule as { rule: Record<string, unknown> }).rule;
+							if ('ByServiceCategory' in r) {
+								return ((r.ByServiceCategory as { categories?: string[] }).categories ?? []).map(
+									(cat) => {
+										const svc = topology?.services?.find(
+											(s) => serviceDefinitions.getCategory(s.service_definition) === cat
+										);
+										return {
+											label: cat,
+											color: (svc
+												? serviceDefinitions.getColorHelper(svc.service_definition).color
+												: 'Gray') as Color
+										};
+									}
+								);
+							}
+							if ('ByTag' in r) {
+								return ((r.ByTag as { tag_ids?: string[] }).tag_ids ?? []).map((tagId) => {
+									const tag = topology?.entity_tags?.find((t) => t.id === tagId);
+									return { label: tag?.name ?? tagId, color: (tag?.color ?? 'Gray') as Color };
+								});
+							}
+							return [];
+						})()}
+						<div class="flex items-center gap-1">
+							{#if header}
+								<span class="text-tertiary text-xs">{header}{labels.length > 0 ? ':' : ''}</span>
+							{/if}
+							{#each labels as pill (pill.label)}
+								<Tag label={pill.label} color={pill.color} />
+							{/each}
+							<span class="text-tertiary text-xs"
+								>({topology_hostsCount({ count: summary.childCount })})</span
+							>
+						</div>
+					{/each}
 				</div>
 			{/if}
 		</div>

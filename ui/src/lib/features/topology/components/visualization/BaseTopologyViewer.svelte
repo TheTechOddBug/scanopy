@@ -287,8 +287,9 @@
 								: isElement
 									? 250
 									: (containerSize?.width ?? undefined);
+							// Collapsed containers: auto height from content (like elements)
 							height = isNodeCollapsed
-								? containerSize?.height
+								? undefined
 								: isElement
 									? undefined
 									: (containerSize?.height ?? undefined);
@@ -298,14 +299,13 @@
 							position = curPos ?? { x: node.position.x, y: node.position.y };
 							const lc = layoutGraph?.containers.get(node.id);
 							const collapsedW = lc?.collapsedSize.width ?? 200;
-							const collapsedH = lc?.collapsedSize.height ?? 80;
 							width = isNodeCollapsed
 								? collapsedW
 								: isElement
 									? 250
 									: (curSize?.width ?? undefined);
 							height = isNodeCollapsed
-								? collapsedH
+								? undefined
 								: isElement
 									? undefined
 									: (curSize?.height ?? undefined);

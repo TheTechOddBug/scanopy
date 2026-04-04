@@ -84,7 +84,7 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 const CONTAINER_PADDING = '[top=25,left=25,bottom=25,right=25]';
 
 /** Sub-group container padding (smaller header). */
-const SUBGROUP_PADDING = '[top=40,left=20,bottom=20,right=20]';
+const SUBGROUP_PADDING = '[top=35,left=20,bottom=20,right=20]';
 
 /** Container types that represent sub-groups within a subnet. */
 const SUBGROUP_CONTAINER_TYPES = new Set(['TagGroup', 'ServiceCategoryGroup']);

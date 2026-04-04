@@ -285,9 +285,10 @@
 		}}
 	>
 		{#if isCollapsed}
-			<!-- Collapsed subgroup: compact inline header IS the entire representation -->
+			<!-- Collapsed subgroup: compact header with same visual style as expanded -->
 			<div
-				class="nopan nodrag text-secondary z-100 absolute left-2 top-1 flex items-center gap-1 rounded px-2 py-1"
+				class="nopan nodrag flex items-center gap-1 rounded-lg border border-dashed border-gray-300 px-3 py-2 dark:border-gray-600"
+				style="background: var(--color-topology-subgroup-bg); width: 100%; height: 100%;"
 			>
 				<ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
 				{#if groupHeader}
@@ -370,11 +371,13 @@
 			class:border={isCollapsed}
 			class:border-gray-400={isCollapsed}
 			class:dark:border-gray-500={isCollapsed}
-			style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: hidden; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
+			style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: {isCollapsed
+				? 'visible'
+				: 'hidden'}; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
 		>
 			{#if isCollapsed}
 				<!-- Collapsed summary -->
-				<div class="flex h-full w-full flex-col items-center justify-center gap-1 px-4 py-3">
+				<div class="flex flex-col items-center gap-1 px-4 py-3">
 					<span class="text-secondary text-sm font-medium">
 						{topology_hostsCount({ count: childCount })}
 					</span>

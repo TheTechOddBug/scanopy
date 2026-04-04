@@ -58,13 +58,9 @@ export class LayoutContainer {
 	}
 
 	get collapsedSize(): { width: number; height: number } {
+		// Minimum size for ELK space reservation. Actual height is content-driven.
 		if (this.isSubgroup) return { width: 250, height: 40 };
-		// Root containers: grow height to fit subgroup summary lines
-		const subgroupCount = this.childContainers.length;
-		const baseHeight = 80;
-		const lineHeight = 24; // per subgroup summary line
-		const height = subgroupCount > 0 ? baseHeight + subgroupCount * lineHeight : baseHeight;
-		return { width: 250, height };
+		return { width: 200, height: 80 };
 	}
 
 	get size(): { width: number; height: number } {

@@ -384,11 +384,13 @@
 					}
 
 					// Phase 3: Run layout engine with real measured sizes
+					const expandedContainerSizes = layoutGraph?.getExpandedContainerSizes();
 					const elkResult = await layoutEngine.compute({
 						nodes: visibleNodes,
 						edges: topology.edges,
 						topology: topology,
 						collapsedContainers: collapsed,
+						expandedContainerSizes,
 						elementNodeSizes,
 						hiddenEdgeTypes: hiddenEdgeTypes
 					});
@@ -397,6 +399,11 @@
 					// Rebuild graph and apply ELK result
 					layoutGraph = LayoutGraph.fromTopology(topology.nodes);
 					layoutGraph.syncCollapseState(collapsed);
+					// Restore expanded sizes for collapsed containers before applying ELK
+					// results — applyElkResult skips them since ELK only has collapsed dims
+					if (expandedContainerSizes) {
+						layoutGraph.restoreExpandedSizes(expandedContainerSizes);
+					}
 					layoutGraph.applyElkResult(
 						elkResult.nodePositions,
 						elkResult.containerSizes,

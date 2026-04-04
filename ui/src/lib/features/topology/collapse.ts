@@ -75,7 +75,7 @@ export function toggleCollapse(containerId: string, allNodes?: TopologyNode[]): 
 			next.delete(containerId);
 			if (allNodes) {
 				for (const node of allNodes) {
-					if (node.node_type === 'ContainerNode') {
+					if (node.node_type === 'Container') {
 						const parentId = (node as Record<string, unknown>).parent_container_id as
 							| string
 							| undefined;
@@ -88,7 +88,7 @@ export function toggleCollapse(containerId: string, allNodes?: TopologyNode[]): 
 			next.add(containerId);
 			if (allNodes) {
 				for (const node of allNodes) {
-					if (node.node_type === 'ContainerNode') {
+					if (node.node_type === 'Container') {
 						const parentId = (node as Record<string, unknown>).parent_container_id as
 							| string
 							| undefined;
@@ -136,6 +136,7 @@ export function buildElementToContainer(nodes: TopologyNode[]): Map<string, stri
  */
 export function buildContainerChildCounts(nodes: TopologyNode[]): Map<string, number> {
 	const counts = new Map<string, number>();
+	// Count direct element children per container
 	for (const node of nodes) {
 		if (node.node_type === 'Element') {
 			const parentId =
@@ -143,6 +144,19 @@ export function buildContainerChildCounts(nodes: TopologyNode[]): Map<string, nu
 				(node as Record<string, unknown>).subnet_id;
 			if (typeof parentId === 'string') {
 				counts.set(parentId, (counts.get(parentId) ?? 0) + 1);
+			}
+		}
+	}
+	// Propagate subgroup counts up to parent containers so a collapsed parent
+	// shows the total count of all nested hosts, not just direct children
+	for (const node of nodes) {
+		if (node.node_type === 'Container') {
+			const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
+			if (parentId) {
+				const subgroupCount = counts.get(node.id) ?? 0;
+				if (subgroupCount > 0) {
+					counts.set(parentId, (counts.get(parentId) ?? 0) + subgroupCount);
+				}
 			}
 		}
 	}

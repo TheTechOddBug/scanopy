@@ -221,7 +221,7 @@
 				})()
 			: null
 	);
-	function handleChevronClick(event: MouseEvent) {
+	function handleChevronClick(event: MouseEvent | KeyboardEvent) {
 		event.stopPropagation();
 		toggleCollapse(id, topology?.nodes);
 	}
@@ -256,17 +256,19 @@
 
 {#if isSubgroup}
 	<!-- Sub-group container (TagGroup / ServiceCategoryGroup) -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="relative"
-		style="{nodeStyle} opacity: {nodeOpacity}; transition: opacity 0.2s ease-in-out;"
+		style="{nodeStyle} opacity: {nodeOpacity}; transition: opacity 0.2s ease-in-out; cursor: pointer;"
+		onpointerup={(e) => {
+			e.stopPropagation();
+			handleChevronClick(e);
+		}}
 	>
 		{#if isCollapsed}
 			<!-- Collapsed subgroup: compact inline header IS the entire representation -->
 			<div
-				class="nopan text-secondary z-100 absolute left-2 top-1 flex cursor-pointer items-center gap-1 rounded px-2 py-1"
-				onclick={handleChevronClick}
-				onmousedown={(e) => e.stopPropagation()}
-				onpointerdown={(e) => e.stopPropagation()}
+				class="nopan nodrag text-secondary z-100 absolute left-2 top-1 flex items-center gap-1 rounded px-2 py-1"
 			>
 				<ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
 				{#if groupHeader}
@@ -284,10 +286,7 @@
 		{:else}
 			{#if groupHeader || groupLabels.length > 0}
 				<div
-					class="nopan text-secondary z-100 absolute left-2 top-1 flex cursor-pointer items-center gap-1 rounded-t px-2 py-0.5"
-					onclick={handleChevronClick}
-					onmousedown={(e) => e.stopPropagation()}
-					onpointerdown={(e) => e.stopPropagation()}
+					class="nopan nodrag text-secondary z-100 absolute left-2 top-1 flex items-center gap-1 rounded-t px-2 py-0.5"
 				>
 					<ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
 					{#if groupHeader}
@@ -315,8 +314,13 @@
 		<!-- External label in upper left corner -->
 		{#if subnetRenderData.cidr || subnetRenderData.headerText}
 			<div
-				class="nopan card text-secondary z-100 absolute -top-10 left-0 flex cursor-pointer items-center gap-1 px-2 py-1 shadow-lg backdrop-blur-sm"
+				class="nopan nodrag card text-secondary z-100 absolute -top-10 left-0 flex cursor-pointer items-center gap-1 px-2 py-1 shadow-lg backdrop-blur-sm"
+				role="button"
+				tabindex={-1}
 				onclick={handleChevronClick}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') handleChevronClick(e);
+				}}
 				onmousedown={(e) => e.stopPropagation()}
 				onpointerdown={(e) => e.stopPropagation()}
 			>

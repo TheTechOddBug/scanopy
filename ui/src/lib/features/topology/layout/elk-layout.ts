@@ -137,8 +137,8 @@ function buildElkGraph(input: ElkLayoutInput): {
 			const layerId = isSubgroup ? undefined : getLayerHint(node, input.topology);
 			const padding = isSubgroup ? SUBGROUP_PADDING : CONTAINER_PADDING;
 
-			const collapsedWidth = isSubgroup ? 120 : 200;
-			const collapsedHeight = isSubgroup ? 36 : 80;
+			const collapsedWidth = isSubgroup ? 250 : 200;
+			const collapsedHeight = isSubgroup ? 40 : 80;
 			const elkNode: ElkNode = isCollapsed
 				? {
 						id: node.id,
@@ -651,11 +651,8 @@ function mapElkResults(
 }
 
 /**
- * Apply local size adjustments without full ELK re-layout.
- *
- * When a leaf node changes height (e.g., port expansion), this recomputes
- * column positions within the affected container, resizes the container,
- * and propagates to parent containers — without repositioning unrelated nodes.
+ * @deprecated Use LayoutGraph.updateElementSize() instead.
+ * Kept temporarily for transition — will be removed.
  */
 export function applyLocalSizeAdjustment(
 	cachedResult: ElkLayoutResult,
@@ -665,13 +662,13 @@ export function applyLocalSizeAdjustment(
 ): ElkLayoutResult {
 	const nodePositions = new Map(cachedResult.nodePositions);
 	const containerSizes = new Map(cachedResult.containerSizes);
-	const leafNodeSizes = new Map(cachedResult.leafNodeSizes);
+	const leafNodeSizes = new Map(cachedResult.elementNodeSizes);
 
 	// Build leaf→container mapping and container→children mapping
 	const leafToContainer = new Map<string, string>();
 	const containerChildren = new Map<string, string[]>();
 	for (const node of nodes) {
-		if (node.node_type === 'LeafNode') {
+		if (node.node_type === 'Element') {
 			const parentId = node.container_id ?? node.subnet_id;
 			if (parentId && !collapsed.has(parentId)) {
 				leafToContainer.set(node.id, parentId);
@@ -684,7 +681,7 @@ export function applyLocalSizeAdjustment(
 	// Build parent container map for nested containers
 	const parentContainerMap = new Map<string, string>();
 	for (const node of nodes) {
-		if (node.node_type === 'ContainerNode') {
+		if (node.node_type === 'Container') {
 			const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
 			if (parentId) parentContainerMap.set(node.id, parentId);
 		}
@@ -762,7 +759,7 @@ export function applyLocalSizeAdjustment(
 				const siblingIds = nodes
 					.filter(
 						(n) =>
-							n.node_type === 'ContainerNode' &&
+							n.node_type === 'Container' &&
 							(n as Record<string, unknown>).parent_container_id === parentId &&
 							n.id !== containerId
 					)
@@ -790,7 +787,104 @@ export function applyLocalSizeAdjustment(
 		}
 	}
 
-	return { nodePositions, containerSizes, leafNodeSizes, edgeHandles: cachedResult.edgeHandles };
+	return {
+		nodePositions,
+		containerSizes,
+		elementNodeSizes: leafNodeSizes,
+		edgeHandles: cachedResult.edgeHandles
+	};
+}
+
+/**
+ * Apply local size adjustment when subgroups collapse/expand.
+ * Adjusts subgroup sizes and reflections within their parent containers.
+ */
+export function applySubgroupCollapseAdjustment(
+	cachedResult: ElkLayoutResult,
+	nodes: TopologyNode[],
+	collapsed: Set<string>,
+	prevCollapsed: Set<string>
+): ElkLayoutResult {
+	const nodePositions = new Map(cachedResult.nodePositions);
+	const containerSizes = new Map(cachedResult.containerSizes);
+
+	// Find subgroups whose collapse state changed
+	const changedSubgroups = new Set<string>();
+	for (const node of nodes) {
+		if (node.node_type !== 'Container') continue;
+		const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
+		if (!parentId) continue; // only subgroups
+		const wasCollapsed = prevCollapsed.has(node.id);
+		const isCollapsed = collapsed.has(node.id);
+		if (wasCollapsed !== isCollapsed) changedSubgroups.add(node.id);
+	}
+
+	if (changedSubgroups.size === 0) return cachedResult;
+
+	// Find affected parent containers
+	const affectedParents = new Set<string>();
+	for (const node of nodes) {
+		if (!changedSubgroups.has(node.id)) continue;
+		const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
+		if (parentId) affectedParents.add(parentId);
+	}
+
+	// For each affected parent, recompute child subgroup positions
+	for (const parentId of affectedParents) {
+		// Gather all children of this parent (subgroups + elements not in subgroups)
+		const childContainers = nodes.filter(
+			(n) =>
+				n.node_type === 'Container' &&
+				(n as Record<string, unknown>).parent_container_id === parentId
+		);
+
+		// Group children by x-position (column) and restack
+		const columns = new Map<number, { id: string; x: number; y: number; height: number }[]>();
+		for (const child of childContainers) {
+			const pos = nodePositions.get(child.id);
+			if (!pos) continue;
+			const isCollapsed = collapsed.has(child.id);
+			const size = isCollapsed
+				? { width: 250, height: 40 }
+				: (containerSizes.get(child.id) ?? { width: 250, height: 100 });
+			// Update the container size for collapsed state
+			if (isCollapsed) {
+				containerSizes.set(child.id, { width: 250, height: 40 });
+			}
+			const x = pos.x;
+			if (!columns.has(x)) columns.set(x, []);
+			columns.get(x)!.push({ id: child.id, x: pos.x, y: pos.y, height: size.height });
+		}
+
+		// Restack each column
+		let maxColumnBottom = 0;
+		for (const [, colNodes] of columns) {
+			colNodes.sort((a, b) => a.y - b.y);
+			const startY = colNodes[0].y;
+			let y = startY;
+			for (const node of colNodes) {
+				nodePositions.set(node.id, { x: node.x, y });
+				y += node.height + 30; // spacing between subgroups
+			}
+			const lastNode = colNodes[colNodes.length - 1];
+			const columnBottom = y - 30 + lastNode.height; // undo last spacing
+			if (columnBottom > maxColumnBottom) maxColumnBottom = columnBottom;
+		}
+
+		// Update parent container height
+		const parentSize = containerSizes.get(parentId);
+		if (parentSize) {
+			const newHeight = maxColumnBottom + 25; // bottom padding
+			containerSizes.set(parentId, { width: parentSize.width, height: newHeight });
+		}
+	}
+
+	return {
+		nodePositions,
+		containerSizes,
+		elementNodeSizes: cachedResult.elementNodeSizes,
+		edgeHandles: cachedResult.edgeHandles
+	};
 }
 
 /**

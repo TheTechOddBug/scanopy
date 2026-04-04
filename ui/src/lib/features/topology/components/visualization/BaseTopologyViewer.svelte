@@ -25,7 +25,7 @@
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { previewEdges, selectedNodes, topologyOptions } from '../../queries';
 	import { isExporting, expandedPortNodeIds } from '../../interactions';
-	import { applyLocalSizeAdjustment } from '../../layout/elk-layout';
+	import { LayoutGraph } from '../../layout/layout-graph';
 
 	// Import custom node/edge components
 	import ContainerNode from './ContainerNode.svelte';
@@ -39,7 +39,6 @@
 		collapseAll,
 		expandAll,
 		buildElementToContainer,
-		buildContainerChildCounts,
 		computeCollapsedEdges
 	} from '../../collapse';
 	import {
@@ -146,7 +145,7 @@
 	let pendingEdges: Edge[] = [];
 
 	// Track ELK layout — only skip within same session when structure unchanged
-	let cachedLayoutResult: import('../../layout/elk-layout').ElkLayoutResult | null = null;
+	let layoutGraph: LayoutGraph | null = null;
 	let sessionStructureKey = '';
 	let isMeasuring = false;
 	let prevExpandedPortIds = new Set<string>();
@@ -218,8 +217,15 @@
 			if (topology && (topology.edges || topology.nodes)) {
 				const collapsed = get(collapsedContainers);
 				const elementToContainer = buildElementToContainer(topology.nodes);
-				const childCounts = buildContainerChildCounts(topology.nodes);
 				const hiddenEdgeTypes = $topologyOptions.local.hide_edge_types ?? [];
+
+				// Build/rebuild the layout graph when topology changes
+				if (!layoutGraph) {
+					layoutGraph = LayoutGraph.fromTopology(topology.nodes);
+				}
+
+				// Sync collapse state from store → graph (handles cascade internally)
+				const collapseChanged = layoutGraph.syncCollapseState(collapsed);
 
 				// Compute aggregated edges for collapsed containers
 				const aggregatedEdges = computeCollapsedEdges(
@@ -229,14 +235,11 @@
 					hiddenEdgeTypes
 				);
 
-				// Filter out element nodes inside collapsed containers
-				const visibleNodes = topology.nodes.filter((node) => {
-					if (node.node_type === 'Element') {
-						const parentId = elementToContainer.get(node.id);
-						if (parentId && collapsed.has(parentId)) return false;
-					}
-					return true;
-				});
+				// Use the graph to determine visible nodes
+				const visibleNodes = layoutGraph.getVisibleNodes(topology.nodes);
+
+				// Only root container collapses affect graph structure (need full ELK)
+				const rootCollapsed = new Set([...collapsed].filter((id) => !layoutGraph!.isSubgroup(id)));
 
 				// Run ELK on structure/collapse changes, skip for edge-only re-renders
 				const opts = get(topologyOptions);
@@ -244,7 +247,7 @@
 				const structureKey =
 					getStructureKey(topology) +
 					':' +
-					Array.from(collapsed).sort().join(',') +
+					Array.from(rootCollapsed).sort().join(',') +
 					':' +
 					sizeKey +
 					':' +
@@ -252,9 +255,7 @@
 				const isNewStructure = sessionStructureKey !== structureKey;
 
 				// Helper: build SvelteFlow node array from topology nodes
-				const buildFlowNodes = (
-					layoutResult?: import('../../layout/elk-layout').ElkLayoutResult
-				): Node[] => {
+				const buildFlowNodes = (useGraph: boolean): Node[] => {
 					// Get live @xyflow positions (includes ELK layout + user drags)
 					const liveNodes = getNodes();
 					const currentPositions = new Map(liveNodes.map((n) => [n.id, n.position]));
@@ -270,27 +271,44 @@
 					);
 
 					return visibleNodes.map((node) => {
-						const isCollapsed = collapsed.has(node.id);
+						const isNodeCollapsed = collapsed.has(node.id);
 						let position: { x: number; y: number };
 						let width: number | undefined;
 						let height: number | undefined;
 
 						const isElement = node.node_type === 'Element';
 
-						if (layoutResult) {
-							const elkPos = layoutResult.nodePositions.get(node.id);
-							const elkSize = layoutResult.containerSizes.get(node.id);
-							position = elkPos ?? { x: node.position.x, y: node.position.y };
-							// Element nodes: fixed width, auto height (content-driven)
-							// Containers: ELK-computed dimensions
-							width = isCollapsed ? 200 : isElement ? 250 : (elkSize?.width ?? undefined);
-							height = isCollapsed ? 80 : isElement ? undefined : (elkSize?.height ?? undefined);
+						if (useGraph && layoutGraph) {
+							const graphPos = layoutGraph.getPosition(node.id);
+							const containerSize = !isElement ? layoutGraph.getContainerSize(node.id) : undefined;
+							position = graphPos ?? { x: node.position.x, y: node.position.y };
+							width = isNodeCollapsed
+								? containerSize?.width
+								: isElement
+									? 250
+									: (containerSize?.width ?? undefined);
+							height = isNodeCollapsed
+								? containerSize?.height
+								: isElement
+									? undefined
+									: (containerSize?.height ?? undefined);
 						} else if (!isNewStructure) {
 							const curPos = currentPositions.get(node.id);
 							const curSize = currentSizes.get(node.id);
 							position = curPos ?? { x: node.position.x, y: node.position.y };
-							width = isCollapsed ? 200 : isElement ? 250 : (curSize?.width ?? undefined);
-							height = isCollapsed ? 80 : isElement ? undefined : (curSize?.height ?? undefined);
+							const lc = layoutGraph?.containers.get(node.id);
+							const collapsedW = lc?.collapsedSize.width ?? 200;
+							const collapsedH = lc?.collapsedSize.height ?? 80;
+							width = isNodeCollapsed
+								? collapsedW
+								: isElement
+									? 250
+									: (curSize?.width ?? undefined);
+							height = isNodeCollapsed
+								? collapsedH
+								: isElement
+									? undefined
+									: (curSize?.height ?? undefined);
 						} else {
 							// Measurement pass: place at origin, let content determine size
 							position = { x: 0, y: 0 };
@@ -314,8 +332,12 @@
 										? (node.parent_container_id as string)
 										: undefined,
 							extent: node.node_type == 'Element' ? 'parent' : undefined,
-							data: isCollapsed
-								? { ...node, isCollapsed: true, childCount: childCounts.get(node.id) ?? 0 }
+							data: isNodeCollapsed
+								? {
+										...node,
+										isCollapsed: true,
+										childCount: layoutGraph?.getChildCount(node.id) ?? 0
+									}
 								: node
 						};
 					});
@@ -334,14 +356,13 @@
 					// Phase 1: Render nodes for DOM measurement (hidden, no ELK yet)
 					isMeasuring = true;
 					edges.set([]);
-					const measureNodes = sortFlowNodes(buildFlowNodes());
+					const measureNodes = sortFlowNodes(buildFlowNodes(false));
 					nodes.set(measureNodes);
 
-					// Wait for DOM render: tick flushes Svelte, rAF ensures browser layout
 					await tick();
 					await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-					// Phase 2: Read actual DOM sizes directly (bypasses SvelteFlow timing)
+					// Phase 2: Read actual DOM sizes
 					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
 					const elementNodeSizes = new Map<string, { x: number; y: number }>();
 					if (containerElement) {
@@ -359,7 +380,7 @@
 					}
 
 					// Phase 3: Run ELK with real measured sizes
-					cachedLayoutResult = await computeElkLayout({
+					const elkResult = await computeElkLayout({
 						nodes: visibleNodes,
 						edges: topology.edges,
 						topology: topology,
@@ -368,6 +389,16 @@
 						hiddenEdgeTypes: hiddenEdgeTypes
 					});
 					sessionStructureKey = structureKey;
+
+					// Rebuild graph and apply ELK result
+					layoutGraph = LayoutGraph.fromTopology(topology.nodes);
+					layoutGraph.syncCollapseState(collapsed);
+					layoutGraph.applyElkResult(
+						elkResult.nodePositions,
+						elkResult.containerSizes,
+						elkResult.elementNodeSizes,
+						elkResult.edgeHandles
+					);
 				}
 
 				// Local size adjustment for port expansion (no full ELK re-layout)
@@ -377,44 +408,44 @@
 					[...currentExpandedPorts].some((id) => !prevExpandedPortIds.has(id)) ||
 					[...prevExpandedPortIds].some((id) => !currentExpandedPorts.has(id));
 
-				if (portsChanged && !isNewStructure && cachedLayoutResult) {
+				if (portsChanged && !isNewStructure && layoutGraph) {
 					// Phase 1: Render with current positions to let DOM update port content
-					const measureNodes = sortFlowNodes(buildFlowNodes());
+					const measureNodes = sortFlowNodes(buildFlowNodes(false));
 					nodes.set(measureNodes);
 					await tick();
 					await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-					// Phase 2: Re-measure affected nodes
-					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
-					const updatedSizes = new Map<string, { x: number; y: number }>();
+					// Phase 2: Re-measure affected nodes and update graph
 					if (containerElement) {
 						const changedIds = new Set([...currentExpandedPorts, ...prevExpandedPortIds]);
 						for (const nodeId of changedIds) {
 							const el = containerElement.querySelector(`[data-id="${nodeId}"]`) as HTMLElement;
 							if (el) {
-								updatedSizes.set(nodeId, {
+								layoutGraph.updateElementSize(nodeId, {
 									x: el.offsetWidth || 250,
 									y: el.offsetHeight || 100
 								});
 							}
 						}
 					}
-
-					// Phase 3: Apply local size adjustment
-					if (updatedSizes.size > 0) {
-						cachedLayoutResult = applyLocalSizeAdjustment(
-							cachedLayoutResult,
-							updatedSizes,
-							visibleNodes,
-							collapsed
-						);
-					}
 					prevExpandedPortIds = new Set(currentExpandedPorts);
 				} else if (isNewStructure) {
 					prevExpandedPortIds = new Set(currentExpandedPorts);
 				}
 
-				const layoutResult = cachedLayoutResult ?? {
+				// Subgroup collapse/expand is handled locally by the graph's reflowChildren
+				// — no separate detection needed. The syncCollapseState + reflowChildren
+				// already updated positions when collapseChanged was true.
+				if (collapseChanged && !isNewStructure && layoutGraph) {
+					// Reflow all containers that might be affected
+					for (const container of layoutGraph.containers.values()) {
+						if (!container.collapsed && container.childContainers.length > 0) {
+							container.reflowChildren();
+						}
+					}
+				}
+
+				const layoutResult = layoutGraph?.toLayoutResult() ?? {
 					nodePositions: new Map(),
 					containerSizes: new Map(),
 					elementNodeSizes: new Map(),
@@ -425,11 +456,9 @@
 				const currentEdges = get(edges);
 				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
 
-				// Build final nodes with ELK positions
-				const useLayoutResult = isNewStructure || portsChanged;
-				const allNodes = sortFlowNodes(
-					useLayoutResult ? buildFlowNodes(layoutResult) : buildFlowNodes()
-				);
+				// Build final nodes with positions from graph
+				const needsLayout = isNewStructure || portsChanged || collapseChanged;
+				const allNodes = sortFlowNodes(buildFlowNodes(needsLayout));
 
 				// Clear edges, set positioned nodes
 				edges.set([]);

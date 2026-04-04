@@ -285,7 +285,8 @@
 			{/if}
 
 			{#if iconComponent}
-				<iconComponent class={`h-5 w-5 ${colorHelper.icon}`}></iconComponent>
+				{@const IconComp = iconComponent}
+				<IconComp class={`h-5 w-5 ${colorHelper.icon}`} />
 			{/if}
 
 			<span class="text-s text-secondary whitespace-nowrap font-medium">
@@ -297,8 +298,7 @@
 	<!-- TITLE: Inline (inside container top padding) -->
 	{#if titleStyle === 'Inline' && !isCollapsed && (headerText || groupLabels.length > 0)}
 		<div
-			class="nopan nodrag text-secondary absolute left-2 top-1 mt-2 flex items-center gap-1 rounded-t px-2 py-1"
-			style="z-index: 1000;"
+			class="nopan nodrag text-secondary absolute left-2 top-2 flex items-center gap-1 rounded-t px-2 py-0.5"
 		>
 			{#if isCollapsible}
 				<ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" />

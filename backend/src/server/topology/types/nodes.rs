@@ -106,7 +106,7 @@ impl TypeMetadataProvider for ContainerType {
         let is_subcontainer = !matches!(self, ContainerType::Subnet);
         let (padding_top, padding_side) = match self {
             ContainerType::Subnet => (25, 25),
-            ContainerType::TagContainer | ContainerType::ServiceCategoryContainer => (35, 20),
+            ContainerType::TagContainer | ContainerType::ServiceCategoryContainer => (45, 20),
         };
         let (collapsed_width, collapsed_height) = match self {
             ContainerType::Subnet => (200, 80),

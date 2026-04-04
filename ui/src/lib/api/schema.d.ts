@@ -1112,6 +1112,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dependencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all Dependencies
+         * @description Returns all dependencies the authenticated user has access to.
+         *     Supports pagination via `limit` and `offset` query parameters,
+         *     and ordering via `group_by`, `order_by`, and `order_direction`.
+         */
+        get: operations["get_all_dependencies"];
+        put?: never;
+        /** Create a new Dependency */
+        post: operations["create_dependency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dependencies/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bulk delete Dependencies */
+        post: operations["bulk_delete_dependencies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dependencies/export/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Dependencies to CSV
+         * @description Export all Dependencies matching the filter criteria to CSV format. Ignores pagination parameters (limit/offset) and exports all matching records.
+         */
+        get: operations["export_dependencies_csv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dependencies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dependency by ID */
+        get: operations["get_dependency_by_id"];
+        /** Update a Dependency */
+        put: operations["update_dependency"];
+        post?: never;
+        /** Delete Dependency */
+        delete: operations["delete_dependency"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/discovery": {
         parameters: {
             query?: never;
@@ -1252,85 +1331,6 @@ export interface paths {
          */
         post: operations["receive_discovery_update"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/groups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List all Groups
-         * @description Returns all groups the authenticated user has access to.
-         *     Supports pagination via `limit` and `offset` query parameters,
-         *     and ordering via `group_by`, `order_by`, and `order_direction`.
-         */
-        get: operations["get_all_groups"];
-        put?: never;
-        /** Create a new Group */
-        post: operations["create_group"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/groups/bulk-delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Bulk delete Groups */
-        post: operations["bulk_delete_groups"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/groups/export/csv": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Export Groups to CSV
-         * @description Export all Groups matching the filter criteria to CSV format. Ignores pagination parameters (limit/offset) and exports all matching records.
-         */
-        get: operations["export_groups_csv"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/groups/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Group by ID */
-        get: operations["get_group_by_id"];
-        /** Update a Group */
-        put: operations["update_group"];
-        post?: never;
-        /** Delete Group */
-        delete: operations["delete_group"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-04T17:42:34.954304Z",
-             *       "id": "57860ae7-196a-4180-a0b0-6c24288a2ba7",
+             *       "created_at": "2026-04-04T23:12:56.077845Z",
+             *       "id": "5333506f-34be-492e-990a-ba208b1ea680",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-04T17:42:34.954304Z"
+             *       "updated_at": "2026-04-04T23:12:56.077845Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2991,6 +2991,40 @@ export interface components {
             meta: components["schemas"]["ApiMeta"];
             success: boolean;
         };
+        ApiResponse_Dependency: {
+            /**
+             * @example {
+             *       "color": "Blue",
+             *       "created_at": "2026-01-15T10:30:00Z",
+             *       "dependency_type": "RequestPath",
+             *       "description": "HTTP/HTTPS services dependency",
+             *       "edge_style": "Bezier",
+             *       "id": "550e8400-e29b-41d4-a716-446655440008",
+             *       "members": {
+             *         "service_ids": [],
+             *         "type": "Services"
+             *       },
+             *       "name": "Web Services",
+             *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
+             *       "source": {
+             *         "type": "Manual"
+             *       },
+             *       "tags": [],
+             *       "updated_at": "2026-01-15T10:30:00Z"
+             *     }
+             */
+            data?: components["schemas"]["DependencyBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
         ApiResponse_Discovery: {
             data?: components["schemas"]["DiscoveryBase"] & {
                 /** Format: date-time */
@@ -3044,37 +3078,6 @@ export interface components {
                 session_id: string;
                 /** Format: date-time */
                 started_at?: string | null;
-            };
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_Group: {
-            /**
-             * @example {
-             *       "binding_ids": [],
-             *       "color": "Blue",
-             *       "created_at": "2026-01-15T10:30:00Z",
-             *       "description": "HTTP/HTTPS services group",
-             *       "edge_style": "Bezier",
-             *       "group_type": "RequestPath",
-             *       "id": "550e8400-e29b-41d4-a716-446655440008",
-             *       "name": "Web Services",
-             *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
-             *       "source": {
-             *         "type": "Manual"
-             *       },
-             *       "tags": [],
-             *       "updated_at": "2026-01-15T10:30:00Z"
-             *     }
-             */
-            data?: components["schemas"]["GroupBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -3153,14 +3156,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-04T17:42:34.937337Z",
-             *               "id": "a6dfa034-c505-433e-a5b4-5c08fcf473e6",
+             *               "created_at": "2026-04-04T23:12:56.067012Z",
+             *               "id": "27d24a19-de1b-4809-859d-ea68798eebc3",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-04T17:42:34.937337Z"
+             *               "updated_at": "2026-04-04T23:12:56.067012Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3169,7 +3172,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Nest Thermostat",
+             *           "service_definition": "Kubernetes",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3425,14 +3428,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-04T17:42:34.949480Z",
-             *           "id": "10cf6377-3b2b-4104-a992-a8bbb97f2fd3",
+             *           "created_at": "2026-04-04T23:12:56.074665Z",
+             *           "id": "89064592-7800-4eda-9354-13cdce45eeb5",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-04T17:42:34.949480Z"
+             *           "updated_at": "2026-04-04T23:12:56.074665Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3441,7 +3444,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Nest Thermostat",
+             *       "service_definition": "Kubernetes",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3768,14 +3771,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-04T17:42:34.937675Z",
-         *       "id": "c5eb7b4b-9b76-4224-8e02-6e6852fbb6db",
+         *       "created_at": "2026-04-04T23:12:56.067221Z",
+         *       "id": "762a3885-fbb1-4978-a1d7-ad1b58df4a92",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-04T17:42:34.937675Z"
+         *       "updated_at": "2026-04-04T23:12:56.067221Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3960,7 +3963,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Nest Thermostat",
+         *           "service_definition": "Kubernetes",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4268,6 +4271,70 @@ export interface components {
             plan_usage: components["schemas"]["PlanUsage"];
             recent_discoveries: components["schemas"]["Discovery"][];
         };
+        /**
+         * @example {
+         *       "color": "Blue",
+         *       "created_at": "2026-01-15T10:30:00Z",
+         *       "dependency_type": "RequestPath",
+         *       "description": "HTTP/HTTPS services dependency",
+         *       "edge_style": "Bezier",
+         *       "id": "550e8400-e29b-41d4-a716-446655440008",
+         *       "members": {
+         *         "service_ids": [],
+         *         "type": "Services"
+         *       },
+         *       "name": "Web Services",
+         *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
+         *       "source": {
+         *         "type": "Manual"
+         *       },
+         *       "tags": [],
+         *       "updated_at": "2026-01-15T10:30:00Z"
+         *     }
+         */
+        Dependency: components["schemas"]["DependencyBase"] & {
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        DependencyBase: {
+            color: components["schemas"]["Color"];
+            dependency_type: components["schemas"]["DependencyType"];
+            description?: string | null;
+            edge_style: components["schemas"]["EdgeStyle"];
+            /** @description Members of this dependency: either service IDs or binding IDs. */
+            members: components["schemas"]["DependencyMembers"];
+            name: string;
+            /** Format: uuid */
+            network_id: string;
+            /** @description Will be automatically set to Manual for creation through API */
+            source?: components["schemas"]["EntitySource"];
+            tags: string[];
+        };
+        /**
+         * @description The members of a dependency: either service-level or binding-level.
+         *     Bindings are all-or-nothing: either every position has a binding (full L3 detail)
+         *     or none do (Application-level only).
+         */
+        DependencyMembers: {
+            service_ids: string[];
+            /** @enum {string} */
+            type: "Services";
+        } | {
+            binding_ids: string[];
+            /** @enum {string} */
+            type: "Bindings";
+        };
+        /**
+         * @description Fields that dependencies can be ordered/grouped by.
+         * @enum {string}
+         */
+        DependencyOrderField: "created_at" | "name" | "dependency_type" | "updated_at" | "network_id";
+        /** @enum {string} */
+        DependencyType: "RequestPath" | "HubAndSpoke";
         /** @enum {string} */
         DeploymentType: "cloud" | "commercial" | "community";
         /**
@@ -4527,7 +4594,7 @@ export interface components {
             urgency?: string | null;
         };
         /** @enum {string} */
-        EntityDiscriminants: "Organization" | "Invite" | "Share" | "Network" | "DaemonApiKey" | "UserApiKey" | "User" | "Tag" | "Discovery" | "Daemon" | "Host" | "Service" | "Port" | "Binding" | "Interface" | "IfEntry" | "Credential" | "Subnet" | "Group" | "Topology" | "Unknown";
+        EntityDiscriminants: "Organization" | "Invite" | "Share" | "Network" | "DaemonApiKey" | "UserApiKey" | "User" | "Tag" | "Discovery" | "Daemon" | "Host" | "Service" | "Port" | "Binding" | "Interface" | "IfEntry" | "Credential" | "Subnet" | "Dependency" | "Topology" | "Unknown";
         EntitySource: {
             /** @enum {string} */
             type: "Manual";
@@ -4589,53 +4656,6 @@ export interface components {
                 };
             };
         };
-        /**
-         * @example {
-         *       "binding_ids": [],
-         *       "color": "Blue",
-         *       "created_at": "2026-01-15T10:30:00Z",
-         *       "description": "HTTP/HTTPS services group",
-         *       "edge_style": "Bezier",
-         *       "group_type": "RequestPath",
-         *       "id": "550e8400-e29b-41d4-a716-446655440008",
-         *       "name": "Web Services",
-         *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
-         *       "source": {
-         *         "type": "Manual"
-         *       },
-         *       "tags": [],
-         *       "updated_at": "2026-01-15T10:30:00Z"
-         *     }
-         */
-        Group: components["schemas"]["GroupBase"] & {
-            /** Format: date-time */
-            readonly created_at: string;
-            /** Format: uuid */
-            readonly id: string;
-            /** Format: date-time */
-            readonly updated_at: string;
-        };
-        GroupBase: {
-            /** @description Ordered list of binding IDs for this group. */
-            binding_ids: string[];
-            color: components["schemas"]["Color"];
-            description?: string | null;
-            edge_style: components["schemas"]["EdgeStyle"];
-            group_type: components["schemas"]["GroupType"];
-            name: string;
-            /** Format: uuid */
-            network_id: string;
-            /** @description Will be automatically set to Manual for creation through API */
-            source?: components["schemas"]["EntitySource"];
-            tags: string[];
-        };
-        /**
-         * @description Fields that groups can be ordered/grouped by.
-         * @enum {string}
-         */
-        GroupOrderField: "created_at" | "name" | "group_type" | "updated_at" | "network_id";
-        /** @enum {string} */
-        GroupType: "RequestPath" | "HubAndSpoke";
         /**
          * @example {
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -4779,14 +4799,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-04T17:42:34.936862Z",
-         *               "id": "9a00e4ce-ee06-4ad0-a480-a7a96a668287",
+         *               "created_at": "2026-04-04T23:12:56.066726Z",
+         *               "id": "65e47d4d-3fcf-471b-889a-89fd97007088",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-04T17:42:34.936862Z"
+         *               "updated_at": "2026-04-04T23:12:56.066726Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4795,7 +4815,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Nest Thermostat",
+         *           "service_definition": "Kubernetes",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5290,7 +5310,7 @@ export interface components {
             snmp_version?: string | null;
         };
         /** @enum {string} */
-        OnboardingOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstGroupCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "FirstCredentialCreated" | "InviteSent" | "InviteAccepted" | "ProfileCompleted" | "ReferralSourceCompleted";
+        OnboardingOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstDependencyCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "FirstCredentialCreated" | "InviteSent" | "InviteAccepted" | "ProfileCompleted" | "ReferralSourceCompleted";
         /** @description Response from onboarding state endpoint */
         OnboardingStateResponse: {
             network?: null | components["schemas"]["OnboardingNetworkState"];
@@ -5398,8 +5418,8 @@ export interface components {
             success: boolean;
         };
         /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Group: {
-            data: (components["schemas"]["GroupBase"] & {
+        PaginatedApiResponse_Dependency: {
+            data: (components["schemas"]["DependencyBase"] & {
                 /** Format: date-time */
                 readonly created_at: string;
                 /** Format: uuid */
@@ -5859,14 +5879,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-04T17:42:34.937555Z",
-         *           "id": "72ee0e68-d26b-45f3-9fa8-f2691f002615",
+         *           "created_at": "2026-04-04T23:12:56.067149Z",
+         *           "id": "00816499-f54f-4e84-9b61-fe217af07450",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-04T17:42:34.937555Z"
+         *           "updated_at": "2026-04-04T23:12:56.067149Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5875,7 +5895,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Nest Thermostat",
+         *       "service_definition": "Kubernetes",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6115,9 +6135,9 @@ export interface components {
         };
         TopologyBase: {
             bindings: components["schemas"]["Binding"][];
+            dependencies: components["schemas"]["Dependency"][];
             edges: components["schemas"]["Edge"][];
             entity_tags: components["schemas"]["Tag"][];
-            groups: components["schemas"]["Group"][];
             hosts: components["schemas"]["Host"][];
             if_entries: components["schemas"]["IfEntry"][];
             interfaces: components["schemas"]["Interface"][];
@@ -6138,7 +6158,7 @@ export interface components {
             parent_id?: string | null;
             ports: components["schemas"]["Port"][];
             removed_bindings: string[];
-            removed_groups: string[];
+            removed_dependencies: string[];
             removed_hosts: string[];
             removed_if_entries: string[];
             removed_interfaces: string[];
@@ -8903,6 +8923,239 @@ export interface operations {
             };
         };
     };
+    get_all_dependencies: {
+        parameters: {
+            query?: {
+                /** @description Filter by network ID */
+                network_id?: string | null;
+                /** @description Primary ordering field (used for grouping). Always sorts ASC to keep groups together. */
+                group_by?: null | components["schemas"]["DependencyOrderField"];
+                /** @description Secondary ordering field (sorting within groups or standalone sort). */
+                order_by?: null | components["schemas"]["DependencyOrderField"];
+                /** @description Direction for order_by field (group_by always uses ASC). */
+                order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of dependencies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedApiResponse_Dependency"];
+                };
+            };
+        };
+    };
+    create_dependency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Dependency"];
+            };
+        };
+        responses: {
+            /** @description Dependency created successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Dependency"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    bulk_delete_dependencies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Array of Dependency IDs to delete */
+        requestBody: {
+            content: {
+                "application/json": string[];
+            };
+        };
+        responses: {
+            /** @description Dependencies deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_BulkDeleteResponse"];
+                };
+            };
+        };
+    };
+    export_dependencies_csv: {
+        parameters: {
+            query?: {
+                /** @description Filter by network ID */
+                network_id?: string | null;
+                /** @description Primary ordering field (used for grouping). Always sorts ASC to keep groups together. */
+                group_by?: null | components["schemas"]["DependencyOrderField"];
+                /** @description Secondary ordering field (sorting within groups or standalone sort). */
+                order_by?: null | components["schemas"]["DependencyOrderField"];
+                /** @description Direction for order_by field (group_by always uses ASC). */
+                order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV file containing Dependencies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+        };
+    };
+    get_dependency_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Dependency ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dependency found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Dependency"];
+                };
+            };
+            /** @description Dependency not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    update_dependency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Dependency ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Dependency"];
+            };
+        };
+        responses: {
+            /** @description Dependency updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Dependency"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Dependency not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_dependency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Dependency ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dependency deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description Dependency not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     list_discoveries: {
         parameters: {
             query?: {
@@ -9250,239 +9503,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse"];
-                };
-            };
-        };
-    };
-    get_all_groups: {
-        parameters: {
-            query?: {
-                /** @description Filter by network ID */
-                network_id?: string | null;
-                /** @description Primary ordering field (used for grouping). Always sorts ASC to keep groups together. */
-                group_by?: null | components["schemas"]["GroupOrderField"];
-                /** @description Secondary ordering field (sorting within groups or standalone sort). */
-                order_by?: null | components["schemas"]["GroupOrderField"];
-                /** @description Direction for order_by field (group_by always uses ASC). */
-                order_direction?: null | components["schemas"]["OrderDirection"];
-                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
-                limit?: number | null;
-                /** @description Number of results to skip. Default: 0. */
-                offset?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of groups */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Group"];
-                };
-            };
-        };
-    };
-    create_group: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Group"];
-            };
-        };
-        responses: {
-            /** @description Group created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_Group"];
-                };
-            };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    bulk_delete_groups: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Array of Group IDs to delete */
-        requestBody: {
-            content: {
-                "application/json": string[];
-            };
-        };
-        responses: {
-            /** @description Groups deleted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_BulkDeleteResponse"];
-                };
-            };
-        };
-    };
-    export_groups_csv: {
-        parameters: {
-            query?: {
-                /** @description Filter by network ID */
-                network_id?: string | null;
-                /** @description Primary ordering field (used for grouping). Always sorts ASC to keep groups together. */
-                group_by?: null | components["schemas"]["GroupOrderField"];
-                /** @description Secondary ordering field (sorting within groups or standalone sort). */
-                order_by?: null | components["schemas"]["GroupOrderField"];
-                /** @description Direction for order_by field (group_by always uses ASC). */
-                order_direction?: null | components["schemas"]["OrderDirection"];
-                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
-                limit?: number | null;
-                /** @description Number of results to skip. Default: 0. */
-                offset?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description CSV file containing Groups */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/csv": unknown;
-                };
-            };
-        };
-    };
-    get_group_by_id: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Group ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Group found */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_Group"];
-                };
-            };
-            /** @description Group not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    update_group: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Group ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Group"];
-            };
-        };
-        responses: {
-            /** @description Group updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_Group"];
-                };
-            };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Group not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    delete_group: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Group ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Group deleted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse"];
-                };
-            };
-            /** @description Group not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };

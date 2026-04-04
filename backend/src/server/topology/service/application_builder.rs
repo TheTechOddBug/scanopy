@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use super::{context::TopologyContext, perspective::PerspectiveBuilder};
 use crate::server::{
-    groups::r#impl::types::GroupType,
+    dependencies::r#impl::{base::DependencyMembers, types::DependencyType},
     services::r#impl::{categories::ServiceCategory, virtualization::ServiceVirtualization},
     shared::types::metadata::EntityMetadataProvider,
     topology::types::{
@@ -74,30 +74,35 @@ impl PerspectiveBuilder for ApplicationBuilder {
             }
         }
 
-        // Build binding_id → service_id lookup
+        // Build binding_id → service_id lookup (for Bindings variant backward compat)
         let binding_to_service: HashMap<Uuid, Uuid> = ctx
             .services
             .iter()
             .flat_map(|s| s.base.bindings.iter().map(move |b| (b.id, s.id)))
             .collect();
 
-        // Create service-level flow edges from groups
-        for group in ctx.groups {
-            let binding_ids = &group.base.binding_ids;
-
-            // Resolve binding_ids to an ordered, deduplicated list of service IDs
-            let mut service_ids: Vec<Uuid> = Vec::new();
-            for binding_id in binding_ids {
-                if let Some(&service_id) = binding_to_service.get(binding_id)
-                    && service_ids.last() != Some(&service_id)
-                {
-                    service_ids.push(service_id);
+        // Create service-level flow edges from dependencies
+        for dep in ctx.dependencies {
+            // Resolve to ordered service IDs based on member type
+            let service_ids: Vec<Uuid> = match &dep.base.members {
+                DependencyMembers::Services { service_ids } => service_ids.clone(),
+                DependencyMembers::Bindings { binding_ids } => {
+                    // Backward compat: resolve binding_ids to deduplicated service IDs
+                    let mut ids = Vec::new();
+                    for binding_id in binding_ids {
+                        if let Some(&service_id) = binding_to_service.get(binding_id)
+                            && ids.last() != Some(&service_id)
+                        {
+                            ids.push(service_id);
+                        }
+                    }
+                    ids
                 }
-            }
+            };
 
             // Only create edges between services that have nodes
-            match group.base.group_type {
-                GroupType::RequestPath => {
+            match dep.base.dependency_type {
+                DependencyType::RequestPath => {
                     for window in service_ids.windows(2) {
                         let (source_id, target_id) = (window[0], window[1]);
                         if service_node_ids.contains_key(&source_id)
@@ -108,11 +113,11 @@ impl PerspectiveBuilder for ApplicationBuilder {
                                 source: source_id,
                                 target: target_id,
                                 edge_type: EdgeType::RequestPath {
-                                    group_id: group.id,
+                                    group_id: dep.id,
                                     source_binding_id: Uuid::nil(),
                                     target_binding_id: Uuid::nil(),
                                 },
-                                label: Some(group.base.name.clone()),
+                                label: Some(dep.base.name.clone()),
                                 source_handle: EdgeHandle::Bottom,
                                 target_handle: EdgeHandle::Top,
                                 is_multi_hop: false,
@@ -121,7 +126,7 @@ impl PerspectiveBuilder for ApplicationBuilder {
                         }
                     }
                 }
-                GroupType::HubAndSpoke => {
+                DependencyType::HubAndSpoke => {
                     if let Some((&hub_id, spokes)) = service_ids.split_first()
                         && service_node_ids.contains_key(&hub_id)
                     {
@@ -132,11 +137,11 @@ impl PerspectiveBuilder for ApplicationBuilder {
                                     source: hub_id,
                                     target: spoke_id,
                                     edge_type: EdgeType::HubAndSpoke {
-                                        group_id: group.id,
+                                        group_id: dep.id,
                                         source_binding_id: Uuid::nil(),
                                         target_binding_id: Uuid::nil(),
                                     },
-                                    label: Some(group.base.name.clone()),
+                                    label: Some(dep.base.name.clone()),
                                     source_handle: EdgeHandle::Bottom,
                                     target_handle: EdgeHandle::Top,
                                     is_multi_hop: false,
@@ -181,7 +186,7 @@ mod tests {
     use super::*;
     use crate::server::{
         bindings::r#impl::base::{Binding, BindingBase, BindingType},
-        groups::r#impl::base::{Group, GroupBase},
+        dependencies::r#impl::base::{Dependency, DependencyBase, DependencyMembers},
         services::r#impl::{
             base::{Service, ServiceBase},
             categories::ServiceCategory,
@@ -251,15 +256,15 @@ mod tests {
         }
     }
 
-    fn make_group(group_type: GroupType, binding_ids: Vec<Uuid>) -> Group {
-        Group {
+    fn make_dependency(dep_type: DependencyType, members: DependencyMembers) -> Dependency {
+        Dependency {
             id: Uuid::new_v4(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            base: GroupBase {
-                name: "Test Group".to_string(),
-                group_type,
-                binding_ids,
+            base: DependencyBase {
+                name: "Test Dependency".to_string(),
+                dependency_type: dep_type,
+                members,
                 ..Default::default()
             },
         }
@@ -335,10 +340,15 @@ mod tests {
         let svc2 = make_service(host_id, ServiceCategory::Development, "App", vec![b2]);
         let svc3 = make_service(host_id, ServiceCategory::Database, "Postgres", vec![b3]);
 
-        let group = make_group(GroupType::RequestPath, vec![b1_id, b2_id, b3_id]);
+        let dep = make_dependency(
+            DependencyType::RequestPath,
+            DependencyMembers::Bindings {
+                binding_ids: vec![b1_id, b2_id, b3_id],
+            },
+        );
 
         let services = vec![svc1, svc2, svc3];
-        let groups = vec![group];
+        let deps = vec![dep];
         let options = TopologyOptions::default();
 
         let ctx = TopologyContext::new(
@@ -346,7 +356,7 @@ mod tests {
             &[],
             &[],
             &services,
-            &groups,
+            &deps,
             &[],
             &[],
             &[],
@@ -386,10 +396,15 @@ mod tests {
         let svc2 = make_service(host_id, ServiceCategory::Development, "App1", vec![b2]);
         let svc3 = make_service(host_id, ServiceCategory::Development, "App2", vec![b3]);
 
-        let group = make_group(GroupType::HubAndSpoke, vec![b1_id, b2_id, b3_id]);
+        let dep = make_dependency(
+            DependencyType::HubAndSpoke,
+            DependencyMembers::Bindings {
+                binding_ids: vec![b1_id, b2_id, b3_id],
+            },
+        );
 
         let services = vec![svc1, svc2, svc3];
-        let groups = vec![group];
+        let deps = vec![dep];
         let options = TopologyOptions::default();
 
         let ctx = TopologyContext::new(
@@ -397,7 +412,7 @@ mod tests {
             &[],
             &[],
             &services,
-            &groups,
+            &deps,
             &[],
             &[],
             &[],
@@ -423,7 +438,7 @@ mod tests {
     fn test_deduplicates_bindings_to_services() {
         let host_id = Uuid::new_v4();
 
-        // Service with 2 bindings in the same group
+        // Service with 2 bindings in the same dependency
         let b1 = make_binding(Uuid::nil());
         let b2 = make_binding(Uuid::nil());
         let b3 = make_binding(Uuid::nil());
@@ -439,12 +454,17 @@ mod tests {
         );
         let svc2 = make_service(host_id, ServiceCategory::Database, "DB", vec![b3]);
 
-        // Group: b1 (svc1) → b2 (svc1) → b3 (svc2)
+        // Dependency: b1 (svc1) → b2 (svc1) → b3 (svc2)
         // Should deduplicate to: svc1 → svc2
-        let group = make_group(GroupType::RequestPath, vec![b1_id, b2_id, b3_id]);
+        let dep = make_dependency(
+            DependencyType::RequestPath,
+            DependencyMembers::Bindings {
+                binding_ids: vec![b1_id, b2_id, b3_id],
+            },
+        );
 
         let services = vec![svc1, svc2];
-        let groups = vec![group];
+        let deps = vec![dep];
         let options = TopologyOptions::default();
 
         let ctx = TopologyContext::new(
@@ -452,7 +472,7 @@ mod tests {
             &[],
             &[],
             &services,
-            &groups,
+            &deps,
             &[],
             &[],
             &[],

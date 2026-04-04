@@ -7,6 +7,7 @@ export interface LayoutInput {
 	edges: TopologyEdge[];
 	topology: Topology;
 	collapsedContainers?: Set<string>;
+	expandedContainerSizes?: Map<string, { width: number; height: number }>;
 	elementNodeSizes?: Map<string, { x: number; y: number }>;
 	hiddenEdgeTypes?: string[];
 }

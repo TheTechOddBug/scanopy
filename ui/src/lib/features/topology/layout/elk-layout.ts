@@ -40,8 +40,8 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 	'elk.direction': 'DOWN',
 	'elk.layered.spacing.nodeNodeBetweenLayers': '100',
 	'elk.layered.spacing.edgeNodeBetweenLayers': '50',
-	'elk.spacing.componentComponent': '80',
-	'elk.spacing.nodeNode': '60',
+	'elk.spacing.componentComponent': '75',
+	'elk.spacing.nodeNode': '50',
 	'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
 	'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
 	'elk.hierarchyHandling': 'SEPARATE_CHILDREN',
@@ -97,15 +97,19 @@ function buildElkGraph(input: ElkLayoutInput): {
 
 			const collapsedWidth = meta.collapsed_size.width;
 			const collapsedHeight = meta.collapsed_size.height;
+			// Use expanded width for collapsed containers so ELK reserves horizontal
+			// space — prevents neighbors from being placed where they'd overlap on expand
+			const expandedWidth = input.expandedContainerSizes?.get(node.id)?.width;
+			const elkCollapsedWidth = expandedWidth ?? collapsedWidth;
 			const elkNode: ElkNode = isCollapsed
 				? {
 						id: node.id,
-						width: collapsedWidth,
+						width: elkCollapsedWidth,
 						height: collapsedHeight,
 						children: [],
 						layoutOptions: {
 							'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-							'elk.nodeSize.minimum': `(${collapsedWidth},${collapsedHeight})`,
+							'elk.nodeSize.minimum': `(${elkCollapsedWidth},${collapsedHeight})`,
 							...(layerId !== undefined && {
 								'elk.layered.layering.layerId': String(layerId)
 							})
@@ -119,7 +123,7 @@ function buildElkGraph(input: ElkLayoutInput): {
 							'elk.box.packingMode': 'SIMPLE',
 							'elk.padding': padding,
 							'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-							'elk.spacing.nodeNode': '30',
+							'elk.spacing.nodeNode': '25',
 							...(layerId !== undefined && {
 								'elk.layered.layering.layerId': String(layerId)
 							})
@@ -600,21 +604,14 @@ function mapElkResults(
 		}
 	}
 
-	// Snap ALL node positions and container sizes to the 25px grid so they align
-	// with SvelteFlow's snapGrid. Container positions must also be grid-aligned
-	// because element positions are relative to their parent container — if the
-	// parent is off-grid, child snap is offset. Sizes use ceil to ensure content fits.
+	// Snap ALL node positions to the 25px grid so they align with SvelteFlow's snapGrid.
+	// Container positions must also be grid-aligned because element positions are relative
+	// to their parent container — if the parent is off-grid, child snap is offset.
 	const SNAP = 25;
 	for (const [id, pos] of nodePositions) {
 		nodePositions.set(id, {
 			x: Math.round(pos.x / SNAP) * SNAP,
 			y: Math.round(pos.y / SNAP) * SNAP
-		});
-	}
-	for (const [id, size] of containerSizes) {
-		containerSizes.set(id, {
-			width: Math.ceil(size.width / SNAP) * SNAP,
-			height: Math.ceil(size.height / SNAP) * SNAP
 		});
 	}
 

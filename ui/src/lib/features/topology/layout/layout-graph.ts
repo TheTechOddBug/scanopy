@@ -207,8 +207,12 @@ export class LayoutGraph {
 			const container = this.containers.get(id);
 			if (container) {
 				container.position = { ...pos };
-				const size = containerSizes.get(id);
-				if (size) container.expandedSize = { ...size };
+				// Don't overwrite expandedSize for collapsed containers — ELK returns
+				// collapsed dimensions which would corrupt the stored expanded size
+				if (!container.collapsed) {
+					const size = containerSizes.get(id);
+					if (size) container.expandedSize = { ...size };
+				}
 			}
 			const element = this.elements.get(id);
 			if (element) {
@@ -228,6 +232,27 @@ export class LayoutGraph {
 	/** Get container size (respects collapsed state) */
 	getContainerSize(containerId: string): { width: number; height: number } | undefined {
 		return this.containers.get(containerId)?.size;
+	}
+
+	/** Get expanded sizes for all containers (for preserving across rebuilds) */
+	getExpandedContainerSizes(): Map<string, { width: number; height: number }> {
+		const sizes = new Map<string, { width: number; height: number }>();
+		for (const [id, container] of this.containers) {
+			if (container.expandedSize.width > 0) {
+				sizes.set(id, { ...container.expandedSize });
+			}
+		}
+		return sizes;
+	}
+
+	/** Restore expanded sizes from a previous layout (for collapsed containers across rebuilds) */
+	restoreExpandedSizes(sizes: Map<string, { width: number; height: number }>): void {
+		for (const [id, size] of sizes) {
+			const container = this.containers.get(id);
+			if (container && container.collapsed) {
+				container.expandedSize = { ...size };
+			}
+		}
 	}
 
 	/** Get element size */

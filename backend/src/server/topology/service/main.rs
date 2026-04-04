@@ -443,21 +443,11 @@ impl TopologyService {
                 ref mut color,
                 ..
             } = node.node_type
+                && let Some(subnet_type) = subnet_map.get(&node.id)
             {
-                if let Some(subnet_type) = subnet_map.get(&node.id) {
-                    *layer_hint = Some(subnet_type.vertical_order() as i32);
-                    // Serialize Icon/Color enums to their JSON string representation
-                    if let Ok(serde_json::Value::String(s)) =
-                        serde_json::to_value(subnet_type.icon())
-                    {
-                        *icon = Some(s);
-                    }
-                    if let Ok(serde_json::Value::String(s)) =
-                        serde_json::to_value(subnet_type.color())
-                    {
-                        *color = Some(s);
-                    }
-                }
+                *layer_hint = Some(subnet_type.vertical_order() as i32);
+                *icon = Some(subnet_type.icon().to_string());
+                *color = Some(subnet_type.color().to_string());
             }
         }
 

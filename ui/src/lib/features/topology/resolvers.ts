@@ -1,8 +1,6 @@
 import type { components } from '$lib/api/schema';
 import type { Topology, TopologyNode } from './types/base';
 
-// Type aliases for the discriminated union variants
-type ContainerType = components['schemas']['ContainerType'];
 type ElementEntityType = components['schemas']['ElementEntityType'];
 
 // Resolver return types
@@ -45,24 +43,19 @@ const elementResolvers: Record<
 	}
 };
 
-const containerResolvers: Record<
-	ContainerType,
-	(nodeId: string, node: TopologyNode, topology: Topology) => ContainerRenderContext
-> = {
-	Subnet: (nodeId, node, topology) => {
-		const subnet = topology.subnets.find((s) => s.id === nodeId);
-		const title = 'header' in node ? (node.header as string | null) : null;
-		return { subnet, title };
-	},
-	TagContainer: (_nodeId, node) => {
-		const title = 'header' in node ? (node.header as string | null) : null;
-		return { subnet: undefined, title };
-	},
-	ServiceCategoryContainer: (_nodeId, node) => {
-		const title = 'header' in node ? (node.header as string | null) : null;
-		return { subnet: undefined, title };
-	}
-};
+// TODO(perspectives): This resolver returns a subnet entity for tag hover support.
+// When containers represent other entity types (hosts, services, hypervisors),
+// this must be refactored to return tags generically from whatever entity
+// the container represents, not specifically a subnet.
+function resolveContainer(
+	nodeId: string,
+	node: TopologyNode,
+	topology: Topology
+): ContainerRenderContext {
+	const subnet = topology.subnets.find((s) => s.id === nodeId);
+	const title = 'header' in node ? (node.header as string | null) : null;
+	return { subnet, title };
+}
 
 // Public API
 export function resolveElementNode(
@@ -81,8 +74,5 @@ export function resolveContainerNode(
 	topology: Topology
 ): ContainerRenderContext {
 	if (node.node_type !== 'Container') throw new Error(`Expected Container, got ${node.node_type}`);
-	const containerType = (node.container_type ?? 'Subnet') as ContainerType;
-	const resolver = containerResolvers[containerType];
-	if (!resolver) return containerResolvers['Subnet'](nodeId, node, topology);
-	return resolver(nodeId, node, topology);
+	return resolveContainer(nodeId, node, topology);
 }

@@ -1,7 +1,5 @@
 import type { components } from '$lib/api/schema';
 import type { Service } from '$lib/features/services/types/base';
-import type { ColorStyle } from '$lib/shared/utils/styling';
-import type { IconComponent } from '$lib/shared/utils/types';
 
 // Re-export generated types
 export type Topology = components['schemas']['Topology'];
@@ -29,9 +27,5 @@ export interface ElementRenderData {
 	interface_id: string;
 }
 
-export interface ContainerRenderData {
-	headerText: string;
-	cidr: string;
-	IconComponent: IconComponent;
-	colorHelper: ColorStyle;
-}
+// ContainerRenderData removed — ContainerNode now reads icon/color directly
+// from node data (set by backend graph builder) and metadata.

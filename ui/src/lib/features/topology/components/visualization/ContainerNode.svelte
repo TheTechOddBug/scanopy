@@ -11,9 +11,8 @@
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
-	import type { Color } from '$lib/shared/utils/styling';
-	import { subnetTypes, serviceDefinitions, containerTypes } from '$lib/shared/stores/metadata';
-	import { isContainerSubnet } from '$lib/features/subnets/queries';
+	import type { Color, ColorStyle } from '$lib/shared/utils/styling';
+	import { serviceDefinitions, containerTypes } from '$lib/shared/stores/metadata';
 	import { topology_hostsCount } from '$lib/paraglide/messages';
 	import {
 		useTopologiesQuery,
@@ -23,7 +22,7 @@
 		selectedNode as globalSelectedNode,
 		selectedEdge as globalSelectedEdge
 	} from '../../queries';
-	import type { TopologyNode, ContainerRenderData, Topology } from '../../types/base';
+	import type { TopologyNode, Topology } from '../../types/base';
 	import { resolveContainerNode } from '../../resolvers';
 	import { type Writable, get } from 'svelte/store';
 	import { getContext } from 'svelte';
@@ -37,6 +36,8 @@
 	} from '../../interactions';
 	import { collapsedContainers, toggleCollapse } from '../../collapse';
 	import type { Node, Edge } from '@xyflow/svelte';
+	import { createIconComponent } from '$lib/shared/utils/styling';
+	import type { IconComponent } from '$lib/shared/utils/types';
 
 	// Subscribe to connectedNodeIds for reactivity
 	let connectedNodes = $state(get(connectedNodeIds));
@@ -95,47 +96,33 @@
 		selectedEdgeContext ? $selectedEdgeContext : $globalSelectedEdge
 	) as Edge | null;
 
-	// Calculate if this node should fade out when another node is selected or hidden by tag filter
+	// Fade out when another node is selected or hidden by tag/search filter
 	let shouldFadeOut = $derived.by(() => {
 		if (isExportingValue) return false;
-
-		// Tag filter: fade if this subnet is hidden
-		if (hiddenNodes.has(id)) {
-			return true;
-		}
-
-		// Search filter: fade if this subnet is hidden by search
-		if (searchHiddenNodes.has(id)) {
-			return true;
-		}
-
-		// Selection-based fading
+		if (hiddenNodes.has(id)) return true;
+		if (searchHiddenNodes.has(id)) return true;
 		if (!selectedNode && !selectedEdge) return false;
-		// Check if this node is in the connected set
 		return !connectedNodes.has(id);
 	});
 
 	let nodeOpacity = $derived(shouldFadeOut ? 0.3 : 1);
 
-	// Check if this subnet should be highlighted by tag hover
-	let tagHoverRingStyle = $derived.by(() => {
-		if (!currentHoveredTag || currentHoveredTag.entityType !== 'subnet' || !subnet) return '';
-		const { tagId, color } = currentHoveredTag;
-		const isUntagged = subnet.tags.length === 0;
-		const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : subnet.tags.includes(tagId);
-		if (!hasTag) return '';
-		const colorHelper = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
-		return `box-shadow: 0 0 0 3px ${colorHelper.rgb};`;
-	});
-
+	// Container metadata (drives all rendering decisions)
 	let containerType = $derived(
 		((data as Record<string, unknown>)?.container_type as string) ?? 'Subnet'
 	);
-	let isSubcontainer = $derived(containerTypes.getMetadata(containerType).is_subcontainer);
+	let containerMeta = $derived(containerTypes.getMetadata(containerType));
+	let titleStyle = $derived(containerMeta.title_style);
+	let isSubcontainer = $derived(containerMeta.is_subcontainer);
+	let isCollapsible = $derived(containerMeta.is_collapsible);
+	let hasBorder = $derived(containerMeta.has_border);
 
+	// Resolve container data
 	let resolved = $derived(
 		topology ? resolveContainerNode(id, data as TopologyNode, topology) : null
 	);
+	// TODO(perspectives): subnet is used for tag hover. When containers represent other
+	// entity types, refactor to use a generic entity tags lookup instead.
 	let subnet = $derived(resolved?.subnet);
 
 	let isCollapsed = $derived(collapsedNodes.has(id));
@@ -149,10 +136,22 @@
 
 	let nodeStyle = $derived(`width: ${width}px; height: ${height}px;`);
 
-	// Header for sub-group containers comes from node header
-	let groupHeader = $derived((data as TopologyNode).header ?? '');
+	// Title text: from node header (set by backend graph builder)
+	let headerText = $derived((data as TopologyNode).header ?? '');
 
-	// Resolve element rule for sub-group containers to render Tag pills
+	// Icon and color: from NodeType::Container fields (set by backend graph builder)
+	let nodeIcon = $derived((data as Record<string, unknown>)?.icon as string | undefined);
+	let nodeColor = $derived((data as Record<string, unknown>)?.color as string | undefined);
+	let iconComponent: IconComponent | null = $derived(
+		nodeIcon ? createIconComponent(nodeIcon) : null
+	);
+	let colorHelper: ColorStyle = $derived(
+		nodeColor
+			? createColorHelper(nodeColor as Parameters<typeof createColorHelper>[0])
+			: createColorHelper('Gray')
+	);
+
+	// Element rule header + tag pills (for subcontainers created by element rules)
 	let elementRuleId = $derived(
 		(data as Record<string, unknown>)?.element_rule_id as string | undefined
 	);
@@ -163,13 +162,11 @@
 		return (rules as any[]).find((r: { id: string }) => r.id === elementRuleId) ?? null;
 	});
 
-	// Build label pills from the element rule
 	let groupLabels = $derived.by((): { label: string; color: Color }[] => {
 		if (!elementRule?.rule) return [];
 		const rule = elementRule.rule;
 		if ('ByServiceCategory' in rule && topology) {
 			return (rule.ByServiceCategory.categories ?? []).map((cat: string) => {
-				// Find a service with this category to get its color
 				const svc = topology!.services?.find(
 					(s) => serviceDefinitions.getCategory(s.service_definition) === cat
 				);
@@ -191,40 +188,23 @@
 		return [];
 	});
 
+	// TODO(perspectives): tag hover highlight is subnet-specific. When containers
+	// represent other entity types, refactor to use generic entity tags.
+	let tagHoverRingStyle = $derived.by(() => {
+		if (!currentHoveredTag || currentHoveredTag.entityType !== 'subnet' || !subnet) return '';
+		const { tagId, color } = currentHoveredTag;
+		const isUntagged = subnet.tags.length === 0;
+		const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : subnet.tags.includes(tagId);
+		if (!hasTag) return '';
+		const ch = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
+		return `box-shadow: 0 0 0 3px ${ch.rgb};`;
+	});
+
 	const viewport = useViewport();
 	let resizeHandleZoomLevel = $derived(viewport.current.zoom > 0.5);
 
 	const grayColorHelper = createColorHelper('Gray');
 
-	let subnetRenderData: ContainerRenderData | null = $derived(
-		subnet
-			? (() => {
-					const subnetColorHelper = subnetTypes.getColorHelper(subnet.subnet_type);
-					let IconComponent = subnetTypes.getIconComponent(subnet.subnet_type);
-					let cidr = subnet.cidr;
-
-					let showLabel = subnetTypes.getMetadata(subnet.subnet_type).show_label;
-					let nameOrType =
-						subnet.name != subnet.cidr
-							? subnet.name
-							: showLabel
-								? subnetTypes.getName(subnet.subnet_type)
-								: '';
-					let header = (data as TopologyNode).header;
-					let label = header
-						? header
-						: nameOrType +
-							(isContainerSubnet(subnet) ? '' : (nameOrType ? ': ' : '') + subnet.cidr);
-
-					return {
-						headerText: label,
-						colorHelper: subnetColorHelper,
-						cidr,
-						IconComponent
-					} as ContainerRenderData;
-				})()
-			: null
-	);
 	// Track pointer position to distinguish clicks from drags
 	let pointerDownPos: { x: number; y: number } | null = null;
 
@@ -237,19 +217,16 @@
 		if (!topology) return;
 		let node = topology.nodes.find((n) => n.id == id);
 		if (node && params.width && params.height) {
-			// Round to grid
 			let roundedWidth = Math.round(params.width / 25) * 25;
 			let roundedHeight = Math.round(params.height / 25) * 25;
 			let roundedX = Math.round(params.x / 25) * 25;
 			let roundedY = Math.round(params.y / 25) * 25;
 
-			// Update local state for immediate feedback
 			node.size.x = roundedWidth;
 			node.size.y = roundedHeight;
 			node.position.x = roundedX;
 			node.position.y = roundedY;
 
-			// Send lightweight update to server (fixes HTTP 413 for large topologies)
 			await updateNodeResizeMutation.mutateAsync({
 				topologyId: topology.id,
 				networkId: topology.network_id,
@@ -261,37 +238,93 @@
 	}
 </script>
 
-{#if isSubcontainer}
-	<!-- Sub-container (TagContainer / ServiceCategoryContainer) -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="relative"
-		style="{nodeStyle} opacity: {nodeOpacity}; transition: opacity 0.2s ease-in-out; cursor: pointer;"
-		onpointerdown={(e) => {
-			pointerDownPos = { x: e.clientX, y: e.clientY };
-		}}
-		onpointerup={(e) => {
-			if (pointerDownPos) {
-				const dx = Math.abs(e.clientX - pointerDownPos.x);
-				const dy = Math.abs(e.clientY - pointerDownPos.y);
-				if (dx < 5 && dy < 5) {
-					e.stopPropagation();
-					handleChevronClick(e);
-				}
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="relative"
+	style="{nodeStyle} opacity: {nodeOpacity}; transition: opacity 0.2s ease-in-out;{isSubcontainer
+		? ' cursor: pointer;'
+		: ''}"
+	onpointerdown={isSubcontainer
+		? (e) => {
+				pointerDownPos = { x: e.clientX, y: e.clientY };
 			}
-			pointerDownPos = null;
-		}}
-	>
-		{#if isCollapsed}
-			<!-- Collapsed subgroup: compact header with same visual style as expanded -->
+		: undefined}
+	onpointerup={isSubcontainer
+		? (e) => {
+				if (pointerDownPos) {
+					const dx = Math.abs(e.clientX - pointerDownPos.x);
+					const dy = Math.abs(e.clientY - pointerDownPos.y);
+					if (dx < 5 && dy < 5) {
+						e.stopPropagation();
+						handleChevronClick(e);
+					}
+				}
+				pointerDownPos = null;
+			}
+		: undefined}
+>
+	<!-- TITLE: External (card/pill above container) -->
+	{#if titleStyle === 'External' && headerText}
+		<div
+			class="nopan nodrag card text-secondary z-100 absolute -top-10 left-0 flex cursor-pointer items-center gap-1 px-2 py-1 shadow-lg backdrop-blur-sm"
+			role="button"
+			tabindex={-1}
+			onclick={handleChevronClick}
+			onkeydown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') handleChevronClick(e);
+			}}
+			onmousedown={(e) => e.stopPropagation()}
+			onpointerdown={(e) => e.stopPropagation()}
+		>
+			{#if isCollapsible}
+				{#if isCollapsed}
+					<ChevronRight class="text-secondary h-4 w-4 flex-shrink-0" />
+				{:else}
+					<ChevronDown class="text-secondary h-4 w-4 flex-shrink-0" />
+				{/if}
+			{/if}
+
+			{#if iconComponent}
+				<iconComponent class={`h-5 w-5 ${colorHelper.icon}`}></iconComponent>
+			{/if}
+
+			<span class="text-s text-secondary whitespace-nowrap font-medium">
+				{headerText}
+			</span>
+		</div>
+	{/if}
+
+	<!-- TITLE: Inline (inside container top padding) -->
+	{#if titleStyle === 'Inline' && !isCollapsed && (headerText || groupLabels.length > 0)}
+		<div
+			class="nopan nodrag text-secondary z-100 absolute left-2 top-1 mt-2 flex items-center gap-1 rounded-t px-2 py-1"
+		>
+			{#if isCollapsible}
+				<ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
+			{/if}
+			{#if headerText}
+				<span class="text-tertiary whitespace-nowrap text-xs font-medium">
+					{headerText}{groupLabels.length > 0 ? ':' : ''}
+				</span>
+			{/if}
+			{#each groupLabels as pill (pill.label)}
+				<Tag label={pill.label} color={pill.color} />
+			{/each}
+		</div>
+	{/if}
+
+	<!-- COLLAPSED STATE -->
+	{#if isCollapsed}
+		{#if isSubcontainer}
+			<!-- Collapsed subcontainer: compact inline header with dashed border -->
 			<div
 				class="nopan nodrag flex items-center gap-1 rounded-lg border border-dashed border-gray-300 px-3 py-2 dark:border-gray-600"
 				style="background: var(--color-topology-subgroup-bg); width: 100%; height: 100%;"
 			>
 				<ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
-				{#if groupHeader}
+				{#if headerText}
 					<span class="text-tertiary whitespace-nowrap text-xs font-medium">
-						{groupHeader}{groupLabels.length > 0 ? ':' : ''}
+						{headerText}{groupLabels.length > 0 ? ':' : ''}
 					</span>
 				{/if}
 				{#each groupLabels as pill (pill.label)}
@@ -302,86 +335,18 @@
 				</span>
 			</div>
 		{:else}
-			{#if groupHeader || groupLabels.length > 0}
-				<div
-					class="nopan nodrag text-secondary z-100 absolute left-2 top-1 mt-2 flex items-center gap-1 rounded-t px-2 py-1"
-				>
-					<ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
-					{#if groupHeader}
-						<span class="text-tertiary whitespace-nowrap text-xs font-medium">
-							{groupHeader}{groupLabels.length > 0 ? ':' : ''}
-						</span>
-					{/if}
-					{#each groupLabels as pill (pill.label)}
-						<Tag label={pill.label} color={pill.color} />
-					{/each}
-				</div>
-			{/if}
-
+			<!-- Collapsed root container: summary with subcontainer info -->
 			<div
-				class="rounded-lg border border-dashed border-gray-300 transition-all duration-200 dark:border-gray-600"
-				style="background: var(--color-topology-subgroup-bg); width: 100%; height: 100%; position: relative; overflow: hidden;"
-			></div>
-		{/if}
-	</div>
-{:else if subnetRenderData}
-	<div
-		class="relative"
-		style="{nodeStyle} opacity: {nodeOpacity}; transition: opacity 0.2s ease-in-out;"
-	>
-		<!-- External label in upper left corner -->
-		{#if subnetRenderData.cidr || subnetRenderData.headerText}
-			<div
-				class="nopan nodrag card text-secondary z-100 absolute -top-10 left-0 flex cursor-pointer items-center gap-1 px-2 py-1 shadow-lg backdrop-blur-sm"
-				role="button"
-				tabindex={-1}
-				onclick={handleChevronClick}
-				onkeydown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') handleChevronClick(e);
-				}}
-				onmousedown={(e) => e.stopPropagation()}
-				onpointerdown={(e) => e.stopPropagation()}
+				class="rounded-xl border border-dashed border-gray-400 text-center text-sm font-semibold shadow-lg dark:border-gray-500"
+				style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: visible; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
 			>
-				<!-- Collapse chevron -->
-				{#if isCollapsed}
-					<ChevronRight class="text-secondary h-4 w-4 flex-shrink-0" />
-				{:else}
-					<ChevronDown class="text-secondary h-4 w-4 flex-shrink-0" />
-				{/if}
-
-				<!-- Icon -->
-				{#if subnetRenderData.IconComponent}
-					<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
-					<subnetRenderData.IconComponent class={`h-5 w-5 ${subnetRenderData.colorHelper.icon}`} />
-				{/if}
-
-				<!-- Label -->
-				<span class="text-s text-secondary whitespace-nowrap font-medium">
-					{subnetRenderData.headerText || subnetRenderData.cidr}
-				</span>
-			</div>
-		{/if}
-
-		<!-- Main container -->
-		<div
-			class="rounded-xl text-center text-sm font-semibold shadow-lg transition-all duration-200"
-			class:border-dashed={isCollapsed}
-			class:border={isCollapsed}
-			class:border-gray-400={isCollapsed}
-			class:dark:border-gray-500={isCollapsed}
-			style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: {isCollapsed
-				? 'visible'
-				: 'hidden'}; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
-		>
-			{#if isCollapsed}
-				<!-- Collapsed summary -->
 				<div class="flex min-w-48 flex-col items-center gap-2 px-6 py-4">
 					<span class="text-secondary text-base font-medium">
 						{topology_hostsCount({ count: childCount })}
 					</span>
 					{#each subgroupSummaries as summary (summary.groupId)}
 						{@const groupNode = topology?.nodes.find((n) => n.id === summary.groupId)}
-						{@const header = groupNode?.header ?? ''}
+						{@const sHeader = groupNode?.header ?? ''}
 						{@const ruleId = (groupNode as Record<string, unknown>)?.element_rule_id as
 							| string
 							| undefined}
@@ -420,8 +385,8 @@
 							class="flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2 py-1 dark:border-gray-600"
 							style="background: var(--color-topology-subgroup-bg);"
 						>
-							{#if header}
-								<span class="text-tertiary text-xs">{header}{labels.length > 0 ? ':' : ''}</span>
+							{#if sHeader}
+								<span class="text-tertiary text-xs">{sHeader}{labels.length > 0 ? ':' : ''}</span>
 							{/if}
 							{#each labels as pill (pill.label)}
 								<Tag label={pill.label} color={pill.color} />
@@ -432,101 +397,113 @@
 						</div>
 					{/each}
 				</div>
-			{/if}
-		</div>
-
-		{#if resizeHandleZoomLevel && !$topologyOptions.local.hide_resize_handles && !isCollapsed}
-			<NodeResizeControl
-				position="bottom-right"
-				onResizeEnd={onResize}
-				style="z-index: 100; border: none; width: 20px; height: 20px;"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="20"
-					height="20"
-					viewBox="0 0 20 20"
-					style="position: absolute; right: 10px; bottom: 10px;"
-				>
-					<path
-						d="M20 7.5 L20 20 L7.5 20 Z"
-						fill={selected ? subnetRenderData.colorHelper.rgb : grayColorHelper.rgb}
-						style="transition: fill 200ms ease-in-out;"
-					/>
-					<line x1="11.667" y1="20" x2="20" y2="11.667" stroke="#374151" stroke-width="1" />
-					<line x1="16.333" y1="20" x2="20" y2="16.333" stroke="#374151" stroke-width="1" />
-				</svg>
-			</NodeResizeControl>
-
-			<NodeResizeControl
-				position="top-left"
-				onResizeEnd={onResize}
-				style="z-index: 100; border: none; width: 20px; height: 20px;"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="20"
-					height="20"
-					viewBox="0 0 20 20"
-					style="position: absolute; left: 10px; top: 10px;"
-				>
-					<path
-						d="M0 12.5 L0 0 L12.5 0 Z"
-						fill={selected ? subnetRenderData.colorHelper.rgb : grayColorHelper.rgb}
-						style="transition: fill 200ms ease-in-out;"
-					/>
-					<line x1="8.333" y1="0" x2="0" y2="8.333" stroke="#374151" stroke-width="1" />
-					<line x1="3.667" y1="0" x2="0" y2="3.667" stroke="#374151" stroke-width="1" />
-				</svg>
-			</NodeResizeControl>
-
-			<NodeResizeControl
-				position="top-right"
-				onResizeEnd={onResize}
-				style="z-index: 100; border: none; width: 20px; height: 20px;"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="20"
-					height="20"
-					viewBox="0 0 20 20"
-					style="position: absolute; right: 10px; top: 10px;"
-				>
-					<path
-						d="M7.5 0 L20 0 L20 12.5 Z"
-						fill={selected ? subnetRenderData.colorHelper.rgb : grayColorHelper.rgb}
-						style="transition: fill 200ms ease-in-out;"
-					/>
-					<line x1="11.667" y1="0" x2="20" y2="8.333" stroke="#374151" stroke-width="1" />
-					<line x1="16.333" y1="0" x2="20" y2="3.667" stroke="#374151" stroke-width="1" />
-				</svg>
-			</NodeResizeControl>
-
-			<NodeResizeControl
-				position="bottom-left"
-				onResizeEnd={onResize}
-				style="z-index: 100; border: none; width: 20px; height: 20px;"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="20"
-					height="20"
-					viewBox="0 0 20 20"
-					style="position: absolute; left: 10px; bottom: 10px;"
-				>
-					<path
-						d="M0 7.5 L12.5 20 L0 20 Z"
-						fill={selected ? subnetRenderData.colorHelper.rgb : grayColorHelper.rgb}
-						style="transition: fill 200ms ease-in-out;"
-					/>
-					<line x1="0" y1="11.667" x2="8.333" y2="20" stroke="#374151" stroke-width="1" />
-					<line x1="0" y1="16.333" x2="3.667" y2="20" stroke="#374151" stroke-width="1" />
-				</svg>
-			</NodeResizeControl>
+			</div>
 		{/if}
-	</div>
-{/if}
-<!-- Sub-containers don't get handles; subnet containers do -->
+	{:else}
+		<!-- EXPANDED STATE -->
+		{#if isSubcontainer}
+			{#if hasBorder}
+				<div
+					class="rounded-lg border border-dashed border-gray-300 transition-all duration-200 dark:border-gray-600"
+					style="background: var(--color-topology-subgroup-bg); width: 100%; height: 100%; position: relative; overflow: hidden;"
+				></div>
+			{/if}
+		{:else}
+			<div
+				class="rounded-xl text-center text-sm font-semibold shadow-lg transition-all duration-200"
+				style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: hidden; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
+			></div>
+
+			{#if resizeHandleZoomLevel && !$topologyOptions.local.hide_resize_handles}
+				<NodeResizeControl
+					position="bottom-right"
+					onResizeEnd={onResize}
+					style="z-index: 100; border: none; width: 20px; height: 20px;"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="20"
+						height="20"
+						viewBox="0 0 20 20"
+						style="position: absolute; right: 10px; bottom: 10px;"
+					>
+						<path
+							d="M20 7.5 L20 20 L7.5 20 Z"
+							fill={selected ? colorHelper.rgb : grayColorHelper.rgb}
+							style="transition: fill 200ms ease-in-out;"
+						/>
+						<line x1="11.667" y1="20" x2="20" y2="11.667" stroke="#374151" stroke-width="1" />
+						<line x1="16.333" y1="20" x2="20" y2="16.333" stroke="#374151" stroke-width="1" />
+					</svg>
+				</NodeResizeControl>
+				<NodeResizeControl
+					position="top-left"
+					onResizeEnd={onResize}
+					style="z-index: 100; border: none; width: 20px; height: 20px;"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="20"
+						height="20"
+						viewBox="0 0 20 20"
+						style="position: absolute; left: 10px; top: 10px;"
+					>
+						<path
+							d="M0 12.5 L0 0 L12.5 0 Z"
+							fill={selected ? colorHelper.rgb : grayColorHelper.rgb}
+							style="transition: fill 200ms ease-in-out;"
+						/>
+						<line x1="8.333" y1="0" x2="0" y2="8.333" stroke="#374151" stroke-width="1" />
+						<line x1="3.667" y1="0" x2="0" y2="3.667" stroke="#374151" stroke-width="1" />
+					</svg>
+				</NodeResizeControl>
+				<NodeResizeControl
+					position="top-right"
+					onResizeEnd={onResize}
+					style="z-index: 100; border: none; width: 20px; height: 20px;"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="20"
+						height="20"
+						viewBox="0 0 20 20"
+						style="position: absolute; right: 10px; top: 10px;"
+					>
+						<path
+							d="M7.5 0 L20 0 L20 12.5 Z"
+							fill={selected ? colorHelper.rgb : grayColorHelper.rgb}
+							style="transition: fill 200ms ease-in-out;"
+						/>
+						<line x1="11.667" y1="0" x2="20" y2="8.333" stroke="#374151" stroke-width="1" />
+						<line x1="16.333" y1="0" x2="20" y2="3.667" stroke="#374151" stroke-width="1" />
+					</svg>
+				</NodeResizeControl>
+				<NodeResizeControl
+					position="bottom-left"
+					onResizeEnd={onResize}
+					style="z-index: 100; border: none; width: 20px; height: 20px;"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="20"
+						height="20"
+						viewBox="0 0 20 20"
+						style="position: absolute; left: 10px; bottom: 10px;"
+					>
+						<path
+							d="M0 7.5 L12.5 20 L0 20 Z"
+							fill={selected ? colorHelper.rgb : grayColorHelper.rgb}
+							style="transition: fill 200ms ease-in-out;"
+						/>
+						<line x1="0" y1="11.667" x2="8.333" y2="20" stroke="#374151" stroke-width="1" />
+						<line x1="0" y1="16.333" x2="3.667" y2="20" stroke="#374151" stroke-width="1" />
+					</svg>
+				</NodeResizeControl>
+			{/if}
+		{/if}
+	{/if}
+</div>
+
 <Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
 <Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
 <Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
@@ -538,7 +515,6 @@
 <Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />
 
 <style>
-	/* Ensure proper text wrapping and overflow handling */
 	div {
 		word-wrap: break-word;
 		overflow-wrap: break-word;

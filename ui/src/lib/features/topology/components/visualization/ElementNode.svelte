@@ -123,8 +123,29 @@
 
 	// Compute nodeRenderData reactively
 	let nodeRenderData: ElementRenderData | null = $derived(
-		host && resolved?.hostId
+		resolved
 			? (() => {
+					const elementType = resolved.elementType ?? 'Interface';
+
+					// Service elements: simpler rendering — single service with host name
+					if (elementType === 'Service') {
+						const service = resolved.services[0];
+						return {
+							elementType,
+							footerText: host?.name ?? null,
+							services: service ? [service] : [],
+							hiddenOpenPorts: [],
+							headerText: null,
+							bodyText: service ? null : 'Unknown Service',
+							showServices: !!service,
+							isVirtualized: false,
+							interface_id: id
+						} as ElementRenderData;
+					}
+
+					// Interface elements: existing behavior
+					if (!host || !resolved.hostId) return null;
+
 					const hiddenCategories = $topologyOptions.request.hide_service_categories ?? [];
 
 					// All services bound to this interface (after tag filtering)
@@ -164,6 +185,7 @@
 					}
 
 					return {
+						elementType,
 						footerText,
 						services: servicesOnInterface,
 						hiddenOpenPorts,

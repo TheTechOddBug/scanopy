@@ -13,6 +13,7 @@ import permissionsJson from '$lib/data/permissions.json';
 import credentialTypesJson from '$lib/data/credential-types.json';
 import conceptsJson from '$lib/data/concepts.json';
 import containerTypesJson from '$lib/data/container-types.json';
+import perspectivesJson from '$lib/data/perspectives.json';
 import {
 	createColorHelper,
 	createIconComponent,
@@ -80,6 +81,7 @@ export interface MetadataRegistry {
 	concepts: EntityMetadata[];
 	credential_types: TypeMetadata[];
 	container_types: TypeMetadata[];
+	perspectives: TypeMetadata[];
 }
 
 // Utility type to add proper typing to the metadata field
@@ -205,7 +207,8 @@ export const metadata = writable<MetadataRegistry>({
 	permissions: permissionsJson,
 	concepts: conceptsJson,
 	credential_types: credentialTypesJson,
-	container_types: containerTypesJson
+	container_types: containerTypesJson,
+	perspectives: perspectivesJson
 } as unknown as MetadataRegistry);
 
 // Shared color helper functions that work for both TypeMetadata and EntityMetadata
@@ -392,6 +395,7 @@ export const credentialTypes = createTypeMetadataHelpers<
 export const containerTypes = createTypeMetadataHelpers<'container_types', ContainerTypeMetadata>(
 	'container_types'
 );
+export const perspectives = createTypeMetadataHelpers<'perspectives', object>('perspectives');
 
 /**
  * Generic metadata item structure for static fixtures.

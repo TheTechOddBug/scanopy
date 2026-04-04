@@ -1,9 +1,6 @@
 import type { ElkNode, ElkExtendedEdge } from 'elkjs';
 import type { TopologyNode, TopologyEdge, Topology } from '../types/base';
-import type { components } from '$lib/api/schema';
 import { classifyEdge } from './edge-classification';
-
-type SubnetType = components['schemas']['SubnetType'];
 
 export interface ElkLayoutInput {
 	nodes: TopologyNode[];
@@ -43,26 +40,6 @@ async function getElk(): Promise<import('elkjs/lib/elk-api')['default']> {
 	return elkPromise;
 }
 
-/** Map SubnetType to vertical layer order (lower = higher on screen). */
-const SUBNET_TYPE_LAYER: Record<SubnetType, number> = {
-	Internet: 0,
-	Remote: 0,
-	Gateway: 1,
-	VpnTunnel: 1,
-	Dmz: 1,
-	Lan: 2,
-	WiFi: 2,
-	IoT: 2,
-	Guest: 2,
-	Management: 3,
-	Storage: 3,
-	DockerBridge: 4,
-	MacVlan: 4,
-	IpVlan: 4,
-	Loopback: 999,
-	Unknown: 999
-};
-
 /** Root-level ELK layout options for layered compound layout. */
 const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 	'elk.algorithm': 'layered',
@@ -84,21 +61,14 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 const CONTAINER_PADDING = '[top=25,left=25,bottom=25,right=25]';
 
 /** Sub-group container padding (smaller header). */
-const SUBGROUP_PADDING = '[top=35,left=20,bottom=20,right=20]';
+const SUBGROUP_PADDING = '[top=40,left=20,bottom=20,right=20]';
 
 /** Container types that represent sub-groups within a subnet. */
 const SUBGROUP_CONTAINER_TYPES = new Set(['TagGroup', 'ServiceCategoryGroup']);
 
-function getLayerHint(node: TopologyNode, topology: Topology): number {
-	// Future: use layer_hint if present
+function getLayerHint(node: TopologyNode): number {
 	if ('layer_hint' in node && typeof (node as Record<string, unknown>).layer_hint === 'number') {
 		return (node as Record<string, unknown>).layer_hint as number;
-	}
-
-	// Derive from subnet's subnet_type
-	const subnet = topology.subnets.find((s) => s.id === node.id);
-	if (subnet) {
-		return SUBNET_TYPE_LAYER[subnet.subnet_type as SubnetType] ?? 999;
 	}
 	return 999;
 }
@@ -134,7 +104,7 @@ function buildElkGraph(input: ElkLayoutInput): {
 			const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
 			if (parentId) parentContainerMap.set(node.id, parentId);
 
-			const layerId = isSubgroup ? undefined : getLayerHint(node, input.topology);
+			const layerId = isSubgroup ? undefined : getLayerHint(node);
 			const padding = isSubgroup ? SUBGROUP_PADDING : CONTAINER_PADDING;
 
 			const collapsedWidth = isSubgroup ? 250 : 200;

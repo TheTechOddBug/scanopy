@@ -5,12 +5,15 @@
 	import { selectedNodes, previewEdges, autoRebuild } from '../../queries';
 	import type { Topology, TopologyNode } from '../../types/base';
 	import { resolveElementNode } from '../../resolvers';
-	import type { GroupType } from '$lib/features/groups/types/base';
+	import type { DependencyType } from '$lib/features/dependencies/types/base';
 	import { getTopologyStateInfo } from '../../state';
 	import { computeCommonTags } from '$lib/shared/utils/tags';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { useBulkAddTagMutation, useBulkRemoveTagMutation } from '$lib/features/tags/queries';
-	import { useCreateGroupMutation, createEmptyGroupFormData } from '$lib/features/groups/queries';
+	import {
+		useCreateDependencyMutation,
+		createEmptyDependencyFormData
+	} from '$lib/features/dependencies/queries';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import {
 		topology_multiSelectActionBarCount,
@@ -20,7 +23,7 @@
 		common_cancel,
 		common_clearSelection,
 		common_confirm,
-		groups_createGroup
+		dependencies_createDependency
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -37,7 +40,7 @@
 
 	const bulkAddTagMutation = useBulkAddTagMutation();
 	const bulkRemoveTagMutation = useBulkRemoveTagMutation();
-	const createGroupMutation = useCreateGroupMutation();
+	const createDependencyMutation = useCreateDependencyMutation();
 
 	// Subscribe to selectedNodes
 	let nodes = $state<Node[]>(get(selectedNodes));
@@ -87,9 +90,9 @@
 		});
 	}
 
-	// Group creation state
+	// Dependency creation state
 	let isCreatingGroup = $state(false);
-	let groupType: GroupType = $state('RequestPath');
+	let groupType: DependencyType = $state('RequestPath');
 	let groupName = $state('');
 
 	// Binding disambiguation: for each selected host, pick which binding to include
@@ -160,12 +163,19 @@
 
 		if (bindingIds.length < 2 || !groupName.trim()) return;
 
-		const newGroup = createEmptyGroupFormData(topology.network_id);
-		newGroup.name = groupName.trim();
-		newGroup.group_type = groupType;
-		newGroup.binding_ids = bindingIds;
+		const newDependency = createEmptyDependencyFormData(topology.network_id);
+		newDependency.name = groupName.trim();
+		newDependency.dependency_type = groupType;
+		// Convert binding IDs to members (service_id + binding_id)
+		newDependency.members = bindingIds.map((bindingId) => {
+			const service = topology.services.find((s) => s.bindings.some((b) => b.id === bindingId));
+			return {
+				service_id: service?.id ?? '',
+				binding_id: bindingId
+			};
+		});
 
-		const created = await createGroupMutation.mutateAsync(newGroup);
+		const created = await createDependencyMutation.mutateAsync(newDependency);
 		previewEdges.set([]);
 		isCreatingGroup = false;
 		onGroupCreated?.(created.id);
@@ -245,7 +255,7 @@
 			<div class="card-divider-v self-stretch"></div>
 
 			{#if !isCreatingGroup}
-				<!-- Group type toggle + Create Group -->
+				<!-- Dependency type toggle + Create Dependency -->
 				<div
 					class="flex items-center gap-2"
 					role="group"
@@ -280,7 +290,7 @@
 					</div>
 
 					<button class="btn-primary text-xs" onclick={startGroupCreation}>
-						{groups_createGroup()}
+						{dependencies_createDependency()}
 					</button>
 				</div>
 			{:else}
@@ -297,7 +307,7 @@
 						<button
 							class="btn-primary text-xs"
 							onclick={confirmGroupCreation}
-							disabled={!groupName.trim() || createGroupMutation.isPending}
+							disabled={!groupName.trim() || createDependencyMutation.isPending}
 						>
 							{common_confirm()}
 						</button>

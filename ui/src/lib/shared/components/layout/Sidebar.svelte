@@ -36,7 +36,7 @@
 	import DiscoveryHistoryTab from '$lib/features/discovery/components/tabs/DiscoveryHistoryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
 	import SubnetTab from '$lib/features/subnets/components/SubnetTab.svelte';
-	import GroupTab from '$lib/features/groups/components/GroupTab.svelte';
+	import DependencyTab from '$lib/features/dependencies/components/DependencyTab.svelte';
 	import HostTab from '$lib/features/hosts/components/HostTab.svelte';
 	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
 	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
@@ -190,11 +190,11 @@
 					component: TopologyTab
 				},
 				{
-					id: entityUIConfig.Group!.tabId,
-					label: TAB_LABELS[entityUIConfig.Group!.tabId],
-					icon: entities.getIconComponent('Group'),
-					entityType: 'Group',
-					component: GroupTab
+					id: entityUIConfig.Dependency!.tabId,
+					label: TAB_LABELS[entityUIConfig.Dependency!.tabId],
+					icon: entities.getIconComponent('Dependency'),
+					entityType: 'Dependency',
+					component: DependencyTab
 				},
 				{
 					id: entityUIConfig.Share!.tabId,

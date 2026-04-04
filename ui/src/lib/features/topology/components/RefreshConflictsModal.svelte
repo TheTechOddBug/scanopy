@@ -9,7 +9,7 @@
 		common_cancel,
 		common_entities,
 		common_entity,
-		common_groupsLabel,
+		common_dependenciesLabel,
 		common_hosts,
 		common_interfaces,
 		common_lock,
@@ -37,7 +37,7 @@
 		topology.removed_hosts.length +
 		topology.removed_services.length +
 		topology.removed_subnets.length +
-		topology.removed_groups.length +
+		topology.removed_dependencies.length +
 		topology.removed_interfaces.length +
 		topology.removed_ports.length +
 		topology.removed_bindings.length;
@@ -58,10 +58,10 @@
 		.filter((s) => s != undefined);
 	$: unresolvedSubnetCount = topology.removed_subnets.length - removedSubnets.length;
 
-	$: removedGroups = topology.removed_groups
-		.map((id) => topology.groups.find((g) => g.id === id))
+	$: removedGroups = topology.removed_dependencies
+		.map((id) => topology.dependencies.find((g) => g.id === id))
 		.filter((g) => g != undefined);
-	$: unresolvedGroupCount = topology.removed_groups.length - removedGroups.length;
+	$: unresolvedGroupCount = topology.removed_dependencies.length - removedGroups.length;
 
 	$: removedInterfaces = topology.removed_interfaces
 		.map((id) => topology.interfaces.find((i) => i.id === id))
@@ -105,7 +105,7 @@
 			if (unresolvedGroupCount > 0) names.push(`(+${unresolvedGroupCount} hidden by filters)`);
 			items.push({
 				id: 'groups-header',
-				name: `${common_groupsLabel()}: ${names.join(', ')}`
+				name: `${common_dependenciesLabel()}: ${names.join(', ')}`
 			});
 		}
 

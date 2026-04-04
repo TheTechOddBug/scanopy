@@ -20,7 +20,7 @@ export const entityToExportPath: Record<EntityDiscriminants, string | null> = {
 	Interface: 'interfaces',
 	Port: 'ports',
 	Binding: 'bindings',
-	Group: 'groups',
+	Dependency: 'dependencies',
 	Tag: 'tags',
 	Daemon: 'daemons',
 	Network: 'networks',

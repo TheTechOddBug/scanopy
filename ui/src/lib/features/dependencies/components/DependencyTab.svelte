@@ -1,8 +1,8 @@
 <script lang="ts">
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
-	import type { Group } from '../types/base';
-	import GroupCard from './GroupCard.svelte';
-	import GroupEditModal from './GroupEditModal/GroupEditModal.svelte';
+	import type { Dependency } from '../types/base';
+	import DependencyCard from './DependencyCard.svelte';
+	import DependencyEditModal from './DependencyEditModal/DependencyEditModal.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import PreDaemonEmptyState from '$lib/shared/components/layout/PreDaemonEmptyState.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
@@ -11,11 +11,11 @@
 	import { Plus } from 'lucide-svelte';
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import {
-		useGroupsQuery,
-		useCreateGroupMutation,
-		useUpdateGroupMutation,
-		useDeleteGroupMutation,
-		useBulkDeleteGroupsMutation
+		useDependenciesQuery,
+		useCreateDependencyMutation,
+		useUpdateDependencyMutation,
+		useDeleteDependencyMutation,
+		useBulkDeleteDependenciesMutation
 	} from '../queries';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
@@ -31,20 +31,20 @@
 		common_create,
 		common_created,
 		common_description,
-		common_groupsLabel,
+		common_dependenciesLabel,
 		common_name,
 		common_network,
 		common_tags,
 		common_unknownNetwork,
 		common_updated,
-		groups_confirmBulkDelete,
-		groups_groupType,
-		groups_noGroupsHelp,
-		groups_noGroupsYet,
-		groups_subtitle
+		dependencies_confirmBulkDelete,
+		dependencies_dependencyType,
+		dependencies_noDependenciesHelp,
+		dependencies_noDependenciesYet,
+		dependencies_subtitle
 	} from '$lib/paraglide/messages';
 
-	type GroupOrderField = components['schemas']['GroupOrderField'];
+	type DependencyOrderField = components['schemas']['DependencyOrderField'];
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
 
 	let { isReadOnly = false }: TabProps = $props();
@@ -55,106 +55,106 @@
 
 	// Queries
 	const tagsQuery = useTagsQuery();
-	const groupsQuery = useGroupsQuery();
+	const dependenciesQuery = useDependenciesQuery();
 	const networksQuery = useNetworksQuery();
-	// Load all hosts to populate services cache for GroupCard display
+	// Load all hosts to populate services cache for DependencyCard display
 	const hostsQuery = useHostsQuery({ limit: 0 });
 	useServicesCacheQuery();
 
 	// Mutations
-	const createGroupMutation = useCreateGroupMutation();
-	const updateGroupMutation = useUpdateGroupMutation();
-	const deleteGroupMutation = useDeleteGroupMutation();
-	const bulkDeleteGroupsMutation = useBulkDeleteGroupsMutation();
+	const createDependencyMutation = useCreateDependencyMutation();
+	const updateDependencyMutation = useUpdateDependencyMutation();
+	const deleteDependencyMutation = useDeleteDependencyMutation();
+	const bulkDeleteDependenciesMutation = useBulkDeleteDependenciesMutation();
 
 	// Derived data
 	let tagsData = $derived(tagsQuery.data ?? []);
-	let groupsData = $derived(groupsQuery.data ?? []);
+	let dependenciesData = $derived(dependenciesQuery.data ?? []);
 	let networksData = $derived(networksQuery.data ?? []);
-	let isLoading = $derived(groupsQuery.isPending || hostsQuery.isPending);
+	let isLoading = $derived(dependenciesQuery.isPending || hostsQuery.isPending);
 
-	let showGroupEditor = $state(false);
-	let editingGroup = $state<Group | null>(null);
+	let showDependencyEditor = $state(false);
+	let editingDependency = $state<Dependency | null>(null);
 
-	// Deep-link: open group editor from URL (handles both fresh open and entity switch)
+	// Deep-link: open dependency editor from URL (handles both fresh open and entity switch)
 	$effect(() => {
 		const result = resolveModalDeepLink(
 			$modalState,
-			'group-editor',
-			groupsData,
-			showGroupEditor,
-			editingGroup?.id
+			'dependency-editor',
+			dependenciesData,
+			showDependencyEditor,
+			editingDependency?.id
 		);
 		if (result !== undefined) {
-			editingGroup = result;
-			showGroupEditor = true;
+			editingDependency = result;
+			showDependencyEditor = true;
 		}
 	});
 
-	function handleCreateGroup() {
-		editingGroup = null;
-		showGroupEditor = true;
+	function handleCreateDependency() {
+		editingDependency = null;
+		showDependencyEditor = true;
 	}
 
-	function handleEditGroup(group: Group) {
-		editingGroup = group;
-		showGroupEditor = true;
+	function handleEditDependency(dependency: Dependency) {
+		editingDependency = dependency;
+		showDependencyEditor = true;
 	}
 
-	function handleDeleteGroup(group: Group) {
-		if (confirm(common_confirmDeleteName({ name: group.name }))) {
-			deleteGroupMutation.mutate(group.id);
+	function handleDeleteDependency(dependency: Dependency) {
+		if (confirm(common_confirmDeleteName({ name: dependency.name }))) {
+			deleteDependencyMutation.mutate(dependency.id);
 		}
 	}
 
-	async function handleGroupCreate(data: Group) {
+	async function handleDependencyCreate(data: Dependency) {
 		try {
-			await createGroupMutation.mutateAsync(data);
-			showGroupEditor = false;
-			editingGroup = null;
+			await createDependencyMutation.mutateAsync(data);
+			showDependencyEditor = false;
+			editingDependency = null;
 		} catch {
 			// Error handled by mutation
 		}
 	}
 
-	async function handleGroupUpdate(id: string, data: Group) {
+	async function handleDependencyUpdate(id: string, data: Dependency) {
 		try {
-			await updateGroupMutation.mutateAsync(data);
-			showGroupEditor = false;
-			editingGroup = null;
+			await updateDependencyMutation.mutateAsync(data);
+			showDependencyEditor = false;
+			editingDependency = null;
 		} catch {
 			// Error handled by mutation
 		}
 	}
 
-	function handleCloseGroupEditor() {
-		showGroupEditor = false;
-		editingGroup = null;
+	function handleCloseDependencyEditor() {
+		showDependencyEditor = false;
+		editingDependency = null;
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(groups_confirmBulkDelete({ count: ids.length }))) {
-			await bulkDeleteGroupsMutation.mutateAsync(ids);
+		if (confirm(dependencies_confirmBulkDelete({ count: ids.length }))) {
+			await bulkDeleteDependenciesMutation.mutateAsync(ids);
 		}
 	}
 
-	function getGroupTags(group: Group): string[] {
-		return group.tags;
+	function getDependencyTags(dependency: Dependency): string[] {
+		return dependency.tags;
 	}
 
 	// CSV export handler
 	async function handleCsvExport() {
-		await downloadCsv('Group', {});
+		await downloadCsv('Dependency', {});
 	}
 
 	// Define field configuration for the DataTableControls
-	// Uses defineFields to ensure all GroupOrderField values are covered
-	let groupFields = $derived(
-		defineFields<Group, GroupOrderField>(
+	// Uses defineFields to ensure all DependencyOrderField values are covered
+	let dependencyFields = $derived(
+		defineFields<Dependency, DependencyOrderField>(
 			{
 				name: { label: common_name(), type: 'string', searchable: true },
-				group_type: {
-					label: groups_groupType(),
+				dependency_type: {
+					label: dependencies_dependencyType(),
 					type: 'string',
 					searchable: true,
 					filterable: true
@@ -189,10 +189,10 @@
 </script>
 
 <div class="space-y-6">
-	<TabHeader title={common_groupsLabel()} subtitle={groups_subtitle()}>
+	<TabHeader title={common_dependenciesLabel()} subtitle={dependencies_subtitle()}>
 		<svelte:fragment slot="actions">
 			{#if hasDaemon(onboarding) && !isReadOnly}
-				<button class="btn-primary flex items-center" onclick={handleCreateGroup}
+				<button class="btn-primary flex items-center" onclick={handleCreateDependency}
 					><Plus class="h-5 w-5" />{common_create()}</button
 				>
 			{/if}
@@ -200,41 +200,43 @@
 	</TabHeader>
 
 	{#if !hasDaemon(onboarding)}
-		<PreDaemonEmptyState title="Install a daemon to start organizing groups on your network." />
+		<PreDaemonEmptyState
+			title="Install a daemon to start organizing dependencies on your network."
+		/>
 	{:else if isLoading}
 		<Loading />
-	{:else if groupsData.length === 0}
+	{:else if dependenciesData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
-			title={groups_noGroupsYet()}
-			subtitle={groups_noGroupsHelp()}
-			onClick={handleCreateGroup}
+			title={dependencies_noDependenciesYet()}
+			subtitle={dependencies_noDependenciesHelp()}
+			onClick={handleCreateDependency}
 			cta={common_create()}
 		/>
 	{:else}
 		<DataControls
-			items={groupsData}
-			fields={groupFields}
-			storageKey="scanopy-groups-table-state"
+			items={dependenciesData}
+			fields={dependencyFields}
+			storageKey="scanopy-dependencies-table-state"
 			onBulkDelete={isReadOnly ? undefined : handleBulkDelete}
-			entityType={isReadOnly ? undefined : 'Group'}
-			getItemTags={getGroupTags}
+			entityType={isReadOnly ? undefined : 'Dependency'}
+			getItemTags={getDependencyTags}
 			getItemId={(item) => item.id}
 			onCsvExport={handleCsvExport}
 		>
 			{#snippet children(
-				item: Group,
+				item: Dependency,
 				viewMode: 'card' | 'list',
 				isSelected: boolean,
 				onSelectionChange: (selected: boolean) => void
 			)}
-				<GroupCard
-					group={item}
+				<DependencyCard
+					dependency={item}
 					selected={isSelected}
 					{onSelectionChange}
 					{viewMode}
-					onEdit={isReadOnly ? undefined : () => handleEditGroup(item)}
-					onDelete={isReadOnly ? undefined : () => handleDeleteGroup(item)}
+					onEdit={isReadOnly ? undefined : () => handleEditDependency(item)}
+					onDelete={isReadOnly ? undefined : () => handleDeleteDependency(item)}
 				/>
 			{/snippet}
 		</DataControls>
@@ -242,17 +244,17 @@
 </div>
 
 <!-- Modal -->
-<GroupEditModal
-	name="group-editor"
-	isOpen={showGroupEditor}
-	group={editingGroup}
-	onCreate={handleGroupCreate}
-	onUpdate={handleGroupUpdate}
-	onClose={handleCloseGroupEditor}
-	onDelete={editingGroup
+<DependencyEditModal
+	name="dependency-editor"
+	isOpen={showDependencyEditor}
+	dependency={editingDependency}
+	onCreate={handleDependencyCreate}
+	onUpdate={handleDependencyUpdate}
+	onClose={handleCloseDependencyEditor}
+	onDelete={editingDependency
 		? () => {
-				handleDeleteGroup(editingGroup!);
-				handleCloseGroupEditor();
+				handleDeleteDependency(editingDependency!);
+				handleCloseDependencyEditor();
 			}
 		: null}
 />

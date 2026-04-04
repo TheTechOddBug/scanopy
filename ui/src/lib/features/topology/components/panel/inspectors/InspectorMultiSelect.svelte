@@ -12,16 +12,19 @@
 	} from '../../../queries';
 	import type { TopologyNode } from '../../../types/base';
 	import { resolveElementNode } from '../../../resolvers';
-	import type { GroupType, EdgeStyle } from '$lib/features/groups/types/base';
+	import type { DependencyType, EdgeStyle } from '$lib/features/dependencies/types/base';
 	import { getTopologyEditState } from '../../../state';
 	import { computeCommonTags } from '$lib/shared/utils/tags';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { useBulkAddTagMutation, useBulkRemoveTagMutation } from '$lib/features/tags/queries';
-	import { useCreateGroupMutation, createEmptyGroupFormData } from '$lib/features/groups/queries';
-	import EdgeStyleForm from '$lib/features/groups/components/GroupEditModal/EdgeStyleForm.svelte';
+	import {
+		useCreateDependencyMutation,
+		createEmptyDependencyFormData
+	} from '$lib/features/dependencies/queries';
+	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import EntityTag from '$lib/shared/components/data/EntityTag.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';
-	import { entities, groupTypes } from '$lib/shared/stores/metadata';
+	import { entities, dependencyTypes } from '$lib/shared/stores/metadata';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
@@ -41,7 +44,7 @@
 		topology_multiSelectReadOnlyHint,
 		common_clearSelection,
 		common_tags,
-		groups_createGroup,
+		dependencies_createDependency,
 		groups_serviceBindings,
 		groups_serviceBindingsInfoTitle,
 		groups_serviceBindingsInfoBody,
@@ -68,7 +71,7 @@
 
 	const bulkAddTagMutation = useBulkAddTagMutation();
 	const bulkRemoveTagMutation = useBulkRemoveTagMutation();
-	const createGroupMutation = useCreateGroupMutation();
+	const createDependencyMutation = useCreateDependencyMutation();
 
 	// Subscribe to selectedNodes
 	let nodes = $state<Node[]>(get(selectedNodes));
@@ -156,8 +159,8 @@
 		});
 	}
 
-	// Group creation state — always visible, no expand/collapse
-	let groupType: GroupType = $state('RequestPath');
+	// Dependency creation state — always visible, no expand/collapse
+	let groupType: DependencyType = $state('RequestPath');
 	let groupName = $state('');
 	let groupColor: Color = $state(
 		AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)]
@@ -198,10 +201,10 @@
 		id: '',
 		name: '',
 		description: '',
-		binding_ids: [],
+		members: [],
 		created_at: '',
 		updated_at: '',
-		group_type: groupType,
+		dependency_type: groupType,
 		source: { type: 'Manual' as const },
 		network_id: '',
 		tags: []
@@ -292,14 +295,22 @@
 
 		if (bindingIds.length < 2 || !groupName.trim()) return;
 
-		const newGroup = createEmptyGroupFormData(topology.network_id);
-		newGroup.name = groupName.trim();
-		newGroup.group_type = groupType;
-		newGroup.binding_ids = bindingIds;
-		newGroup.color = groupColor;
-		newGroup.edge_style = groupEdgeStyle;
+		const newDependency = createEmptyDependencyFormData(topology.network_id);
+		newDependency.name = groupName.trim();
+		newDependency.dependency_type = groupType;
+		// Convert binding IDs to members (service_id + binding_id)
+		const allServices = topology.services;
+		newDependency.members = bindingIds.map((bindingId) => {
+			const service = allServices.find((s) => s.bindings.some((b) => b.id === bindingId));
+			return {
+				service_id: service?.id ?? '',
+				binding_id: bindingId
+			};
+		});
+		newDependency.color = groupColor;
+		newDependency.edge_style = groupEdgeStyle;
 
-		const created = await createGroupMutation.mutateAsync(newGroup);
+		const created = await createDependencyMutation.mutateAsync(newDependency);
 		previewEdges.set([]);
 		onGroupCreated?.(created.id);
 	}
@@ -474,23 +485,24 @@
 			</div>
 		</div>
 
-		<!-- Group creation section — always visible -->
+		<!-- Dependency creation section — always visible -->
 		<div class="space-y-2">
-			<span class="text-secondary block text-sm font-medium">{groups_createGroup()}</span>
+			<span class="text-secondary block text-sm font-medium">{dependencies_createDependency()}</span
+			>
 
 			<div class="card card-static space-y-3 p-3">
-				<!-- Group type toggle + preview button -->
+				<!-- Dependency type toggle + preview button -->
 				<div class="flex items-center gap-2">
 					<SegmentedControl
 						options={['RequestPath', 'HubAndSpoke'].map((type) => ({
 							value: type,
 							label: '',
-							icon: groupTypes.getIconComponent(type)
+							icon: dependencyTypes.getIconComponent(type)
 						}))}
 						selected={groupType}
-						onchange={(v) => (groupType = v as GroupType)}
+						onchange={(v) => (groupType = v as DependencyType)}
 					/>
-					<span class="text-secondary text-xs">{groupTypes.getName(groupType)}</span>
+					<span class="text-secondary text-xs">{dependencyTypes.getName(groupType)}</span>
 					<button
 						class="btn-secondary ml-auto flex items-center gap-1 p-1.5 text-xs"
 						onclick={togglePreview}
@@ -576,9 +588,9 @@
 					<button
 						class="btn-primary w-full text-xs"
 						onclick={confirmGroupCreation}
-						disabled={!groupName.trim() || createGroupMutation.isPending}
+						disabled={!groupName.trim() || createDependencyMutation.isPending}
 					>
-						{groups_createGroup()}
+						{dependencies_createDependency()}
 					</button>
 				</div>
 			</div>

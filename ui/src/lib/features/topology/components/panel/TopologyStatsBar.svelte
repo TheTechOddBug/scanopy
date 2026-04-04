@@ -8,12 +8,12 @@
 	const HostIcon = entities.getIconComponent('Host');
 	const ServiceIcon = entities.getIconComponent('Service');
 	const SubnetIcon = entities.getIconComponent('Subnet');
-	const GroupIcon = entities.getIconComponent('Group');
+	const DependencyIcon = entities.getIconComponent('Dependency');
 
 	const hostColor = entities.getColorHelper('Host').icon;
 	const serviceColor = entities.getColorHelper('Service').icon;
 	const subnetColor = entities.getColorHelper('Subnet').icon;
-	const groupColor = entities.getColorHelper('Group').icon;
+	const dependencyColor = entities.getColorHelper('Dependency').icon;
 
 	let hostCount = $derived(
 		new Set(
@@ -25,12 +25,12 @@
 	);
 	let subnetCount = $derived(topology.nodes.filter((n) => n.node_type === 'Container').length);
 	let serviceCount = $derived(topology.services.length);
-	let groupCount = $derived(
+	let dependencyCount = $derived(
 		new Set(
 			topology.edges.filter((e) => 'group_id' in e).map((e) => (e as { group_id: string }).group_id)
 		).size
 	);
-	let totalCount = $derived(hostCount + serviceCount + subnetCount + groupCount);
+	let totalCount = $derived(hostCount + serviceCount + subnetCount + dependencyCount);
 </script>
 
 {#if totalCount > 0}
@@ -55,10 +55,12 @@
 				<span class="text-secondary text-xs">{subnetCount} subnet{subnetCount > 1 ? 's' : ''}</span>
 			</div>
 		{/if}
-		{#if groupCount > 0}
+		{#if dependencyCount > 0}
 			<div class="flex items-center gap-1">
-				<GroupIcon class="h-3.5 w-3.5 flex-shrink-0 {groupColor}" />
-				<span class="text-secondary text-xs">{groupCount} group{groupCount > 1 ? 's' : ''}</span>
+				<DependencyIcon class="h-3.5 w-3.5 flex-shrink-0 {dependencyColor}" />
+				<span class="text-secondary text-xs"
+					>{dependencyCount} dependenc{dependencyCount > 1 ? 'ies' : 'y'}</span
+				>
 			</div>
 		{/if}
 	</div>

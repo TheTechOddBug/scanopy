@@ -1,18 +1,18 @@
 <script lang="ts">
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import {
-		useUpdateGroupMutation,
-		useUpdateGroupDescriptionMutation
-	} from '$lib/features/groups/queries';
+		useUpdateDependencyMutation,
+		useUpdateDependencyDescriptionMutation
+	} from '$lib/features/dependencies/queries';
 	import {
 		BindingWithServiceDisplay,
 		type BindingWithServiceContext
 	} from '$lib/shared/components/forms/selection/display/BindingWithServiceDisplay.svelte';
-	import { GroupDisplay } from '$lib/shared/components/forms/selection/display/GroupDisplay.svelte';
+	import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
 	import { ArrowDown } from 'lucide-svelte';
-	import EdgeStyleForm from '$lib/features/groups/components/GroupEditModal/EdgeStyleForm.svelte';
+	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
-	import type { Group } from '$lib/features/groups/types/base';
+	import type { Dependency } from '$lib/features/dependencies/types/base';
 	import {
 		useTopologiesQuery,
 		autoRebuild,
@@ -43,17 +43,17 @@
 	let isReadonly = $derived(!!topologyContext);
 	let editState = $derived(getTopologyEditState(topology, $autoRebuild, isReadonly));
 
-	// TanStack Query mutation for updating groups
-	const updateGroupMutation = useUpdateGroupMutation();
-	const descriptionMutation = useUpdateGroupDescriptionMutation();
-	let isMutationPending = $derived(updateGroupMutation.isPending);
+	// TanStack Query mutation for updating dependencies
+	const updateDependencyMutation = useUpdateDependencyMutation();
+	const descriptionMutation = useUpdateDependencyDescriptionMutation();
+	let isMutationPending = $derived(updateDependencyMutation.isPending);
 
-	let group = $derived(topology ? topology.groups.find((g) => g.id == groupId) : null);
+	let group = $derived(topology ? topology.dependencies.find((g) => g.id == groupId) : null);
 
-	// Local copy of group for editing
-	let localGroup = $state<Group | null>(null);
+	// Local copy of dependency for editing
+	let localGroup = $state<Dependency | null>(null);
 
-	// Initialize from group when it loads
+	// Initialize from dependency when it loads
 	$effect(() => {
 		if (group) {
 			localGroup = { ...group };
@@ -70,13 +70,13 @@
 			!isMutationPending &&
 			(localGroup.color !== group.color || localGroup.edge_style !== group.edge_style)
 		) {
-			updateGroupMutation.mutate(localGroup);
+			updateDependencyMutation.mutate(localGroup);
 		}
 	});
 
 	let groupColor = $derived(createColorHelper(group?.color || 'Gray'));
 
-	let isRequestPath = $derived(group?.group_type == 'RequestPath');
+	let isRequestPath = $derived(group?.dependency_type == 'RequestPath');
 
 	// TanStack Query for subnets (for isContainerSubnet check)
 	const subnetsQuery = useSubnetsQuery();
@@ -124,7 +124,7 @@
 		entityDescriptionDisabled: !editState.isEditable,
 		onEntityDescriptionSave: (desc: string | null) => {
 			if (group) {
-				descriptionMutation.mutate({ groupId: group.id, description: desc });
+				descriptionMutation.mutate({ dependencyId: group.id, description: desc });
 			}
 		}
 	});
@@ -132,9 +132,13 @@
 
 <div class="space-y-3">
 	{#if group && localGroup}
-		<span class="text-secondary mb-2 block text-sm font-medium">Group</span>
+		<span class="text-secondary mb-2 block text-sm font-medium">Dependency</span>
 		<div class="card card-static">
-			<EntityDisplayWrapper context={groupContext} item={group} displayComponent={GroupDisplay} />
+			<EntityDisplayWrapper
+				context={groupContext}
+				item={group}
+				displayComponent={DependencyDisplay}
+			/>
 		</div>
 
 		{#if !isReadonly}
@@ -155,10 +159,11 @@
 		{/if}
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Services</span>
-		{#each group.binding_ids ?? [] as binding (binding)}
-			{@const bindingService = getServiceForBindingFromTopology(binding)}
+		{#each group.members ?? [] as member (member.service_id + (member.binding_id ?? ''))}
+			{@const binding = member.binding_id}
+			{@const bindingService = binding ? getServiceForBindingFromTopology(binding) : null}
 			{@const bindingHost = bindingService ? getHostForService(bindingService.host_id) : null}
-			{@const bindingData = getBindingFromTopology(binding)}
+			{@const bindingData = binding ? getBindingFromTopology(binding) : null}
 			{#if bindingService && bindingHost && bindingData}
 				<div
 					class={isRequestPath

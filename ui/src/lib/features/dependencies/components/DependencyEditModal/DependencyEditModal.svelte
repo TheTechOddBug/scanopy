@@ -4,12 +4,12 @@
 	import { required, max } from '$lib/shared/components/forms/validators';
 	import { Info, Palette, ArrowRight } from 'lucide-svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
-	import { createEmptyGroupFormData } from '../../queries';
+	import { createEmptyDependencyFormData } from '../../queries';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
-	import type { Group, EdgeStyle } from '../../types/base';
+	import type { Dependency, EdgeStyle } from '../../types/base';
 	import type { Color } from '$lib/shared/utils/styling';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
-	import { entities, groupTypes } from '$lib/shared/stores/metadata';
+	import { entities, dependencyTypes } from '$lib/shared/stores/metadata';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { useHostsQuery } from '$lib/features/hosts/queries';
@@ -37,33 +37,33 @@
 		common_next,
 		common_saving,
 		common_update,
-		groups_createGroup,
-		groups_descriptionPlaceholder,
-		groups_edgeAppearance,
-		groups_groupName,
-		groups_groupNamePlaceholder,
-		groups_groupType,
-		groups_loadingServices,
-		groups_noBindingsYet,
-		groups_selectBinding,
-		groups_serviceBindings,
-		groups_serviceBindingsHelp,
-		groups_serviceBindingsInfoTitle,
-		groups_serviceBindingsInfoBody
+		dependencies_createDependency,
+		dependencies_descriptionPlaceholder,
+		dependencies_edgeAppearance,
+		dependencies_dependencyName,
+		dependencies_dependencyNamePlaceholder,
+		dependencies_dependencyType,
+		dependencies_loadingServices,
+		dependencies_noBindingsYet,
+		dependencies_selectBinding,
+		dependencies_serviceBindings,
+		dependencies_serviceBindingsHelp,
+		dependencies_serviceBindingsInfoTitle,
+		dependencies_serviceBindingsInfoBody
 	} from '$lib/paraglide/messages';
 
 	interface Props {
-		group?: Group | null;
+		dependency?: Dependency | null;
 		isOpen?: boolean;
-		onCreate: (data: Group) => Promise<void> | void;
-		onUpdate: (id: string, data: Group) => Promise<void> | void;
+		onCreate: (data: Dependency) => Promise<void> | void;
+		onUpdate: (id: string, data: Dependency) => Promise<void> | void;
 		onClose: () => void;
 		onDelete?: ((id: string) => Promise<void> | void) | null;
 		name?: string;
 	}
 
 	let {
-		group = null,
+		dependency = null,
 		isOpen = false,
 		onCreate,
 		onUpdate,
@@ -75,7 +75,7 @@
 	// TanStack Query hooks
 	const servicesQuery = useServicesCacheQuery();
 	const networksQuery = useNetworksQuery();
-	// Use limit: 0 to get all hosts for group edit modal
+	// Use limit: 0 to get all hosts for dependency edit modal
 	const hostsQuery = useHostsQuery({ limit: 0 });
 	const interfacesQuery = useInterfacesQuery();
 	const portsQuery = usePortsQuery();
@@ -108,9 +108,9 @@
 	let loading = $state(false);
 	let deleting = $state(false);
 
-	let isEditing = $derived(group !== null);
+	let isEditing = $derived(dependency !== null);
 	let title = $derived(
-		isEditing ? common_editName({ name: group?.name ?? '' }) : groups_createGroup()
+		isEditing ? common_editName({ name: dependency?.name ?? '' }) : dependencies_createDependency()
 	);
 
 	// Tab management
@@ -121,13 +121,13 @@
 		{ id: 'details', label: common_details(), icon: Info },
 		{
 			id: 'bindings',
-			label: groups_serviceBindings(),
+			label: dependencies_serviceBindings(),
 			icon: entities.getIconComponent('Binding'),
 			disabled: !isEditing && furthestReached < 1
 		},
 		{
 			id: 'edge-style',
-			label: groups_edgeAppearance(),
+			label: dependencies_edgeAppearance(),
 			icon: Palette,
 			disabled: !isEditing && furthestReached < 2
 		}
@@ -159,30 +159,37 @@
 	let cancelLabel = $derived(isEditing ? common_cancel() : common_back());
 	let showCancel = $derived(isEditing ? true : currentEnabledIndex !== 0);
 
-	function getDefaultValues(): Group {
-		return group ? { ...group } : createEmptyGroupFormData(defaultNetworkId);
+	function getDefaultValues(): Dependency {
+		return dependency ? { ...dependency } : createEmptyDependencyFormData(defaultNetworkId);
 	}
 
 	// Create form
 	const form = createForm(() => ({
-		defaultValues: createEmptyGroupFormData(''),
+		defaultValues: createEmptyDependencyFormData(''),
 		onSubmit: async ({ value }) => {
-			const groupData: Group = {
-				...(value as Group),
+			const dependencyData: Dependency = {
+				...(value as Dependency),
 				name: value.name.trim(),
 				description: value.description?.trim() || '',
 				// Use local state for values that need Svelte reactivity
-				binding_ids: bindingIds,
+				members: memberBindingIds.map((bindingId) => {
+					// Find which service this binding belongs to
+					const service = servicesData.find((s) => s.bindings.some((b) => b.id === bindingId));
+					return {
+						service_id: service?.id ?? '',
+						binding_id: bindingId
+					};
+				}),
 				color: edgeColor,
 				edge_style: edgeEdgeStyle
 			};
 
 			loading = true;
 			try {
-				if (isEditing && group) {
-					await onUpdate(group.id, groupData);
+				if (isEditing && dependency) {
+					await onUpdate(dependency.id, dependencyData);
 				} else {
-					await onCreate(groupData);
+					await onCreate(dependencyData);
 				}
 			} finally {
 				loading = false;
@@ -192,7 +199,7 @@
 
 	// Local state to enable Svelte 5 reactivity
 	// (form.state.values is not tracked by $derived)
-	let bindingIds = $state<string[]>([]);
+	let memberBindingIds = $state<string[]>([]);
 	let selectedNetworkId = $state<string>('');
 	let edgeColor = $state<Color>('Blue');
 	let edgeEdgeStyle = $state<EdgeStyle>('SmoothStep');
@@ -201,7 +208,10 @@
 	function handleOpen() {
 		const defaults = getDefaultValues();
 		form.reset(defaults);
-		bindingIds = defaults.binding_ids ?? [];
+		// Extract binding IDs from members for backward compatibility
+		memberBindingIds = (defaults.members ?? [])
+			.map((m) => m.binding_id)
+			.filter((id): id is string => id !== null && id !== undefined);
 		selectedNetworkId = defaults.network_id ?? '';
 		edgeColor = defaults.color || 'Blue';
 		edgeEdgeStyle = defaults.edge_style || 'SmoothStep';
@@ -215,33 +225,30 @@
 			.filter((s) => s.network_id == selectedNetworkId)
 			.filter((s) => s.service_definition !== 'Unclaimed Open Ports')
 			.flatMap((s) => s.bindings)
-			.filter((sb) => !bindingIds.some((binding) => binding === sb.id));
+			.filter((sb) => !memberBindingIds.some((binding) => binding === sb.id));
 	});
 
 	let selectedServiceBindings = $derived.by(() => {
-		return bindingIds
+		return memberBindingIds
 			.map((bindingId) => servicesData.flatMap((s) => s.bindings).find((sb) => sb.id === bindingId))
 			.filter(Boolean);
 	});
 
 	// Handlers for service bindings
 	function handleAdd(bindingId: string) {
-		bindingIds = [...bindingIds, bindingId];
-		form.setFieldValue('binding_ids', bindingIds);
+		memberBindingIds = [...memberBindingIds, bindingId];
 	}
 
 	function handleRemove(index: number) {
-		bindingIds = bindingIds.filter((_, i) => i !== index);
-		form.setFieldValue('binding_ids', bindingIds);
+		memberBindingIds = memberBindingIds.filter((_, i) => i !== index);
 	}
 
 	function handleServiceBindingsReorder(fromIndex: number, toIndex: number) {
 		if (fromIndex === toIndex) return;
-		const current = [...bindingIds];
+		const current = [...memberBindingIds];
 		const [movedBinding] = current.splice(fromIndex, 1);
 		current.splice(toIndex, 0, movedBinding);
-		bindingIds = current;
-		form.setFieldValue('binding_ids', bindingIds);
+		memberBindingIds = current;
 	}
 
 	async function handleSubmit() {
@@ -273,38 +280,38 @@
 	}
 
 	async function handleDelete() {
-		if (onDelete && group) {
+		if (onDelete && dependency) {
 			deleting = true;
 			try {
-				await onDelete(group.id);
+				await onDelete(dependency.id);
 			} finally {
 				deleting = false;
 			}
 		}
 	}
 
-	// Group type options
-	let groupTypeOptions = $derived(
-		groupTypes.getItems().map((gt) => ({
-			value: gt.id,
-			label: gt.name ?? gt.id
+	// Dependency type options
+	let dependencyTypeOptions = $derived(
+		dependencyTypes.getItems().map((dt) => ({
+			value: dt.id,
+			label: dt.name ?? dt.id
 		}))
 	);
 
-	let colorHelper = entities.getColorHelper('Group');
+	let colorHelper = entities.getColorHelper('Dependency');
 
 	// Read-only formData for EdgeStyleForm display (uses callbacks for changes)
 	let edgeStyleFormData = $derived({
 		color: edgeColor,
 		edge_style: edgeEdgeStyle
-	} as Group);
+	} as Dependency);
 </script>
 
 <GenericModal
 	{isOpen}
 	{title}
 	{name}
-	entityId={group?.id}
+	entityId={dependency?.id}
 	size="full"
 	{onClose}
 	onOpen={handleOpen}
@@ -315,7 +322,7 @@
 	onTabChange={(tabId) => (activeTab = tabId)}
 >
 	{#snippet headerIcon()}
-		<ModalHeaderIcon Icon={entities.getIconComponent('Group')} color={colorHelper.color} />
+		<ModalHeaderIcon Icon={entities.getIconComponent('Dependency')} color={colorHelper.color} />
 	{/snippet}
 
 	<form
@@ -338,10 +345,10 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label={groups_groupName()}
+								label={dependencies_dependencyName()}
 								id="name"
 								{field}
-								placeholder={groups_groupNamePlaceholder()}
+								placeholder={dependencies_dependencyNamePlaceholder()}
 								required
 							/>
 						{/snippet}
@@ -359,15 +366,17 @@
 						{/snippet}
 					</form.Field>
 
-					<form.Field name="group_type">
+					<form.Field name="dependency_type">
 						{#snippet children(field)}
 							<SelectInput
-								label={groups_groupType()}
-								id="group_type"
+								label={dependencies_dependencyType()}
+								id="dependency_type"
 								{field}
-								options={groupTypeOptions}
+								options={dependencyTypeOptions}
 							/>
-							<p class="text-tertiary text-xs">{groupTypes.getDescription(field.state.value)}</p>
+							<p class="text-tertiary text-xs">
+								{dependencyTypes.getDescription(field.state.value)}
+							</p>
 						{/snippet}
 					</form.Field>
 
@@ -382,7 +391,7 @@
 								label={common_description()}
 								id="description"
 								{field}
-								placeholder={groups_descriptionPlaceholder()}
+								placeholder={dependencies_descriptionPlaceholder()}
 							/>
 						{/snippet}
 					</form.Field>
@@ -402,16 +411,18 @@
 			{#if activeTab === 'bindings'}
 				<div class="space-y-4 p-6">
 					<InlineInfo
-						title={groups_serviceBindingsInfoTitle()}
-						body={groups_serviceBindingsInfoBody()}
-						dismissableKey="group-bindings-info"
+						title={dependencies_serviceBindingsInfoTitle()}
+						body={dependencies_serviceBindingsInfoBody()}
+						dismissableKey="dependency-bindings-info"
 					/>
 					<div class="card">
 						<ListManager
-							label={groups_serviceBindings()}
-							helpText={groups_serviceBindingsHelp()}
-							placeholder={isServicesLoading ? groups_loadingServices() : groups_selectBinding()}
-							emptyMessage={groups_noBindingsYet()}
+							label={dependencies_serviceBindings()}
+							helpText={dependencies_serviceBindingsHelp()}
+							placeholder={isServicesLoading
+								? dependencies_loadingServices()
+								: dependencies_selectBinding()}
+							emptyMessage={dependencies_noBindingsYet()}
 							allowReorder={true}
 							allowItemEdit={() => false}
 							showSearch={true}
@@ -450,8 +461,8 @@
 			{/if}
 		</div>
 
-		{#if isEditing && group}
-			<EntityMetadataSection entities={[group]} />
+		{#if isEditing && dependency}
+			<EntityMetadataSection entities={[dependency]} />
 		{/if}
 
 		<!-- Footer -->

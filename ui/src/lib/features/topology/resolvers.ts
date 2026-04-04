@@ -25,10 +25,6 @@ const elementResolvers: Record<
 	(nodeId: string, node: TopologyNode, topology: Topology) => ElementRenderContext
 > = {
 	Interface: (_nodeId, node, topology) => {
-		// Currently reads from convenience fields on the node.
-		// When convenience fields are removed, resolve from entity collections:
-		//   const iface = topology.interfaces.find(i => i.id === nodeId);
-		//   const host = topology.hosts.find(h => h.id === iface?.host_id);
 		const hostId = 'host_id' in node ? (node.host_id as string) : undefined;
 		const interfaceId =
 			'interface_id' in node ? (node.interface_id as string | undefined) : undefined;
@@ -40,6 +36,22 @@ const elementResolvers: Record<
 		const services = topology.services.filter((s) => s.host_id === hostId);
 
 		return { host, iface, services, hostId, interfaceId, subnetId, isInfra };
+	},
+	Service: (nodeId, node, topology) => {
+		const hostId = 'host_id' in node ? (node.host_id as string) : undefined;
+		const host = topology.hosts.find((h) => h.id === hostId);
+		const service = topology.services.find((s) => s.id === nodeId);
+		const services = service ? [service] : [];
+
+		return {
+			host,
+			iface: undefined,
+			services,
+			hostId,
+			interfaceId: undefined,
+			subnetId: '',
+			isInfra: false
+		};
 	}
 };
 

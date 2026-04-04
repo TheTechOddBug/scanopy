@@ -172,14 +172,9 @@
 				name: value.name.trim(),
 				description: value.description?.trim() || '',
 				// Use local state for values that need Svelte reactivity
-				members: memberBindingIds.map((bindingId) => {
-					// Find which service this binding belongs to
-					const service = servicesData.find((s) => s.bindings.some((b) => b.id === bindingId));
-					return {
-						service_id: service?.id ?? '',
-						binding_id: bindingId
-					};
-				}),
+				members: memberBindingIds.length > 0
+					? { type: 'Bindings' as const, binding_ids: memberBindingIds }
+					: { type: 'Services' as const, service_ids: [] },
 				color: edgeColor,
 				edge_style: edgeEdgeStyle
 			};
@@ -209,9 +204,14 @@
 		const defaults = getDefaultValues();
 		form.reset(defaults);
 		// Extract binding IDs from members for backward compatibility
-		memberBindingIds = (defaults.members ?? [])
-			.map((m) => m.binding_id)
-			.filter((id): id is string => id !== null && id !== undefined);
+		const members = defaults.members;
+		if (members && 'binding_ids' in members) {
+			memberBindingIds = members.binding_ids ?? [];
+		} else if (members && 'service_ids' in members) {
+			memberBindingIds = [];
+		} else {
+			memberBindingIds = [];
+		}
 		selectedNetworkId = defaults.network_id ?? '';
 		edgeColor = defaults.color || 'Blue';
 		edgeEdgeStyle = defaults.edge_style || 'SmoothStep';

@@ -14,8 +14,13 @@ import { makeGraphRule } from './types/grouping';
 import type { Organization } from '$lib/features/organizations/types';
 import { uuidv4Sentinel, utcTimeZoneSentinel } from '$lib/shared/utils/formatting';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
-import { writable, get } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { UNTAGGED_SENTINEL } from './interactions';
+import { getDefaultHiddenEdgeTypes } from './layout/edge-classification';
+import type { components } from '$lib/api/schema';
+
+export type TopologyPerspective = components['schemas']['TopologyPerspective'];
+type PerPerspectiveOptions = Record<TopologyPerspective, TopologyOptions>;
 
 /** Strip UI-only sentinel values from options before sending to the API */
 export function sanitizeOptionsForApi(options: TopologyOptions): TopologyOptions {
@@ -51,33 +56,46 @@ export const defaultElementRules: ElementGraphRule[] = [
 	})
 ];
 
-export const defaultTopologyOptions: TopologyOptions = {
-	local: {
-		hide_edge_types: [
-			'HostVirtualization',
-			'ServiceVirtualization',
-			'RequestPath',
-			'HubAndSpoke',
-			'PhysicalLink'
-		],
-		no_fade_edges: false,
-		hide_resize_handles: false,
-		bundle_edges: true,
-		tag_filter: {
-			hidden_host_tag_ids: [],
-			hidden_service_tag_ids: [],
-			hidden_subnet_tag_ids: []
+export function getDefaultTopologyOptions(perspective: TopologyPerspective): TopologyOptions {
+	return {
+		local: {
+			hide_edge_types: getDefaultHiddenEdgeTypes(perspective),
+			no_fade_edges: false,
+			hide_resize_handles: false,
+			bundle_edges: true,
+			tag_filter: {
+				hidden_host_tag_ids: [],
+				hidden_service_tag_ids: [],
+				hidden_subnet_tag_ids: []
+			},
+			show_minimap: true
 		},
-		show_minimap: true
-	},
-	request: {
-		hide_ports: false,
-		hide_vm_title_on_docker_container: false,
-		hide_service_categories: ['OpenPorts'],
-		container_rules: defaultContainerRules,
-		element_rules: defaultElementRules
-	}
-};
+		request: {
+			hide_ports: false,
+			hide_vm_title_on_docker_container: false,
+			hide_service_categories: ['OpenPorts'],
+			container_rules: defaultContainerRules,
+			element_rules: defaultElementRules,
+			perspective
+		}
+	};
+}
+
+/** @deprecated Use getDefaultTopologyOptions('l3_logical') */
+export const defaultTopologyOptions: TopologyOptions = getDefaultTopologyOptions('l3_logical');
+
+const ALL_PERSPECTIVES: TopologyPerspective[] = [
+	'l2_physical',
+	'l3_logical',
+	'infrastructure',
+	'application'
+];
+
+function buildDefaultPerPerspectiveOptions(): PerPerspectiveOptions {
+	return Object.fromEntries(
+		ALL_PERSPECTIVES.map((p) => [p, getDefaultTopologyOptions(p)])
+	) as PerPerspectiveOptions;
+}
 
 /**
  * Query hook for fetching all topologies
@@ -476,7 +494,37 @@ export const selectedEdge = writable<Edge | null>(null);
 export const selectedNodes = writable<Node[]>([]);
 export const previewEdges = writable<Edge[]>([]);
 export const autoRebuild = writable<boolean>(loadAutoRebuildFromStorage());
-export const topologyOptions = writable<TopologyOptions>(loadOptionsFromStorage());
+export const activePerspective = writable<TopologyPerspective>('l3_logical');
+
+// Internal per-perspective options record
+const perPerspectiveOptions = writable<PerPerspectiveOptions>(loadOptionsFromStorage());
+
+// Public store: resolves to the active perspective's options
+export const topologyOptions = derived(
+	[perPerspectiveOptions, activePerspective],
+	([$allOptions, $perspective]) => $allOptions[$perspective]
+);
+
+// Helper to update the active perspective's options
+export function updateTopologyOptions(
+	updater: (current: TopologyOptions) => TopologyOptions
+): void {
+	const perspective = get(activePerspective);
+	perPerspectiveOptions.update((all) => ({
+		...all,
+		[perspective]: updater(all[perspective])
+	}));
+}
+
+// Writable-like setter for the active perspective's options (for compatibility)
+export function setTopologyOptions(options: TopologyOptions): void {
+	const perspective = get(activePerspective);
+	perPerspectiveOptions.update((all) => ({
+		...all,
+		[perspective]: options
+	}));
+}
+
 export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage());
 
 /**
@@ -502,7 +550,7 @@ export function consumePreferredNetwork(): string | null {
 }
 
 export function resetTopologyOptions(): void {
-	topologyOptions.set(structuredClone(defaultTopologyOptions));
+	perPerspectiveOptions.set(buildDefaultPerPerspectiveOptions());
 	if (browser) {
 		localStorage.removeItem(OPTIONS_STORAGE_KEY);
 		localStorage.removeItem(EXPANDED_STORAGE_KEY);
@@ -522,24 +570,45 @@ export function hasConflicts(topology: Topology): boolean {
 }
 
 // localStorage helpers
-function loadOptionsFromStorage(): TopologyOptions {
-	if (!browser) return defaultTopologyOptions;
+function loadOptionsFromStorage(): PerPerspectiveOptions {
+	const defaults = buildDefaultPerPerspectiveOptions();
+	if (!browser) return defaults;
 
 	try {
 		const stored = localStorage.getItem(OPTIONS_STORAGE_KEY);
 		if (stored) {
 			const parsed = JSON.parse(stored);
-			return deepmerge(defaultTopologyOptions, parsed, {
-				arrayMerge: (_, sourceArray) => sourceArray
-			});
+
+			// Migration: if stored data is flat TopologyOptions (no perspective key),
+			// wrap it as the l3_logical entry
+			if (parsed && 'local' in parsed && 'request' in parsed) {
+				const migrated: PerPerspectiveOptions = {
+					...defaults,
+					l3_logical: deepmerge(defaults.l3_logical, parsed, {
+						arrayMerge: (_, sourceArray) => sourceArray
+					})
+				};
+				return migrated;
+			}
+
+			// Per-perspective format: deep merge each perspective with its defaults
+			const result = { ...defaults };
+			for (const perspective of ALL_PERSPECTIVES) {
+				if (parsed[perspective]) {
+					result[perspective] = deepmerge(defaults[perspective], parsed[perspective], {
+						arrayMerge: (_, sourceArray) => sourceArray
+					});
+				}
+			}
+			return result;
 		}
 	} catch (error) {
 		console.warn('Failed to load topology options from localStorage:', error);
 	}
-	return defaultTopologyOptions;
+	return defaults;
 }
 
-function saveOptionsToStorage(options: TopologyOptions): void {
+function saveOptionsToStorage(options: PerPerspectiveOptions): void {
 	if (!browser) return;
 
 	try {
@@ -604,12 +673,13 @@ let autoRebuildInitialized = false;
 
 if (browser) {
 	let optionsRebuildTimeout: ReturnType<typeof setTimeout>;
-	topologyOptions.subscribe((options) => {
+	perPerspectiveOptions.subscribe((allOptions) => {
 		if (optionsInitialized) {
-			saveOptionsToStorage(options);
+			saveOptionsToStorage(allOptions);
 
 			// Trigger a rebuild when request options change (replaces the old
 			// debounced PUT that was lost in the TanStack migration)
+			const options = allOptions[get(activePerspective)];
 			clearTimeout(optionsRebuildTimeout);
 			optionsRebuildTimeout = setTimeout(() => {
 				if (!get(autoRebuild)) return;

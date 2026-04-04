@@ -1,19 +1,13 @@
 import type { ElkNode, ElkExtendedEdge } from 'elkjs';
-import type { TopologyNode, TopologyEdge, Topology } from '../types/base';
+import type { TopologyNode, Topology } from '../types/base';
 import type { components } from '$lib/api/schema';
 import { classifyEdge } from './edge-classification';
+import type { LayoutInput, LayoutResult } from './engine';
 
 type SubnetType = components['schemas']['SubnetType'];
 
-export interface ElkLayoutInput {
-	nodes: TopologyNode[];
-	edges: TopologyEdge[];
-	topology: Topology;
-	collapsedContainers?: Set<string>;
-	/** Frontend-computed element node sizes (overrides backend node.size) */
-	elementNodeSizes?: Map<string, { x: number; y: number }>;
-	hiddenEdgeTypes?: string[];
-}
+/** @deprecated Use LayoutInput from engine.ts */
+export type ElkLayoutInput = LayoutInput;
 
 export type HandleSide = 'Top' | 'Bottom' | 'Left' | 'Right';
 
@@ -22,12 +16,8 @@ export interface EdgeHandles {
 	targetHandle: HandleSide;
 }
 
-export interface ElkLayoutResult {
-	nodePositions: Map<string, { x: number; y: number }>;
-	containerSizes: Map<string, { width: number; height: number }>;
-	elementNodeSizes: Map<string, { x: number; y: number }>;
-	edgeHandles: Map<string, EdgeHandles>;
-}
+/** @deprecated Use LayoutResult from engine.ts */
+export type ElkLayoutResult = LayoutResult;
 
 // @ts-expect-error -- elkjs module import type works at runtime but svelte-check disagrees
 let elkPromise: Promise<import('elkjs')['default']> | null = null;

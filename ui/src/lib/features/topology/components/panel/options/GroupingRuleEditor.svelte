@@ -6,7 +6,8 @@
 	import GroupingRuleItem from './GroupingRuleItem.svelte';
 	import type { ContainerGraphRule, ElementGraphRule, ElementRule } from '../../../types/grouping';
 	import { setElementRuleTitle, makeGraphRule } from '../../../types/grouping';
-	import { topologyOptions } from '../../../queries';
+	import { topologyOptions, updateTopologyOptions, activePerspective } from '../../../queries';
+	import type { TopologyPerspective } from '../../../queries';
 	import { getTopologyEditState } from '../../../state';
 	import { useTopologiesQuery, selectedTopologyId, autoRebuild } from '../../../queries';
 	import { serviceDefinitions } from '$lib/shared/stores/metadata';
@@ -91,7 +92,7 @@
 	// --- Container Rules ---
 
 	let containerAddOptions = $derived.by(() => {
-		return typedContainerRuleTypes
+		return filteredContainerRuleTypes
 			.filter((m) => m.metadata?.is_user_editable && !containerRules.some((r) => r.rule === m.id))
 			.map((m) => ({
 				value: m.id,
@@ -104,11 +105,37 @@
 		getLabel: (item: ContainerGraphRule) => containerRuleMeta[item.rule]?.name ?? item.rule
 	};
 
+	const CONTAINER_RULE_PERSPECTIVES: Record<string, TopologyPerspective[]> = {
+		BySubnet: ['l3_logical'],
+		ByVirtualizingService: ['l3_logical', 'infrastructure']
+	};
+
+	const ELEMENT_RULE_PERSPECTIVES: Record<string, TopologyPerspective[]> = {
+		ByServiceCategory: ['l3_logical', 'application'],
+		ByTag: ['l2_physical', 'l3_logical', 'infrastructure', 'application']
+	};
+
+	let currentPerspective = $derived($activePerspective);
+
+	let filteredContainerRuleTypes = $derived(
+		typedContainerRuleTypes.filter((m) => {
+			const perspectives = CONTAINER_RULE_PERSPECTIVES[m.id];
+			return !perspectives || perspectives.includes(currentPerspective);
+		})
+	);
+
+	let filteredElementRuleTypes = $derived(
+		typedElementRuleTypes.filter((m) => {
+			const perspectives = ELEMENT_RULE_PERSPECTIVES[m.id];
+			return !perspectives || perspectives.includes(currentPerspective);
+		})
+	);
+
 	function updateContainerRules(newRules: ContainerGraphRule[]) {
-		topologyOptions.update((opts) => {
-			(opts.request as Record<string, unknown>).container_rules = newRules;
-			return opts;
-		});
+		updateTopologyOptions((opts) => ({
+			...opts,
+			request: { ...opts.request, container_rules: newRules }
+		}));
 	}
 
 	function handleContainerAdd(optionId: string) {
@@ -143,7 +170,7 @@
 	// --- Element Rules ---
 
 	let elementAddOptions = $derived(
-		typedElementRuleTypes.map((m) => ({
+		filteredElementRuleTypes.map((m) => ({
 			value: m.id,
 			label: m.name ?? m.id
 		}))
@@ -171,10 +198,10 @@
 	}
 
 	function updateElementRules(newRules: ElementGraphRule[]) {
-		topologyOptions.update((opts) => {
-			(opts.request as Record<string, unknown>).element_rules = newRules;
-			return opts;
-		});
+		updateTopologyOptions((opts) => ({
+			...opts,
+			request: { ...opts.request, element_rules: newRules }
+		}));
 	}
 
 	function handleElementAdd(optionId: string) {

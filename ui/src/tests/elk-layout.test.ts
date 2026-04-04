@@ -3,7 +3,7 @@ import { computeElkLayout, type ElkLayoutInput } from '$lib/features/topology/la
 import {
 	classifyEdge,
 	isOverlayEdge,
-	L3_OVERLAY_EDGE_TYPES
+	getDefaultHiddenEdgeTypes
 } from '$lib/features/topology/layout/edge-classification';
 import type { components } from '$lib/api/schema';
 
@@ -49,13 +49,19 @@ function makeElement(id: string, subnetId: string, hostId?: string): TopologyNod
 	} as TopologyNode;
 }
 
-function makeEdge(source: string, target: string, edgeType: string = 'Interface'): TopologyEdge {
+function makeEdge(
+	source: string,
+	target: string,
+	edgeType: string = 'Interface',
+	classification?: 'primary' | 'overlay'
+): TopologyEdge {
 	return {
 		edge_type: edgeType,
 		source,
 		target,
 		source_handle: 'Bottom',
-		target_handle: 'Top'
+		target_handle: 'Top',
+		...(classification && { classification })
 	} as TopologyEdge;
 }
 
@@ -135,26 +141,44 @@ function makeTopology(
 // --- Edge Classification Tests ---
 
 describe('classifyEdge', () => {
-	it('classifies Interface edges as primary', () => {
+	it('defaults to overlay when no classification field is present', () => {
 		const edge = makeEdge('a', 'b', 'Interface');
-		expect(classifyEdge(edge)).toBe('primary');
-	});
-
-	it('classifies non-Interface edges as overlay', () => {
-		for (const edgeType of L3_OVERLAY_EDGE_TYPES) {
-			const edge = makeEdge('a', 'b', edgeType);
-			expect(classifyEdge(edge)).toBe('overlay');
-		}
+		expect(classifyEdge(edge)).toBe('overlay');
 	});
 
 	it('uses explicit classification field when present', () => {
-		const edge = { ...makeEdge('a', 'b', 'RequestPath'), classification: 'primary' };
-		expect(classifyEdge(edge as TopologyEdge)).toBe('primary');
+		const edge = makeEdge('a', 'b', 'Interface', 'primary');
+		expect(classifyEdge(edge)).toBe('primary');
+
+		const overlay = makeEdge('a', 'b', 'RequestPath', 'overlay');
+		expect(classifyEdge(overlay)).toBe('overlay');
 	});
 
-	it('isOverlayEdge returns true for overlay edges', () => {
+	it('isOverlayEdge returns true for edges without classification', () => {
 		expect(isOverlayEdge(makeEdge('a', 'b', 'HostVirtualization'))).toBe(true);
-		expect(isOverlayEdge(makeEdge('a', 'b', 'Interface'))).toBe(false);
+		expect(isOverlayEdge(makeEdge('a', 'b', 'Interface'))).toBe(true);
+	});
+
+	it('isOverlayEdge returns false for edges classified as primary', () => {
+		expect(isOverlayEdge(makeEdge('a', 'b', 'Interface', 'primary'))).toBe(false);
+	});
+
+	it('getDefaultHiddenEdgeTypes returns correct types per perspective', () => {
+		const l3 = getDefaultHiddenEdgeTypes('l3_logical');
+		expect(l3).toContain('HostVirtualization');
+		expect(l3).toContain('PhysicalLink');
+
+		const l2 = getDefaultHiddenEdgeTypes('l2_physical');
+		expect(l2).not.toContain('PhysicalLink');
+		expect(l2).toContain('RequestPath');
+
+		const infra = getDefaultHiddenEdgeTypes('infrastructure');
+		expect(infra).not.toContain('HostVirtualization');
+		expect(infra).toContain('PhysicalLink');
+
+		const app = getDefaultHiddenEdgeTypes('application');
+		expect(app).not.toContain('RequestPath');
+		expect(app).toContain('PhysicalLink');
 	});
 });
 
@@ -198,8 +222,8 @@ describe('computeElkLayout', () => {
 		];
 
 		const edges: TopologyEdge[] = [
-			makeEdge(elem1, elem3, 'Interface'), // primary: ext -> gw
-			makeEdge(elem3, elem4, 'Interface'), // primary: gw -> lan
+			makeEdge(elem1, elem3, 'Interface', 'primary'), // primary: ext -> gw
+			makeEdge(elem3, elem4, 'Interface', 'primary'), // primary: gw -> lan
 			makeEdge(elem1, elem4, 'HostVirtualization') // overlay: should be ignored by layout
 		];
 
@@ -251,8 +275,8 @@ describe('computeElkLayout', () => {
 		];
 
 		const edges: TopologyEdge[] = [
-			makeEdge(elem1, elem2, 'Interface'),
-			makeEdge(elem2, elem3, 'Interface')
+			makeEdge(elem1, elem2, 'Interface', 'primary'),
+			makeEdge(elem2, elem3, 'Interface', 'primary')
 		];
 
 		const subnets = [
@@ -283,7 +307,7 @@ describe('computeElkLayout', () => {
 			makeElement(elem2, subnetId)
 		];
 
-		const edges: TopologyEdge[] = [makeEdge(elem1, elem2, 'Interface')];
+		const edges: TopologyEdge[] = [makeEdge(elem1, elem2, 'Interface', 'primary')];
 		const subnets = [makeSubnet(subnetId, 'Lan')];
 
 		const input = makeTopology(nodes, edges, subnets);
@@ -349,7 +373,7 @@ describe('computeElkLayout', () => {
 		// Create some primary edges between adjacent subnets
 		const edges: TopologyEdge[] = [];
 		for (let i = 0; i < elementIds.length - 1; i += 3) {
-			edges.push(makeEdge(elementIds[i], elementIds[i + 1], 'Interface'));
+			edges.push(makeEdge(elementIds[i], elementIds[i + 1], 'Interface', 'primary'));
 		}
 
 		const input = makeTopology(nodes, edges, subnets);
@@ -385,7 +409,7 @@ describe('computeElkLayout', () => {
 			makeElement(elem3, groupId)
 		];
 
-		const edges: TopologyEdge[] = [makeEdge(elem1, elem2, 'Interface')];
+		const edges: TopologyEdge[] = [makeEdge(elem1, elem2, 'Interface', 'primary')];
 		const subnets = [makeSubnet(subnetId, 'Lan')];
 
 		const input = makeTopology(nodes, edges, subnets);

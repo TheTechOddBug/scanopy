@@ -5,6 +5,7 @@ type ElementEntityType = components['schemas']['ElementEntityType'];
 
 // Resolver return types
 export interface ElementRenderContext {
+	elementType: ElementEntityType;
 	host: Topology['hosts'][number] | undefined;
 	iface: Topology['interfaces'][number] | undefined;
 	services: Topology['services'][number][];
@@ -17,6 +18,7 @@ export interface ElementRenderContext {
 export interface ContainerRenderContext {
 	subnet: Topology['subnets'][number] | undefined;
 	title: string | null;
+	containerType: string;
 }
 
 // Exhaustive resolver maps — TypeScript errors if a variant is missing
@@ -39,7 +41,33 @@ const elementResolvers: Record<
 		const iface = interfaceId ? topology.interfaces.find((i) => i.id === interfaceId) : undefined;
 		const services = topology.services.filter((s) => s.host_id === hostId);
 
-		return { host, iface, services, hostId, interfaceId, subnetId, isInfra };
+		return {
+			elementType: 'Interface',
+			host,
+			iface,
+			services,
+			hostId,
+			interfaceId,
+			subnetId,
+			isInfra
+		};
+	},
+	// @ts-expect-error Service variant not yet in generated types — will resolve after codegen
+	Service: (nodeId, _node, topology) => {
+		const service = topology.services.find((s) => s.id === nodeId);
+		const hostId = service?.host_id;
+		const host = hostId ? topology.hosts.find((h) => h.id === hostId) : undefined;
+
+		return {
+			elementType: 'Service' as ElementEntityType,
+			host,
+			iface: undefined,
+			services: service ? [service] : [],
+			hostId,
+			interfaceId: undefined,
+			subnetId: '',
+			isInfra: false
+		};
 	}
 };
 
@@ -52,9 +80,16 @@ function resolveContainer(
 	node: TopologyNode,
 	topology: Topology
 ): ContainerRenderContext {
-	const subnet = topology.subnets.find((s) => s.id === nodeId);
+	const containerType = 'container_type' in node ? (node.container_type as string) : 'Subnet';
 	const title = 'header' in node ? (node.header as string | null) : null;
-	return { subnet, title };
+
+	// ServiceCategory containers don't have subnet entities
+	if (containerType === 'ServiceCategoryContainer') {
+		return { subnet: undefined, title, containerType };
+	}
+
+	const subnet = topology.subnets.find((s) => s.id === nodeId);
+	return { subnet, title, containerType };
 }
 
 // Public API

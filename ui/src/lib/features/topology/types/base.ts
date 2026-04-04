@@ -17,6 +17,7 @@ export type ContainerNode = Extract<TopologyNode, { node_type: 'Container' }>;
 
 // Frontend-specific render types (not from backend)
 export interface ElementRenderData {
+	elementType: string;
 	headerText: string | null;
 	footerText: string | null;
 	bodyText: string | null;

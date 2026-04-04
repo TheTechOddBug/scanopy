@@ -36,7 +36,20 @@ pub enum EdgeClassification {
 }
 
 /// Which topology perspective is being rendered
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    ToSchema,
+    EnumIter,
+    IntoStaticStr,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum TopologyPerspective {
     L2Physical,
@@ -44,6 +57,52 @@ pub enum TopologyPerspective {
     L3Logical,
     Infrastructure,
     Application,
+}
+
+impl HasId for TopologyPerspective {
+    fn id(&self) -> &'static str {
+        self.into()
+    }
+}
+
+impl EntityMetadataProvider for TopologyPerspective {
+    fn color(&self) -> Color {
+        match self {
+            Self::L2Physical => Color::Emerald,
+            Self::L3Logical => Color::Blue,
+            Self::Infrastructure => Color::Orange,
+            Self::Application => Color::Purple,
+        }
+    }
+
+    fn icon(&self) -> Icon {
+        match self {
+            Self::L2Physical => Icon::Cable,
+            Self::L3Logical => Icon::Network,
+            Self::Infrastructure => Icon::Server,
+            Self::Application => Icon::AppWindow,
+        }
+    }
+}
+
+impl TypeMetadataProvider for TopologyPerspective {
+    fn name(&self) -> &'static str {
+        match self {
+            Self::L2Physical => "L2 Physical",
+            Self::L3Logical => "L3 Logical",
+            Self::Infrastructure => "Infrastructure",
+            Self::Application => "Application",
+        }
+    }
+
+    fn description(&self) -> &'static str {
+        match self {
+            Self::L2Physical => "Physical layer 2 network topology",
+            Self::L3Logical => "Logical layer 3 network topology",
+            Self::Infrastructure => "Infrastructure and virtualization topology",
+            Self::Application => "Application and service dependency topology",
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]

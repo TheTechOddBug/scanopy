@@ -21,7 +21,8 @@
 		hasConflicts,
 		selectedTopologyId,
 		selectedNodes,
-		consumePreferredNetwork
+		consumePreferredNetwork,
+		activePerspective
 	} from '../queries';
 	import type { Topology } from '../types/base';
 	import TopologyModal from './TopologyModal.svelte';
@@ -32,6 +33,7 @@
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import RefreshConflictsModal from './RefreshConflictsModal.svelte';
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
+	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
 	import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
@@ -43,7 +45,7 @@
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import type { components } from '$lib/api/schema';
-	import { entities, permissions } from '$lib/shared/stores/metadata';
+	import { entities, permissions, perspectives } from '$lib/shared/stores/metadata';
 	import { modalState, openModal } from '$lib/shared/stores/modal-registry';
 	import type { TabProps } from '$lib/shared/types';
 	import {
@@ -61,7 +63,9 @@
 		topology_lockedTimestamp,
 		topology_noTopologySelected,
 		topology_staleData,
-		topology_staleDataBody
+		topology_staleDataBody,
+		topology_perspectiveL3,
+		common_application
 	} from '$lib/paraglide/messages';
 	import { useConfigQuery } from '$lib/shared/stores/config-query';
 
@@ -107,6 +111,27 @@
 			: null
 	);
 	let discoveryColor = $derived(entities.getColorHelper('Discovery'));
+
+	// Perspective selector — hardcoded to L3 + Application for now
+	const perspectiveIdMap: Record<string, string> = {
+		l3_logical: 'L3Logical',
+		application: 'Application'
+	};
+	const perspectiveOptions = [
+		{
+			value: 'l3_logical',
+			label: topology_perspectiveL3(),
+			icon: perspectives.getIconComponent('L3Logical')
+		},
+		{
+			value: 'application',
+			label: common_application(),
+			icon: perspectives.getIconComponent('Application')
+		}
+	];
+	let perspectiveColorStyle = $derived(
+		perspectives.getColorHelper(perspectiveIdMap[$activePerspective] ?? 'L3Logical')
+	);
 
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
 	let onboarding = $derived((organizationQuery.data?.onboarding ?? []) as OnboardingOperation[]);
@@ -399,7 +424,10 @@
 	{:else}
 		<div class="space-y-6">
 			<!-- Header -->
-			<div class="card card-static flex items-center justify-evenly gap-4 px-4 py-2">
+			<div
+				class="card card-static flex items-center justify-evenly gap-4 px-4 py-2"
+				style="border-bottom: 2px solid {perspectiveColorStyle.rgb}; transition: border-color 0.3s ease;"
+			>
 				{#if currentTopology}
 					<div class="flex items-center gap-4 py-2">
 						<ExportButton onclick={() => (isExportModalOpen = true)} />
@@ -526,6 +554,14 @@
 							displayComponent={TopologyDisplay}
 							onSelect={handleTopologyChange}
 							options={topologiesData}
+						/>
+
+						<div class="card-divider-v self-stretch"></div>
+
+						<SegmentedControl
+							options={perspectiveOptions}
+							selected={$activePerspective}
+							onchange={(value) => activePerspective.set(value)}
 						/>
 					{/if}
 				{/if}

@@ -23,7 +23,7 @@
 	import '@xyflow/svelte/dist/style.css';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
-	import { previewEdges, selectedNodes, topologyOptions } from '../../queries';
+	import { previewEdges, selectedNodes, topologyOptions, activePerspective } from '../../queries';
 	import { isExporting, expandedPortNodeIds } from '../../interactions';
 	import { LayoutGraph } from '../../layout/layout-graph';
 
@@ -33,7 +33,7 @@
 	import CustomEdge from './CustomEdge.svelte';
 	import type { TopologyEdge, Topology } from '../../types/base';
 	import { resolveElementNode } from '../../resolvers';
-	import { computeElkLayout } from '../../layout/elk-layout';
+	import { ElkLayoutEngine } from '../../layout/engine';
 	import {
 		collapsedContainers,
 		collapseAll,
@@ -54,6 +54,8 @@
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
 	import { themeStore } from '$lib/shared/stores/theme.svelte';
+
+	const layoutEngine = new ElkLayoutEngine();
 
 	// Props
 	export let topology: Topology;
@@ -149,6 +151,7 @@
 	let sessionStructureKey = '';
 	let isMeasuring = false;
 	let prevExpandedPortIds = new Set<string>();
+	let prevPerspective = get(activePerspective);
 
 	function getStructureKey(topo: Topology): string {
 		return `${topo.nodes.length}:${topo.edges.length}:${topo.nodes
@@ -246,7 +249,10 @@
 				// Run ELK on structure/collapse changes, skip for edge-only re-renders
 				const opts = get(topologyOptions);
 				const sizeKey = `${(opts.request.hide_service_categories ?? []).join(',')}:${opts.request.hide_ports}`;
+				const currentPerspective = get(activePerspective);
 				const structureKey =
+					currentPerspective +
+					':' +
 					getStructureKey(topology) +
 					':' +
 					Array.from(rootCollapsed).sort().join(',') +
@@ -376,8 +382,8 @@
 						}
 					}
 
-					// Phase 3: Run ELK with real measured sizes
-					const elkResult = await computeElkLayout({
+					// Phase 3: Run layout engine with real measured sizes
+					const elkResult = await layoutEngine.compute({
 						nodes: visibleNodes,
 						edges: topology.edges,
 						topology: topology,
@@ -442,12 +448,18 @@
 					}
 				}
 
-				const layoutResult = layoutGraph?.toLayoutResult() ?? {
+				let layoutResult = layoutGraph?.toLayoutResult() ?? {
 					nodePositions: new Map(),
 					containerSizes: new Map(),
 					elementNodeSizes: new Map(),
 					edgeHandles: new Map()
 				};
+
+				// Skip handle preservation on perspective change
+				if (currentPerspective !== prevPerspective) {
+					layoutResult = { ...layoutResult, edgeHandles: new Map() };
+					prevPerspective = currentPerspective;
+				}
 
 				// Save current state before rebuilding
 				const currentEdges = get(edges);
@@ -582,7 +594,7 @@
 	function createFlowEdge(
 		edge: TopologyEdge,
 		index: number,
-		layoutResult: import('../../layout/elk-layout').ElkLayoutResult,
+		layoutResult: import('../../layout/engine').LayoutResult,
 		animatedStates: Map<string, boolean | undefined>,
 		extraData?: Record<string, unknown>
 	): Edge {

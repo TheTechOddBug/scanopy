@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		topologyOptions,
+		updateTopologyOptions,
 		selectedTopologyId,
 		useTopologiesQuery,
 		autoRebuild
@@ -72,7 +73,7 @@
 
 	// Toggle functions for tag filter
 	function toggleHostTag(tagId: string) {
-		topologyOptions.update((opts) => {
+		updateTopologyOptions((opts) => {
 			const currentFilter = opts.local.tag_filter;
 			const hiddenIds = currentFilter?.hidden_host_tag_ids ?? [];
 			const idx = hiddenIds.indexOf(tagId);
@@ -88,7 +89,7 @@
 	}
 
 	function toggleServiceTag(tagId: string) {
-		topologyOptions.update((opts) => {
+		updateTopologyOptions((opts) => {
 			const currentFilter = opts.local.tag_filter;
 			const hiddenIds = currentFilter?.hidden_service_tag_ids ?? [];
 			const idx = hiddenIds.indexOf(tagId);
@@ -104,7 +105,7 @@
 	}
 
 	function toggleSubnetTag(tagId: string) {
-		topologyOptions.update((opts) => {
+		updateTopologyOptions((opts) => {
 			const currentFilter = opts.local.tag_filter;
 			const hiddenIds = currentFilter?.hidden_subnet_tag_ids ?? [];
 			const idx = hiddenIds.indexOf(tagId);
@@ -132,7 +133,7 @@
 	});
 
 	function toggleServiceCategory(category: string) {
-		topologyOptions.update((opts) => {
+		updateTopologyOptions((opts) => {
 			const hidden = opts.request.hide_service_categories ?? [];
 			const idx = hidden.indexOf(category as (typeof hidden)[number]);
 			const isUnhiding = idx !== -1;
@@ -155,7 +156,7 @@
 	}
 
 	function toggleEdgeType(edgeType: string) {
-		topologyOptions.update((opts) => {
+		updateTopologyOptions((opts) => {
 			const hidden = opts.local.hide_edge_types ?? [];
 			const idx = hidden.indexOf(edgeType as (typeof hidden)[number]);
 			const newHidden =
@@ -352,7 +353,7 @@
 	function updateValue(def: TopologyFieldDef, newValue: boolean | string | string[]) {
 		values = { ...values, [def.id]: newValue };
 
-		topologyOptions.update((opts) => {
+		updateTopologyOptions((opts) => {
 			if (def.path === 'local') {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				(opts.local as any)[def.key] = newValue;

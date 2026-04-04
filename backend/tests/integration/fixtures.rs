@@ -1,8 +1,8 @@
 use scanopy::server::bindings::r#impl::base::Binding;
 use scanopy::server::daemon_api_keys::r#impl::base::DaemonApiKey;
 use scanopy::server::daemons::r#impl::base::Daemon;
+use scanopy::server::dependencies::r#impl::base::Dependency;
 use scanopy::server::discovery::r#impl::base::Discovery;
-use scanopy::server::groups::r#impl::base::Group;
 use scanopy::server::hosts::r#impl::base::Host;
 use scanopy::server::if_entries::r#impl::base::IfEntry;
 use scanopy::server::interfaces::r#impl::base::Interface;
@@ -363,7 +363,7 @@ async fn generate_entity_metadata_json() -> Result<(), Box<dyn std::error::Error
         EntityMetadataEntry::new::<DaemonApiKey>("daemon_api_key"),
         EntityMetadataEntry::new::<Discovery>("discovery"),
         // Visualization
-        EntityMetadataEntry::new::<Group>("group"),
+        EntityMetadataEntry::new::<Dependency>("dependency"),
         EntityMetadataEntry::new::<Topology>("topology"),
         EntityMetadataEntry::new::<Share>("share"),
         // Metadata

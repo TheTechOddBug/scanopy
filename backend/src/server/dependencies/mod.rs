@@ -1,4 +1,4 @@
-pub mod group_bindings;
+pub mod dependency_members;
 pub mod handlers;
 pub mod r#impl;
 pub mod service;

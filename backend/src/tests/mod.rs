@@ -4,9 +4,9 @@ use crate::server::{
         api::DaemonCapabilities,
         base::{Daemon, DaemonBase, DaemonMode},
     },
-    groups::r#impl::{
-        base::{Group, GroupBase},
-        types::GroupType,
+    dependencies::r#impl::{
+        base::{Dependency, DependencyBase, DependencyMembers},
+        types::DependencyType,
     },
     hosts::r#impl::base::{Host, HostBase},
     interfaces::r#impl::base::{Interface, InterfaceBase},
@@ -151,14 +151,14 @@ pub fn service(network_id: &Uuid, host_id: &Uuid) -> Service {
     })
 }
 
-pub fn group(network_id: &Uuid) -> Group {
-    Group::new(GroupBase {
-        name: "Test Group".to_string(),
+pub fn dependency(network_id: &Uuid) -> Dependency {
+    Dependency::new(DependencyBase {
+        name: "Test Dependency".to_string(),
         description: None,
         network_id: *network_id,
         color: Color::default(),
-        group_type: GroupType::RequestPath,
-        binding_ids: vec![],
+        dependency_type: DependencyType::RequestPath,
+        members: DependencyMembers::default(),
         source: EntitySource::System,
         edge_style: EdgeStyle::Bezier,
         tags: Vec::new(),

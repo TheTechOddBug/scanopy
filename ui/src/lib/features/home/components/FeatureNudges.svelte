@@ -121,23 +121,23 @@
 					onNavigate('topology');
 					optionsPanelExpanded.set(true);
 				},
-				visible: has('FirstTopologyRebuild') && !has('FirstGroupCreated'),
+				visible: has('FirstTopologyRebuild') && !has('FirstDependencyCreated'),
 				icon: entities.getIconComponent('Topology'),
 				iconColor: entities.getColorHelper('Topology').icon
 			},
 			{
-				id: 'groups',
-				title: 'Create a Group',
+				id: 'dependencies',
+				title: 'Create a Dependency',
 				description:
-					'Group related services together on the topology to keep your network view organized.',
-				actionLabel: 'Create Group',
+					'Define service dependencies on the topology to keep your network view organized.',
+				actionLabel: 'Create Dependency',
 				action: () => {
-					onNavigate('groups');
-					openModal('group-editor');
+					onNavigate('dependencies');
+					openModal('dependency-editor');
 				},
-				visible: has('FirstTopologyRebuild') && !has('FirstGroupCreated'),
-				icon: entities.getIconComponent('Group'),
-				iconColor: entities.getColorHelper('Group').icon
+				visible: has('FirstTopologyRebuild') && !has('FirstDependencyCreated'),
+				icon: entities.getIconComponent('Dependency'),
+				iconColor: entities.getColorHelper('Dependency').icon
 			},
 			{
 				id: 'snmp',

@@ -35,7 +35,7 @@
 	} from '../queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
-	import { useGroupsQuery } from '$lib/features/groups/queries';
+	import { useDependenciesQuery } from '$lib/features/dependencies/queries';
 	import { downloadCsv } from '$lib/shared/utils/csvExport';
 	import { modalState, resolveModalDeepLink } from '$lib/shared/stores/modal-registry';
 
@@ -55,7 +55,7 @@
 	// Load related data for network cards
 	useDaemonsQuery();
 	useSubnetsQuery();
-	useGroupsQuery();
+	useDependenciesQuery();
 
 	// Mutations
 	const createNetworkMutation = useCreateNetworkMutation();

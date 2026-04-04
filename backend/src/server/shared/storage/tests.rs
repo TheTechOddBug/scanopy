@@ -3,8 +3,8 @@ use crate::server::{
     credentials::r#impl::base::Credential,
     daemon_api_keys::r#impl::base::DaemonApiKey,
     daemons::r#impl::base::Daemon,
+    dependencies::{dependency_members::DependencyMemberRecord, r#impl::base::Dependency},
     discovery::r#impl::base::Discovery,
-    groups::{group_bindings::GroupBinding, r#impl::base::Group},
     hosts::r#impl::base::Host,
     if_entries::r#impl::base::IfEntry,
     interfaces::r#impl::base::Interface,
@@ -62,9 +62,9 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
     );
 
     map.insert(
-        Group::table_name(),
+        Dependency::table_name(),
         Box::new(|row| {
-            Group::from_row(row)?;
+            Dependency::from_row(row)?;
             Ok(())
         }),
     );
@@ -174,9 +174,9 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
     );
 
     map.insert(
-        GroupBinding::table_name(),
+        DependencyMemberRecord::table_name(),
         Box::new(|row| {
-            GroupBinding::from_row(row)?;
+            DependencyMemberRecord::from_row(row)?;
             Ok(())
         }),
     );

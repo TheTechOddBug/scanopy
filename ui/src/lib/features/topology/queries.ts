@@ -451,13 +451,13 @@ export function createEmptyTopologyFormData(networkId: string): Topology {
 		interfaces: [],
 		services: [],
 		subnets: [],
-		groups: [],
+		dependencies: [],
 		ports: [],
 		bindings: [],
 		is_stale: false,
 		last_refreshed: utcTimeZoneSentinel,
 		is_locked: false,
-		removed_groups: [],
+		removed_dependencies: [],
 		removed_hosts: [],
 		removed_interfaces: [],
 		removed_services: [],
@@ -565,7 +565,7 @@ export function hasConflicts(topology: Topology): boolean {
 		topology.removed_bindings.length > 0 ||
 		topology.removed_ports.length > 0 ||
 		topology.removed_interfaces.length > 0 ||
-		topology.removed_groups.length > 0
+		topology.removed_dependencies.length > 0
 	);
 }
 
@@ -774,7 +774,7 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 
 				const timer = setTimeout(() => {
 					this.applyPartialUpdate(update.id, {
-						removed_groups: update.removed_groups,
+						removed_dependencies: update.removed_dependencies,
 						removed_hosts: update.removed_hosts,
 						removed_services: update.removed_services,
 						removed_subnets: update.removed_subnets,

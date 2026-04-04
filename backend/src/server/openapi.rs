@@ -19,9 +19,9 @@ use crate::server::credentials::r#impl::base::Credential;
 use crate::server::daemon_api_keys::r#impl::base::DaemonApiKey;
 use crate::server::daemons::handlers::DaemonOrderField;
 use crate::server::daemons::r#impl::base::Daemon;
+use crate::server::dependencies::handlers::DependencyOrderField;
+use crate::server::dependencies::r#impl::base::Dependency;
 use crate::server::discovery::r#impl::base::Discovery;
-use crate::server::groups::handlers::GroupOrderField;
-use crate::server::groups::r#impl::base::Group;
 use crate::server::hosts::handlers::HostOrderField;
 use crate::server::hosts::r#impl::base::Host;
 use crate::server::if_entries::r#impl::base::IfEntry;
@@ -60,7 +60,7 @@ pub const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
         HostOrderField,
         ServiceOrderField,
         TagOrderField,
-        GroupOrderField,
+        DependencyOrderField,
         SubnetOrderField,
         DaemonOrderField,
         CredentialOrderField
@@ -179,7 +179,7 @@ Resources are scoped to your **organization** and **network(s)**:
         (name = Daemon::ENTITY_NAME_PLURAL, description = Daemon::ENTITY_DESCRIPTION),
         (name = DaemonApiKey::ENTITY_NAME_PLURAL, description = DaemonApiKey::ENTITY_DESCRIPTION),
         (name = Discovery::ENTITY_NAME_PLURAL, description = Discovery::ENTITY_DESCRIPTION),
-        (name = Group::ENTITY_NAME_PLURAL, description = Group::ENTITY_DESCRIPTION),
+        (name = Dependency::ENTITY_NAME_PLURAL, description = Dependency::ENTITY_DESCRIPTION),
         (name = Host::ENTITY_NAME_PLURAL, description = Host::ENTITY_DESCRIPTION),
         (name = IfEntry::ENTITY_NAME_PLURAL, description = IfEntry::ENTITY_DESCRIPTION),
         (name = Interface::ENTITY_NAME_PLURAL, description = Interface::ENTITY_DESCRIPTION),

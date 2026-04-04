@@ -40,7 +40,7 @@
 	import { trackEvent } from '$lib/shared/utils/analytics';
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
 	import { useActiveSessionsQuery } from '$lib/features/discovery/queries';
-	import { useGroupsQuery } from '$lib/features/groups/queries';
+	import { useDependenciesQuery } from '$lib/features/dependencies/queries';
 	import { useUsersQuery } from '$lib/features/users/queries';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
@@ -83,7 +83,7 @@
 
 	// Queries - TanStack Query handles deduplication
 	const subnetsQuery = useSubnetsQuery();
-	const groupsQuery = useGroupsQuery();
+	const dependenciesQuery = useDependenciesQuery();
 	const usersQuery = useUsersQuery({ enabled: () => canViewUsers });
 	const topologiesQuery = useTopologiesQuery();
 	const organizationQuery = useOrganizationQuery();
@@ -94,7 +94,7 @@
 	let usersData = $derived(usersQuery.data ?? []);
 	let topologiesData = $derived(topologiesQuery.data ?? []);
 	let isLoading = $derived(
-		subnetsQuery.isPending || groupsQuery.isPending || topologiesQuery.isPending
+		subnetsQuery.isPending || dependenciesQuery.isPending || topologiesQuery.isPending
 	);
 
 	let hasEmail = $derived(configQuery.data?.has_email_service ?? false);

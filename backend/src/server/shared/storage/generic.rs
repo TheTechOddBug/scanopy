@@ -169,7 +169,7 @@ where
             SqlValue::Hosts(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Subnets(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Services(v) => query.bind(serde_json::to_value(v)?),
-            SqlValue::Groups(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Dependencies(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::IfEntries(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Tags(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::PlanLimitNotifications(v) => query.bind(serde_json::to_value(v)?),

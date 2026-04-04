@@ -199,7 +199,7 @@ const entityTypeToQueryKeyName: Record<EntityDiscriminants, keyof typeof queryKe
 	Host: 'hosts',
 	Service: 'services',
 	Subnet: 'subnets',
-	Group: 'groups',
+	Dependency: 'dependencies',
 	Network: 'networks',
 	Discovery: 'discovery',
 	Daemon: 'daemons',

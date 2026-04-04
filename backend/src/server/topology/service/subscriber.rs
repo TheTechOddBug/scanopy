@@ -24,7 +24,7 @@ struct TopologyChanges {
     updated_interfaces: bool,
     updated_services: bool,
     updated_subnets: bool,
-    updated_groups: bool,
+    updated_dependencies: bool,
     updated_ports: bool,
     updated_bindings: bool,
     updated_if_entries: bool,
@@ -32,7 +32,7 @@ struct TopologyChanges {
     removed_interfaces: HashSet<Uuid>,
     removed_services: HashSet<Uuid>,
     removed_subnets: HashSet<Uuid>,
-    removed_groups: HashSet<Uuid>,
+    removed_dependencies: HashSet<Uuid>,
     removed_ports: HashSet<Uuid>,
     removed_bindings: HashSet<Uuid>,
     removed_if_entries: HashSet<Uuid>,
@@ -48,7 +48,7 @@ impl EventSubscriber for TopologyService {
             (EntityDiscriminants::Interface, None),
             (EntityDiscriminants::Service, None),
             (EntityDiscriminants::Subnet, None),
-            (EntityDiscriminants::Group, None),
+            (EntityDiscriminants::Dependency, None),
             (EntityDiscriminants::Port, None),
             (EntityDiscriminants::Binding, None),
             (EntityDiscriminants::IfEntry, None), // LLDP neighbor changes trigger edge rebuild
@@ -120,7 +120,9 @@ impl EventSubscriber for TopologyService {
                             changes.removed_services.insert(entity_event.entity_id)
                         }
                         Entity::Subnet(_) => changes.removed_subnets.insert(entity_event.entity_id),
-                        Entity::Group(_) => changes.removed_groups.insert(entity_event.entity_id),
+                        Entity::Dependency(_) => {
+                            changes.removed_dependencies.insert(entity_event.entity_id)
+                        }
                         Entity::Port(_) => changes.removed_ports.insert(entity_event.entity_id),
                         Entity::Binding(_) => {
                             changes.removed_bindings.insert(entity_event.entity_id)
@@ -144,7 +146,7 @@ impl EventSubscriber for TopologyService {
                         Entity::Interface(_) => changes.updated_interfaces = true,
                         Entity::Service(_) => changes.updated_services = true,
                         Entity::Subnet(_) => changes.updated_subnets = true,
-                        Entity::Group(_) => changes.updated_groups = true,
+                        Entity::Dependency(_) => changes.updated_dependencies = true,
                         Entity::Port(_) => changes.updated_ports = true,
                         Entity::Binding(_) => changes.updated_bindings = true,
                         Entity::IfEntry(_) => changes.updated_if_entries = true,
@@ -159,7 +161,7 @@ impl EventSubscriber for TopologyService {
             let network_filter = StorageFilter::<Topology>::new_from_network_ids(&[network_id]);
             let topologies = self.get_all(network_filter).await?;
 
-            let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
+            let (hosts, interfaces, subnets, dependencies, ports, bindings, if_entries) =
                 self.get_entity_data(network_id).await?;
 
             if let Some(changes) = topology_updates.get(&network_id) {
@@ -187,9 +189,9 @@ impl EventSubscriber for TopologyService {
                             topology.base.removed_subnets.push(*subnet_id);
                         }
                     }
-                    for group_id in &changes.removed_groups {
-                        if !topology.base.removed_groups.contains(group_id) {
-                            topology.base.removed_groups.push(*group_id);
+                    for dependency_id in &changes.removed_dependencies {
+                        if !topology.base.removed_dependencies.contains(dependency_id) {
+                            topology.base.removed_dependencies.push(*dependency_id);
                         }
                     }
                     for port_id in &changes.removed_ports {
@@ -236,8 +238,8 @@ impl EventSubscriber for TopologyService {
                         topology.base.subnets = subnets.clone()
                     }
 
-                    if changes.updated_groups && changes.removed_groups.is_empty() {
-                        topology.base.groups = groups.clone();
+                    if changes.updated_dependencies && changes.removed_dependencies.is_empty() {
+                        topology.base.dependencies = dependencies.clone();
                     }
 
                     if changes.updated_ports && changes.removed_ports.is_empty() {

@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { createColorHelper, AVAILABLE_COLORS, type Color } from '$lib/shared/utils/styling';
-	import type { Group, EdgeStyle } from '../../types/base';
+	import type { Dependency, EdgeStyle } from '../../types/base';
 	import { Edit } from 'lucide-svelte';
 	import {
 		common_bezier,
 		common_done,
 		common_step,
 		common_straight,
-		groups_edgeColor,
-		groups_edgeColorHelp,
-		groups_edgeStyleHelp,
-		groups_edgeStyleLabel,
-		groups_editEdgeStyle,
-		groups_simpleBezier,
-		groups_smoothStep
+		dependencies_edgeColor,
+		dependencies_edgeColorHelp,
+		dependencies_edgeStyleHelp,
+		dependencies_edgeStyleLabel,
+		dependencies_editEdgeStyle,
+		dependencies_simpleBezier,
+		dependencies_smoothStep
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -25,7 +25,7 @@
 		onColorChange,
 		onEdgeStyleChange
 	}: {
-		formData: Group;
+		formData: Dependency;
 		collapsed?: boolean;
 		editable?: boolean;
 		showCollapseToggle?: boolean;
@@ -52,10 +52,10 @@
 
 	let edgeStyleOptions = $derived([
 		{ value: 'Straight' as const, label: common_straight() },
-		{ value: 'SmoothStep' as const, label: groups_smoothStep() },
+		{ value: 'SmoothStep' as const, label: dependencies_smoothStep() },
 		{ value: 'Step' as const, label: common_step() },
 		{ value: 'Bezier' as const, label: common_bezier() },
-		{ value: 'SimpleBezier' as const, label: groups_simpleBezier() }
+		{ value: 'SimpleBezier' as const, label: dependencies_simpleBezier() }
 	]);
 
 	// Ensure formData has default values if not set
@@ -70,7 +70,8 @@
 
 	let selectedColorHelper = $derived(createColorHelper(formData.color));
 	let selectedEdgeStyleLabel = $derived(
-		edgeStyleOptions.find((opt) => opt.value === formData.edge_style)?.label || groups_smoothStep()
+		edgeStyleOptions.find((opt) => opt.value === formData.edge_style)?.label ||
+			dependencies_smoothStep()
 	);
 </script>
 
@@ -98,7 +99,7 @@
 			onclick={() => (editable ? (collapsed = false) : {})}
 			class="btn-icon"
 			disabled={!editable}
-			aria-label={groups_editEdgeStyle()}
+			aria-label={dependencies_editEdgeStyle()}
 		>
 			<Edit size={16} />
 		</button>
@@ -109,7 +110,7 @@
 		{#if showCollapseToggle}
 			<!-- Header with collapse button -->
 			<div class="flex items-center justify-between">
-				<div class="text-primary block text-sm font-medium">{groups_editEdgeStyle()}</div>
+				<div class="text-primary block text-sm font-medium">{dependencies_editEdgeStyle()}</div>
 				<button type="button" onclick={() => (collapsed = true)} class="btn-secondary text-xs">
 					{common_done()}
 				</button>
@@ -119,8 +120,8 @@
 		<div class={layout === 'horizontal' ? 'grid grid-cols-2 gap-6' : 'space-y-6'}>
 			<!-- Edge Color Section -->
 			<div class="{layout === 'horizontal' ? 'card p-4' : ''} space-y-3">
-				<div class="text-primary text-sm font-medium">{groups_edgeColor()}</div>
-				<p class="text-tertiary text-xs">{groups_edgeColorHelp()}</p>
+				<div class="text-primary text-sm font-medium">{dependencies_edgeColor()}</div>
+				<p class="text-tertiary text-xs">{dependencies_edgeColorHelp()}</p>
 
 				<div class="grid grid-cols-7 gap-2">
 					{#each AVAILABLE_COLORS as color (color)}
@@ -160,8 +161,8 @@
 
 			<!-- Edge Style Section -->
 			<div class="{layout === 'horizontal' ? 'card p-4' : ''} space-y-3">
-				<div class="text-primary text-sm font-medium">{groups_edgeStyleLabel()}</div>
-				<p class="text-tertiary text-xs">{groups_edgeStyleHelp()}</p>
+				<div class="text-primary text-sm font-medium">{dependencies_edgeStyleLabel()}</div>
+				<p class="text-tertiary text-xs">{dependencies_edgeStyleHelp()}</p>
 
 				<div class="space-y-1">
 					{#each edgeStyleOptions as option (option.value)}

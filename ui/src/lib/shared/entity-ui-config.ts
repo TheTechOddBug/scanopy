@@ -11,7 +11,7 @@ import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display
 import { IfEntryDisplay } from '$lib/shared/components/forms/selection/display/IfEntryDisplay.svelte';
 import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
 import { DaemonDisplay } from '$lib/shared/components/forms/selection/display/DaemonDisplay.svelte';
-import { GroupDisplay } from '$lib/shared/components/forms/selection/display/GroupDisplay.svelte';
+import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
 import { NetworkDisplay } from '$lib/shared/components/forms/selection/display/NetworkDisplay.svelte';
 import { CredentialDisplay } from '$lib/shared/components/forms/selection/display/CredentialDisplay.svelte';
 import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
@@ -34,7 +34,7 @@ export interface EntityUIConfig {
 export const TAB_LABELS: Record<string, string> = {
 	home: 'Home',
 	topology: 'Topology',
-	groups: 'Groups',
+	dependencies: 'Dependencies',
 	shares: 'Sharing',
 	discovery: 'Scans',
 	'discovery-scans': 'Scans',
@@ -82,7 +82,11 @@ export const entityUIConfig: Record<EntityDiscriminants, EntityUIConfig | null> 
 		modalName: 'daemon-api-key',
 		displayComponent: DaemonApiKeyDisplay
 	},
-	Group: { tabId: 'groups', modalName: 'group-editor', displayComponent: GroupDisplay },
+	Dependency: {
+		tabId: 'dependencies',
+		modalName: 'dependency-editor',
+		displayComponent: DependencyDisplay
+	},
 	Network: { tabId: 'networks', modalName: 'network-editor', displayComponent: NetworkDisplay },
 	Credential: {
 		tabId: 'credentials',

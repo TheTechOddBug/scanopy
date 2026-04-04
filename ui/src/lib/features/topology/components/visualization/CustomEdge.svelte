@@ -89,11 +89,11 @@
 	});
 	const edgeTypeMetadata = $derived(edgeData ? edgeTypes.getMetadata(edgeData.edge_type) : null);
 
-	// Get group reactively - updates when groups store changes
+	// Get dependency reactively - updates when dependencies store changes
 	let group = $derived.by(() => {
-		if (!topology?.groups || !edgeTypeMetadata || !edgeData) return null;
+		if (!topology?.dependencies || !edgeTypeMetadata || !edgeData) return null;
 		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
-			return topology.groups.find((g) => g.id == edgeData.group_id) || null;
+			return topology.dependencies.find((g) => g.id == edgeData.group_id) || null;
 		}
 		return null;
 	});

@@ -7,9 +7,9 @@ use crate::server::{
     credentials::service::CredentialService,
     daemon_api_keys::service::DaemonApiKeyService,
     daemons::service::DaemonService,
+    dependencies::{dependency_members::DependencyMemberStorage, service::DependencyService},
     discovery::service::DiscoveryService,
     email::{brevo::BrevoEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
-    groups::{group_bindings::GroupBindingStorage, service::GroupService},
     hosts::service::HostService,
     if_entries::service::IfEntryService,
     interfaces::service::InterfaceService,
@@ -47,7 +47,7 @@ pub struct ServiceFactory {
     pub network_service: Arc<NetworkService>,
     pub host_service: Arc<HostService>,
     pub interface_service: Arc<InterfaceService>,
-    pub group_service: Arc<GroupService>,
+    pub dependency_service: Arc<DependencyService>,
     pub subnet_service: Arc<SubnetService>,
     pub daemon_service: Arc<DaemonService>,
     pub topology_service: Arc<TopologyService>,
@@ -113,10 +113,11 @@ impl ServiceFactory {
             entity_tag_service.clone(),
         ));
 
-        let group_binding_storage = Arc::new(GroupBindingStorage::new(storage.pool.clone()));
-        let group_service = Arc::new(GroupService::new(
-            storage.groups.clone(),
-            group_binding_storage,
+        let dependency_member_storage =
+            Arc::new(DependencyMemberStorage::new(storage.pool.clone()));
+        let dependency_service = Arc::new(DependencyService::new(
+            storage.dependencies.clone(),
+            dependency_member_storage,
             event_bus.clone(),
             entity_tag_service.clone(),
         ));
@@ -167,7 +168,7 @@ impl ServiceFactory {
         let service_service = Arc::new(ServiceService::new(
             storage.services.clone(),
             binding_service.clone(),
-            group_service.clone(),
+            dependency_service.clone(),
             event_bus.clone(),
             entity_tag_service.clone(),
         ));
@@ -238,7 +239,7 @@ impl ServiceFactory {
             host_service.clone(),
             interface_service.clone(),
             subnet_service.clone(),
-            group_service.clone(),
+            dependency_service.clone(),
             service_service.clone(),
             port_service.clone(),
             binding_service.clone(),
@@ -402,7 +403,7 @@ impl ServiceFactory {
             network_service,
             host_service,
             interface_service,
-            group_service,
+            dependency_service,
             subnet_service,
             daemon_service,
             topology_service,

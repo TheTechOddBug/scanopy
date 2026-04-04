@@ -10,13 +10,13 @@ pub struct TopologyUpdate {
     removed_hosts: Vec<Uuid>,
     removed_services: Vec<Uuid>,
     removed_subnets: Vec<Uuid>,
-    removed_groups: Vec<Uuid>,
+    removed_dependencies: Vec<Uuid>,
 }
 
 impl From<Topology> for TopologyUpdate {
     fn from(value: Topology) -> Self {
         Self {
-            removed_groups: value.base.removed_groups,
+            removed_dependencies: value.base.removed_dependencies,
             removed_hosts: value.base.removed_hosts,
             removed_services: value.base.removed_services,
             removed_subnets: value.base.removed_subnets,

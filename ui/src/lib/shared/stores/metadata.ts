@@ -3,7 +3,7 @@ import type { components } from '$lib/api/schema';
 import serviceDefinitionsJson from '$lib/data/service-definitions.json';
 import subnetTypesJson from '$lib/data/subnet-types.json';
 import edgeTypesJson from '$lib/data/edge-types.json';
-import groupTypesJson from '$lib/data/group-types.json';
+import dependencyTypesJson from '$lib/data/dependency-types.json';
 import entitiesJson from '$lib/data/entities.json';
 import portsJson from '$lib/data/ports.json';
 import discoveryTypesJson from '$lib/data/discovery-types.json';
@@ -71,7 +71,7 @@ export interface MetadataRegistry {
 	service_definitions: TypeMetadata[];
 	subnet_types: TypeMetadata[];
 	edge_types: TypeMetadata[];
-	group_types: TypeMetadata[];
+	dependency_types: TypeMetadata[];
 	entities: EntityMetadata[];
 	ports: TypeMetadata[];
 	discovery_types: TypeMetadata[];
@@ -166,7 +166,7 @@ export interface EdgeTypeMetadata {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface GroupTypeMetadata {}
+export interface DependencyTypeMetadata {}
 
 export interface FeatureMetadata {
 	is_coming_soon: boolean;
@@ -198,7 +198,7 @@ export const metadata = writable<MetadataRegistry>({
 	service_definitions: serviceDefinitionsJson,
 	subnet_types: subnetTypesJson,
 	edge_types: edgeTypesJson,
-	group_types: groupTypesJson,
+	dependency_types: dependencyTypesJson,
 	entities: entitiesJson,
 	ports: portsJson,
 	discovery_types: discoveryTypesJson,
@@ -372,9 +372,10 @@ export const subnetTypes = createTypeMetadataHelpers<'subnet_types', SubnetTypeM
 	'subnet_types'
 );
 export const edgeTypes = createTypeMetadataHelpers<'edge_types', EdgeTypeMetadata>('edge_types');
-export const groupTypes = createTypeMetadataHelpers<'group_types', GroupTypeMetadata>(
-	'group_types'
-);
+export const dependencyTypes = createTypeMetadataHelpers<
+	'dependency_types',
+	DependencyTypeMetadata
+>('dependency_types');
 export const entities = createEntityMetadataHelpers('entities');
 export const ports = createTypeMetadataHelpers<'ports', PortTypeMetadata>('ports');
 export const discoveryTypes = createTypeMetadataHelpers<'discovery_types', DiscoveryTypeMetadata>(

@@ -1,5 +1,5 @@
 use crate::server::bindings::r#impl::base::Binding;
-use crate::server::groups::r#impl::base::Group;
+use crate::server::dependencies::r#impl::base::Dependency;
 use crate::server::hosts::r#impl::base::Host;
 use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
@@ -26,7 +26,7 @@ pub struct SetEntitiesParams {
     pub hosts: Vec<Host>,
     pub services: Vec<Service>,
     pub subnets: Vec<Subnet>,
-    pub groups: Vec<Group>,
+    pub dependencies: Vec<Dependency>,
     pub ports: Vec<Port>,
     pub bindings: Vec<Binding>,
     pub interfaces: Vec<Interface>,
@@ -64,7 +64,7 @@ impl Topology {
     }
 
     pub fn clear_stale(&mut self) {
-        self.base.removed_groups = vec![];
+        self.base.removed_dependencies = vec![];
         self.base.removed_hosts = vec![];
         self.base.removed_interfaces = vec![];
         self.base.removed_services = vec![];
@@ -80,7 +80,7 @@ impl Topology {
         self.base.hosts = params.hosts;
         self.base.services = params.services;
         self.base.subnets = params.subnets;
-        self.base.groups = params.groups;
+        self.base.dependencies = params.dependencies;
         self.base.ports = params.ports;
         self.base.bindings = params.bindings;
         self.base.interfaces = params.interfaces;
@@ -116,7 +116,7 @@ pub struct TopologyBase {
     pub bindings: Vec<Binding>,
     pub subnets: Vec<Subnet>,
     pub services: Vec<Service>,
-    pub groups: Vec<Group>,
+    pub dependencies: Vec<Dependency>,
     pub if_entries: Vec<IfEntry>,
 
     // Tag definitions for filtering
@@ -133,7 +133,7 @@ pub struct TopologyBase {
     pub removed_interfaces: Vec<Uuid>,
     pub removed_subnets: Vec<Uuid>,
     pub removed_services: Vec<Uuid>,
-    pub removed_groups: Vec<Uuid>,
+    pub removed_dependencies: Vec<Uuid>,
     pub removed_ports: Vec<Uuid>,
     pub removed_bindings: Vec<Uuid>,
     pub removed_if_entries: Vec<Uuid>,
@@ -153,7 +153,7 @@ impl TopologyBase {
             subnets: vec![],
             bindings: vec![],
             services: vec![],
-            groups: vec![],
+            dependencies: vec![],
             if_entries: vec![],
             is_stale: true,
             last_refreshed: Utc::now(),
@@ -164,7 +164,7 @@ impl TopologyBase {
             removed_interfaces: vec![],
             removed_subnets: vec![],
             removed_services: vec![],
-            removed_groups: vec![],
+            removed_dependencies: vec![],
             removed_bindings: vec![],
             removed_ports: vec![],
             removed_if_entries: vec![],

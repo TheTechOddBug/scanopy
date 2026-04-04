@@ -150,9 +150,9 @@ async fn integration_tests() {
         .await
         .expect("Failed to apply tag to discovered service");
 
-    let _group = discovery::create_group(&client, network.id)
+    let _dependency = discovery::create_dependency(&client, network.id)
         .await
-        .expect("Failed to create group");
+        .expect("Failed to create dependency");
 
     println!("\n✅ ServerPoll discovery completed!");
 

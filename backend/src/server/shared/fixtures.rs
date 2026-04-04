@@ -5,9 +5,9 @@ use crate::server::billing::plans::get_website_fixture_plans;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::billing::types::features::Feature;
 use crate::server::credentials::r#impl::types::CredentialTypeDiscriminants;
+use crate::server::dependencies::r#impl::types::DependencyType;
 use crate::server::discovery::r#impl::scan_settings::ScanSettings;
 use crate::server::discovery::r#impl::types::DiscoveryType;
-use crate::server::groups::r#impl::types::GroupType;
 use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::ServiceDefinitionRegistry;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -66,10 +66,10 @@ pub fn generate_ui_data_fixtures(output_dir: &Path) {
     let edge_types: Vec<TypeMetadata> = EdgeType::iter().map(|t| t.to_metadata()).collect();
     write_fixture(&edge_types, output_dir, "edge-types.json");
 
-    let group_types: Vec<TypeMetadata> = GroupType::iter()
+    let dependency_types: Vec<TypeMetadata> = DependencyType::iter()
         .map(|t| t.discriminant().to_metadata())
         .collect();
-    write_fixture(&group_types, output_dir, "group-types.json");
+    write_fixture(&dependency_types, output_dir, "dependency-types.json");
 
     let ports: Vec<TypeMetadata> = PortType::iter().map(|p| p.to_metadata()).collect();
     write_fixture(&ports, output_dir, "ports.json");

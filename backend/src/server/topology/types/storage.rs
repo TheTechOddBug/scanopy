@@ -1,5 +1,5 @@
 use crate::server::bindings::r#impl::base::Binding;
-use crate::server::groups::r#impl::base::Group;
+use crate::server::dependencies::r#impl::base::Dependency;
 use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::ports::r#impl::base::Port;
@@ -81,7 +81,7 @@ impl Storable for Topology {
                     bindings,
                     services,
                     subnets,
-                    groups,
+                    dependencies,
                     if_entries,
                     is_stale,
                     last_refreshed,
@@ -92,7 +92,7 @@ impl Storable for Topology {
                     removed_interfaces,
                     removed_services,
                     removed_subnets,
-                    removed_groups,
+                    removed_dependencies,
                     removed_bindings,
                     removed_ports,
                     removed_if_entries,
@@ -115,7 +115,7 @@ impl Storable for Topology {
                 "hosts",
                 "interfaces",
                 "subnets",
-                "groups",
+                "dependencies",
                 "services",
                 "bindings",
                 "ports",
@@ -129,7 +129,7 @@ impl Storable for Topology {
                 "removed_interfaces",
                 "removed_services",
                 "removed_subnets",
-                "removed_groups",
+                "removed_dependencies",
                 "removed_bindings",
                 "removed_ports",
                 "removed_if_entries",
@@ -149,7 +149,7 @@ impl Storable for Topology {
                 SqlValue::Hosts(hosts),
                 SqlValue::Interfaces(interfaces),
                 SqlValue::Subnets(subnets),
-                SqlValue::Groups(groups),
+                SqlValue::Dependencies(dependencies),
                 SqlValue::Services(services),
                 SqlValue::Bindings(bindings),
                 SqlValue::Ports(ports),
@@ -163,7 +163,7 @@ impl Storable for Topology {
                 SqlValue::UuidArray(removed_interfaces),
                 SqlValue::UuidArray(removed_services),
                 SqlValue::UuidArray(removed_subnets),
-                SqlValue::UuidArray(removed_groups),
+                SqlValue::UuidArray(removed_dependencies),
                 SqlValue::UuidArray(removed_bindings),
                 SqlValue::UuidArray(removed_ports),
                 SqlValue::UuidArray(removed_if_entries),
@@ -195,8 +195,9 @@ impl Storable for Topology {
         let services: Vec<Service> =
             serde_json::from_value(row.get::<serde_json::Value, _>("services"))
                 .map_err(|e| anyhow::anyhow!("Failed to deserialize services: {}", e))?;
-        let groups: Vec<Group> = serde_json::from_value(row.get::<serde_json::Value, _>("groups"))
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize groups: {}", e))?;
+        let dependencies: Vec<Dependency> =
+            serde_json::from_value(row.get::<serde_json::Value, _>("dependencies"))
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize dependencies: {}", e))?;
 
         let ports: Vec<Port> = serde_json::from_value(row.get::<serde_json::Value, _>("ports"))
             .map_err(|e| anyhow::anyhow!("Failed to deserialize ports: {}", e))?;
@@ -225,7 +226,7 @@ impl Storable for Topology {
                 is_locked: row.get("is_locked"),
                 locked_at: row.get("locked_at"),
                 locked_by: row.get("locked_by"),
-                removed_groups: row.get("removed_groups"),
+                removed_dependencies: row.get("removed_dependencies"),
                 removed_hosts: row.get("removed_hosts"),
                 removed_interfaces: row.get("removed_interfaces"),
                 removed_services: row.get("removed_services"),
@@ -242,7 +243,7 @@ impl Storable for Topology {
                 bindings,
                 ports,
                 services,
-                groups,
+                dependencies,
                 if_entries,
                 options,
                 tags: row.get("tags"),

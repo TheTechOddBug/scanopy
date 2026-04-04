@@ -3,10 +3,10 @@ use cidr::{IpCidr, Ipv4Cidr};
 use reqwest::StatusCode;
 use scanopy::server::daemon_api_keys::r#impl::api::DaemonApiKeyResponse;
 use scanopy::server::daemon_api_keys::r#impl::base::{DaemonApiKey, DaemonApiKeyBase};
+use scanopy::server::dependencies::r#impl::base::{Dependency, DependencyBase, DependencyMembers};
+use scanopy::server::dependencies::r#impl::types::DependencyType;
 use scanopy::server::discovery::r#impl::base::{Discovery, DiscoveryBase};
 use scanopy::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback, RunType};
-use scanopy::server::groups::r#impl::base::{Group, GroupBase};
-use scanopy::server::groups::r#impl::types::GroupType;
 use scanopy::server::hosts::r#impl::api::{CreateHostRequest, HostResponse, UpdateHostRequest};
 use scanopy::server::services::definitions::ServiceDefinitionRegistry;
 use scanopy::server::services::r#impl::base::{Service, ServiceBase};
@@ -30,7 +30,7 @@ pub async fn run_crud_tests(ctx: &TestContext) -> Result<(), String> {
     test_subnet_crud(ctx).await?;
     test_host_crud(ctx).await?;
     test_service_crud(ctx).await?;
-    test_group_crud(ctx).await?;
+    test_dependency_crud(ctx).await?;
     test_tag_crud(ctx).await?;
     test_discovery_crud(ctx).await?;
     test_api_key_crud(ctx).await?;
@@ -254,52 +254,52 @@ async fn test_service_crud(ctx: &TestContext) -> Result<(), String> {
     Ok(())
 }
 
-async fn test_group_crud(ctx: &TestContext) -> Result<(), String> {
-    println!("Testing Group CRUD...");
+async fn test_dependency_crud(ctx: &TestContext) -> Result<(), String> {
+    println!("Testing Dependency CRUD...");
 
-    let group = Group::new(GroupBase {
-        name: "Test Group".to_string(),
+    let dependency = Dependency::new(DependencyBase {
+        name: "Test Dependency".to_string(),
         description: Some("Test description".to_string()),
         network_id: ctx.network_id,
         color: Color::Red,
-        group_type: GroupType::RequestPath,
-        binding_ids: vec![],
+        dependency_type: DependencyType::RequestPath,
+        members: DependencyMembers::default(),
         source: EntitySource::System,
         edge_style: EdgeStyle::Bezier,
         tags: Vec::new(),
     });
 
-    let created: Group = ctx.client.post("/api/v1/groups", &group).await?;
+    let created: Dependency = ctx.client.post("/api/v1/dependencies", &dependency).await?;
     assert!(!created.id.is_nil());
-    assert_eq!(created.base.name, "Test Group");
-    println!("  ✓ Create group");
+    assert_eq!(created.base.name, "Test Dependency");
+    println!("  ✓ Create dependency");
 
-    let fetched: Group = ctx
+    let fetched: Dependency = ctx
         .client
-        .get(&format!("/api/v1/groups/{}", created.id))
+        .get(&format!("/api/v1/dependencies/{}", created.id))
         .await?;
     assert_eq!(fetched.id, created.id);
-    println!("  ✓ Read group");
+    println!("  ✓ Read dependency");
 
     let mut updated = fetched.clone();
-    updated.base.name = "Updated Group".to_string();
-    let updated: Group = ctx
+    updated.base.name = "Updated Dependency".to_string();
+    let updated: Dependency = ctx
         .client
-        .put(&format!("/api/v1/groups/{}", updated.id), &updated)
+        .put(&format!("/api/v1/dependencies/{}", updated.id), &updated)
         .await?;
-    assert_eq!(updated.base.name, "Updated Group");
-    println!("  ✓ Update group");
+    assert_eq!(updated.base.name, "Updated Dependency");
+    println!("  ✓ Update dependency");
 
-    let groups: Vec<Group> = ctx.client.get("/api/v1/groups").await?;
-    assert!(groups.iter().any(|g| g.id == created.id));
-    println!("  ✓ List groups");
+    let dependencies: Vec<Dependency> = ctx.client.get("/api/v1/dependencies").await?;
+    assert!(dependencies.iter().any(|d| d.id == created.id));
+    println!("  ✓ List dependencies");
 
     ctx.client
-        .delete_no_content(&format!("/api/v1/groups/{}", created.id))
+        .delete_no_content(&format!("/api/v1/dependencies/{}", created.id))
         .await?;
-    println!("  ✓ Delete group");
+    println!("  ✓ Delete dependency");
 
-    println!("✅ Group CRUD passed");
+    println!("✅ Dependency CRUD passed");
     Ok(())
 }
 

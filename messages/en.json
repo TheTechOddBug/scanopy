@@ -577,7 +577,7 @@
 	"dependencies_selectBindingRequired": "Select a binding for each service",
 	"dependencies_simpleBezier": "Simple Bezier",
 	"dependencies_smoothStep": "Smooth Step",
-	"dependencies_subtitle": "Define service dependencies to improve topology visualization",
+	"dependencies_subtitle": "Track how services depend on each other to understand your application architecture",
 	"discovery_adHoc": "AdHoc (Run on Demand)",
 	"discovery_adHocDescription": "This discovery will only run when manually triggered",
 	"discovery_allInterfacedSubnets": "All subnets daemon had an interface with at time of scan",

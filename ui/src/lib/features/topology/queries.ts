@@ -670,6 +670,7 @@ function saveAutoRebuildToStorage(value: boolean): void {
 let optionsInitialized = false;
 let expandedInitialized = false;
 let autoRebuildInitialized = false;
+let perspectiveInitialized = false;
 
 if (browser) {
 	let optionsRebuildTimeout: ReturnType<typeof setTimeout>;
@@ -716,6 +717,31 @@ if (browser) {
 			saveAutoRebuildToStorage(value);
 		}
 		autoRebuildInitialized = true;
+	});
+
+	// Trigger a rebuild when the active perspective changes
+	activePerspective.subscribe((perspective) => {
+		if (perspectiveInitialized) {
+			if (!get(autoRebuild)) return;
+			const topologyId = get(selectedTopologyId);
+			if (!topologyId) return;
+
+			const topologies = queryClient.getQueryData<Topology[]>(queryKeys.topology.all);
+			const topology = topologies?.find((t) => t.id === topologyId);
+			if (!topology) return;
+
+			const options = get(perPerspectiveOptions)[perspective];
+			apiClient.POST('/api/v1/topology/{id}/rebuild', {
+				params: { path: { id: topologyId } },
+				body: {
+					network_id: topology.network_id,
+					options: sanitizeOptionsForApi(options),
+					nodes: topology.nodes,
+					edges: topology.edges
+				}
+			});
+		}
+		perspectiveInitialized = true;
 	});
 }
 

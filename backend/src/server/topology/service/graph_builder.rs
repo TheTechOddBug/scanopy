@@ -409,18 +409,38 @@ impl GraphBuilder {
         subnet_ids
             .iter()
             .map(|subnet_id| {
-                let header = self.consolidated_docker_subnets.get(subnet_id).map(
-                    |consolidated_subnet_ids| {
+                // Build display header from subnet metadata
+                let header = if let Some(cids) = self.consolidated_docker_subnets.get(subnet_id) {
+                    Some(
                         "Docker Bridge: (".to_owned()
                             + &ctx
                                 .subnets
                                 .iter()
-                                .filter(|s| consolidated_subnet_ids.contains(&s.id))
+                                .filter(|s| cids.contains(&s.id))
                                 .map(|s| s.base.cidr.to_string())
                                 .join(", ")
-                            + ")"
-                    },
-                );
+                            + ")",
+                    )
+                } else if let Some(subnet) = ctx.subnets.iter().find(|s| s.id == *subnet_id) {
+                    use crate::server::shared::types::metadata::TypeMetadataProvider;
+                    let type_name = subnet.base.subnet_type.name();
+                    let cidr = subnet.base.cidr.to_string();
+                    let show_label = subnet.base.subnet_type.show_label();
+                    let name_or_type = if subnet.base.name != cidr {
+                        subnet.base.name.clone()
+                    } else if show_label {
+                        type_name.to_string()
+                    } else {
+                        String::new()
+                    };
+                    Some(if name_or_type.is_empty() {
+                        cidr
+                    } else {
+                        format!("{}: {}", name_or_type, cidr)
+                    })
+                } else {
+                    None
+                };
 
                 Node {
                     id: *subnet_id,

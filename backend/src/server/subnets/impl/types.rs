@@ -195,6 +195,10 @@ impl SubnetType {
             SubnetType::Loopback | SubnetType::Internet | SubnetType::Remote
         )
     }
+
+    pub fn show_label(&self) -> bool {
+        !matches!(self, SubnetType::Unknown | SubnetType::Loopback)
+    }
 }
 
 impl HasId for SubnetType {

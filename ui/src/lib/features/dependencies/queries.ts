@@ -176,7 +176,7 @@ export function createEmptyDependencyFormData(defaultNetworkId?: string): Depend
 		id: uuidv4Sentinel,
 		name: '',
 		description: '',
-		members: [],
+		members: { type: 'Services', service_ids: [] },
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
 		dependency_type: 'RequestPath',

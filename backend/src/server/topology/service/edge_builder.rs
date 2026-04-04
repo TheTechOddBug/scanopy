@@ -5,7 +5,7 @@ use strum::IntoDiscriminant;
 use uuid::Uuid;
 
 use crate::server::{
-    groups::r#impl::{base::Group, types::GroupType},
+    dependencies::r#impl::{base::Dependency, types::DependencyType},
     hosts::r#impl::virtualization::HostVirtualization,
     if_entries::r#impl::base::Neighbor,
     services::r#impl::virtualization::ServiceVirtualization,
@@ -23,22 +23,22 @@ use crate::server::{
 pub struct EdgeBuilder;
 
 impl EdgeBuilder {
-    /// Create group edges (connecting services in a group's service chain)
-    pub fn create_group_edges(ctx: &TopologyContext) -> Vec<Edge> {
-        ctx.groups
+    /// Create dependency edges (connecting services in a dependency's service chain)
+    pub fn create_dependency_edges(ctx: &TopologyContext) -> Vec<Edge> {
+        ctx.dependencies
             .iter()
-            .flat_map(|group| {
-                let binding_ids = &group.base.binding_ids;
-                match &group.base.group_type {
-                    GroupType::RequestPath => binding_ids
+            .flat_map(|dependency| {
+                let binding_ids = dependency.binding_ids();
+                match &dependency.base.dependency_type {
+                    DependencyType::RequestPath => binding_ids
                         .windows(2)
                         .filter_map(|window| {
                             EdgeBuilder::edge_from_service_bindings(
-                                ctx, window[0], window[1], group,
+                                ctx, window[0], window[1], dependency,
                             )
                         })
                         .collect::<Vec<Edge>>(),
-                    GroupType::HubAndSpoke => {
+                    DependencyType::HubAndSpoke => {
                         let mut binding_ids = binding_ids.clone();
                         binding_ids.reverse();
                         if let Some(hub_binding_id) = binding_ids.pop() {
@@ -49,7 +49,7 @@ impl EdgeBuilder {
                                         ctx,
                                         hub_binding_id,
                                         *spoke_binding,
-                                        group,
+                                        dependency,
                                     )
                                 })
                                 .collect::<Vec<Edge>>();
@@ -477,7 +477,7 @@ impl EdgeBuilder {
         ctx: &TopologyContext,
         source_binding_id: Uuid,
         target_binding_id: Uuid,
-        group: &Group,
+        dependency: &Dependency,
     ) -> Option<Edge> {
         let source_interface = ctx.services.iter().find_map(|s| {
             if let Some(source_binding) = s.get_binding(source_binding_id) {
@@ -518,23 +518,23 @@ impl EdgeBuilder {
         {
             None
         } else {
-            Some(group.base.name.to_string())
+            Some(dependency.base.name.to_string())
         };
 
         Some(Edge {
             id: Uuid::new_v4(),
             source: source_interface,
             target: target_interface,
-            edge_type: match group.base.group_type {
-                GroupType::HubAndSpoke => EdgeType::HubAndSpoke {
+            edge_type: match dependency.base.dependency_type {
+                DependencyType::HubAndSpoke => EdgeType::HubAndSpoke {
                     source_binding_id,
                     target_binding_id,
-                    group_id: group.id,
+                    group_id: dependency.id,
                 },
-                GroupType::RequestPath => EdgeType::RequestPath {
+                DependencyType::RequestPath => EdgeType::RequestPath {
                     source_binding_id,
                     target_binding_id,
-                    group_id: group.id,
+                    group_id: dependency.id,
                 },
             },
             label,

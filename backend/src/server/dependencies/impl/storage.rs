@@ -5,9 +5,9 @@ use sqlx::postgres::PgRow;
 use uuid::Uuid;
 
 use crate::server::{
-    groups::r#impl::{
-        base::{Group, GroupBase},
-        types::GroupType,
+    dependencies::r#impl::{
+        base::{Dependency, DependencyBase, DependencyMembers},
+        types::DependencyType,
     },
     shared::{
         entities::EntityDiscriminants,
@@ -18,13 +18,13 @@ use crate::server::{
     topology::types::edges::EdgeStyle,
 };
 
-/// CSV row representation for Group export (excludes nested binding_ids)
+/// CSV row representation for Dependency export (excludes nested members)
 #[derive(Serialize)]
-pub struct GroupCsvRow {
+pub struct DependencyCsvRow {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
-    pub group_type: String,
+    pub dependency_type: String,
     pub color: String,
     pub network_id: Uuid,
     pub source: String,
@@ -32,11 +32,11 @@ pub struct GroupCsvRow {
     pub updated_at: DateTime<Utc>,
 }
 
-impl Storable for Group {
-    type BaseData = GroupBase;
+impl Storable for Dependency {
+    type BaseData = DependencyBase;
 
     fn table_name() -> &'static str {
-        "groups"
+        "dependencies"
     }
 
     fn new(base: Self::BaseData) -> Self {
@@ -64,8 +64,8 @@ impl Storable for Group {
                     name,
                     network_id,
                     description,
-                    group_type,
-                    binding_ids: _, // Stored in group_bindings junction table
+                    dependency_type,
+                    ref members, // member_type stored on table, IDs in junction table
                     source,
                     color,
                     edge_style,
@@ -73,8 +73,7 @@ impl Storable for Group {
                 },
         } = self.clone();
 
-        // GroupType is now stored as TEXT (just the variant name)
-        let group_type_str: &'static str = group_type.into();
+        let dependency_type_str: &'static str = dependency_type.into();
 
         Ok((
             vec![
@@ -85,9 +84,10 @@ impl Storable for Group {
                 "description",
                 "network_id",
                 "source",
-                "group_type",
+                "dependency_type",
                 "color",
                 "edge_style",
+                "member_type",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -97,20 +97,32 @@ impl Storable for Group {
                 SqlValue::OptionalString(description),
                 SqlValue::Uuid(network_id),
                 SqlValue::EntitySource(source),
-                SqlValue::String(group_type_str.to_string()),
+                SqlValue::String(dependency_type_str.to_string()),
                 SqlValue::String(color.to_string()),
                 SqlValue::String(serde_json::to_string(&edge_style)?),
+                SqlValue::String(
+                    if members.is_bindings() {
+                        "Bindings"
+                    } else {
+                        "Services"
+                    }
+                    .to_string(),
+                ),
             ],
         ))
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
-        // GroupType is now stored as TEXT (variant name like "RequestPath" or "HubAndSpoke")
-        let group_type_str: String = row.get("group_type");
-        let group_type = match group_type_str.as_str() {
-            "RequestPath" => GroupType::RequestPath,
-            "HubAndSpoke" => GroupType::HubAndSpoke,
-            _ => return Err(anyhow::anyhow!("Unknown group_type: {}", group_type_str)),
+        let dependency_type_str: String = row.get("dependency_type");
+        let dependency_type = match dependency_type_str.as_str() {
+            "RequestPath" => DependencyType::RequestPath,
+            "HubAndSpoke" => DependencyType::HubAndSpoke,
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Unknown dependency_type: {}",
+                    dependency_type_str
+                ));
+            }
         };
 
         let source: EntitySource =
@@ -120,18 +132,26 @@ impl Storable for Group {
         let edge_style: EdgeStyle = serde_json::from_str(&row.get::<String, _>("edge_style"))
             .map_err(|e| anyhow::anyhow!("Failed to deserialize edge_style: {}", e))?;
 
-        Ok(Group {
+        Ok(Dependency {
             id: row.get("id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            base: GroupBase {
+            base: DependencyBase {
                 name: row.get("name"),
                 description: row.get("description"),
                 network_id: row.get("network_id"),
                 source,
                 edge_style,
-                group_type,
-                binding_ids: Vec::new(), // Hydrated by GroupService via GroupBindingStorage
+                dependency_type,
+                // member_type discriminant determines which variant; IDs hydrated by DependencyService
+                members: match row.get::<String, _>("member_type").as_str() {
+                    "Bindings" => DependencyMembers::Bindings {
+                        binding_ids: Vec::new(),
+                    },
+                    _ => DependencyMembers::Services {
+                        service_ids: Vec::new(),
+                    },
+                },
                 color: row.get::<String, _>("color").parse().unwrap_or_default(),
                 tags: Vec::new(), // Hydrated from entity_tags junction table
             },
@@ -139,7 +159,7 @@ impl Storable for Group {
     }
 }
 
-impl Entity for Group {
+impl Entity for Dependency {
     fn id(&self) -> Uuid {
         self.id
     }
@@ -156,15 +176,15 @@ impl Entity for Group {
         self.created_at = time;
     }
 
-    type CsvRow = GroupCsvRow;
+    type CsvRow = DependencyCsvRow;
 
     fn to_csv_row(&self) -> Self::CsvRow {
-        let group_type_str: &'static str = self.base.group_type.into();
-        GroupCsvRow {
+        let dependency_type_str: &'static str = self.base.dependency_type.into();
+        DependencyCsvRow {
             id: self.id,
             name: self.base.name.clone(),
             description: self.base.description.clone(),
-            group_type: group_type_str.to_string(),
+            dependency_type: dependency_type_str.to_string(),
             color: self.base.color.to_string(),
             network_id: self.base.network_id,
             source: format!("{:?}", self.base.source),
@@ -174,12 +194,13 @@ impl Entity for Group {
     }
 
     fn entity_type() -> EntityDiscriminants {
-        EntityDiscriminants::Group
+        EntityDiscriminants::Dependency
     }
 
-    const ENTITY_NAME_SINGULAR: &'static str = "Group";
-    const ENTITY_NAME_PLURAL: &'static str = "Groups";
-    const ENTITY_DESCRIPTION: &'static str = "Logical groupings of hosts. Organize hosts into groups for easier management and visualization.";
+    const ENTITY_NAME_SINGULAR: &'static str = "Dependency";
+    const ENTITY_NAME_PLURAL: &'static str = "Dependencies";
+    const ENTITY_DESCRIPTION: &'static str =
+        "Service dependency relationships. Define how services depend on each other.";
 
     fn entity_category() -> EntityCategory {
         EntityCategory::Visualization
@@ -214,7 +235,6 @@ impl Entity for Group {
     }
 
     fn preserve_immutable_fields(&mut self, existing: &Self) {
-        // source is set at creation time (Manual or Discovery), cannot be changed
         self.base.source = existing.base.source.clone();
         self.created_at = existing.created_at;
         self.updated_at = existing.updated_at;

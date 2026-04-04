@@ -20,7 +20,7 @@ impl PerspectiveBuilder for L3Builder {
         let mut all_edges = Vec::new();
 
         all_edges.extend(EdgeBuilder::create_interface_edges(ctx));
-        all_edges.extend(EdgeBuilder::create_group_edges(ctx));
+        all_edges.extend(EdgeBuilder::create_dependency_edges(ctx));
         all_edges.extend(EdgeBuilder::create_vm_host_edges(ctx));
         let (container_edges, docker_bridge_host_subnet_id_to_group_on) =
             EdgeBuilder::create_containerized_service_edges(ctx, grouping);

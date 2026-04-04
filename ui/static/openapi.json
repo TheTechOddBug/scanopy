@@ -4101,6 +4101,506 @@
         ]
       }
     },
+    "/api/v1/dependencies": {
+      "get": {
+        "tags": [
+          "Dependencies"
+        ],
+        "summary": "List all Dependencies",
+        "description": "Returns all dependencies the authenticated user has access to.\nSupports pagination via `limit` and `offset` query parameters,\nand ordering via `group_by`, `order_by`, and `order_direction`.",
+        "operationId": "get_all_dependencies",
+        "parameters": [
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "description": "Primary ordering field (used for grouping). Always sorts ASC to keep groups together.",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/DependencyOrderField"
+                }
+              ]
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Secondary ordering field (sorting within groups or standalone sort).",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/DependencyOrderField"
+                }
+              ]
+            }
+          },
+          {
+            "name": "order_direction",
+            "in": "query",
+            "description": "Direction for order_by field (group_by always uses ASC).",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/OrderDirection"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "maximum": 1000,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of results to skip. Default: 0.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of dependencies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedApiResponse_Dependency"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Dependencies"
+        ],
+        "summary": "Create a new Dependency",
+        "operationId": "create_dependency",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Dependency"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Dependency created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Dependency"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dependencies/bulk-delete": {
+      "post": {
+        "tags": [
+          "Dependencies"
+        ],
+        "summary": "Bulk delete Dependencies",
+        "operationId": "bulk_delete_dependencies",
+        "requestBody": {
+          "description": "Array of Dependency IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Dependencies deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dependencies/export/csv": {
+      "get": {
+        "tags": [
+          "Dependencies"
+        ],
+        "summary": "Export Dependencies to CSV",
+        "description": "Export all Dependencies matching the filter criteria to CSV format. Ignores pagination parameters (limit/offset) and exports all matching records.",
+        "operationId": "export_dependencies_csv",
+        "parameters": [
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "description": "Primary ordering field (used for grouping). Always sorts ASC to keep groups together.",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/DependencyOrderField"
+                }
+              ]
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Secondary ordering field (sorting within groups or standalone sort).",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/DependencyOrderField"
+                }
+              ]
+            }
+          },
+          {
+            "name": "order_direction",
+            "in": "query",
+            "description": "Direction for order_by field (group_by always uses ASC).",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/components/schemas/OrderDirection"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "maximum": 1000,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of results to skip. Default: 0.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file containing Dependencies",
+            "content": {
+              "text/csv": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dependencies/{id}": {
+      "get": {
+        "tags": [
+          "Dependencies"
+        ],
+        "summary": "Get Dependency by ID",
+        "operationId": "get_dependency_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Dependency ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependency found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Dependency"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dependency not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Dependencies"
+        ],
+        "summary": "Update a Dependency",
+        "operationId": "update_dependency",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Dependency ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Dependency"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Dependency updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Dependency"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dependency not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Dependencies"
+        ],
+        "summary": "Delete Dependency",
+        "operationId": "delete_dependency",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Dependency ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependency deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dependency not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "user_api_key": []
+          },
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/discovery": {
       "get": {
         "tags": [
@@ -4742,506 +5242,6 @@
         "security": [
           {
             "daemon_api_key": []
-          }
-        ]
-      }
-    },
-    "/api/v1/groups": {
-      "get": {
-        "tags": [
-          "Groups"
-        ],
-        "summary": "List all Groups",
-        "description": "Returns all groups the authenticated user has access to.\nSupports pagination via `limit` and `offset` query parameters,\nand ordering via `group_by`, `order_by`, and `order_direction`.",
-        "operationId": "get_all_groups",
-        "parameters": [
-          {
-            "name": "network_id",
-            "in": "query",
-            "description": "Filter by network ID",
-            "required": false,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "group_by",
-            "in": "query",
-            "description": "Primary ordering field (used for grouping). Always sorts ASC to keep groups together.",
-            "required": false,
-            "schema": {
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "$ref": "#/components/schemas/GroupOrderField"
-                }
-              ]
-            }
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "Secondary ordering field (sorting within groups or standalone sort).",
-            "required": false,
-            "schema": {
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "$ref": "#/components/schemas/GroupOrderField"
-                }
-              ]
-            }
-          },
-          {
-            "name": "order_direction",
-            "in": "query",
-            "description": "Direction for order_by field (group_by always uses ASC).",
-            "required": false,
-            "schema": {
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "$ref": "#/components/schemas/OrderDirection"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.",
-            "required": false,
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int32",
-              "maximum": 1000,
-              "minimum": 0
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "description": "Number of results to skip. Default: 0.",
-            "required": false,
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int32",
-              "minimum": 0
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of groups",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginatedApiResponse_Group"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "user_api_key": []
-          },
-          {
-            "session": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "Groups"
-        ],
-        "summary": "Create a new Group",
-        "operationId": "create_group",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Group"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Group created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_Group"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "user_api_key": []
-          },
-          {
-            "session": []
-          }
-        ]
-      }
-    },
-    "/api/v1/groups/bulk-delete": {
-      "post": {
-        "tags": [
-          "Groups"
-        ],
-        "summary": "Bulk delete Groups",
-        "operationId": "bulk_delete_groups",
-        "requestBody": {
-          "description": "Array of Group IDs to delete",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Groups deleted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_BulkDeleteResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "user_api_key": []
-          },
-          {
-            "session": []
-          }
-        ]
-      }
-    },
-    "/api/v1/groups/export/csv": {
-      "get": {
-        "tags": [
-          "Groups"
-        ],
-        "summary": "Export Groups to CSV",
-        "description": "Export all Groups matching the filter criteria to CSV format. Ignores pagination parameters (limit/offset) and exports all matching records.",
-        "operationId": "export_groups_csv",
-        "parameters": [
-          {
-            "name": "network_id",
-            "in": "query",
-            "description": "Filter by network ID",
-            "required": false,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "group_by",
-            "in": "query",
-            "description": "Primary ordering field (used for grouping). Always sorts ASC to keep groups together.",
-            "required": false,
-            "schema": {
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "$ref": "#/components/schemas/GroupOrderField"
-                }
-              ]
-            }
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "Secondary ordering field (sorting within groups or standalone sort).",
-            "required": false,
-            "schema": {
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "$ref": "#/components/schemas/GroupOrderField"
-                }
-              ]
-            }
-          },
-          {
-            "name": "order_direction",
-            "in": "query",
-            "description": "Direction for order_by field (group_by always uses ASC).",
-            "required": false,
-            "schema": {
-              "oneOf": [
-                {
-                  "type": "null"
-                },
-                {
-                  "$ref": "#/components/schemas/OrderDirection"
-                }
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "Maximum number of results to return (1-1000, default: 50). Use 0 for no limit.",
-            "required": false,
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int32",
-              "maximum": 1000,
-              "minimum": 0
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "description": "Number of results to skip. Default: 0.",
-            "required": false,
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int32",
-              "minimum": 0
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "CSV file containing Groups",
-            "content": {
-              "text/csv": {}
-            }
-          }
-        },
-        "security": [
-          {
-            "user_api_key": []
-          },
-          {
-            "session": []
-          }
-        ]
-      }
-    },
-    "/api/v1/groups/{id}": {
-      "get": {
-        "tags": [
-          "Groups"
-        ],
-        "summary": "Get Group by ID",
-        "operationId": "get_group_by_id",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Group ID",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Group found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_Group"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Group not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "user_api_key": []
-          },
-          {
-            "session": []
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "Groups"
-        ],
-        "summary": "Update a Group",
-        "operationId": "update_group",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Group ID",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Group"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Group updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_Group"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Group not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "user_api_key": []
-          },
-          {
-            "session": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "Groups"
-        ],
-        "summary": "Delete Group",
-        "operationId": "delete_group",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Group ID",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Group deleted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Group not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "user_api_key": []
-          },
-          {
-            "session": []
           }
         ]
       }
@@ -12577,14 +12577,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-04T14:49:45.011401Z",
-              "id": "50cbeae8-9742-4edf-8938-b711f613e646",
+              "created_at": "2026-04-04T18:25:08.907171Z",
+              "id": "f5fcb95d-547a-45fe-8fcc-0c0e0c99149e",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-04T14:49:45.011401Z"
+              "updated_at": "2026-04-04T18:25:08.907171Z"
             }
           },
           "error": {
@@ -13021,6 +13021,78 @@
           }
         }
       },
+      "ApiResponse_Dependency": {
+        "type": "object",
+        "required": [
+          "success",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DependencyBase"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "id",
+                  "created_at",
+                  "updated_at"
+                ],
+                "properties": {
+                  "created_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "readOnly": true
+                  },
+                  "updated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true
+                  }
+                }
+              }
+            ],
+            "example": {
+              "color": "Blue",
+              "created_at": "2026-01-15T10:30:00Z",
+              "dependency_type": "RequestPath",
+              "description": "HTTP/HTTPS services dependency",
+              "edge_style": "Bezier",
+              "id": "550e8400-e29b-41d4-a716-446655440008",
+              "members": {
+                "service_ids": [],
+                "type": "Services"
+              },
+              "name": "Web Services",
+              "network_id": "550e8400-e29b-41d4-a716-446655440002",
+              "source": {
+                "type": "Manual"
+              },
+              "tags": [],
+              "updated_at": "2026-01-15T10:30:00Z"
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
       "ApiResponse_Discovery": {
         "type": "object",
         "required": [
@@ -13179,75 +13251,6 @@
                 ],
                 "format": "date-time"
               }
-            }
-          },
-          "error": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ApiMeta"
-          },
-          "success": {
-            "type": "boolean"
-          }
-        }
-      },
-      "ApiResponse_Group": {
-        "type": "object",
-        "required": [
-          "success",
-          "meta"
-        ],
-        "properties": {
-          "data": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/GroupBase"
-              },
-              {
-                "type": "object",
-                "required": [
-                  "id",
-                  "created_at",
-                  "updated_at"
-                ],
-                "properties": {
-                  "created_at": {
-                    "type": "string",
-                    "format": "date-time",
-                    "readOnly": true
-                  },
-                  "id": {
-                    "type": "string",
-                    "format": "uuid",
-                    "readOnly": true
-                  },
-                  "updated_at": {
-                    "type": "string",
-                    "format": "date-time",
-                    "readOnly": true
-                  }
-                }
-              }
-            ],
-            "example": {
-              "binding_ids": [],
-              "color": "Blue",
-              "created_at": "2026-01-15T10:30:00Z",
-              "description": "HTTP/HTTPS services group",
-              "edge_style": "Bezier",
-              "group_type": "RequestPath",
-              "id": "550e8400-e29b-41d4-a716-446655440008",
-              "name": "Web Services",
-              "network_id": "550e8400-e29b-41d4-a716-446655440002",
-              "source": {
-                "type": "Manual"
-              },
-              "tags": [],
-              "updated_at": "2026-01-15T10:30:00Z"
             }
           },
           "error": {
@@ -13480,14 +13483,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-04T14:49:44.991994Z",
-                      "id": "b8b97018-b765-4e01-ade5-959db2d2e1aa",
+                      "created_at": "2026-04-04T18:25:08.889755Z",
+                      "id": "6b3e4847-1065-4e03-9e2e-029d7acb7a80",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-04T14:49:44.991994Z"
+                      "updated_at": "2026-04-04T18:25:08.889755Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -13496,7 +13499,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "FreeIPA",
+                  "service_definition": "HAProxy",
                   "source": {
                     "type": "Manual"
                   },
@@ -14199,14 +14202,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-04T14:49:45.006366Z",
-                  "id": "a9b72bfd-0a1c-4769-b71a-a807fb262e2d",
+                  "created_at": "2026-04-04T18:25:08.902427Z",
+                  "id": "5fbf5731-9e17-4339-9ef4-1328048a0648",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-04T14:49:45.006366Z"
+                  "updated_at": "2026-04-04T18:25:08.902427Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14215,7 +14218,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "FreeIPA",
+              "service_definition": "HAProxy",
               "source": {
                 "type": "Manual"
               },
@@ -15489,14 +15492,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-04T14:49:44.992214Z",
-          "id": "164079b1-00bc-4cd0-8ec4-43d431866126",
+          "created_at": "2026-04-04T18:25:08.890119Z",
+          "id": "761fbd47-dfe9-4041-a8e3-851ebed7e20c",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-04T14:49:44.992214Z"
+          "updated_at": "2026-04-04T18:25:08.890119Z"
         }
       },
       "BindingBase": {
@@ -16011,7 +16014,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "FreeIPA",
+              "service_definition": "HAProxy",
               "tags": [],
               "virtualization": null
             }
@@ -16832,6 +16835,177 @@
           }
         }
       },
+      "Dependency": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DependencyBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ],
+        "example": {
+          "color": "Blue",
+          "created_at": "2026-01-15T10:30:00Z",
+          "dependency_type": "RequestPath",
+          "description": "HTTP/HTTPS services dependency",
+          "edge_style": "Bezier",
+          "id": "550e8400-e29b-41d4-a716-446655440008",
+          "members": {
+            "service_ids": [],
+            "type": "Services"
+          },
+          "name": "Web Services",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "source": {
+            "type": "Manual"
+          },
+          "tags": [],
+          "updated_at": "2026-01-15T10:30:00Z"
+        }
+      },
+      "DependencyBase": {
+        "type": "object",
+        "required": [
+          "name",
+          "network_id",
+          "dependency_type",
+          "members",
+          "color",
+          "edge_style",
+          "tags"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "dependency_type": {
+            "$ref": "#/components/schemas/DependencyType"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "edge_style": {
+            "$ref": "#/components/schemas/EdgeStyle"
+          },
+          "members": {
+            "$ref": "#/components/schemas/DependencyMembers",
+            "description": "Members of this dependency: either service IDs or binding IDs."
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntitySource",
+            "description": "Will be automatically set to Manual for creation through API"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "DependencyMembers": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Application-level only. Ordered list of service IDs.",
+            "required": [
+              "service_ids",
+              "type"
+            ],
+            "properties": {
+              "service_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Services"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Full L3 detail. Ordered list of binding IDs (one per service in the chain).",
+            "required": [
+              "binding_ids",
+              "type"
+            ],
+            "properties": {
+              "binding_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Bindings"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "The members of a dependency: either service-level or binding-level.\nBindings are all-or-nothing: either every position has a binding (full L3 detail)\nor none do (Application-level only)."
+      },
+      "DependencyOrderField": {
+        "type": "string",
+        "description": "Fields that dependencies can be ordered/grouped by.",
+        "enum": [
+          "created_at",
+          "name",
+          "dependency_type",
+          "updated_at",
+          "network_id"
+        ]
+      },
+      "DependencyType": {
+        "type": "string",
+        "enum": [
+          "RequestPath",
+          "HubAndSpoke"
+        ]
+      },
       "DeploymentType": {
         "type": "string",
         "enum": [
@@ -17633,7 +17807,7 @@
           "IfEntry",
           "Credential",
           "Subnet",
-          "Group",
+          "Dependency",
           "Topology",
           "Unknown"
         ]
@@ -17885,127 +18059,6 @@
             "description": "Rules that organize nodes within a container into sub-groups."
           }
         }
-      },
-      "Group": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/GroupBase"
-          },
-          {
-            "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
-            "properties": {
-              "created_at": {
-                "type": "string",
-                "format": "date-time",
-                "readOnly": true
-              },
-              "id": {
-                "type": "string",
-                "format": "uuid",
-                "readOnly": true
-              },
-              "updated_at": {
-                "type": "string",
-                "format": "date-time",
-                "readOnly": true
-              }
-            }
-          }
-        ],
-        "example": {
-          "binding_ids": [],
-          "color": "Blue",
-          "created_at": "2026-01-15T10:30:00Z",
-          "description": "HTTP/HTTPS services group",
-          "edge_style": "Bezier",
-          "group_type": "RequestPath",
-          "id": "550e8400-e29b-41d4-a716-446655440008",
-          "name": "Web Services",
-          "network_id": "550e8400-e29b-41d4-a716-446655440002",
-          "source": {
-            "type": "Manual"
-          },
-          "tags": [],
-          "updated_at": "2026-01-15T10:30:00Z"
-        }
-      },
-      "GroupBase": {
-        "type": "object",
-        "required": [
-          "name",
-          "network_id",
-          "group_type",
-          "binding_ids",
-          "color",
-          "edge_style",
-          "tags"
-        ],
-        "properties": {
-          "binding_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Ordered list of binding IDs for this group."
-          },
-          "color": {
-            "$ref": "#/components/schemas/Color"
-          },
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "edge_style": {
-            "$ref": "#/components/schemas/EdgeStyle"
-          },
-          "group_type": {
-            "$ref": "#/components/schemas/GroupType"
-          },
-          "name": {
-            "type": "string"
-          },
-          "network_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "source": {
-            "$ref": "#/components/schemas/EntitySource",
-            "description": "Will be automatically set to Manual for creation through API"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
-      "GroupOrderField": {
-        "type": "string",
-        "description": "Fields that groups can be ordered/grouped by.",
-        "enum": [
-          "created_at",
-          "name",
-          "group_type",
-          "updated_at",
-          "network_id"
-        ]
-      },
-      "GroupType": {
-        "type": "string",
-        "enum": [
-          "RequestPath",
-          "HubAndSpoke"
-        ]
       },
       "Host": {
         "allOf": [
@@ -18420,14 +18473,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-04T14:49:44.991623Z",
-                  "id": "612a8107-02ed-4fe4-a735-5bb87ab42700",
+                  "created_at": "2026-04-04T18:25:08.889272Z",
+                  "id": "396cb6c3-18ec-4750-9f9e-5020ef9e973c",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-04T14:49:44.991623Z"
+                  "updated_at": "2026-04-04T18:25:08.889272Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -18436,7 +18489,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "FreeIPA",
+              "service_definition": "HAProxy",
               "source": {
                 "type": "Manual"
               },
@@ -19783,7 +19836,7 @@
           "FirstHostDiscovered",
           "SecondNetworkCreated",
           "FirstTagCreated",
-          "FirstGroupCreated",
+          "FirstDependencyCreated",
           "FirstUserApiKeyCreated",
           "FirstSnmpCredentialCreated",
           "FirstCredentialCreated",
@@ -20123,7 +20176,7 @@
           }
         }
       },
-      "PaginatedApiResponse_Group": {
+      "PaginatedApiResponse_Dependency": {
         "type": "object",
         "description": "Response type for paginated list endpoints (pagination is always present in meta)",
         "required": [
@@ -20137,7 +20190,7 @@
             "items": {
               "allOf": [
                 {
-                  "$ref": "#/components/schemas/GroupBase"
+                  "$ref": "#/components/schemas/DependencyBase"
                 },
                 {
                   "type": "object",
@@ -20166,13 +20219,16 @@
                 }
               ],
               "example": {
-                "binding_ids": [],
                 "color": "Blue",
                 "created_at": "2026-01-15T10:30:00Z",
-                "description": "HTTP/HTTPS services group",
+                "dependency_type": "RequestPath",
+                "description": "HTTP/HTTPS services dependency",
                 "edge_style": "Bezier",
-                "group_type": "RequestPath",
                 "id": "550e8400-e29b-41d4-a716-446655440008",
+                "members": {
+                  "service_ids": [],
+                  "type": "Services"
+                },
                 "name": "Web Services",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "source": {
@@ -20417,14 +20473,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-04T14:49:44.980832Z",
-                        "id": "d8ce9f76-33ae-4d25-ab96-88f6ee22e261",
+                        "created_at": "2026-04-04T18:25:08.878323Z",
+                        "id": "f32ac228-aabe-49a3-b640-a5748454874a",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-04T14:49:44.980832Z"
+                        "updated_at": "2026-04-04T18:25:08.878323Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -20433,7 +20489,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "FreeIPA",
+                    "service_definition": "HAProxy",
                     "source": {
                       "type": "Manual"
                     },
@@ -20510,14 +20566,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-04T14:49:45.004618Z",
-                    "id": "d5c1efbe-b2ac-49d5-b586-1bd79f2512d1",
+                    "created_at": "2026-04-04T18:25:08.901091Z",
+                    "id": "35bc78eb-afca-4c86-b7ae-6e46c8cf8aec",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-04T14:49:45.004618Z"
+                    "updated_at": "2026-04-04T18:25:08.901091Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -20526,7 +20582,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "FreeIPA",
+                "service_definition": "HAProxy",
                 "source": {
                   "type": "Manual"
                 },
@@ -20924,6 +20980,38 @@
             "format": "int32",
             "description": "Number of results to skip. Default: 0.",
             "minimum": 0
+          }
+        }
+      },
+      "PerspectiveOptionOverrides": {
+        "type": "object",
+        "properties": {
+          "container_rules": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GraphRule_ContainerRule"
+            }
+          },
+          "element_rules": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GraphRule_ElementRule"
+            }
+          },
+          "hide_service_categories": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ServiceCategory"
+            }
           }
         }
       },
@@ -21685,14 +21773,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-04T14:49:44.992140Z",
-              "id": "85918db4-2eaa-450d-9bbd-b6e829c3a7bc",
+              "created_at": "2026-04-04T18:25:08.889999Z",
+              "id": "259fa391-2f91-4d41-8105-dc731b50c766",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-04T14:49:44.992140Z"
+              "updated_at": "2026-04-04T18:25:08.889999Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -21701,7 +21789,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "FreeIPA",
+          "service_definition": "HAProxy",
           "source": {
             "type": "Manual"
           },
@@ -22410,7 +22498,7 @@
           "bindings",
           "subnets",
           "services",
-          "groups",
+          "dependencies",
           "if_entries",
           "entity_tags",
           "is_stale",
@@ -22420,7 +22508,7 @@
           "removed_interfaces",
           "removed_subnets",
           "removed_services",
-          "removed_groups",
+          "removed_dependencies",
           "removed_ports",
           "removed_bindings",
           "removed_if_entries"
@@ -22430,6 +22518,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Binding"
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dependency"
             }
           },
           "edges": {
@@ -22442,12 +22536,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Tag"
-            }
-          },
-          "groups": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Group"
             }
           },
           "hosts": {
@@ -22528,7 +22616,7 @@
               "format": "uuid"
             }
           },
-          "removed_groups": {
+          "removed_dependencies": {
             "type": "array",
             "items": {
               "type": "string",
@@ -22833,6 +22921,25 @@
           },
           "perspective": {
             "$ref": "#/components/schemas/TopologyPerspective"
+          },
+          "perspective_overrides": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PerspectiveOptionOverrides"
+            },
+            "propertyNames": {
+              "type": "string",
+              "description": "Which topology perspective is being rendered",
+              "enum": [
+                "l2_physical",
+                "l3_logical",
+                "infrastructure",
+                "application"
+              ]
+            }
           }
         }
       },
@@ -23310,8 +23417,8 @@
       "description": "Network discovery operations. Trigger and monitor scans that detect hosts, services, and network topology."
     },
     {
-      "name": "Groups",
-      "description": "Logical groupings of hosts. Organize hosts into groups for easier management and visualization."
+      "name": "Dependencies",
+      "description": "Service dependency relationships. Define how services depend on each other."
     },
     {
       "name": "Hosts",

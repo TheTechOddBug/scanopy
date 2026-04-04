@@ -175,7 +175,7 @@ impl BrevoService {
             OnboardingOperation::SecondNetworkCreated
             | OnboardingOperation::FirstHostDiscovered
             | OnboardingOperation::FirstTagCreated
-            | OnboardingOperation::FirstGroupCreated
+            | OnboardingOperation::FirstDependencyCreated
             | OnboardingOperation::FirstUserApiKeyCreated
             | OnboardingOperation::FirstSnmpCredentialCreated
             | OnboardingOperation::FirstCredentialCreated
@@ -199,7 +199,7 @@ impl BrevoService {
             OnboardingOperation::FirstTagCreated => {
                 company_attrs = company_attrs.with_first_tag_date(event.timestamp);
             }
-            OnboardingOperation::FirstGroupCreated => {
+            OnboardingOperation::FirstDependencyCreated => {
                 company_attrs = company_attrs.with_first_group_date(event.timestamp);
             }
             OnboardingOperation::FirstUserApiKeyCreated => {

@@ -101,8 +101,8 @@ impl<T: Storable> StorableFilter<T> {
         Self::new().interface_id(interface_id)
     }
 
-    pub fn new_from_group_ids(group_ids: &[Uuid]) -> Self {
-        Self::new().group_ids(group_ids)
+    pub fn new_from_dependency_ids(dependency_ids: &[Uuid]) -> Self {
+        Self::new().dependency_ids(dependency_ids)
     }
 
     pub fn new_from_uuid_column(column: &str, id: &Uuid) -> Self {
@@ -388,21 +388,21 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
-    pub fn group_id(mut self, id: &Uuid) -> Self {
-        let col = self.qualify_column("group_id");
+    pub fn dependency_id(mut self, id: &Uuid) -> Self {
+        let col = self.qualify_column("dependency_id");
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
         self.values.push(SqlValue::Uuid(*id));
         self
     }
 
-    pub fn group_ids(mut self, ids: &[Uuid]) -> Self {
+    pub fn dependency_ids(mut self, ids: &[Uuid]) -> Self {
         if ids.is_empty() {
             self.conditions.push("FALSE".to_string());
             return self;
         }
 
-        let col = self.qualify_column("group_id");
+        let col = self.qualify_column("dependency_id");
         let placeholders: Vec<String> = ids
             .iter()
             .enumerate()

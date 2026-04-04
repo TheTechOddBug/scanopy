@@ -292,7 +292,9 @@ async fn resolve_entity_scope(
         EntityDiscriminants::Host => resolve_scope(s.host_service.as_ref(), entity_id).await,
         EntityDiscriminants::Service => resolve_scope(s.service_service.as_ref(), entity_id).await,
         EntityDiscriminants::Subnet => resolve_scope(s.subnet_service.as_ref(), entity_id).await,
-        EntityDiscriminants::Group => resolve_scope(s.group_service.as_ref(), entity_id).await,
+        EntityDiscriminants::Dependency => {
+            resolve_scope(s.dependency_service.as_ref(), entity_id).await
+        }
         EntityDiscriminants::Network => resolve_scope(s.network_service.as_ref(), entity_id).await,
         EntityDiscriminants::Discovery => {
             resolve_scope(s.discovery_service.as_ref(), entity_id).await

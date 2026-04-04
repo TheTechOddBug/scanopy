@@ -4,5 +4,5 @@ import type { components } from '$lib/api/schema';
 export type Dependency = components['schemas']['Dependency'];
 export type DependencyBase = components['schemas']['DependencyBase'];
 export type DependencyType = components['schemas']['DependencyType'];
-export type DependencyMember = components['schemas']['DependencyMember'];
+export type DependencyMembers = components['schemas']['DependencyMembers'];
 export type EdgeStyle = components['schemas']['EdgeStyle'];

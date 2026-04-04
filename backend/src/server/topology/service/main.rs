@@ -10,13 +10,12 @@ use uuid::Uuid;
 use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
     bindings::{r#impl::base::Binding, service::BindingService},
-    groups::{r#impl::base::Group, service::GroupService},
+    dependencies::{r#impl::base::Dependency, service::DependencyService},
     hosts::{r#impl::base::Host, service::HostService},
     if_entries::{r#impl::base::IfEntry, service::IfEntryService},
     interfaces::{r#impl::base::Interface, service::InterfaceService},
     ports::{r#impl::base::Port, service::PortService},
     services::{r#impl::base::Service, service::ServiceService},
-    shared::types::metadata::EntityMetadataProvider,
     shared::{
         events::{
             bus::EventBus,
@@ -30,7 +29,7 @@ use crate::server::{
         },
     },
     subnets::{
-        r#impl::{base::Subnet, types::SubnetType},
+        r#impl::base::Subnet,
         service::SubnetService,
     },
     tags::{entity_tags::EntityTagService, r#impl::base::Tag, service::TagService},
@@ -50,7 +49,7 @@ pub struct TopologyService {
     host_service: Arc<HostService>,
     interface_service: Arc<InterfaceService>,
     subnet_service: Arc<SubnetService>,
-    group_service: Arc<GroupService>,
+    dependency_service: Arc<DependencyService>,
     service_service: Arc<ServiceService>,
     port_service: Arc<PortService>,
     binding_service: Arc<BindingService>,
@@ -95,7 +94,7 @@ impl CrudService<Topology> for TopologyService {
             entity
         };
 
-        let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
+        let (hosts, interfaces, subnets, dependencies, ports, bindings, if_entries) =
             self.get_entity_data(topology.base.network_id).await?;
 
         let services = self.get_service_data(topology.base.network_id).await?;
@@ -108,7 +107,7 @@ impl CrudService<Topology> for TopologyService {
             interfaces: &interfaces,
             services: &services,
             subnets: &subnets,
-            groups: &groups,
+            dependencies: &dependencies,
             ports: &ports,
             bindings: &bindings,
             if_entries: &if_entries,
@@ -126,7 +125,7 @@ impl CrudService<Topology> for TopologyService {
             interfaces,
             services,
             subnets,
-            groups,
+            dependencies,
             if_entries,
             entity_tags,
             ports,
@@ -165,7 +164,7 @@ pub struct BuildGraphParams<'a> {
     pub interfaces: &'a [Interface],
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
-    pub groups: &'a [Group],
+    pub dependencies: &'a [Dependency],
     pub ports: &'a [Port],
     pub bindings: &'a [Binding],
     pub if_entries: &'a [IfEntry],
@@ -181,7 +180,7 @@ impl TopologyService {
         host_service: Arc<HostService>,
         interface_service: Arc<InterfaceService>,
         subnet_service: Arc<SubnetService>,
-        group_service: Arc<GroupService>,
+        dependency_service: Arc<DependencyService>,
         service_service: Arc<ServiceService>,
         port_service: Arc<PortService>,
         binding_service: Arc<BindingService>,
@@ -195,7 +194,7 @@ impl TopologyService {
             host_service,
             interface_service,
             subnet_service,
-            group_service,
+            dependency_service,
             service_service,
             storage,
             port_service,
@@ -219,7 +218,7 @@ impl TopologyService {
             Vec<Host>,
             Vec<Interface>,
             Vec<Subnet>,
-            Vec<Group>,
+            Vec<Dependency>,
             Vec<Port>,
             Vec<Binding>,
             Vec<IfEntry>,
@@ -244,9 +243,11 @@ impl TopologyService {
                 network_id,
             ]))
             .await?;
-        let groups = self
-            .group_service
-            .get_all(StorableFilter::<Group>::new_from_network_ids(&[network_id]))
+        let dependencies = self
+            .dependency_service
+            .get_all(StorableFilter::<Dependency>::new_from_network_ids(&[
+                network_id,
+            ]))
             .await?;
 
         let ports = self
@@ -268,7 +269,13 @@ impl TopologyService {
             .await?;
 
         Ok((
-            hosts, interfaces, subnets, groups, ports, bindings, if_entries,
+            hosts,
+            interfaces,
+            subnets,
+            dependencies,
+            ports,
+            bindings,
+            if_entries,
         ))
     }
 
@@ -323,7 +330,7 @@ impl TopologyService {
         topology: &mut Topology,
         authentication: AuthenticatedEntity,
     ) -> Result<(), Error> {
-        let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
+        let (hosts, interfaces, subnets, dependencies, ports, bindings, if_entries) =
             self.get_entity_data(topology.base.network_id).await?;
 
         let services = self.get_service_data(topology.base.network_id).await?;
@@ -336,7 +343,7 @@ impl TopologyService {
             interfaces: &interfaces,
             subnets: &subnets,
             services: &services,
-            groups: &groups,
+            dependencies: &dependencies,
             ports: &ports,
             bindings: &bindings,
             if_entries: &if_entries,
@@ -351,7 +358,7 @@ impl TopologyService {
             interfaces,
             services,
             subnets,
-            groups,
+            dependencies,
             ports,
             bindings,
             if_entries,
@@ -372,7 +379,7 @@ impl TopologyService {
             interfaces,
             subnets,
             services,
-            groups,
+            dependencies,
             ports,
             bindings,
             if_entries,
@@ -389,7 +396,7 @@ impl TopologyService {
             interfaces,
             subnets,
             services,
-            groups,
+            dependencies,
             ports,
             bindings,
             if_entries,

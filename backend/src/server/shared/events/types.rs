@@ -478,7 +478,8 @@ pub enum OnboardingOperation {
     FirstHostDiscovered,
     SecondNetworkCreated,
     FirstTagCreated,
-    FirstGroupCreated,
+    #[serde(alias = "FirstGroupCreated")]
+    FirstDependencyCreated,
     FirstUserApiKeyCreated,
     FirstSnmpCredentialCreated,
     FirstCredentialCreated,

@@ -2,7 +2,7 @@ use std::net::IpAddr;
 
 use crate::server::bindings::r#impl::base::Binding;
 use crate::server::credentials::r#impl::types::CredentialType;
-use crate::server::groups::r#impl::base::Group;
+use crate::server::dependencies::r#impl::base::Dependency;
 use crate::server::services::r#impl::base::Service;
 use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::entity_metadata::EntityCategory;
@@ -227,7 +227,7 @@ pub enum SqlValue {
     Subnets(Vec<Subnet>),
     Services(Vec<Service>),
     Bindings(Vec<Binding>),
-    Groups(Vec<Group>),
+    Dependencies(Vec<Dependency>),
     OnboardingOperation(Vec<OnboardingOperation>),
     StringArray(Vec<String>),
     OptionalStringArray(Option<Vec<String>>),

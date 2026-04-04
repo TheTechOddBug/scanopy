@@ -2,7 +2,7 @@
 //!
 //! This module provides a complete dataset representing "Acme Technologies", a mid-size
 //! company with MSP operations. The data includes multiple networks, subnets, hosts,
-//! services, daemons, API keys, tags, and groups.
+//! services, daemons, API keys, tags, and dependencies.
 
 use crate::daemon::discovery::types::base::DiscoveryPhase;
 use crate::server::{
@@ -16,14 +16,14 @@ use crate::server::{
         api::{DaemonCapabilities, DiscoveryUpdatePayload},
         base::{Daemon, DaemonBase, DaemonMode},
     },
+    dependencies::r#impl::{
+        base::{Dependency, DependencyBase, DependencyMembers},
+        types::DependencyType,
+    },
     discovery::r#impl::{
         base::{Discovery, DiscoveryBase},
         scan_settings::ScanSettings,
         types::{DiscoveryType, HostNamingFallback, RunType},
-    },
-    groups::r#impl::{
-        base::{Group, GroupBase},
-        types::GroupType,
     },
     hosts::r#impl::{
         base::{Host, HostBase},
@@ -107,7 +107,7 @@ pub struct DemoData {
     pub neighbor_updates: Vec<NeighborUpdate>,
     pub daemons: Vec<Daemon>,
     pub api_keys: Vec<DaemonApiKey>,
-    pub groups: Vec<Group>,
+    pub dependencies: Vec<Dependency>,
     pub topologies: Vec<Topology>,
     pub discoveries: Vec<Discovery>,
     pub shares: Vec<Share>,
@@ -116,8 +116,8 @@ pub struct DemoData {
 
 impl DemoData {
     /// Generate all demo data for the given organization
-    /// Note: Groups are intentionally empty - they must be generated after services are created
-    /// because group bindings reference actual service binding IDs from the database.
+    /// Note: Dependencies are intentionally empty - they must be generated after services are created
+    /// because dependency members reference actual service binding IDs from the database.
     pub fn generate(organization_id: Uuid, user_id: Uuid) -> Self {
         let now = Utc::now();
 
@@ -148,9 +148,9 @@ impl DemoData {
         let shares = generate_shares(&topologies, &networks, user_id, now);
         let user_api_keys = generate_user_api_keys(&networks, organization_id, now);
 
-        // Groups are empty - they'll be generated in the handler after services are created
-        // This ensures group bindings reference actual service binding IDs
-        let groups = vec![];
+        // Dependencies are empty - they'll be generated in the handler after services are created
+        // This ensures dependency members reference actual service binding IDs
+        let dependencies = vec![];
 
         Self {
             tags,
@@ -163,7 +163,7 @@ impl DemoData {
             neighbor_updates,
             daemons,
             api_keys,
-            groups,
+            dependencies,
             topologies,
             discoveries,
             shares,
@@ -4041,12 +4041,16 @@ fn generate_user_api_keys(
 }
 
 // ============================================================================
-// Groups
+// Dependencies
 // ============================================================================
 
-/// Generate demo groups using actual created services.
+/// Generate demo dependencies using actual created services.
 /// This must be called AFTER services are created to ensure binding IDs are correct.
-pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag]) -> Vec<Group> {
+pub fn generate_dependencies(
+    networks: &[Network],
+    _services: &[Service],
+    tags: &[Tag],
+) -> Vec<Dependency> {
     let now = Utc::now();
     let hq = networks
         .iter()
@@ -4062,183 +4066,126 @@ pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag])
         .find(|t| t.base.name == "Monitoring")
         .map(|t| t.id);
 
-    // Network-scoped binding lookup to avoid cross-network matches
-    let find_binding = |name: &str, network_id: Uuid| -> Option<Uuid> {
-        services
-            .iter()
-            .find(|s| s.base.name.contains(name) && s.base.network_id == network_id)
-            .and_then(|s| s.base.bindings.first())
-            .map(|b| b.id())
-    };
+    let mut dependencies = Vec::new();
 
-    let mut groups = Vec::new();
-
-    // ===== HQ Groups (3) =====
+    // ===== HQ Dependencies (3) =====
 
     // 1. Monitoring Stack: Prometheus → Grafana, Uptime Kuma
-    let prometheus_binding = find_binding("Prometheus", hq.id);
-    let grafana_binding = find_binding("Grafana", hq.id);
-    let uptime_binding = find_binding("Uptime Kuma", hq.id);
-
-    if let (Some(prometheus), Some(grafana)) = (prometheus_binding, grafana_binding) {
-        let mut bindings = vec![prometheus, grafana];
-        if let Some(uptime) = uptime_binding {
-            bindings.push(uptime);
-        }
-        groups.push(Group {
-            id: Uuid::new_v4(),
-            created_at: now,
-            updated_at: now,
-            base: GroupBase {
-                name: "Monitoring Stack".to_string(),
-                network_id: hq.id,
-                description: Some(
-                    "Prometheus metrics collection with Grafana visualization".to_string(),
-                ),
-                group_type: GroupType::HubAndSpoke,
-                binding_ids: bindings,
-                source: EntitySource::Manual,
-                color: Color::Purple,
-                edge_style: EdgeStyle::Straight,
-                tags: monitoring_tag.into_iter().collect(),
-            },
-        });
-    }
+    dependencies.push(Dependency {
+        id: Uuid::new_v4(),
+        created_at: now,
+        updated_at: now,
+        base: DependencyBase {
+            name: "Monitoring Stack".to_string(),
+            network_id: hq.id,
+            description: Some(
+                "Prometheus metrics collection with Grafana visualization".to_string(),
+            ),
+            dependency_type: DependencyType::HubAndSpoke,
+            members: DependencyMembers::default(),
+            source: EntitySource::Manual,
+            color: Color::Purple,
+            edge_style: EdgeStyle::Straight,
+            tags: monitoring_tag.into_iter().collect(),
+        },
+    });
 
     // 2. Backup Flow: Proxmox VE (hv01) → TrueNAS
-    let proxmox_binding = find_binding("Proxmox", hq.id);
-    let truenas_binding = find_binding("TrueNAS", hq.id);
-
-    if let (Some(proxmox), Some(truenas)) = (proxmox_binding, truenas_binding) {
-        groups.push(Group {
-            id: Uuid::new_v4(),
-            created_at: now,
-            updated_at: now,
-            base: GroupBase {
-                name: "Backup Flow".to_string(),
-                network_id: hq.id,
-                description: Some("Server backup targets to TrueNAS storage".to_string()),
-                group_type: GroupType::RequestPath,
-                binding_ids: vec![proxmox, truenas],
-                source: EntitySource::Manual,
-                color: Color::Green,
-                edge_style: EdgeStyle::SmoothStep,
-                tags: vec![],
-            },
-        });
-    }
+    dependencies.push(Dependency {
+        id: Uuid::new_v4(),
+        created_at: now,
+        updated_at: now,
+        base: DependencyBase {
+            name: "Backup Flow".to_string(),
+            network_id: hq.id,
+            description: Some("Server backup targets to TrueNAS storage".to_string()),
+            dependency_type: DependencyType::RequestPath,
+            members: DependencyMembers::default(),
+            source: EntitySource::Manual,
+            color: Color::Green,
+            edge_style: EdgeStyle::SmoothStep,
+            tags: vec![],
+        },
+    });
 
     // 3. Network Access Path: pfSense → Portainer
-    let pfsense_binding = find_binding("pfSense", hq.id);
-    let portainer_binding = find_binding("Portainer", hq.id);
+    dependencies.push(Dependency {
+        id: Uuid::new_v4(),
+        created_at: now,
+        updated_at: now,
+        base: DependencyBase {
+            name: "Network Access Path".to_string(),
+            network_id: hq.id,
+            description: Some("Traffic path from firewall to container management".to_string()),
+            dependency_type: DependencyType::RequestPath,
+            members: DependencyMembers::default(),
+            source: EntitySource::Manual,
+            color: Color::Cyan,
+            edge_style: EdgeStyle::Bezier,
+            tags: vec![],
+        },
+    });
 
-    if let (Some(pfsense), Some(portainer)) = (pfsense_binding, portainer_binding) {
-        groups.push(Group {
-            id: Uuid::new_v4(),
-            created_at: now,
-            updated_at: now,
-            base: GroupBase {
-                name: "Network Access Path".to_string(),
-                network_id: hq.id,
-                description: Some("Traffic path from firewall to container management".to_string()),
-                group_type: GroupType::RequestPath,
-                binding_ids: vec![pfsense, portainer],
-                source: EntitySource::Manual,
-                color: Color::Cyan,
-                edge_style: EdgeStyle::Bezier,
-                tags: vec![],
-            },
-        });
-    }
-
-    // ===== DC Groups (3) =====
+    // ===== DC Dependencies (3) =====
 
     // 4. Web Traffic Flow: HAProxy → Web Application → RabbitMQ
-    let haproxy_binding = find_binding("HAProxy", dc.id);
-    let app_binding = find_binding("Web Application", dc.id);
-    let rabbitmq_binding = find_binding("RabbitMQ", dc.id);
-
-    if let (Some(haproxy), Some(app), Some(rabbitmq)) =
-        (haproxy_binding, app_binding, rabbitmq_binding)
-    {
-        groups.push(Group {
-            id: Uuid::new_v4(),
-            created_at: now,
-            updated_at: now,
-            base: GroupBase {
-                name: "Web Traffic Flow".to_string(),
-                network_id: dc.id,
-                description: Some(
-                    "Production web request path from load balancer through app servers to message broker"
-                        .to_string(),
-                ),
-                group_type: GroupType::RequestPath,
-                binding_ids: vec![haproxy, app, rabbitmq],
-                source: EntitySource::Manual,
-                color: Color::Blue,
-                edge_style: EdgeStyle::Bezier,
-                tags: vec![],
-            },
-        });
-    }
+    dependencies.push(Dependency {
+        id: Uuid::new_v4(),
+        created_at: now,
+        updated_at: now,
+        base: DependencyBase {
+            name: "Web Traffic Flow".to_string(),
+            network_id: dc.id,
+            description: Some(
+                "Production web request path from load balancer through app servers to message broker"
+                    .to_string(),
+            ),
+            dependency_type: DependencyType::RequestPath,
+            members: DependencyMembers::default(),
+            source: EntitySource::Manual,
+            color: Color::Blue,
+            edge_style: EdgeStyle::Bezier,
+            tags: vec![],
+        },
+    });
 
     // 5. Observability Stack: Prometheus (container) → Grafana (container), Jaeger (container)
-    let dc_prometheus = find_binding("Prometheus", dc.id);
-    let dc_grafana = find_binding("Grafana", dc.id);
-    let dc_jaeger = find_binding("Jaeger", dc.id);
-
-    if let (Some(prometheus), Some(grafana)) = (dc_prometheus, dc_grafana) {
-        let mut bindings = vec![prometheus, grafana];
-        if let Some(jaeger) = dc_jaeger {
-            bindings.push(jaeger);
-        }
-        groups.push(Group {
-            id: Uuid::new_v4(),
-            created_at: now,
-            updated_at: now,
-            base: GroupBase {
-                name: "Observability Stack".to_string(),
-                network_id: dc.id,
-                description: Some(
-                    "Containerized observability: Prometheus, Grafana, and Jaeger".to_string(),
-                ),
-                group_type: GroupType::HubAndSpoke,
-                binding_ids: bindings,
-                source: EntitySource::Manual,
-                color: Color::Purple,
-                edge_style: EdgeStyle::Straight,
-                tags: monitoring_tag.into_iter().collect(),
-            },
-        });
-    }
+    dependencies.push(Dependency {
+        id: Uuid::new_v4(),
+        created_at: now,
+        updated_at: now,
+        base: DependencyBase {
+            name: "Observability Stack".to_string(),
+            network_id: dc.id,
+            description: Some(
+                "Containerized observability: Prometheus, Grafana, and Jaeger".to_string(),
+            ),
+            dependency_type: DependencyType::HubAndSpoke,
+            members: DependencyMembers::default(),
+            source: EntitySource::Manual,
+            color: Color::Purple,
+            edge_style: EdgeStyle::Straight,
+            tags: monitoring_tag.into_iter().collect(),
+        },
+    });
 
     // 6. Storage Tier: MinIO → Ceph, Elasticsearch
-    let minio_binding = find_binding("MinIO", dc.id);
-    let ceph_binding = find_binding("Ceph", dc.id);
-    let es_binding = find_binding("Elasticsearch", dc.id);
+    dependencies.push(Dependency {
+        id: Uuid::new_v4(),
+        created_at: now,
+        updated_at: now,
+        base: DependencyBase {
+            name: "Storage Tier".to_string(),
+            network_id: dc.id,
+            description: Some("Object storage, distributed storage, and search".to_string()),
+            dependency_type: DependencyType::HubAndSpoke,
+            members: DependencyMembers::default(),
+            source: EntitySource::Manual,
+            color: Color::Orange,
+            edge_style: EdgeStyle::Step,
+            tags: vec![],
+        },
+    });
 
-    if let (Some(minio), Some(ceph)) = (minio_binding, ceph_binding) {
-        let mut bindings = vec![minio, ceph];
-        if let Some(es) = es_binding {
-            bindings.push(es);
-        }
-        groups.push(Group {
-            id: Uuid::new_v4(),
-            created_at: now,
-            updated_at: now,
-            base: GroupBase {
-                name: "Storage Tier".to_string(),
-                network_id: dc.id,
-                description: Some("Object storage, distributed storage, and search".to_string()),
-                group_type: GroupType::HubAndSpoke,
-                binding_ids: bindings,
-                source: EntitySource::Manual,
-                color: Color::Orange,
-                edge_style: EdgeStyle::Step,
-                tags: vec![],
-            },
-        });
-    }
-
-    groups
+    dependencies
 }

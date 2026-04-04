@@ -1,5 +1,5 @@
 use crate::server::{
-    groups::r#impl::types::GroupTypeDiscriminants,
+    dependencies::r#impl::types::DependencyTypeDiscriminants,
     shared::{
         concepts::Concept,
         entities::EntityDiscriminants,
@@ -267,8 +267,8 @@ impl EdgeType {
 impl EntityMetadataProvider for EdgeType {
     fn color(&self) -> Color {
         match self {
-            EdgeType::RequestPath { .. } => EntityDiscriminants::Group.color(),
-            EdgeType::HubAndSpoke { .. } => EntityDiscriminants::Group.color(),
+            EdgeType::RequestPath { .. } => EntityDiscriminants::Dependency.color(),
+            EdgeType::HubAndSpoke { .. } => EntityDiscriminants::Dependency.color(),
             EdgeType::Interface { .. } => EntityDiscriminants::Host.color(),
             EdgeType::HostVirtualization { .. } => Concept::Virtualization.color(),
             EdgeType::ServiceVirtualization { .. } => Concept::Virtualization.color(),
@@ -278,8 +278,8 @@ impl EntityMetadataProvider for EdgeType {
 
     fn icon(&self) -> Icon {
         match self {
-            EdgeType::RequestPath { .. } => GroupTypeDiscriminants::RequestPath.icon(),
-            EdgeType::HubAndSpoke { .. } => GroupTypeDiscriminants::HubAndSpoke.icon(),
+            EdgeType::RequestPath { .. } => DependencyTypeDiscriminants::RequestPath.icon(),
+            EdgeType::HubAndSpoke { .. } => DependencyTypeDiscriminants::HubAndSpoke.icon(),
             EdgeType::Interface { .. } => EntityDiscriminants::Host.icon(),
             EdgeType::HostVirtualization { .. } => Concept::Virtualization.icon(),
             EdgeType::ServiceVirtualization { .. } => Concept::Virtualization.icon(),
@@ -292,7 +292,7 @@ impl TypeMetadataProvider for EdgeType {
     fn name(&self) -> &'static str {
         match self {
             EdgeType::RequestPath { .. } => EdgeStyle::SmoothStep.into(),
-            EdgeType::HubAndSpoke { .. } => GroupTypeDiscriminants::HubAndSpoke.name(),
+            EdgeType::HubAndSpoke { .. } => DependencyTypeDiscriminants::HubAndSpoke.name(),
             EdgeType::Interface { .. } => "Host Interface",
             EdgeType::HostVirtualization { .. } => "Virtualized Host",
             EdgeType::ServiceVirtualization { .. } => "Virtualized Service",
@@ -334,7 +334,7 @@ impl TypeMetadataProvider for EdgeType {
             self,
             EdgeType::Interface { .. } | EdgeType::ServiceVirtualization { .. }
         );
-        let is_group_edge = matches!(
+        let is_dependency_edge = matches!(
             self,
             EdgeType::RequestPath { .. } | EdgeType::HubAndSpoke { .. }
         );
@@ -346,7 +346,7 @@ impl TypeMetadataProvider for EdgeType {
             "has_end_marker": has_end_marker,
             "edge_style": edge_style,
             "is_host_edge": is_host_edge,
-            "is_group_edge": is_group_edge,
+            "is_dependency_edge": is_dependency_edge,
             "is_physical_edge": is_physical_edge
         })
     }
@@ -358,21 +358,22 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
-    use crate::server::groups::r#impl::types::GroupTypeDiscriminants;
+    use crate::server::dependencies::r#impl::types::DependencyTypeDiscriminants;
 
     #[test]
-    fn edge_type_matches_group_type() {
-        // This will fail to compile if GroupType adds/removes variants
+    fn edge_type_matches_dependency_type() {
+        // This will fail to compile if DependencyType adds/removes variants
         // without updating EdgeType
-        let group_types: Vec<GroupTypeDiscriminants> = GroupTypeDiscriminants::iter().collect();
+        let dependency_types: Vec<DependencyTypeDiscriminants> =
+            DependencyTypeDiscriminants::iter().collect();
 
         assert_eq!(
-            group_types.len(),
+            dependency_types.len(),
             2,
-            "Update EdgeType to match GroupType variants!"
+            "Update EdgeType to match DependencyType variants!"
         );
-        assert!(group_types.contains(&GroupTypeDiscriminants::RequestPath));
-        assert!(group_types.contains(&GroupTypeDiscriminants::HubAndSpoke));
+        assert!(dependency_types.contains(&DependencyTypeDiscriminants::RequestPath));
+        assert!(dependency_types.contains(&DependencyTypeDiscriminants::HubAndSpoke));
     }
 
     fn dummy_id() -> Uuid {
@@ -468,7 +469,7 @@ mod tests {
     }
 
     #[test]
-    fn classification_application_group_edges_are_primary() {
+    fn classification_application_dependency_edges_are_primary() {
         let req = EdgeType::RequestPath {
             group_id: dummy_id(),
             source_binding_id: dummy_id(),

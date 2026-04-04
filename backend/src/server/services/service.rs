@@ -7,7 +7,7 @@ use crate::server::{
         r#impl::base::{Binding, BindingType},
         service::BindingService,
     },
-    groups::{r#impl::base::Group, service::GroupService},
+    dependencies::{r#impl::base::Dependency, service::DependencyService},
     hosts::{r#impl::base::Host, service::HostService},
     interfaces::r#impl::base::Interface,
     ports::r#impl::base::Port,
@@ -42,8 +42,8 @@ pub struct ServiceService {
     storage: Arc<GenericPostgresStorage<Service>>,
     binding_service: Arc<BindingService>,
     host_service: OnceLock<Arc<HostService>>,
-    group_service: Arc<GroupService>,
-    group_update_lock: Arc<Mutex<()>>,
+    dependency_service: Arc<DependencyService>,
+    dependency_update_lock: Arc<Mutex<()>>,
     service_locks: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
     event_bus: Arc<EventBus>,
     entity_tag_service: Arc<EntityTagService>,
@@ -305,7 +305,7 @@ impl CrudService<Service> for ServiceService {
         )
         .await?;
 
-        self.update_group_service_bindings(&current_service, Some(service), authentication.clone())
+        self.update_dependency_members(&current_service, Some(service), authentication.clone())
             .await?;
 
         let mut updated = self.storage.update(service).await?;
@@ -371,7 +371,7 @@ impl CrudService<Service> for ServiceService {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Service {} not found", id))?;
 
-        self.update_group_service_bindings(&service, None, authentication.clone())
+        self.update_dependency_members(&service, None, authentication.clone())
             .await?;
 
         // Remove tags from junction table
@@ -410,16 +410,16 @@ impl ServiceService {
     pub fn new(
         storage: Arc<GenericPostgresStorage<Service>>,
         binding_service: Arc<BindingService>,
-        group_service: Arc<GroupService>,
+        dependency_service: Arc<DependencyService>,
         event_bus: Arc<EventBus>,
         entity_tag_service: Arc<EntityTagService>,
     ) -> Self {
         Self {
             storage,
             binding_service,
-            group_service,
+            dependency_service,
             host_service: OnceLock::new(),
-            group_update_lock: Arc::new(Mutex::new(())),
+            dependency_update_lock: Arc::new(Mutex::new(())),
             service_locks: Arc::new(Mutex::new(HashMap::new())),
             event_bus,
             entity_tag_service,
@@ -1119,17 +1119,19 @@ impl ServiceService {
         Ok(existing_service)
     }
 
-    async fn update_group_service_bindings(
+    async fn update_dependency_members(
         &self,
         current_service: &Service,
         updates: Option<&Service>,
         authenticated: AuthenticatedEntity,
     ) -> Result<(), Error> {
-        let filter =
-            StorableFilter::<Group>::new_from_network_ids(&[current_service.base.network_id]);
-        let groups = self.group_service.get_all(filter).await?;
+        use crate::server::dependencies::r#impl::base::DependencyMembers;
 
-        let _guard = self.group_update_lock.lock().await;
+        let filter =
+            StorableFilter::<Dependency>::new_from_network_ids(&[current_service.base.network_id]);
+        let dependencies = self.dependency_service.get_all(filter).await?;
+
+        let _guard = self.dependency_update_lock.lock().await;
 
         let current_service_binding_ids: Vec<Uuid> = current_service
             .base
@@ -1147,29 +1149,46 @@ impl ServiceService {
             None => Vec::new(),
         };
 
-        let groups_to_update: Vec<Group> = groups
+        let is_service_deleted = updates.is_none();
+
+        let deps_to_update: Vec<Dependency> = dependencies
             .into_iter()
-            .filter_map(|mut group| {
-                let initial_bindings_length = group.base.binding_ids.len();
+            .filter_map(|mut dep| {
+                let changed = match &mut dep.base.members {
+                    DependencyMembers::Services { service_ids } => {
+                        if is_service_deleted {
+                            let initial_len = service_ids.len();
+                            service_ids.retain(|id| *id != current_service.id);
+                            service_ids.len() != initial_len
+                        } else {
+                            false // Service updates don't affect service-level deps
+                        }
+                    }
+                    DependencyMembers::Bindings { binding_ids } => {
+                        let initial_len = binding_ids.len();
+                        if is_service_deleted {
+                            // Remove all bindings that belonged to this service
+                            binding_ids.retain(|bid| !current_service_binding_ids.contains(bid));
+                        } else {
+                            // Remove bindings that were in the old service but not the new
+                            binding_ids.retain(|bid| {
+                                let in_current = current_service_binding_ids.contains(bid);
+                                let in_updated = updated_service_binding_ids.contains(bid);
+                                if in_current { in_updated } else { true }
+                            });
+                        }
+                        binding_ids.len() != initial_len
+                    }
+                };
 
-                group.base.binding_ids.retain(|sb| {
-                    let in_current = current_service_binding_ids.contains(sb);
-                    let in_updated = updated_service_binding_ids.contains(sb);
-                    if in_current { in_updated } else { true }
-                });
-
-                if group.base.binding_ids.len() != initial_bindings_length {
-                    Some(group)
-                } else {
-                    None
-                }
+                if changed { Some(dep) } else { None }
             })
             .collect();
 
-        if !groups_to_update.is_empty() {
-            for mut group in groups_to_update {
-                self.group_service
-                    .update(&mut group, authenticated.clone())
+        if !deps_to_update.is_empty() {
+            for mut dep in deps_to_update {
+                self.dependency_service
+                    .update(&mut dep, authenticated.clone())
                     .await?;
             }
         }

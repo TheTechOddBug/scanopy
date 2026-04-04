@@ -226,7 +226,7 @@ async fn create_topology(
 
     let service = Topology::get_service(&state);
 
-    let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
+    let (hosts, interfaces, subnets, dependencies, ports, bindings, if_entries) =
         service.get_entity_data(topology.base.network_id).await?;
 
     let services = service.get_service_data(topology.base.network_id).await?;
@@ -239,7 +239,7 @@ async fn create_topology(
         interfaces: &interfaces,
         subnets: &subnets,
         services: &services,
-        groups: &groups,
+        dependencies: &dependencies,
         ports: &ports,
         bindings: &bindings,
         if_entries: &if_entries,
@@ -254,7 +254,7 @@ async fn create_topology(
         interfaces,
         services,
         subnets,
-        groups,
+        dependencies,
         ports,
         bindings,
         if_entries,
@@ -329,7 +329,7 @@ async fn refresh(
     // Update options from request
     topology.base.options = request.options;
 
-    let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
+    let (hosts, interfaces, subnets, dependencies, ports, bindings, if_entries) =
         service.get_entity_data(request.network_id).await?;
 
     let services = service.get_service_data(request.network_id).await?;
@@ -341,7 +341,7 @@ async fn refresh(
         services,
         interfaces,
         subnets,
-        groups,
+        dependencies,
         ports,
         bindings,
         if_entries,
@@ -398,7 +398,7 @@ async fn rebuild(
     // Update options from request
     topology.base.options = request.options.clone();
 
-    let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
+    let (hosts, interfaces, subnets, dependencies, ports, bindings, if_entries) =
         service.get_entity_data(request.network_id).await?;
 
     let services = service.get_service_data(request.network_id).await?;
@@ -411,7 +411,7 @@ async fn rebuild(
         interfaces: &interfaces,
         subnets: &subnets,
         services: &services,
-        groups: &groups,
+        dependencies: &dependencies,
         ports: &ports,
         bindings: &bindings,
         if_entries: &if_entries,
@@ -426,7 +426,7 @@ async fn rebuild(
         services,
         interfaces,
         subnets,
-        groups,
+        dependencies,
         ports,
         bindings,
         if_entries,

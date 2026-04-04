@@ -19,13 +19,13 @@ use crate::server::{
         api::DaemonCapabilities,
         base::{Daemon, DaemonBase, DaemonMode},
     },
+    dependencies::r#impl::{
+        base::{Dependency, DependencyBase, DependencyMembers},
+        types::DependencyType,
+    },
     discovery::r#impl::{
         base::{Discovery, DiscoveryBase},
         types::{DiscoveryType, RunType},
-    },
-    groups::r#impl::{
-        base::{Group, GroupBase},
-        types::GroupType,
     },
     hosts::r#impl::{
         api::{
@@ -186,19 +186,19 @@ pub fn port() -> Port {
     }
 }
 
-/// Example Group entity.
-pub fn group() -> Group {
-    Group {
+/// Example Dependency entity.
+pub fn dependency() -> Dependency {
+    Dependency {
         id: ids::GROUP,
         created_at: example_timestamp(),
         updated_at: example_timestamp(),
-        base: GroupBase {
+        base: DependencyBase {
             name: "Web Services".to_string(),
-            description: Some("HTTP/HTTPS services group".to_string()),
+            description: Some("HTTP/HTTPS services dependency".to_string()),
             network_id: ids::NETWORK,
             color: Color::Blue,
-            group_type: GroupType::RequestPath,
-            binding_ids: vec![],
+            dependency_type: DependencyType::RequestPath,
+            members: DependencyMembers::default(),
             source: EntitySource::Manual,
             edge_style: EdgeStyle::Bezier,
             tags: vec![],

@@ -2,9 +2,9 @@
 
 use crate::infra::{BASE_URL, TestClient, retry};
 use scanopy::server::daemons::r#impl::api::DiscoveryUpdatePayload;
+use scanopy::server::dependencies::r#impl::base::{Dependency, DependencyBase};
 use scanopy::server::discovery::r#impl::base::{Discovery, DiscoveryBase};
 use scanopy::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback, RunType};
-use scanopy::server::groups::r#impl::base::{Group, GroupBase};
 use scanopy::server::services::definitions::home_assistant::HomeAssistant;
 use scanopy::server::services::r#impl::base::Service;
 use scanopy::server::shared::entities::EntityDiscriminants;
@@ -160,16 +160,20 @@ pub async fn verify_home_assistant_discovered(client: &TestClient) -> Result<Ser
     .await
 }
 
-pub async fn create_group(client: &TestClient, network_id: Uuid) -> Result<Group, String> {
-    println!("\n=== Creating Group ===");
+pub async fn create_dependency(
+    client: &TestClient,
+    network_id: Uuid,
+) -> Result<Dependency, String> {
+    println!("\n=== Creating Dependency ===");
 
-    let mut group = Group::new(GroupBase::default());
-    group.base.network_id = network_id;
+    let mut dependency = Dependency::new(DependencyBase::default());
+    dependency.base.network_id = network_id;
 
-    retry("create Group", 10, 3, || async {
-        let created_group: Group = client.post("/api/v1/groups", &group).await?;
-        println!("✅ Created group");
-        Ok(created_group)
+    retry("create Dependency", 10, 3, || async {
+        let created_dependency: Dependency =
+            client.post("/api/v1/dependencies", &dependency).await?;
+        println!("✅ Created dependency");
+        Ok(created_dependency)
     })
     .await
 }

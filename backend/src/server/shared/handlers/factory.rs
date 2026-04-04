@@ -8,8 +8,8 @@ use crate::server::{
     bindings::handlers as binding_handlers, config::AppState,
     credentials::handlers as credential_handlers,
     daemon_api_keys::handlers as daemon_api_key_handlers, daemons::handlers as daemon_handlers,
-    dashboard::handlers as dashboard_handlers, discovery::handlers as discovery_handlers,
-    groups::handlers as group_handlers, hosts::handlers as host_handlers,
+    dashboard::handlers as dashboard_handlers, dependencies::handlers as dependency_handlers,
+    discovery::handlers as discovery_handlers, hosts::handlers as host_handlers,
     if_entries::handlers as if_entry_handlers, interfaces::handlers as interface_handlers,
     invites::handlers as invite_handlers, metrics::handlers as metrics_handlers,
     networks::handlers as network_handlers, organizations::handlers as organization_handlers,
@@ -70,7 +70,7 @@ fn create_billed_openapi_routes() -> OpenApiRouter<Arc<AppState>> {
         .nest("/api/v1/interfaces", interface_handlers::create_router())
         .nest("/api/v1/subnets", subnet_handlers::create_router())
         .nest("/api/v1/networks", network_handlers::create_router())
-        .nest("/api/v1/groups", group_handlers::create_router())
+        .nest("/api/v1/dependencies", dependency_handlers::create_router())
         .nest("/api/v1/daemons", daemon_handlers::create_router())
         .nest("/api/v1/dashboard", dashboard_handlers::create_router())
         .nest("/api/v1/discovery", discovery_handlers::create_router())
@@ -164,7 +164,10 @@ pub fn create_router(state: Arc<AppState>) -> (Router<Arc<AppState>>, OpenApi) {
         .nest("/api/hosts", host_handlers::create_router().into())
         .nest("/api/subnets", subnet_handlers::create_router().into())
         .nest("/api/services", service_handlers::create_router().into())
-        .nest("/api/groups", group_handlers::create_router().into())
+        .nest(
+            "/api/dependencies",
+            dependency_handlers::create_router().into(),
+        )
         .nest("/api/discovery", discovery_handlers::create_router().into());
 
     // Cacheable routes with cache headers

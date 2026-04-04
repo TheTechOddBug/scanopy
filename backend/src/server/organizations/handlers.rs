@@ -352,7 +352,7 @@ pub async fn populate_demo_data(
     auth: Authorized<Owner>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
-    use crate::server::organizations::demo_data::{DemoData, generate_groups};
+    use crate::server::organizations::demo_data::{DemoData, generate_dependencies};
     use crate::server::services::r#impl::base::Service;
     use crate::server::shared::handlers::traits::CrudHandlers;
     use crate::server::topology::types::base::Topology;
@@ -611,12 +611,12 @@ pub async fn populate_demo_data(
         .create_many(&demo_data.discoveries)
         .await?;
 
-    // 9. Groups — generate with created services to get correct binding IDs
-    let groups = generate_groups(&created_networks, &created_services, &created_tags);
+    // 9. Dependencies — generate with created services to get correct binding IDs
+    let dependencies = generate_dependencies(&created_networks, &created_services, &created_tags);
     state
         .services
-        .group_service
-        .create_many(&groups, entity.clone())
+        .dependency_service
+        .create_many(&dependencies, entity.clone())
         .await?;
 
     // 10. Topologies (depends on networks)
@@ -699,8 +699,8 @@ async fn reset_organization_data(
     use crate::server::credentials::r#impl::base::Credential;
     use crate::server::daemon_api_keys::r#impl::base::DaemonApiKey;
     use crate::server::daemons::r#impl::base::Daemon;
+    use crate::server::dependencies::r#impl::base::Dependency;
     use crate::server::discovery::r#impl::base::Discovery;
-    use crate::server::groups::r#impl::base::Group;
     use crate::server::hosts::r#impl::base::Host;
     use crate::server::if_entries::r#impl::base::IfEntry;
     use crate::server::interfaces::r#impl::base::Interface;
@@ -752,9 +752,11 @@ async fn reset_organization_data(
         .await?;
     state
         .services
-        .group_service
+        .dependency_service
         .storage()
-        .delete_by_filter(StorableFilter::<Group>::new_from_network_ids(net_filter))
+        .delete_by_filter(StorableFilter::<Dependency>::new_from_network_ids(
+            net_filter,
+        ))
         .await?;
     state
         .services

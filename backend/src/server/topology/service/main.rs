@@ -28,10 +28,7 @@ use crate::server::{
             traits::{Entity, Storable, Storage},
         },
     },
-    subnets::{
-        r#impl::base::Subnet,
-        service::SubnetService,
-    },
+    subnets::{r#impl::base::Subnet, service::SubnetService},
     tags::{entity_tags::EntityTagService, r#impl::base::Tag, service::TagService},
     topology::{
         service::{context::TopologyContext, edge_builder::EdgeBuilder},

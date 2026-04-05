@@ -42,7 +42,6 @@
 		common_saving,
 		common_update,
 		dependencies_withPorts,
-		dependencies_withPortsHelp,
 		dependencies_createDependency,
 		dependencies_descriptionPlaceholder,
 		dependencies_edgeAppearance,
@@ -55,7 +54,6 @@
 		dependencies_selectBindingRequired,
 		dependencies_selectService,
 		dependencies_servicesOnly,
-		dependencies_servicesOnlyHelp,
 		common_services,
 		dependencies_servicesHelp,
 		dependencies_servicesInfoTitle,
@@ -509,19 +507,13 @@
 					/>
 
 					<!-- Mode selector -->
-					<div class="space-y-1">
-						<SegmentedControl
-							options={modeOptions}
-							selected={memberMode}
-							onchange={handleModeChange}
-							size="sm"
-						/>
-						<p class="text-tertiary text-xs">
-							{memberMode === 'Services'
-								? dependencies_servicesOnlyHelp()
-								: dependencies_withPortsHelp()}
-						</p>
-					</div>
+					<SegmentedControl
+						options={modeOptions}
+						selected={memberMode}
+						onchange={handleModeChange}
+						size="sm"
+						fullWidth={true}
+					/>
 
 					<div class="card">
 						<ListManager

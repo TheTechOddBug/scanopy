@@ -63,7 +63,6 @@
 	"billing_subscriptionActivated": "Subscription activated successfully!",
 	"billing_subscriptionDelayed": "Subscription is taking longer than expected to activate. Please refresh the page.",
 	"common_account": "Account",
-	"common_add": "Add",
 	"common_active": "Active",
 	"common_advanced": "Advanced",
 	"common_all": "All",
@@ -176,7 +175,7 @@
 	"common_hostname": "Hostname",
 	"common_hosts": "Hosts",
 	"common_id": "ID",
-	"common_identity": "Identity",
+
 	"common_ifEntries": "ifEntries",
 	"common_inbound": "Inbound",
 	"common_included": "Included",
@@ -296,13 +295,13 @@
 	"common_step": "Step",
 	"common_stepNumber": "Step {number}.",
 	"common_straight": "Straight",
-	"common_subnet": "Subnet",
+
 	"common_subnets": "Subnets",
 	"common_sun": "Sun",
 	"common_switchToCardView": "Switch to card view",
 	"common_switchToListView": "Switch to list view",
 	"common_system": "System",
-	"common_tag": "Tag",
+
 	"common_tags": "Tags",
 	"common_target": "Target",
 	"common_targets": "Targets",
@@ -452,7 +451,7 @@
 	"daemons_dockerProxyCreated": "Docker proxy credential created",
 	"daemons_dockerProxyHelp": "Configure a Docker API proxy for remote container discovery",
 	"daemons_dockerProxyWizardCta": "Create a Docker Proxy credential in Scan Credentials",
-	"daemons_dockerSocketProxyNote": "If a Docker Proxy credential is added later, container discovery will use the proxy instead of the local socket.",
+
 	"daemons_docsConfigOptions": "Need a full reference for all configuration options? See the %link%.",
 	"daemons_docsConfigOptionsLinkText": "configuration reference",
 	"daemons_docsMacvlan": "Need network isolation without host networking? See the %link%.",
@@ -886,11 +885,11 @@
 	"hosts_virtualization_virtualMachines": "Virtual Machines",
 	"hosts_virtualization_vmHelp": "Manage VMs controlled by this {serviceName} instance",
 	"hosts_vmManagedBy": "VM Managed By {serviceName}",
-	"inspector_appGroupPicker": "Application Group",
+
 	"inspector_createGroupingRuleFromTag": "Create grouping rule from this tag",
 	"inspector_crossBoundaryDeps": "Cross-boundary Dependencies",
 	"inspector_dependencySummary": "Dependency Summary",
-	"inspector_elementCount": "{count} elements",
+
 	"inspector_elementSummary": "Element Summary",
 	"inspector_fdbMacs": "FDB MACs",
 	"inspector_hostDetail": "Host Details",

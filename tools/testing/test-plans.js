@@ -1,365 +1,251 @@
 var TEST_PLANS = [
 {
-  "branch": "feat/application-builder",
+  "branch": "feat/topo-app-wizard",
   "tests": [
     {
-      "id": "application-perspective-request-path-edges",
-      "category": "Application Perspective",
-      "description": "Request path dependency edges connect services in order",
+      "id": "wizard-appears-no-app-groups",
+      "category": "Wizard Gate",
+      "description": "Wizard appears when switching to Application perspective with no app-group tags",
       "steps": [
-        "In the Application perspective, verify that request path group edges are visible between service nodes",
-        "Verify edges follow the order defined in the group (e.g., Nginx → App → Database)"
+        "Navigate to the topology tab",
+        "Select 'Application' from the perspective dropdown"
       ],
-      "setup": "Create a RequestPath group with bindings from 3 different services (e.g., Nginx binding → App binding → Database binding). Each service must have at least one binding.",
-      "expected": "Edges connect service nodes in chain order (Nginx→App, App→Database). Edges are displayed as primary edges with arrows.",
-      "flow": "setup",
-      "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "application-perspective-hub-spoke-edges",
-      "category": "Application Perspective",
-      "description": "Hub and spoke dependency edges connect hub to spokes",
-      "steps": [
-        "In the Application perspective, verify that hub-and-spoke group edges are visible",
-        "Verify the first service in the group acts as the hub with edges to all other services"
-      ],
-      "setup": "Create a HubAndSpoke group with bindings from 3 services (e.g., Load Balancer, App1, App2). The first binding's service should be the hub.",
-      "expected": "Hub service has edges to each spoke service. No edges between spokes.",
-      "flow": "setup",
-      "sequence": 3,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "application-perspective-no-unbound-services",
-      "category": "Application Perspective",
-      "description": "Services without bindings are excluded from the topology",
-      "steps": [
-        "In the Application perspective, verify that services without any bindings do not appear as nodes"
-      ],
-      "setup": "Ensure at least one service exists without any bindings alongside services that have bindings.",
-      "expected": "Only services with bindings appear in the topology. The unbound service is not shown.",
-      "flow": "setup",
-      "sequence": 4,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "application-perspective-docker-virtualization-edges",
-      "category": "Application Perspective",
-      "description": "Docker virtualization edges show containerization relationships",
-      "steps": [
-        "In the Application perspective, verify that dashed edges connect Docker engine services to their containerized services"
-      ],
-      "setup": "Ensure a host has a Docker service that containerizes other services (e.g., Docker → Nginx, Docker → Redis). All services must have bindings.",
-      "expected": "ServiceVirtualization edges (dashed) connect the Docker service to each containerized service.",
-      "flow": "setup",
-      "sequence": 5,
-      "status": null,
-      "feedback": null
-    }
-  ]
-}
-,
-{
-  "branch": "refactor/topology-perspective-frontend",
-  "tests": [
-    {
-      "id": "l3-topology-unchanged",
-      "category": "Visual Regression",
-      "description": "L3 topology renders identically after refactoring",
-      "steps": [
-        "Navigate to the topology page",
-        "Select a network with hosts/subnets",
-        "Verify the topology renders with correct node positions, edge routing, and container layout",
-        "Toggle edge visibility options (e.g., hide/show HostVirtualization edges)",
-        "Collapse and expand containers",
-        "Verify minimap, controls, and zoom work correctly"
-      ],
-      "setup": "Ensure at least one network has a topology with multiple subnets, hosts, and edges.",
-      "expected": "Topology should render identically to before the refactoring. No visual differences in node placement, edge routing, container sizing, or UI controls.",
+      "setup": "Ensure no tags with is_application_group=true exist for the organization. Delete any existing app-group tags via the API.",
+      "expected": "A modal wizard appears with 'Application Perspective Setup' title and step 1 'Define Groups' active. The wizard cannot be closed or dismissed.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "options-persist-across-sessions",
-      "category": "Options Store",
-      "description": "Topology options persist in localStorage and survive page reload",
+      "id": "wizard-not-skippable",
+      "category": "Wizard Gate",
+      "description": "Wizard cannot be skipped or dismissed",
       "steps": [
-        "Open the topology options panel",
-        "Toggle some options (e.g., hide minimap, change edge visibility, add/remove a grouping rule)",
-        "Refresh the page",
-        "Open the options panel again"
+        "With the wizard open, try clicking outside the modal",
+        "Try pressing Escape",
+        "Verify there is no close (X) button"
       ],
-      "expected": "All toggled options should be preserved after page reload.",
+      "expected": "The wizard remains open. No close button visible, clicking outside and Escape do nothing.",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "localstorage-migration",
-      "category": "Options Store",
-      "description": "Existing flat localStorage options migrate to per-perspective format",
+      "id": "step1-suggestions-homelab",
+      "category": "Step 1 - Define Groups",
+      "description": "Correct suggestions shown for homelab use case",
       "steps": [
-        "Navigate to the topology page",
-        "Open browser DevTools > Application > Local Storage",
-        "Check the value of scanopy_topology_options"
+        "With wizard on Step 1, observe the suggested groups section"
       ],
-      "setup": "Before navigating, manually set localStorage key 'scanopy_topology_options' to a flat TopologyOptions JSON object (e.g., {\"local\":{\"hide_edge_types\":[\"RequestPath\"],\"no_fade_edges\":true,\"hide_resize_handles\":false,\"bundle_edges\":true,\"show_minimap\":false},\"request\":{\"hide_ports\":false,\"hide_vm_title_on_docker_container\":false,\"hide_service_categories\":[\"OpenPorts\"],\"container_rules\":[],\"element_rules\":[]}})",
-      "expected": "After page load, the localStorage value should be a per-perspective object with 'l2_physical', 'l3_logical', 'infrastructure', 'application' keys. The l3_logical entry should contain the migrated flat options (e.g., no_fade_edges: true, show_minimap: false). Other perspectives should have default values.",
+      "setup": "Set organization use_case to 'homelab' via the API.",
+      "expected": "Suggestions include: Media Stack, Home Automation, Monitoring, Network Infrastructure, Development, Smart Home",
       "flow": "setup",
       "sequence": 3,
       "status": null,
       "feedback": null
     },
     {
-      "id": "grouping-rules-available",
-      "category": "Grouping Rules",
-      "description": "All grouping rules are available in L3 perspective",
+      "id": "step1-suggestions-company",
+      "category": "Step 1 - Define Groups",
+      "description": "Correct suggestions shown for company use case",
       "steps": [
-        "Open the topology options panel",
-        "In Container Grouping, click the add button",
-        "Verify BySubnet and ByVirtualizingService are available (if not already added)",
-        "In Element Grouping, click the add button",
-        "Verify ByServiceCategory and ByTag are available"
+        "With wizard on Step 1, observe the suggested groups section"
       ],
-      "expected": "All container and element rule types should be visible for the L3 perspective. No rules should be filtered out.",
+      "setup": "Set organization use_case to 'company' via the API.",
+      "expected": "Suggestions include: Production, Staging, Internal Tools, Monitoring, CI/CD, Shared Services",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "step1-suggestions-msp",
+      "category": "Step 1 - Define Groups",
+      "description": "MSP use case shows client name input",
+      "steps": [
+        "With wizard on Step 1 for an MSP org, observe the UI",
+        "Type a client name (e.g. 'Acme Corp') and click 'Add client'"
+      ],
+      "setup": "Set organization use_case to 'msp' via the API.",
+      "expected": "Shows Shared Infrastructure and Monitoring suggestions, plus a client name input with explanation text. Typing a client name and clicking 'Add client' creates an app-group tag named 'Acme Corp'.",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "step1-one-click-add",
+      "category": "Step 1 - Define Groups",
+      "description": "One-click suggestion adds app-group tag",
+      "steps": [
+        "Click a suggestion chip (e.g. 'Monitoring')"
+      ],
+      "expected": "The suggestion disappears from the chip list. A tag pill labeled 'Monitoring' appears in the created groups area below. The tag has is_application_group=true.",
       "flow": "setup",
       "sequence": 4,
       "status": null,
       "feedback": null
     },
     {
-      "id": "option-toggles-work",
-      "category": "Options Panel",
-      "description": "Option toggles (edge types, categories, tags) function correctly",
+      "id": "step1-custom-group",
+      "category": "Step 1 - Define Groups",
+      "description": "Custom group creation works",
       "steps": [
-        "Open the topology options panel",
-        "Toggle edge type visibility (e.g., show PhysicalLink edges)",
-        "Toggle a service category visibility",
-        "Toggle bundle edges on/off",
-        "Toggle minimap on/off"
+        "Type 'My Custom App' in the custom group name input",
+        "Click 'Add' or press Enter"
       ],
-      "expected": "Each toggle should take effect immediately on the topology visualization. Edge visibility, category visibility, bundling, and minimap all respond to changes.",
+      "expected": "A new app-group tag pill labeled 'My Custom App' appears in the created groups area.",
       "flow": "setup",
       "sequence": 5,
       "status": null,
       "feedback": null
     },
     {
-      "id": "reset-options",
-      "category": "Options Store",
-      "description": "Reset options restores all defaults",
+      "id": "step1-remove-group",
+      "category": "Step 1 - Define Groups",
+      "description": "Removing a created group works",
       "steps": [
-        "Open topology options panel",
-        "Change several options",
-        "Trigger options reset (if reset button exists in UI)",
-        "Verify options return to defaults"
+        "Click the X button on one of the created group pills"
       ],
-      "expected": "All options should return to their default values for all perspectives.",
-      "status": null,
-      "feedback": null
-    }
-  ]
-}
-,
-{
-  "branch": "refactor/topology-perspective-backend",
-  "tests": [
-    {
-      "id": "l3-topology-unchanged",
-      "category": "Topology Rendering",
-      "description": "L3 topology renders identically after refactoring",
-      "steps": [
-        "Navigate to a network with discovered hosts and services",
-        "Open the topology view",
-        "Verify all subnet containers, element nodes, and edges render correctly",
-        "Verify nested group containers (service category groups) appear correctly",
-        "Verify Docker bridge consolidation works if applicable"
-      ],
-      "expected": "Topology looks identical to before the refactor — same nodes, edges, containers, and layout",
+      "expected": "The tag pill is removed. If it was from a suggestion, the suggestion chip reappears.",
       "flow": "setup",
-      "sequence": 1,
+      "sequence": 6,
       "status": null,
       "feedback": null
     },
     {
-      "id": "rebuild-preserves-edge-handles",
-      "category": "Handle Preservation",
-      "description": "Edge handles are preserved when rebuilding with same perspective",
+      "id": "step1-next-disabled-no-groups",
+      "category": "Step 1 - Define Groups",
+      "description": "Next button disabled when no groups exist",
       "steps": [
-        "Open topology view",
-        "Drag an edge handle to a different connection point on a node",
-        "Trigger a topology rebuild (e.g., refresh or modify options)",
-        "Verify the edge handle position is preserved after rebuild"
+        "Remove all created groups",
+        "Check the Next button state"
       ],
-      "expected": "Edge handles remain at the user-edited positions after rebuild",
+      "expected": "Next button is disabled. Message 'Add at least one application group to continue.' is visible.",
       "flow": "setup",
-      "sequence": 2,
+      "sequence": 7,
       "status": null,
       "feedback": null
     },
     {
-      "id": "grouping-rules-metadata-perspectives",
-      "category": "Grouping Rules",
-      "description": "Rule metadata endpoint includes perspectives field",
+      "id": "step2-host-list-inline-picker",
+      "category": "Step 2 - Assign Hosts",
+      "description": "Host list shows with inline app-group tag pickers",
       "steps": [
-        "Open the topology rule configuration UI (grouping rules panel)",
-        "Inspect the rule metadata (via browser devtools network tab or UI display)"
+        "Create at least 2 groups in Step 1",
+        "Click Next to go to Step 2",
+        "Observe the host list"
       ],
-      "setup": "Ensure the topology metadata endpoint is accessible. Check the response payload for container and element rule metadata.",
-      "expected": "Each rule's metadata JSON includes a 'perspectives' array listing applicable perspectives",
+      "setup": "Create at least 3 hosts on the default network via the API.",
+      "expected": "All hosts are listed with inline tag pickers. The tag pickers only show app-group tags (not regular tags).",
       "flow": "setup",
-      "sequence": 3,
-      "status": null,
-      "feedback": null
-    }
-  ]
-}
-,
-{
-  "branch": "feat/service-flow-rework",
-  "tests": [
-    {
-      "id": "dependencies-tab-loads",
-      "category": "Dependencies Tab",
-      "description": "Dependencies tab renders correctly with renamed labels",
-      "steps": [
-        "Navigate to the Dependencies tab in the sidebar",
-        "Verify the tab header says 'Dependencies' not 'Groups'",
-        "Verify the subtitle text references dependencies"
-      ],
-      "expected": "Tab loads with 'Dependencies' title and correct subtitle text",
-      "flow": "setup",
-      "sequence": 1,
+      "sequence": 8,
       "status": null,
       "feedback": null
     },
     {
-      "id": "dependency-create-modal",
-      "category": "Dependencies Tab",
-      "description": "Create Dependency modal opens and has renamed labels",
+      "id": "step2-inline-tag-assign",
+      "category": "Step 2 - Assign Hosts",
+      "description": "Inline tag picker assigns app-group to host",
       "steps": [
-        "Click 'Create' button on Dependencies tab",
-        "Verify modal title says 'Create Dependency'",
-        "Verify the type selector says 'Dependency Type' not 'Group Type'",
-        "Verify the name field label says 'Dependency Name'",
-        "Navigate through all wizard steps (Details, Service Bindings, Edge Appearance)"
+        "Click the tag picker on a host row",
+        "Select an app-group tag"
       ],
-      "expected": "All modal labels use 'Dependency' terminology, wizard steps work correctly",
+      "expected": "The app-group tag appears on the host. Only app-group tags are shown in the picker dropdown.",
       "flow": "setup",
-      "sequence": 2,
+      "sequence": 9,
       "status": null,
       "feedback": null
     },
     {
-      "id": "dependency-card-display",
-      "category": "Dependencies Tab",
-      "description": "Dependency cards display correctly with renamed type labels",
+      "id": "step2-expandable-services",
+      "category": "Step 2 - Assign Hosts",
+      "description": "Host rows expand to show services for override tagging",
       "steps": [
-        "View existing dependencies in the Dependencies tab",
-        "Verify cards show 'Dependency Type' label (not 'Group Type')",
-        "Verify service members are displayed correctly"
+        "Find a host that has services",
+        "Observe if services are shown below the host"
       ],
-      "setup": "Create at least one dependency with services via the API",
-      "expected": "Cards render with correct dependency terminology and show service members",
+      "setup": "Ensure at least one host has services discovered.",
+      "expected": "Services for the host are shown in an expanded section below the host row, each with their own inline tag picker for override tagging.",
       "flow": "setup",
-      "sequence": 3,
+      "sequence": 10,
       "status": null,
       "feedback": null
     },
     {
-      "id": "topology-dependency-edges",
-      "category": "Topology",
-      "description": "Dependency edges render correctly on topology view",
+      "id": "step2-multi-select-bulk-assign",
+      "category": "Step 2 - Assign Hosts",
+      "description": "Multi-select and bulk assign works",
       "steps": [
-        "Navigate to the Topology tab",
-        "Verify dependency edges are visible (if dependencies exist)",
-        "Click on a dependency edge to open the inspector",
-        "Verify inspector shows 'Dependency' label (not 'Group')"
+        "Select checkboxes on 3+ hosts",
+        "In the bulk assign bar that appears, click an app-group tag"
       ],
-      "setup": "Create a dependency with at least 2 service members and rebuild topology",
-      "expected": "Dependency edges render and inspector shows correct terminology",
+      "expected": "A bottom bar appears showing '{count} selected' and app-group tag buttons. Clicking a tag assigns it to all selected hosts. Selection clears after assignment.",
       "flow": "setup",
-      "sequence": 4,
+      "sequence": 11,
       "status": null,
       "feedback": null
     },
     {
-      "id": "topology-multiselect-create-dependency",
-      "category": "Topology",
-      "description": "Multi-select action bar allows creating dependencies",
+      "id": "step2-inheritance-note",
+      "category": "Step 2 - Assign Hosts",
+      "description": "Tag inheritance note is visible",
       "steps": [
-        "Select multiple nodes on the topology",
-        "Verify the action bar shows 'Create Dependency' button (not 'Create Group')",
-        "Click 'Create Dependency' and fill in the name",
-        "Confirm creation"
+        "On Step 2, observe the text above the host list"
       ],
-      "setup": "Ensure topology has at least 2 hosts with services",
-      "expected": "Dependency is created successfully from multi-select, button labels say 'Dependency'",
+      "expected": "Text reads: 'Services inherit their host's application group. Override individual services by tagging them directly.'",
       "flow": "setup",
-      "sequence": 5,
+      "sequence": 12,
       "status": null,
       "feedback": null
     },
     {
-      "id": "sidebar-dependencies-navigation",
+      "id": "wizard-completion",
+      "category": "Wizard Completion",
+      "description": "Completing wizard creates container rule and renders topology",
+      "steps": [
+        "On Step 2, click 'Complete Setup'"
+      ],
+      "expected": "The wizard closes. The Application perspective renders with app groups as containers and services as elements inside them.",
+      "flow": "setup",
+      "sequence": 13,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "wizard-back-button",
       "category": "Navigation",
-      "description": "Sidebar shows 'Dependencies' tab with correct icon and navigation",
+      "description": "Back button on Step 2 returns to Step 1",
       "steps": [
-        "Look at the sidebar navigation",
-        "Verify 'Dependencies' appears as a tab (not 'Groups')",
-        "Click the Dependencies tab",
-        "Verify it navigates to the dependencies view"
+        "On Step 2, click 'Back'"
       ],
-      "expected": "Sidebar shows 'Dependencies' label and navigates correctly",
+      "expected": "Returns to Step 1 with previously created groups still visible.",
+      "flow": "setup",
+      "sequence": 14,
       "status": null,
       "feedback": null
     },
     {
-      "id": "feature-nudge-dependency",
-      "category": "Home",
-      "description": "Feature nudge for dependency creation uses correct labels",
+      "id": "wizard-reappears-on-delete",
+      "category": "Wizard Gate",
+      "description": "Wizard reappears if all app-group tags are deleted",
       "steps": [
-        "Navigate to the Home tab",
-        "If the dependency creation nudge is visible, verify it says 'Create a Dependency' (not 'Create a Group')",
-        "Click the nudge action button",
-        "Verify it navigates to dependencies tab and opens the editor"
+        "After completing the wizard, navigate to Tags tab",
+        "Delete all app-group tags",
+        "Navigate back to topology and select Application perspective"
       ],
-      "setup": "Ensure a topology has been rebuilt but no dependency has been created yet (FirstDependencyCreated onboarding step not completed)",
-      "expected": "Nudge shows 'Dependency' terminology and navigates to dependency editor",
+      "expected": "The wizard reappears, requiring setup again.",
       "status": null,
       "feedback": null
     },
     {
-      "id": "api-endpoint-dependencies",
-      "category": "API",
-      "description": "API calls use /api/v1/dependencies endpoint",
+      "id": "perspective-switch-no-wizard",
+      "category": "Wizard Gate",
+      "description": "L3 perspective works normally without wizard",
       "steps": [
-        "Open browser dev tools Network tab",
-        "Navigate to Dependencies tab",
-        "Observe the API request URLs"
+        "Select L3 Logical perspective"
       ],
-      "expected": "All API calls go to /api/v1/dependencies, not /api/v1/groups",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "existing-dependencies-backward-compat",
-      "category": "Backward Compatibility",
-      "description": "Existing dependencies (migrated from groups) still load correctly",
-      "steps": [
-        "Navigate to Dependencies tab",
-        "View existing dependencies that were migrated from groups",
-        "Open one for editing"
-      ],
-      "setup": "Run the migration on a database with existing groups that have binding_ids. The migration backfills service_id and sets member_type to 'Bindings'.",
-      "expected": "Migrated dependencies display correctly with their binding members intact and can be edited",
+      "expected": "Topology renders normally without any wizard appearing.",
+      "flow": "setup",
+      "sequence": 15,
       "status": null,
       "feedback": null
     }
@@ -367,60 +253,155 @@ var TEST_PLANS = [
 }
 ,
 {
-  "branch": "fix/session-rehydration",
+  "branch": "feat/topo-fixes-and-polish",
   "tests": [
     {
-      "id": "discovery-card-after-restart",
-      "category": "Session Rehydration",
-      "description": "Discovery card shows session progress after server restart",
+      "id": "disabled-edge-not-in-toggles",
+      "category": "Edge Classification",
+      "description": "ServiceVirtualization edges should not appear in edge type toggles when viewing L3 perspective",
       "steps": [
-        "Navigate to the Discovery page",
-        "Start a discovery session on any configured discovery",
-        "Wait until the Discovery card shows scanning progress (phase: Scanning, progress > 0%)",
-        "Restart the server process",
-        "Return to the Discovery page after server is back up",
-        "Observe the Discovery card for the same discovery"
+        "Open a topology in L3 perspective",
+        "Open the Options panel",
+        "Check the edge type toggles list"
       ],
-      "setup": "Ensure at least one discovery is configured with a daemon connected and a scannable network.",
-      "expected": "The Discovery card should show the active session progress (phase, percentage) after the server restarts and the daemon sends its next update.",
+      "setup": "Ensure topology has at least one Docker container service (produces ServiceVirtualization edges)",
+      "expected": "ServiceVirtualization should NOT appear in the edge type toggle list. Other edge types (Interface, HostVirtualization, etc.) should still appear.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "duplicate-session-blocked-after-restart",
-      "category": "Session Rehydration",
-      "description": "Cannot start a duplicate session after server restart",
+      "id": "dependency-edges-visible-l3",
+      "category": "Edge Classification",
+      "description": "RequestPath and HubAndSpoke edges should be visible by default in L3",
       "steps": [
-        "Navigate to the Discovery page",
-        "Start a discovery session",
-        "Wait until the session is actively scanning",
-        "Restart the server process",
-        "Wait for the Discovery card to show the active session again",
-        "Try to start another session for the same discovery"
+        "Open a topology in L3 perspective (fresh options or after reset)",
+        "Look at the edge type toggles in Options panel"
       ],
-      "setup": "Ensure at least one discovery is configured with a daemon connected and a scannable network.",
-      "expected": "The server should reject the second session start with a conflict error ('A session is already running for this discovery').",
+      "setup": "Ensure topology has dependency edges (RequestPath or HubAndSpoke). Reset topology options to defaults.",
+      "expected": "RequestPath and HubAndSpoke should be enabled (not in hidden list) by default. Dependency edges should be visible on the canvas.",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "homepage-active-discoveries-after-restart",
-      "category": "Session Rehydration",
-      "description": "Homepage active discoveries widget works after server restart",
+      "id": "docker-bridge-label",
+      "category": "Container Labels",
+      "description": "Docker bridge containers show virtualizing service + host name",
       "steps": [
-        "Start a discovery session",
-        "Wait until actively scanning",
-        "Restart the server process",
-        "Navigate to the homepage after server is back up"
+        "Open a topology that has Docker bridge subnet containers",
+        "Look at the container header text"
       ],
-      "setup": "Ensure at least one discovery is configured with a daemon connected.",
-      "expected": "The ActiveDiscoveries widget on the homepage should show the in-progress discovery session.",
+      "setup": "Ensure topology has hosts running Docker with containerized services",
+      "expected": "Docker bridge containers should show 'Docker ({service-name}) on {host-name}' in the header instead of 'Docker @ {host-name}'",
       "flow": "setup",
       "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "collapse-persists-rebuild",
+      "category": "Collapse State",
+      "description": "Collapse state persists across topology rebuilds",
+      "steps": [
+        "Open a topology",
+        "Collapse a subnet container and a service category subcontainer",
+        "Trigger a rebuild (Cmd+R or rebuild button)"
+      ],
+      "expected": "Both collapsed containers should remain collapsed after rebuild. Container IDs are deterministic so collapse state persists.",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "collapsed-root-width",
+      "category": "Collapse State",
+      "description": "Collapsed root containers have reasonable width, sub-containers keep expanded width",
+      "steps": [
+        "Open a topology with both root subnet containers and nested subcontainers",
+        "Collapse a root container",
+        "Collapse a subcontainer inside an expanded root container"
+      ],
+      "expected": "Collapsed root containers should have a compact, content-fit width (not full canvas width). Collapsed sub-containers should maintain their expanded width to prevent layout overlap on re-expand.",
+      "flow": "setup",
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "unambiguous-element-counts",
+      "category": "Container Labels",
+      "description": "Collapsed element counts are unambiguous with subcontainer breakdown",
+      "steps": [
+        "Open a topology with subnet containers that have nested subcontainers (e.g. ByServiceCategory groups)",
+        "Collapse a root container that has subcontainers"
+      ],
+      "expected": "Top-level shows total count (e.g. '26 host interfaces'). Each subgroup line says 'including N in {name}' to clarify the breakdown.",
+      "flow": "setup",
+      "sequence": 6,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "perspective-aware-count-label",
+      "category": "Container Labels",
+      "description": "Count label matches perspective",
+      "steps": [
+        "Open a topology in L3 perspective, collapse a container",
+        "Note the count label",
+        "Switch to Application perspective, collapse a container",
+        "Note the count label"
+      ],
+      "expected": "In L3: count says 'N host interfaces'. In Application: count says 'N services'.",
+      "flow": "setup",
+      "sequence": 7,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "no-layout-flicker",
+      "category": "Layout",
+      "description": "No layout flicker on topology rebuild",
+      "steps": [
+        "Open a topology",
+        "Trigger a rebuild (Cmd+R or rebuild button)",
+        "Watch carefully for any flash of unpositioned nodes"
+      ],
+      "expected": "Topology should transition smoothly from hidden to visible. No flash of nodes at origin (0,0) or unpositioned layout.",
+      "flow": "setup",
+      "sequence": 8,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "edge-handles-correct",
+      "category": "Layout",
+      "description": "Edge handles computed correctly based on node positions",
+      "steps": [
+        "Open a topology with multiple subnets at different vertical layers",
+        "Observe edge connection points on nodes"
+      ],
+      "expected": "Edges should connect at sensible handle positions: top/bottom for vertically separated nodes, left/right for horizontally separated nodes. Handles should look correct even without backend computation.",
+      "flow": "setup",
+      "sequence": 9,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "icon-only-perspective-selector",
+      "category": "UI",
+      "description": "Perspective selector is icon-only with larger icons and hover tooltips",
+      "steps": [
+        "Open the topology tab",
+        "Look at the perspective selector in the toolbar",
+        "Hover over each perspective button"
+      ],
+      "expected": "Perspective buttons show only icons (no text labels). Icons should be larger (20px/h-5 w-5). Hovering shows tooltip with perspective name ('L3 Logical', 'Application').",
+      "flow": "setup",
+      "sequence": 10,
       "status": null,
       "feedback": null
     }
@@ -428,12 +409,336 @@ var TEST_PLANS = [
 }
 ,
 {
-  "branch": "fix/l3-ui-bugs",
-  "tests": []
+  "branch": "feat/topo-app-group-backend",
+  "tests": [
+    {
+      "id": "app-group-tag-creation",
+      "category": "Tag Management",
+      "description": "Create a tag with is_application_group=true and verify it appears with AppWindow icon and sheen animation",
+      "steps": [
+        "Navigate to Tags tab in asset management",
+        "Create a new tag, enable the 'Application Group' toggle",
+        "Verify the tag displays with the AppWindow icon and a subtle sheen animation"
+      ],
+      "expected": "Tag shows with AppWindow icon and diagonal gradient sheen animation on mount",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "app-group-tag-one-per-host",
+      "category": "Tag Validation",
+      "description": "Verify only one application group tag can be assigned to a host",
+      "steps": [
+        "Navigate to a host card",
+        "Add the first app-group tag — should succeed",
+        "Try to add a second app-group tag to the same host"
+      ],
+      "setup": "Create two tags with is_application_group=true via API (e.g., 'ERP' and 'CRM'). Ensure at least one host exists.",
+      "expected": "Second app-group tag assignment returns 400 error with message about only one application group tag allowed and inheritance model",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "app-group-tag-one-per-service",
+      "category": "Tag Validation",
+      "description": "Verify only one application group tag can be assigned to a service",
+      "steps": [
+        "Navigate to a service in a host edit modal",
+        "Add the first app-group tag — should succeed",
+        "Try to add a second app-group tag to the same service"
+      ],
+      "setup": "Create two tags with is_application_group=true. Ensure at least one host with a service exists.",
+      "expected": "Second app-group tag assignment returns 400 error",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "app-group-tag-sheen-visual",
+      "category": "Visual",
+      "description": "Verify sheen animation on application group tags",
+      "steps": [
+        "View a host card that has an app-group tag assigned",
+        "Observe the tag pill — should show sheen animation on page load",
+        "Hover over the tag — should show a subtle hover sheen"
+      ],
+      "setup": "Assign an app-group tag to a host via API.",
+      "expected": "Diagonal gradient sweep animation plays once on mount; subtler animation on hover",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "app-group-topology-grouping",
+      "category": "Topology Application Perspective",
+      "description": "Verify services are grouped by application group tags in Application perspective",
+      "steps": [
+        "Open a topology in Application perspective",
+        "Verify services with app-group tags are grouped into containers named after the tags",
+        "Verify services without app-group tags (and whose hosts also lack them) appear in 'Ungrouped' container"
+      ],
+      "setup": "Create app-group tags 'ERP' and 'CRM'. Assign 'ERP' tag to host A and 'CRM' tag to host B. Ensure hosts have services with bindings. Leave at least one service/host untagged. Rebuild topology.",
+      "expected": "Services on host A appear in 'ERP' container, services on host B appear in 'CRM' container, untagged services appear in 'Ungrouped' container",
+      "flow": "setup",
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "app-group-host-inheritance",
+      "category": "Topology Application Perspective",
+      "description": "Verify services inherit app-group tag from their host",
+      "steps": [
+        "Open topology in Application perspective",
+        "Verify that a service on a host with an app-group tag is grouped under that tag's container",
+        "Assign a different app-group tag directly to that service",
+        "Rebuild topology and verify the service now uses its own tag, not the host's"
+      ],
+      "setup": "Create two app-group tags 'ERP' and 'CRM'. Assign 'ERP' to a host. The host should have services with bindings.",
+      "expected": "Services inherit host's app-group initially; direct service tag overrides inheritance after rebuild",
+      "flow": "setup",
+      "sequence": 6,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "generic-service-filter-default",
+      "category": "Topology Filters",
+      "description": "Verify generic services are hidden by default in Application perspective",
+      "steps": [
+        "Open topology in Application perspective",
+        "Open the Filters panel, expand the Services section",
+        "Verify 'Generic Services' pseudo-tag appears and is faded (excluded by default)",
+        "Toggle 'Generic Services' to show them",
+        "Verify generic services now appear in the topology"
+      ],
+      "setup": "Ensure the network has hosts with both branded services (e.g., PostgreSQL, Nginx) and generic services (e.g., Open Ports, SSH).",
+      "expected": "Generic services hidden by default in Application perspective; toggling the filter shows them",
+      "flow": "setup",
+      "sequence": 7,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "generic-filter-not-in-other-perspectives",
+      "category": "Topology Filters",
+      "description": "Verify 'Generic Services' filter only appears in Application perspective",
+      "steps": [
+        "Open topology in L3 Logical perspective",
+        "Open Filters panel, check Services section",
+        "Verify 'Generic Services' pseudo-tag does NOT appear",
+        "Switch to Application perspective and verify it DOES appear"
+      ],
+      "expected": "'Generic Services' filter option only visible in Application perspective",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "perspective-concept-colors",
+      "category": "Topology Perspectives",
+      "description": "Verify perspective selector uses correct concept colors and icons",
+      "steps": [
+        "Open topology perspective selector",
+        "Verify L2 Physical shows Emerald/Cable, L3 Logical shows Blue/Network, Infrastructure shows Orange/Server, Application shows Purple/AppWindow"
+      ],
+      "expected": "Each perspective has its correct concept-derived color and icon",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "staleness-on-app-group-change",
+      "category": "Topology Staleness",
+      "description": "Verify topology becomes stale when a tag's is_application_group changes",
+      "steps": [
+        "Open a topology that has services",
+        "Edit a tag and toggle its is_application_group status",
+        "Verify the topology shows as stale"
+      ],
+      "setup": "Create a tag and assign it to a host. Open the topology so it's built.",
+      "expected": "Changing is_application_group triggers topology staleness indicator",
+      "status": null,
+      "feedback": null
+    }
+  ]
 }
 ,
 {
-  "branch": "feat/perspective-selector",
-  "tests": []
+  "branch": "feat/topo-inspector-refactor",
+  "tests": [
+    {
+      "id": "l3-element-inspector-sections",
+      "category": "Inspector Sections",
+      "description": "L3 perspective element inspector shows correct sections in order",
+      "steps": [
+        "Open a topology in L3 Logical perspective",
+        "Click on an interface element node",
+        "Verify inspector panel shows sections: Identity (interface), IfEntry Data, Services, Host Details, Other Interfaces, Tags"
+      ],
+      "setup": "Ensure a topology exists with at least one host that has SNMP IfEntry data, multiple interfaces, and services bound to interfaces.",
+      "expected": "Inspector shows all 6 L3 element sections in the correct order. IfEntry data shows SNMP status and speed. Services section shows services bound to the selected interface.",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "application-element-inspector-sections",
+      "category": "Inspector Sections",
+      "description": "Application perspective element inspector shows correct sections",
+      "steps": [
+        "Switch to Application perspective",
+        "Click on a service element node",
+        "Verify inspector panel shows sections: Identity (service), Dependencies (inbound+outbound), Port Bindings, Tags"
+      ],
+      "setup": "Ensure the topology has services with dependencies (both inbound and outbound) and port bindings.",
+      "expected": "Inspector shows Identity with service name/category/host, Dependencies section with inbound/outbound lists, Port Bindings with port numbers, and Tags.",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "l3-container-inspector-sections",
+      "category": "Inspector Sections",
+      "description": "L3 perspective container inspector shows subnet detail and element summary",
+      "steps": [
+        "In L3 Logical perspective, click on a subnet container node",
+        "Verify inspector shows: Subnet Detail (CIDR, gateway), Element Summary (element count)"
+      ],
+      "expected": "Subnet detail shows with tag picker and editable description. Element summary shows count of interfaces in the container.",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "application-container-inspector-sections",
+      "category": "Inspector Sections",
+      "description": "Application perspective container inspector shows identity and dependency summary",
+      "steps": [
+        "In Application perspective, click on an app group or category container",
+        "Verify inspector shows: Identity (group name), Dependency Summary (cross-boundary deps)"
+      ],
+      "expected": "Container identity shows the group name. Dependency summary lists dependencies that cross the container boundary.",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "multiselect-422-fix",
+      "category": "Bug Fix",
+      "description": "Multi-select dependency creation no longer returns 422",
+      "steps": [
+        "In L3 perspective, multi-select 3+ interface nodes",
+        "Enter a group name in the dependency creation section",
+        "Select bindings for each interface",
+        "Click Create Dependency"
+      ],
+      "setup": "Ensure the topology has at least 3 hosts with services that have bindings on their interfaces.",
+      "expected": "Dependency is created successfully without a 422 error. The topology rebuilds with the new dependency edge.",
+      "flow": "setup",
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "multiselect-bulk-tag-entity-perspective",
+      "category": "Multi-Select",
+      "description": "Bulk tag entity type changes with perspective",
+      "steps": [
+        "In L3 perspective, multi-select nodes and check the tag entity toggle",
+        "Switch to Application perspective and multi-select nodes",
+        "Check the tag entity toggle default"
+      ],
+      "expected": "In L3, the tag entity toggle defaults to 'Host'. In Application, it defaults to 'Service'.",
+      "flow": "setup",
+      "sequence": 6,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "multiselect-app-group-picker",
+      "category": "Multi-Select",
+      "description": "App-group picker appears in Application perspective multi-select",
+      "steps": [
+        "In Application perspective, multi-select service nodes",
+        "Verify the 'Application Group' tag picker section appears",
+        "Switch to L3 perspective and multi-select",
+        "Verify the app-group picker is NOT shown"
+      ],
+      "expected": "App-group picker section visible only in Application perspective.",
+      "flow": "setup",
+      "sequence": 7,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "multiselect-create-grouping-rule",
+      "category": "Multi-Select",
+      "description": "Create grouping rule from tag action appears after bulk tagging",
+      "steps": [
+        "Multi-select nodes in L3 perspective",
+        "Add a tag via the tag picker",
+        "Verify a 'Create grouping rule from this tag' button appears",
+        "Click the button"
+      ],
+      "expected": "After adding a non-app-group tag, the create grouping rule button appears. Clicking it adds a ByTag element rule to the topology options.",
+      "flow": "setup",
+      "sequence": 8,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "dependency-edit-modal-works",
+      "category": "DependencyMemberSelector",
+      "description": "DependencyEditModal still works after DependencyMemberSelector extraction",
+      "steps": [
+        "Open the dependency edit modal (create new dependency)",
+        "Fill in details, go to services tab",
+        "Add 2+ services, toggle to With Ports mode, select bindings",
+        "Create the dependency"
+      ],
+      "setup": "Ensure services exist with port bindings on the network.",
+      "expected": "The services tab works identically to before: mode toggle, service search, binding selection, reordering all function correctly.",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "multiselect-no-dependency-infra-l2",
+      "category": "Multi-Select",
+      "description": "Dependency creation hidden in Infrastructure and L2 perspectives",
+      "steps": [
+        "Switch to Infrastructure perspective (if available) and multi-select",
+        "Verify the dependency creation section is NOT shown",
+        "Repeat for L2 Physical perspective"
+      ],
+      "expected": "Dependency creation section is hidden in perspectives where dependency_creation is null.",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "edge-inspector-perspective-prop",
+      "category": "Edge Inspector",
+      "description": "Edge inspector receives perspective prop",
+      "steps": [
+        "Click on a dependency edge in L3 perspective",
+        "Verify the edge group inspector displays correctly",
+        "Click on an interface edge",
+        "Verify the interface edge inspector displays correctly"
+      ],
+      "expected": "Edge inspectors render correctly with the perspective prop passed through.",
+      "flow": "setup",
+      "sequence": 9,
+      "status": null,
+      "feedback": null
+    }
+  ]
 }
 ];

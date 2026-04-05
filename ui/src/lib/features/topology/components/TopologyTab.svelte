@@ -111,7 +111,7 @@
 
 	// Auto-open wizard when entering Application perspective with no app-group tags
 	$effect(() => {
-		if (isActive && $activePerspective === 'application' && appGroupTags.length === 0) {
+		if (isActive && $activePerspective === 'Application' && appGroupTags.length === 0) {
 			wizardActive = true;
 		}
 	});

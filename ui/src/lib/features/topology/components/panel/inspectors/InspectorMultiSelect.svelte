@@ -53,7 +53,7 @@
 		dependencies_serviceBindingsInfoBody,
 		topology_multiSelectPreviewEdge,
 		topology_focusSelection,
-		inspector_appGroupPicker,
+		tags_applicationGroup,
 		inspector_createGroupingRuleFromTag
 	} from '$lib/paraglide/messages';
 
@@ -553,7 +553,7 @@
 		{#if inspectorConfig.show_application_group_picker}
 			<!-- App-group tag picker — highlights is_application_group tags -->
 			<div class="space-y-2">
-				<span class="text-secondary block text-sm font-medium">{inspector_appGroupPicker()}</span>
+				<span class="text-secondary block text-sm font-medium">{tags_applicationGroup()}</span>
 				<div class="card card-static space-y-2 p-2">
 					<TagPickerInline
 						selectedTagIds={commonTags}

@@ -43,8 +43,7 @@
 		topology_hideVmOnContainer,
 		topology_hideVmOnContainerHelp,
 		topology_genericServices,
-		common_show,
-		common_hide
+		topology_showGenericServices
 	} from '$lib/paraglide/messages';
 
 	// Get topology for entity_tags
@@ -434,21 +433,18 @@
 						disabled={!editState.isEditable}
 						label={common_byCategory()}
 					/>
-				</div>
-
-				<!-- Generic Services -->
-				<div class="space-y-1.5 rounded-lg p-2.5" style="background: var(--color-bg-surface-hover)">
-					<div class="text-secondary text-xs font-semibold uppercase tracking-wide">
-						{topology_genericServices()}
+					<div class="space-y-1">
+						<div class="text-tertiary text-xs">{topology_genericServices()}</div>
+						<label class="flex items-center gap-2">
+							<input
+								type="checkbox"
+								checked={!isGenericHidden}
+								onchange={() => toggleServiceTag(GENERIC_SENTINEL)}
+								class="h-3.5 w-3.5 rounded"
+							/>
+							<span class="text-secondary text-xs">{topology_showGenericServices()}</span>
+						</label>
 					</div>
-					<button
-						onclick={() => toggleServiceTag(GENERIC_SENTINEL)}
-						class="text-xs font-medium transition-opacity {isGenericHidden
-							? 'text-tertiary opacity-60 hover:opacity-80'
-							: 'text-secondary opacity-100'}"
-					>
-						{isGenericHidden ? common_show() : common_hide()}
-					</button>
 				</div>
 
 				<!-- Subnets -->

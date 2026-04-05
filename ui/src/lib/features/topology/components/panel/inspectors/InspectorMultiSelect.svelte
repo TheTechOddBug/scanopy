@@ -10,6 +10,7 @@
 		selectedTopologyId,
 		useTopologiesQuery,
 		activePerspective,
+		topologyOptions,
 		updateTopologyOptions
 	} from '../../../queries';
 	import type { TopologyNode } from '../../../types/base';
@@ -17,8 +18,13 @@
 	import type { DependencyType, EdgeStyle } from '$lib/features/dependencies/types/base';
 	import { getTopologyEditState } from '../../../state';
 	import { computeCommonTags } from '$lib/shared/utils/tags';
+	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
-	import { useBulkAddTagMutation, useBulkRemoveTagMutation } from '$lib/features/tags/queries';
+	import {
+		useTagsQuery,
+		useBulkAddTagMutation,
+		useBulkRemoveTagMutation
+	} from '$lib/features/tags/queries';
 	import {
 		useCreateDependencyMutation,
 		createEmptyDependencyFormData
@@ -26,7 +32,7 @@
 	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import EntityTag from '$lib/shared/components/data/EntityTag.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';
-	import { entities, dependencyTypes } from '$lib/shared/stores/metadata';
+	import { entities, dependencyTypes, concepts } from '$lib/shared/stores/metadata';
 	import { getInspectorConfig } from './perspective-config';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
@@ -54,6 +60,9 @@
 		topology_multiSelectPreviewEdge,
 		topology_focusSelection,
 		tags_applicationGroup,
+		tags_crossGroupSelectionHint,
+		tags_inheritedFromHost,
+		tags_inheritedOverrideHint,
 		inspector_createGroupingRuleFromTag
 	} from '$lib/paraglide/messages';
 
@@ -153,6 +162,76 @@
 		if (editState.disabledReason === 'readonly') return topology_multiSelectReadOnlyHint();
 		if (editState.disabledReason === 'locked') return topology_multiSelectLockedHint();
 		return topology_multiSelectStaleHint();
+	});
+
+	// App-group tag analysis
+	const tagsQuery = useTagsQuery();
+	let allTags = $derived(tagsQuery.data ?? []);
+
+	// Get app-group tag IDs from the ByApplicationGroup container rule
+	let appGroupTagIds = $derived.by(() => {
+		const rules = $topologyOptions?.request?.container_rules ?? [];
+		for (const rule of rules) {
+			if (typeof rule.rule === 'object' && 'ByApplicationGroup' in rule.rule) {
+				return rule.rule.ByApplicationGroup.tag_ids ?? [];
+			}
+		}
+		return [];
+	});
+
+	let appGroupTagSet = $derived(new Set(appGroupTagIds));
+
+	// Analyze each selected service's app-group status
+	type AppGroupInfo = { tagId: string; inherited: boolean } | null;
+
+	let serviceAppGroupInfos = $derived.by((): AppGroupInfo[] => {
+		if (!topology) return [];
+		return selectedServices.map((service) => {
+			// Check for direct app-group tag on the service
+			for (const tagId of service.tags) {
+				if (appGroupTagSet.has(tagId)) {
+					return { tagId, inherited: false };
+				}
+			}
+			// Check for inherited app-group tag from host
+			const host = topology!.hosts.find((h) => h.id === service.host_id);
+			if (host) {
+				for (const tagId of host.tags) {
+					if (appGroupTagSet.has(tagId)) {
+						return { tagId, inherited: true };
+					}
+				}
+			}
+			return null; // Ungrouped
+		});
+	});
+
+	// Overall app-group selection state
+	let appGroupState = $derived.by(() => {
+		const infos = serviceAppGroupInfos;
+		if (infos.length === 0) return { type: 'ungrouped' as const };
+
+		const uniqueTagIds = new Set(infos.map((i) => i?.tagId ?? '__ungrouped__'));
+		if (uniqueTagIds.size > 1) return { type: 'cross-group' as const };
+
+		const tagId = infos[0]?.tagId;
+		if (!tagId) return { type: 'ungrouped' as const };
+
+		const allInherited = infos.every((i) => i?.inherited === true);
+		const allDirect = infos.every((i) => i?.inherited === false);
+		return {
+			type: 'single' as const,
+			tagId,
+			allInherited,
+			allDirect,
+			mixed: !allInherited && !allDirect
+		};
+	});
+
+	// Get the tag object for the current app-group
+	let currentAppGroupTag = $derived.by(() => {
+		if (appGroupState.type !== 'single') return null;
+		return allTags.find((t) => t.id === appGroupState.tagId) ?? null;
 	});
 
 	// Tag handlers — mutation onSuccess handles cache updates optimistically
@@ -336,34 +415,31 @@
 		initBindingSelections();
 	});
 
-	async function confirmGroupCreation() {
-		if (!topology) return;
-		const bindingIds: string[] = [];
-		for (const bindingId of bindingSelections.values()) {
-			if (bindingId) {
-				bindingIds.push(bindingId);
-			}
-		}
+	let isServicesMode = $derived(inspectorConfig.dependency_creation === 'Services');
 
-		if (bindingIds.length < 2 || !groupName.trim()) return;
+	async function confirmGroupCreation() {
+		if (!topology || !groupName.trim()) return;
 
 		const newDependency = createEmptyDependencyFormData(topology.network_id);
 		newDependency.name = groupName.trim();
 		newDependency.dependency_type = groupType;
-		// Build members as the correct tagged union based on perspective
-		if (inspectorConfig.dependency_creation === 'Services') {
-			// Derive service IDs from the selected bindings
-			const serviceIds: string[] = [];
-			for (const bindingId of bindingIds) {
-				const service = topology.services.find((s) => s.bindings.some((b) => b.id === bindingId));
-				if (service && !serviceIds.includes(service.id)) {
-					serviceIds.push(service.id);
+
+		if (isServicesMode) {
+			// Application perspective: use service IDs directly from selected nodes
+			if (selectedServiceIds.length < 2) return;
+			newDependency.members = { type: 'Services', service_ids: [...selectedServiceIds] };
+		} else {
+			// L3 perspective: use binding IDs from disambiguation
+			const bindingIds: string[] = [];
+			for (const bindingId of bindingSelections.values()) {
+				if (bindingId) {
+					bindingIds.push(bindingId);
 				}
 			}
-			newDependency.members = { type: 'Services', service_ids: serviceIds };
-		} else {
+			if (bindingIds.length < 2) return;
 			newDependency.members = { type: 'Bindings', binding_ids: bindingIds };
 		}
+
 		newDependency.color = groupColor;
 		newDependency.edge_style = groupEdgeStyle;
 
@@ -551,15 +627,35 @@
 		</div>
 
 		{#if inspectorConfig.show_application_group_picker}
-			<!-- App-group tag picker — highlights is_application_group tags -->
+			<!-- App-group tag picker — with cross-group and inheritance awareness -->
 			<div class="space-y-2">
 				<span class="text-secondary block text-sm font-medium">{tags_applicationGroup()}</span>
 				<div class="card card-static space-y-2 p-2">
-					<TagPickerInline
-						selectedTagIds={commonTags}
-						onAdd={handleAddAppGroupTag}
-						onRemove={handleRemoveTag}
-					/>
+					{#if appGroupState.type === 'cross-group'}
+						<p class="text-tertiary text-xs">{tags_crossGroupSelectionHint()}</p>
+					{:else}
+						{#if appGroupState.type === 'single' && currentAppGroupTag}
+							<div class="flex flex-wrap items-center gap-1">
+								<Tag
+									label={currentAppGroupTag.name}
+									color={currentAppGroupTag.color}
+									icon={concepts.getIconComponent('Application')}
+									isShiny={true}
+								/>
+								{#if appGroupState.allInherited}
+									<span class="text-tertiary text-xs">{tags_inheritedFromHost()}</span>
+								{/if}
+							</div>
+							{#if appGroupState.allInherited}
+								<p class="text-tertiary text-xs">{tags_inheritedOverrideHint()}</p>
+							{/if}
+						{/if}
+						<TagPickerInline
+							selectedTagIds={commonTags}
+							onAdd={handleAddAppGroupTag}
+							onRemove={handleRemoveTag}
+						/>
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -617,51 +713,53 @@
 						onEdgeStyleChange={(s) => (groupEdgeStyle = s)}
 					/>
 
-					<!-- Binding selection -->
-					<div class="space-y-2">
-						<span class="text-secondary block text-xs font-medium"
-							>{dependencies_serviceBindings()}</span
-						>
-						<InlineInfo
-							title={dependencies_serviceBindingsInfoTitle()}
-							body={dependencies_serviceBindingsInfoBody()}
-							dismissableKey="group-bindings-info"
-						/>
-						{#each interfaceBindingChoices as choice (choice.interfaceId)}
-							<div class="card card-static space-y-1 p-2">
-								<div class="text-primary truncate text-xs font-medium">
-									{choice.hostName}
-								</div>
-								<div class="text-tertiary truncate text-[10px]">
-									{choice.interfaceName}
-								</div>
-								{#if choice.bindings.length === 0}
-									<div class="text-tertiary text-xs italic">
-										{topology_multiSelectNoBindings()}
+					<!-- Binding selection (L3 only — not shown in Services mode) -->
+					{#if !isServicesMode}
+						<div class="space-y-2">
+							<span class="text-secondary block text-xs font-medium"
+								>{dependencies_serviceBindings()}</span
+							>
+							<InlineInfo
+								title={dependencies_serviceBindingsInfoTitle()}
+								body={dependencies_serviceBindingsInfoBody()}
+								dismissableKey="group-bindings-info"
+							/>
+							{#each interfaceBindingChoices as choice (choice.interfaceId)}
+								<div class="card card-static space-y-1 p-2">
+									<div class="text-primary truncate text-xs font-medium">
+										{choice.hostName}
 									</div>
-								{:else if choice.bindings.length === 1}
-									<div class="text-secondary text-xs">
-										{choice.bindings[0].label}
+									<div class="text-tertiary truncate text-[10px]">
+										{choice.interfaceName}
 									</div>
-								{:else}
-									<select
-										class="h-auto min-h-6 w-full rounded px-1 text-xs"
-										style="border: 1px solid var(--color-border-input); background: var(--color-bg-input); color: var(--color-text-primary)"
-										value={bindingSelections.get(choice.interfaceId) ?? ''}
-										onchange={(e) => {
-											const target = e.target as HTMLSelectElement;
-											bindingSelections.set(choice.interfaceId, target.value || null);
-										}}
-									>
-										<option value="">{topology_multiSelectPickBinding()}</option>
-										{#each choice.bindings as binding (binding.id)}
-											<option value={binding.id}>{binding.label}</option>
-										{/each}
-									</select>
-								{/if}
-							</div>
-						{/each}
-					</div>
+									{#if choice.bindings.length === 0}
+										<div class="text-tertiary text-xs italic">
+											{topology_multiSelectNoBindings()}
+										</div>
+									{:else if choice.bindings.length === 1}
+										<div class="text-secondary text-xs">
+											{choice.bindings[0].label}
+										</div>
+									{:else}
+										<select
+											class="h-auto min-h-6 w-full rounded px-1 text-xs"
+											style="border: 1px solid var(--color-border-input); background: var(--color-bg-input); color: var(--color-text-primary)"
+											value={bindingSelections.get(choice.interfaceId) ?? ''}
+											onchange={(e) => {
+												const target = e.target as HTMLSelectElement;
+												bindingSelections.set(choice.interfaceId, target.value || null);
+											}}
+										>
+											<option value="">{topology_multiSelectPickBinding()}</option>
+											{#each choice.bindings as binding (binding.id)}
+												<option value={binding.id}>{binding.label}</option>
+											{/each}
+										</select>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
 
 					<!-- Rebuild warning + Create button -->
 					<div class="space-y-2">
@@ -671,7 +769,9 @@
 						<button
 							class="btn-primary w-full text-xs"
 							onclick={confirmGroupCreation}
-							disabled={!groupName.trim() || createDependencyMutation.isPending}
+							disabled={!groupName.trim() ||
+								createDependencyMutation.isPending ||
+								(isServicesMode ? selectedServiceIds.length < 2 : false)}
 						>
 							{dependencies_createDependency()}
 						</button>

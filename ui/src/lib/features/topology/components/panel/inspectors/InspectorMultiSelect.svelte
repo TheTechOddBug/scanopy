@@ -213,6 +213,29 @@
 		});
 	});
 
+	// DIAGNOSTIC: log the entire app-group detection chain
+	$effect(() => {
+		const entityTags = topology?.entity_tags ?? [];
+		const entityAppGroupTags = entityTags.filter((t: { is_application_group: boolean }) => t.is_application_group);
+		console.debug('[app-group debug]', {
+			'allTags.length': allTags.length,
+			'allTags app-group': allTags.filter((t) => t.is_application_group).map((t) => t.name),
+			'entity_tags.length': entityTags.length,
+			'entity_tags app-group': entityAppGroupTags.map((t: { name: string }) => t.name),
+			'$topologyOptions.request.container_rules': $topologyOptions?.request?.container_rules,
+			appGroupTagIds,
+			'appGroupTagSet.size': appGroupTagSet.size,
+			'selectedServices.length': selectedServices.length,
+			'selectedServices tags': selectedServices.map((s) => ({ name: s.name, tags: s.tags })),
+			'selectedHosts tags': selectedHosts.map((h) => ({ name: h.name, tags: h.tags })),
+			commonTags,
+			commonAppGroupTags,
+			serviceAppGroupInfos,
+			appGroupState,
+			'inspectorConfig.show_application_group_picker': inspectorConfig.show_application_group_picker
+		});
+	});
+
 	// Overall app-group selection state
 	let appGroupState = $derived.by(() => {
 		const infos = serviceAppGroupInfos;

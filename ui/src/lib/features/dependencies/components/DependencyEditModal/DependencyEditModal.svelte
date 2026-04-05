@@ -224,25 +224,23 @@
 		bindingsSubmitted = false;
 
 		// Initialize member state from existing dependency
+		bindingSelections.clear();
 		const members = defaults.members;
 		if (members?.type === 'Bindings') {
 			memberMode = 'Bindings';
 			// Derive service IDs from binding IDs
 			const svcIds: string[] = [];
-			const bindings = new SvelteMap<string, string | null>();
 			for (const bindingId of members.binding_ids) {
 				const service = servicesData.find((s) => s.bindings.some((b) => b.id === bindingId));
 				if (service && !svcIds.includes(service.id)) {
 					svcIds.push(service.id);
-					bindings.set(service.id, bindingId);
+					bindingSelections.set(service.id, bindingId);
 				}
 			}
 			selectedServiceIds = svcIds;
-			bindingSelections = bindings;
 		} else {
 			memberMode = 'Services';
 			selectedServiceIds = members?.service_ids ? [...members.service_ids] : [];
-			bindingSelections = new SvelteMap();
 		}
 	}
 
@@ -270,15 +268,21 @@
 	// Handlers for service list
 	function handleAddService(serviceId: string) {
 		selectedServiceIds = [...selectedServiceIds, serviceId];
+		// In Bindings mode, auto-select if service has exactly one binding
+		if (memberMode === 'Bindings') {
+			const service = servicesData.find((s) => s.id === serviceId);
+			if (service?.bindings.length === 1) {
+				bindingSelections.set(serviceId, service.bindings[0].id);
+			} else {
+				bindingSelections.set(serviceId, null);
+			}
+		}
 	}
 
 	function handleRemoveService(index: number) {
 		const removedId = selectedServiceIds[index];
 		selectedServiceIds = selectedServiceIds.filter((_, i) => i !== index);
-		// Also remove any binding selection for this service
-		const newBindings = new SvelteMap(bindingSelections);
-		newBindings.delete(removedId);
-		bindingSelections = newBindings;
+		bindingSelections.delete(removedId);
 	}
 
 	function handleReorderServices(fromIndex: number, toIndex: number) {
@@ -294,26 +298,26 @@
 		bindingsSubmitted = false;
 		if (mode === 'Services') {
 			memberMode = 'Services';
-			// Clear binding selections but keep services
-			bindingSelections = new SvelteMap();
+			bindingSelections.clear();
 		} else {
 			memberMode = 'Bindings';
-			// Initialize empty binding slots for existing services
-			const newBindings = new SvelteMap(bindingSelections);
+			// Initialize binding slots — auto-select if service has exactly one binding
 			for (const svcId of selectedServiceIds) {
-				if (!newBindings.has(svcId)) {
-					newBindings.set(svcId, null);
+				if (!bindingSelections.has(svcId) || !bindingSelections.get(svcId)) {
+					const service = servicesData.find((s) => s.id === svcId);
+					if (service?.bindings.length === 1) {
+						bindingSelections.set(svcId, service.bindings[0].id);
+					} else {
+						bindingSelections.set(svcId, null);
+					}
 				}
 			}
-			bindingSelections = newBindings;
 		}
 	}
 
 	// Handle binding selection for a specific service
 	function handleBindingSelect(serviceId: string, bindingId: string) {
-		const newBindings = new SvelteMap(bindingSelections);
-		newBindings.set(serviceId, bindingId);
-		bindingSelections = newBindings;
+		bindingSelections.set(serviceId, bindingId);
 	}
 
 	// Get available bindings for a specific service
@@ -331,20 +335,24 @@
 		await submitForm(form);
 	}
 
+	function validateBindings(): boolean {
+		if (memberMode !== 'Bindings') return true;
+		const missing = selectedServiceIds.some((svcId) => !bindingSelections.get(svcId));
+		if (missing) {
+			bindingsSubmitted = true;
+			return false;
+		}
+		return true;
+	}
+
 	async function handleFormSubmit() {
 		if (isEditing || isLastWizardStep) {
-			// Validate all bindings are selected in With ports mode
-			if (memberMode === 'Bindings') {
-				const missing = selectedServiceIds.some((svcId) => !bindingSelections.get(svcId));
-				if (missing) {
-					// Trigger validation display by marking unselected bindings
-					bindingsSubmitted = true;
-					return;
-				}
-			}
+			if (!validateBindings()) return;
 			handleSubmit();
 		} else {
 			const isValid = await validateForm(form);
+			// Also validate bindings when advancing from the services tab
+			if (isValid && activeTab === 'services' && !validateBindings()) return;
 			if (isValid) {
 				const wizardIndex = wizardSteps.indexOf(activeTab);
 				if (wizardIndex >= 0 && wizardIndex + 1 > furthestReached) {
@@ -560,7 +568,7 @@
 									{@const serviceBindings = getBindingsForService(service)}
 									{@const selectedBindingId = bindingSelections.get(service.id) ?? null}
 									{@const showError = bindingsSubmitted && !selectedBindingId}
-									<div class="mt-2 border-t border-gray-200 pt-2 dark:border-gray-700">
+									<div class="mt-2 w-full border-t border-gray-200 pt-2 dark:border-gray-700">
 										<RichSelect
 											options={serviceBindings}
 											selectedValue={selectedBindingId}

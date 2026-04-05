@@ -279,8 +279,8 @@
 		/>
 	{/each}
 
-	<!-- Add button / dropdown -->
-	{#if (onAdd || isEntityMode) && !disabled}
+	<!-- Add button / dropdown (hide when no tags to add and creation disabled) -->
+	{#if (onAdd || isEntityMode) && !disabled && (canCreateTags || tags.some((t) => !selectedTagIds.includes(t.id)))}
 		<div bind:this={triggerElement} class="relative flex h-5 items-center">
 			{#if isDropdownOpen}
 				<!-- Input for searching/creating tags -->

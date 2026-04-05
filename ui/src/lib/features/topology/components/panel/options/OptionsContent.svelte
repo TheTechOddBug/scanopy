@@ -15,6 +15,7 @@
 	import OptionToggle from './OptionToggle.svelte';
 	import CategoryFilterGroup from './CategoryFilterGroup.svelte';
 	import FilterGroup from './FilterGroup.svelte';
+	import GenericServiceFilter from './GenericServiceFilter.svelte';
 	import GroupingRuleEditor from './GroupingRuleEditor.svelte';
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -41,9 +42,7 @@
 		common_filters,
 		topology_filtersHelp,
 		topology_hideVmOnContainer,
-		topology_hideVmOnContainerHelp,
-		topology_genericServices,
-		topology_showGenericServices
+		topology_hideVmOnContainerHelp
 	} from '$lib/paraglide/messages';
 
 	// Get topology for entity_tags
@@ -432,18 +431,10 @@
 						disabled={!editState.isEditable}
 						label={common_byCategory()}
 					/>
-					<div class="space-y-1">
-						<div class="text-tertiary text-xs">{topology_genericServices()}</div>
-						<label class="flex items-center gap-2">
-							<input
-								type="checkbox"
-								checked={!isGenericHidden}
-								onchange={() => toggleServiceTag(GENERIC_SENTINEL)}
-								class="h-3.5 w-3.5 rounded"
-							/>
-							<span class="text-secondary text-xs">{topology_showGenericServices()}</span>
-						</label>
-					</div>
+					<GenericServiceFilter
+						hidden={isGenericHidden}
+						onToggle={() => toggleServiceTag(GENERIC_SENTINEL)}
+					/>
 				</div>
 
 				<!-- Subnets -->

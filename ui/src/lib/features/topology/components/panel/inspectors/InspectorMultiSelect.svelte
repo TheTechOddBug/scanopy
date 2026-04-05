@@ -21,11 +21,7 @@
 	import { computeCommonTags } from '$lib/shared/utils/tags';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
-	import {
-		useTagsQuery,
-		useBulkAddTagMutation,
-		useBulkRemoveTagMutation
-	} from '$lib/features/tags/queries';
+	import { useBulkAddTagMutation, useBulkRemoveTagMutation } from '$lib/features/tags/queries';
 	import {
 		useCreateDependencyMutation,
 		createEmptyDependencyFormData
@@ -97,8 +93,7 @@
 		const hostSet = new Set<string>();
 		const serviceSet = new Set<string>();
 		for (const node of nodes) {
-			const data = node.data as TopologyNode;
-			const ids = getNodeSelectionIds(node.id, data, topology);
+			const ids = getNodeSelectionIds(node.id, node.data as TopologyNode, topology);
 			ids.hostIds.forEach((id) => hostSet.add(id));
 			ids.serviceIds.forEach((id) => serviceSet.add(id));
 		}
@@ -136,22 +131,18 @@
 		return topology_multiSelectStaleHint();
 	});
 
-	// App-group tag analysis
-	const tagsQuery = useTagsQuery();
-	let allTags = $derived(tagsQuery.data ?? []);
+	// App-group tag analysis — read from topology entity_tags
+	let topoEntityTags = $derived(topology?.entity_tags ?? []);
 
-	// Get app-group tag IDs from entity_tags (is_application_group field on Tag)
 	let appGroupTagIds = $derived(
-		(topology?.entity_tags ?? [])
-			.filter((t: { is_application_group: boolean }) => t.is_application_group)
-			.map((t: { id: string }) => t.id)
+		topoEntityTags.filter((t) => t.is_application_group).map((t) => t.id)
 	);
 
 	let appGroupTagSet = $derived(new Set(appGroupTagIds));
 
 	// Filtered tag lists for pickers
-	let nonAppGroupTags = $derived(allTags.filter((t) => !t.is_application_group));
-	let appGroupTags = $derived(allTags.filter((t) => t.is_application_group));
+	let nonAppGroupTags = $derived(topoEntityTags.filter((t) => !t.is_application_group));
+	let appGroupTags = $derived(topoEntityTags.filter((t) => t.is_application_group));
 
 	// Common app-group tags across selected entities (for app-group picker selectedTagIds)
 	let commonAppGroupTags = $derived(commonTags.filter((id) => appGroupTagSet.has(id)));
@@ -212,7 +203,7 @@
 	// Get the tag object for the current app-group
 	let currentAppGroupTag = $derived.by(() => {
 		if (appGroupState.type !== 'single') return null;
-		return allTags.find((t) => t.id === appGroupState.tagId) ?? null;
+		return topoEntityTags.find((t) => t.id === appGroupState.tagId) ?? null;
 	});
 
 	// Tag handlers — mutation onSuccess handles cache updates optimistically
@@ -265,7 +256,8 @@
 	let recentlyAddedTags = $derived(
 		recentlyAddedTagIds
 			.map(
-				(id) => allTags.find((t) => t.id === id) ?? topology?.entity_tags?.find((t) => t.id === id)
+				(id) =>
+					topoEntityTags.find((t) => t.id === id) ?? topology?.entity_tags?.find((t) => t.id === id)
 			)
 			.filter(Boolean)
 	);
@@ -586,7 +578,7 @@
 			<div class="card card-static space-y-2 p-2">
 				<div class="flex items-center gap-1.5">
 					<TagPickerInline
-						selectedTagIds={commonTags}
+						selectedTagIds={commonTags.filter((id) => !appGroupTagSet.has(id))}
 						onAdd={handleAddTagWithTracking}
 						onRemove={handleRemoveTag}
 						availableTags={nonAppGroupTags}
@@ -615,23 +607,20 @@
 				<div class="card card-static space-y-2 p-2">
 					{#if appGroupState.type === 'cross-group'}
 						<p class="text-tertiary text-xs">{tags_crossGroupSelectionHint()}</p>
+					{:else if appGroupState.type === 'single' && appGroupState.allInherited && currentAppGroupTag}
+						<!-- Inherited: show static badge, no picker (can't remove inherited tag) -->
+						<div class="flex flex-wrap items-center gap-1">
+							<Tag
+								label={currentAppGroupTag.name}
+								color={currentAppGroupTag.color}
+								icon={concepts.getIconComponent('Application')}
+								isShiny={true}
+							/>
+							<span class="text-tertiary text-xs">{tags_inheritedFromHost()}</span>
+						</div>
+						<p class="text-tertiary text-xs">{tags_inheritedOverrideHint()}</p>
 					{:else}
-						{#if appGroupState.type === 'single' && currentAppGroupTag}
-							<div class="flex flex-wrap items-center gap-1">
-								<Tag
-									label={currentAppGroupTag.name}
-									color={currentAppGroupTag.color}
-									icon={concepts.getIconComponent('Application')}
-									isShiny={true}
-								/>
-								{#if appGroupState.allInherited}
-									<span class="text-tertiary text-xs">{tags_inheritedFromHost()}</span>
-								{/if}
-							</div>
-							{#if appGroupState.allInherited}
-								<p class="text-tertiary text-xs">{tags_inheritedOverrideHint()}</p>
-							{/if}
-						{/if}
+						<!-- Direct or ungrouped: show picker -->
 						<TagPickerInline
 							selectedTagIds={commonAppGroupTags}
 							onAdd={handleAddAppGroupTag}

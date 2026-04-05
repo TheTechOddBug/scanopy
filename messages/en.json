@@ -882,7 +882,6 @@
 	"inspector_ifEntryData": "Interface Data",
 	"inspector_lldpNeighbor": "LLDP Neighbor",
 	"inspector_noDependencies": "No dependencies",
-	"inspector_otherInterfaces": "Other Interfaces",
 	"inspector_otherInterface": "Other Host Interface",
 	"inspector_otherInterfaces": "Other Host Interfaces",
 	"inspector_servicesOnInterface": "Services Bound to Interface",

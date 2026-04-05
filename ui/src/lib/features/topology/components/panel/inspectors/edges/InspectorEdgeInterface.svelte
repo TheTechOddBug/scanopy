@@ -19,7 +19,7 @@
 	let {
 		edge,
 		hostId,
-		perspective = 'l3_logical'
+		perspective = 'L3Logical'
 	}: {
 		edge: Edge;
 		hostId: string;

@@ -26,7 +26,7 @@ export function getDefaultHiddenEdgeTypes(
 	perspective: TopologyPerspective
 ): EdgeTypeDiscriminants[] {
 	switch (perspective) {
-		case 'l3_logical':
+		case 'L3Logical':
 			return [
 				'HostVirtualization',
 				'ServiceVirtualization',
@@ -34,11 +34,11 @@ export function getDefaultHiddenEdgeTypes(
 				'HubAndSpoke',
 				'PhysicalLink'
 			];
-		case 'l2_physical':
+		case 'L2Physical':
 			return ['HostVirtualization', 'ServiceVirtualization', 'RequestPath', 'HubAndSpoke'];
-		case 'infrastructure':
+		case 'Infrastructure':
 			return ['RequestPath', 'HubAndSpoke', 'PhysicalLink'];
-		case 'application':
+		case 'Application':
 			return ['HostVirtualization', 'ServiceVirtualization', 'HubAndSpoke', 'PhysicalLink'];
 	}
 }

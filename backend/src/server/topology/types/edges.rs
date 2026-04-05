@@ -50,7 +50,6 @@ pub enum EdgeClassification {
     EnumIter,
     IntoStaticStr,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum TopologyPerspective {
     L2Physical,
     #[default]
@@ -102,6 +101,12 @@ impl TypeMetadataProvider for TopologyPerspective {
             Self::Infrastructure => "Infrastructure and virtualization topology",
             Self::Application => "Application and service dependency topology",
         }
+    }
+
+    fn metadata(&self) -> serde_json::Value {
+        serde_json::json!({
+            "inspector_config": self.inspector_config()
+        })
     }
 }
 
@@ -565,7 +570,7 @@ mod tests {
     #[test]
     fn topology_perspective_serde_round_trip() {
         let json = serde_json::to_value(TopologyPerspective::L2Physical).unwrap();
-        assert_eq!(json, "l2_physical");
+        assert_eq!(json, "L2Physical");
         let deserialized: TopologyPerspective = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized, TopologyPerspective::L2Physical);
     }

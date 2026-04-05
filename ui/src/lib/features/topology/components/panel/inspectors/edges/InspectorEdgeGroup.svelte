@@ -32,7 +32,7 @@
 		groupId,
 		sourceBindingId,
 		targetBindingId,
-		perspective = 'l3_logical'
+		perspective = 'L3Logical'
 	}: {
 		groupId: string;
 		sourceBindingId: string;

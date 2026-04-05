@@ -39,6 +39,13 @@
 		)
 	);
 
+	// App group tag IDs for checking if a host already has one
+	let appGroupTagIds = $derived(new Set(appGroupTags.map((t) => t.id)));
+
+	function hasAppGroupTag(entity: { tags: string[] }): boolean {
+		return entity.tags.some((tagId) => appGroupTagIds.has(tagId));
+	}
+
 	// Selection state
 	let selectedHosts: Host[] = $state([]);
 
@@ -57,14 +64,16 @@
 		const hostServices = allServices.filter((s) => s.host_id === host.id);
 		return {
 			showEntityTagPicker: true,
+			tagPickerDisabled: hasAppGroupTag(host),
 			entityTags: appGroupTags,
 			services: hostServices
 		};
 	}
 
-	function getServiceContext(): ServiceDisplayContext {
+	function getServiceContext(service: { tags: string[] }): ServiceDisplayContext {
 		return {
 			showEntityTagPicker: true,
+			tagPickerDisabled: hasAppGroupTag(service),
 			entityTags: appGroupTags
 		};
 	}
@@ -127,7 +136,7 @@
 									<div class="pl-6">
 										<ListSelectItem
 											item={service}
-											context={getServiceContext()}
+											context={getServiceContext(service)}
 											displayComponent={ServiceDisplay}
 										/>
 									</div>

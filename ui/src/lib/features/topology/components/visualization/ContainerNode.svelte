@@ -346,12 +346,12 @@
 			</div>
 		{:else}
 			<!-- Collapsed root container: summary with subcontainer info -->
+			{@const subgroupTotal = subgroupSummaries.reduce((sum, s) => sum + s.childCount, 0)}
+			{@const ungroupedCount = childCount - subgroupTotal}
 			<div
 				class="rounded-xl border border-dashed border-gray-400 text-center text-sm font-semibold shadow-lg dark:border-gray-500"
 				style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: visible; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
 			>
-				{@const subgroupTotal = subgroupSummaries.reduce((sum, s) => sum + s.childCount, 0)}
-				{@const ungroupedCount = childCount - subgroupTotal}
 				<div class="flex min-w-48 flex-col items-center gap-2 px-6 py-4">
 					<span class="text-secondary text-base font-medium underline">
 						{topology_elementCount({ count: childCount, label: elementLabel })}

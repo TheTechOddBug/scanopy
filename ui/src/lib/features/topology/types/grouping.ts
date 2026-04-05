@@ -6,6 +6,13 @@ export type ElementRule = components['schemas']['GraphRule_ElementRule']['rule']
 export type ContainerGraphRule = components['schemas']['GraphRule_ContainerRule'];
 export type ElementGraphRule = components['schemas']['GraphRule_ElementRule'];
 
+export type ContainerRuleType = 'BySubnet' | 'ByVirtualizingService' | 'ByApplicationGroup';
+
+export function getContainerRuleDiscriminant(rule: ContainerRule): ContainerRuleType {
+	if (typeof rule === 'string') return rule;
+	return Object.keys(rule)[0] as ContainerRuleType;
+}
+
 export type ElementRuleType = 'ByServiceCategory' | 'ByTag';
 
 export function getElementRuleType(rule: ElementRule): ElementRuleType {

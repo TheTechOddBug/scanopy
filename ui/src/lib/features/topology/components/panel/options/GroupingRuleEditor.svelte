@@ -4,17 +4,25 @@
 	import { SimpleOptionDisplay } from '$lib/shared/components/forms/selection/display/SimpleOptionDisplay';
 	import FilterGroup from './FilterGroup.svelte';
 	import GroupingRuleItem from './GroupingRuleItem.svelte';
-	import type { ContainerGraphRule, ElementGraphRule, ElementRule } from '../../../types/grouping';
-	import { setElementRuleTitle, makeGraphRule } from '../../../types/grouping';
+	import type {
+		ContainerGraphRule,
+		ElementGraphRule,
+		ElementRule,
+		ContainerRule
+	} from '../../../types/grouping';
+	import {
+		setElementRuleTitle,
+		makeGraphRule,
+		getContainerRuleDiscriminant
+	} from '../../../types/grouping';
 	import { topologyOptions, updateTopologyOptions, activePerspective } from '../../../queries';
-	import type { TopologyPerspective } from '../../../queries';
 	import { getTopologyEditState } from '../../../state';
 	import { useTopologiesQuery, selectedTopologyId, autoRebuild } from '../../../queries';
 	import { serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { components } from '$lib/api/schema';
 	type ServiceCategory = components['schemas']['ServiceCategory'];
 	import { useTagsQuery } from '$lib/features/tags/queries';
-	import type { Color } from '$lib/shared/utils/styling';
+	import { COLOR_MAP, type Color } from '$lib/shared/utils/styling';
 	interface RuleTypeMetadata {
 		id: string;
 		name: string | null;
@@ -22,20 +30,21 @@
 		category: string | null;
 		icon: string | null;
 		color: string | null;
-		metadata: { is_user_editable: boolean } | null;
+		metadata: { is_user_editable: boolean; perspectives?: string[] } | null;
 	}
 	import _containerRuleTypes from '$lib/data/container-rule-types.json';
 	import _elementRuleTypes from '$lib/data/element-rule-types.json';
 	const typedContainerRuleTypes = _containerRuleTypes as RuleTypeMetadata[];
 	const typedElementRuleTypes = _elementRuleTypes as RuleTypeMetadata[];
 	import {
-		topology_containerGrouping,
+		topology_containerGroupingPerspective,
 		topology_elementGrouping,
 		topology_addContainerRule,
 		topology_addElementRule,
 		topology_elementGroupingHelp,
 		topology_groupRuleTitlePlaceholder
 	} from '$lib/paraglide/messages';
+	import perspectivesJson from '$lib/data/perspectives.json';
 
 	// Topology for edit state
 	const topologiesQuery = useTopologiesQuery();
@@ -100,7 +109,11 @@
 
 	let containerAddOptions = $derived.by(() => {
 		return filteredContainerRuleTypes
-			.filter((m) => m.metadata?.is_user_editable && !containerRules.some((r) => r.rule === m.id))
+			.filter(
+				(m) =>
+					m.metadata?.is_user_editable &&
+					!containerRules.some((r) => getContainerRuleDiscriminant(r.rule) === m.id)
+			)
 			.map((m) => ({
 				value: m.id,
 				label: m.name ?? m.id
@@ -109,31 +122,25 @@
 
 	const containerRuleDisplayComponent = {
 		getId: (item: ContainerGraphRule) => item.id,
-		getLabel: (item: ContainerGraphRule) => containerRuleMeta[item.rule]?.name ?? item.rule
-	};
-
-	const CONTAINER_RULE_PERSPECTIVES: Record<string, TopologyPerspective[]> = {
-		BySubnet: ['L3Logical'],
-		ByVirtualizingService: ['L3Logical', 'Infrastructure']
-	};
-
-	const ELEMENT_RULE_PERSPECTIVES: Record<string, TopologyPerspective[]> = {
-		ByServiceCategory: ['L3Logical', 'Application'],
-		ByTag: ['L2Physical', 'L3Logical', 'Infrastructure', 'Application']
+		getLabel: (item: ContainerGraphRule) =>
+			containerRuleMeta[getContainerRuleDiscriminant(item.rule)]?.name ??
+			getContainerRuleDiscriminant(item.rule)
 	};
 
 	let currentPerspective = $derived($activePerspective);
 
+	let perspectiveMeta = $derived(perspectivesJson.find((p) => p.id === currentPerspective));
+
 	let filteredContainerRuleTypes = $derived(
 		typedContainerRuleTypes.filter((m) => {
-			const perspectives = CONTAINER_RULE_PERSPECTIVES[m.id];
+			const perspectives = m.metadata?.perspectives;
 			return !perspectives || perspectives.includes(currentPerspective);
 		})
 	);
 
 	let filteredElementRuleTypes = $derived(
 		typedElementRuleTypes.filter((m) => {
-			const perspectives = ELEMENT_RULE_PERSPECTIVES[m.id];
+			const perspectives = m.metadata?.perspectives;
 			return !perspectives || perspectives.includes(currentPerspective);
 		})
 	);
@@ -146,10 +153,13 @@
 	}
 
 	function handleContainerAdd(optionId: string) {
-		updateContainerRules([
-			...containerRules,
-			makeGraphRule(optionId as ContainerGraphRule['rule'])
-		]);
+		let rule: ContainerRule;
+		if (optionId === 'ByApplicationGroup') {
+			rule = { ByApplicationGroup: { tag_ids: [] } };
+		} else {
+			rule = optionId as 'BySubnet' | 'ByVirtualizingService';
+		}
+		updateContainerRules([...containerRules, makeGraphRule(rule)]);
 	}
 
 	function handleContainerRemove(index: number) {
@@ -171,7 +181,9 @@
 	}
 
 	function isContainerRuleEditable(rule: ContainerGraphRule): boolean {
-		return containerRuleMeta[rule.rule]?.metadata?.is_user_editable ?? true;
+		return (
+			containerRuleMeta[getContainerRuleDiscriminant(rule.rule)]?.metadata?.is_user_editable ?? true
+		);
 	}
 
 	// --- Element Rules ---
@@ -335,9 +347,14 @@
 </script>
 
 <!-- Container grouping section -->
-<div class="mb-4">
+<div
+	class="mb-4 border-l-2 pl-2"
+	style="border-left-color: {perspectiveMeta?.color
+		? COLOR_MAP[perspectiveMeta.color as Color]?.rgb
+		: 'transparent'}"
+>
 	<ListManager
-		label={topology_containerGrouping()}
+		label={topology_containerGroupingPerspective({ perspective: perspectiveMeta?.name ?? '' })}
 		placeholder={topology_addContainerRule()}
 		items={containerRules}
 		options={containerAddOptions}
@@ -355,7 +372,8 @@
 	>
 		{#snippet itemSnippet({ item })}
 			<GroupingRuleItem
-				label={containerRuleMeta[item.rule]?.name ?? item.rule}
+				label={containerRuleMeta[getContainerRuleDiscriminant(item.rule)]?.name ??
+					getContainerRuleDiscriminant(item.rule)}
 				locked={!isContainerRuleEditable(item)}
 			/>
 		{/snippet}

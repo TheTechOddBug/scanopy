@@ -11,6 +11,8 @@ import { apiClient } from '$lib/api/client';
 import type { Topology, TopologyOptions } from './types/base';
 import type { ContainerGraphRule, ElementGraphRule } from './types/grouping';
 import { makeGraphRule } from './types/grouping';
+import type { ContainerRule } from './types/grouping';
+import _containerRuleTypes from '$lib/data/container-rule-types.json';
 import type { Organization } from '$lib/features/organizations/types';
 import { uuidv4Sentinel, utcTimeZoneSentinel } from '$lib/shared/utils/formatting';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
@@ -40,11 +42,20 @@ export function sanitizeOptionsForApi(options: TopologyOptions): TopologyOptions
 	};
 }
 
-// Default options for new topologies
-export const defaultContainerRules: ContainerGraphRule[] = [
-	makeGraphRule('BySubnet' as const),
-	makeGraphRule('ByVirtualizingService' as const)
-];
+// Default container rules, derived from fixture metadata per perspective
+function getDefaultContainerRules(perspective: TopologyPerspective): ContainerGraphRule[] {
+	return _containerRuleTypes
+		.filter((r) => (r.metadata as { perspectives?: string[] })?.perspectives?.includes(perspective))
+		.map((r) => {
+			if (r.id === 'ByApplicationGroup') {
+				return makeGraphRule({ ByApplicationGroup: { tag_ids: [] } } as ContainerRule);
+			}
+			return makeGraphRule(r.id as ContainerRule);
+		});
+}
+
+// Legacy default for backward compatibility
+export const defaultContainerRules: ContainerGraphRule[] = getDefaultContainerRules('L3Logical');
 
 export const defaultElementRules: ElementGraphRule[] = [
 	makeGraphRule({
@@ -70,7 +81,7 @@ export function getDefaultTopologyOptions(perspective: TopologyPerspective): Top
 			hide_ports: false,
 			hide_vm_title_on_docker_container: false,
 			hide_service_categories: ['OpenPorts'],
-			container_rules: defaultContainerRules,
+			container_rules: getDefaultContainerRules(perspective),
 			element_rules: defaultElementRules,
 			perspective
 		}
@@ -738,7 +749,6 @@ if (browser) {
 	// Trigger a rebuild when the active perspective changes
 	activePerspective.subscribe((perspective) => {
 		if (perspectiveInitialized) {
-			if (!get(autoRebuild)) return;
 			const topologyId = get(selectedTopologyId);
 			if (!topologyId) return;
 

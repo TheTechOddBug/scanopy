@@ -4,7 +4,8 @@
 		updateTopologyOptions,
 		selectedTopologyId,
 		useTopologiesQuery,
-		autoRebuild
+		autoRebuild,
+		activePerspective
 	} from '../../../queries';
 	import { updateTagFilter, hoveredEdgeType, GENERIC_SENTINEL } from '../../../interactions';
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
@@ -189,7 +190,7 @@
 
 	// Update tag filter stores when topology or options change
 	$effect(() => {
-		updateTagFilter(topology, $topologyOptions.local.tag_filter);
+		updateTagFilter(topology, $topologyOptions.local.tag_filter, $activePerspective);
 	});
 
 	// Build categories with colors from services present in the topology

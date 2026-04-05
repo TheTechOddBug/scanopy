@@ -177,6 +177,7 @@
 		void $expandedBundles;
 		void $expandedPortNodeIds;
 		void $topologyOptions.local.bundle_edges;
+		void $topologyOptions.local.hide_edge_types;
 		void $tagHiddenServiceIds;
 		void loadTopologyData();
 	}

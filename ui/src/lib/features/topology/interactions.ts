@@ -103,7 +103,11 @@ interface TagFilter {
  * - Subnets with hidden tags -> Container nodes fade out
  * - UNTAGGED_SENTINEL in hidden arrays -> hide entities with no tags
  */
-export function updateTagFilter(topology: Topology | undefined, tagFilter: TagFilter | undefined) {
+export function updateTagFilter(
+	topology: Topology | undefined,
+	tagFilter: TagFilter | undefined,
+	perspective?: string
+) {
 	if (!topology) {
 		tagHiddenNodeIds.set(new Set());
 		tagHiddenServiceIds.set(new Set());
@@ -150,6 +154,10 @@ export function updateTagFilter(topology: Topology | undefined, tagFilter: TagFi
 				?.is_generic === true;
 		if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices) || isGeneric) {
 			hiddenServiceIds.add(service.id);
+			// In Application perspective, services ARE element nodes — hide the node too
+			if (perspective === 'Application') {
+				hiddenNodeIds.add(service.id);
+			}
 		}
 	}
 

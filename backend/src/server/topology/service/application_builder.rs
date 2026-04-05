@@ -240,32 +240,67 @@ impl PerspectiveBuilder for ApplicationBuilder {
             .flat_map(|s| s.base.bindings.iter().map(move |b| (b.id, s.id)))
             .collect();
 
+        // DIAGNOSTIC: log service_node_ids count
+        tracing::debug!(
+            node_count = service_node_ids.len(),
+            binding_map_count = binding_to_service.len(),
+            dep_count = ctx.dependencies.len(),
+            "ApplicationBuilder: edge creation context"
+        );
+
         // Create service-level flow edges from dependencies
         for dep in ctx.dependencies {
             // Resolve to ordered service IDs based on member type
+            let is_bindings = matches!(dep.base.members, DependencyMembers::Bindings { .. });
             let service_ids: Vec<Uuid> = match &dep.base.members {
                 DependencyMembers::Services { service_ids } => service_ids.clone(),
                 DependencyMembers::Bindings { binding_ids } => {
-                    // Backward compat: resolve binding_ids to deduplicated service IDs
                     let mut ids = Vec::new();
                     for binding_id in binding_ids {
                         if let Some(&service_id) = binding_to_service.get(binding_id)
                             && ids.last() != Some(&service_id)
                         {
                             ids.push(service_id);
+                        } else if !binding_to_service.contains_key(binding_id) {
+                            // DIAGNOSTIC
+                            tracing::warn!(
+                                dep_id = %dep.id, dep_name = %dep.base.name,
+                                binding_id = %binding_id,
+                                "Binding ID not found in any service's bindings"
+                            );
                         }
                     }
                     ids
                 }
             };
 
+            // DIAGNOSTIC
+            if is_bindings && service_ids.len() < 2 {
+                tracing::warn!(
+                    dep_id = %dep.id, dep_name = %dep.base.name,
+                    resolved = service_ids.len(),
+                    member_type = "Bindings",
+                    "Dependency resolved to < 2 services — no edges will be created"
+                );
+            }
+
             // Only create edges between services that have nodes
             match dep.base.dependency_type {
                 DependencyType::RequestPath => {
                     for window in service_ids.windows(2) {
                         let (source_id, target_id) = (window[0], window[1]);
-                        if service_node_ids.contains_key(&source_id)
-                            && service_node_ids.contains_key(&target_id)
+                        let source_has_node = service_node_ids.contains_key(&source_id);
+                        let target_has_node = service_node_ids.contains_key(&target_id);
+                        if !source_has_node || !target_has_node {
+                            // DIAGNOSTIC
+                            tracing::warn!(
+                                dep_id = %dep.id, dep_name = %dep.base.name,
+                                source_id = %source_id, source_has_node,
+                                target_id = %target_id, target_has_node,
+                                "RequestPath edge dropped — service missing from graph"
+                            );
+                        }
+                        if source_has_node && target_has_node
                         {
                             edges.push(Edge {
                                 id: Uuid::new_v4(),

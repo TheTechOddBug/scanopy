@@ -125,6 +125,12 @@ impl TypeMetadataProvider for TopologyPerspective {
                 Self::Infrastructure => "hosts",
                 Self::Application => "services",
             },
+            "element_label_singular": match self {
+                Self::L2Physical => "port",
+                Self::L3Logical => "host interface",
+                Self::Infrastructure => "host",
+                Self::Application => "service",
+            },
             "services_are_elements": matches!(self, Self::Application),
             "default_hide_generic_services": matches!(self, Self::Application),
             "tag_filter_categories": match self {

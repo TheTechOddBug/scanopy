@@ -141,7 +141,7 @@
 
 	let perspectiveMeta = $derived(perspectivesJson.find((p) => p.id === currentPerspective));
 	let elementGroupingLabel = $derived.by(() => {
-		const raw = (perspectiveMeta?.metadata as Record<string, unknown>)?.element_label as string ?? 'Element';
+		const raw = (perspectiveMeta?.metadata as Record<string, unknown>)?.element_label_singular as string ?? 'element';
 		return raw.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 	});
 

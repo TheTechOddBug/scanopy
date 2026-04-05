@@ -140,6 +140,10 @@
 	let currentPerspective = $derived($activePerspective);
 
 	let perspectiveMeta = $derived(perspectivesJson.find((p) => p.id === currentPerspective));
+	let elementGroupingLabel = $derived.by(() => {
+		const raw = (perspectiveMeta?.metadata as Record<string, unknown>)?.element_label as string ?? 'Element';
+		return raw.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+	});
 
 	let filteredContainerRuleTypes = $derived(
 		typedContainerRuleTypes.filter((m) => {
@@ -391,10 +395,8 @@
 </div>
 
 <!-- Element grouping section -->
-{@const elementLabel = (perspectiveMeta?.metadata as Record<string, unknown>)?.element_label as string ?? 'Element'}
-{@const capitalizedLabel = elementLabel.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
 <ListManager
-	label={topology_elementGrouping({ label: capitalizedLabel })}
+	label={topology_elementGrouping({ label: elementGroupingLabel })}
 	helpText={topology_elementGroupingHelp()}
 	placeholder={topology_addElementRule()}
 	items={elementRules}

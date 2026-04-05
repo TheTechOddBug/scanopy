@@ -228,6 +228,11 @@
 		return !$connectedNodeIds.has(nodeRenderData.interface_id);
 	});
 
+	// Service-type element nodes should be fully hidden (not faded) when filtered out
+	let shouldHideEntirely = $derived(
+		nodeRenderData?.elementType === 'Service' && hiddenServices.has(id)
+	);
+
 	let nodeOpacity = $derived(shouldFadeOut ? 0.3 : 1);
 
 	const hostColorHelper = entities.getColorHelper('Host');
@@ -298,7 +303,7 @@
 	});
 </script>
 
-{#if nodeRenderData}
+{#if nodeRenderData && !shouldHideEntirely}
 	<div
 		class={`${cardClass} ${isNewNode ? 'animate-pulse-highlight' : ''} ${serviceHoverShadowStyle ? 'animate-pulse-highlight-once' : ''}`}
 		style={`width: ${effectiveWidth}px; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out, box-shadow 0.15s ease-in-out; ${isNewNode ? `--pulse-color: ${discoveryColorHelper.rgb};` : ''} ${serviceHoverShadowStyle} ${tagHoverRingStyle}`}

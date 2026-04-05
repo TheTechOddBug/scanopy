@@ -79,7 +79,7 @@
 
 <div class="flex h-full flex-col">
 	<!-- Host list with ListManager -->
-	<div class="flex min-h-0 flex-1 flex-col px-1">
+	<div class="flex min-h-0 flex-1 flex-col px-2">
 		<ListManager
 			label=""
 			helpText={appWizard_assignDescription()}
@@ -141,7 +141,7 @@
 				<span class="text-secondary whitespace-nowrap text-sm font-medium">
 					{appWizard_selectedCount({ count: String(selectedHosts.length) })}
 				</span>
-				<span class="text-tertiary text-sm">{appWizard_bulkAssign()}</span>
+				<span class="text-tertiary whitespace-nowrap text-sm">{appWizard_bulkAssign()}</span>
 			</div>
 			<div class="flex flex-wrap gap-2">
 				{#each appGroupTags as tag (tag.id)}

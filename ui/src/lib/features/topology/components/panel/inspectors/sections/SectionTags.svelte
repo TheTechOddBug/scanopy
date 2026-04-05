@@ -89,7 +89,9 @@
 	$effect(() => {
 		if (!showAppGroupPicker) return;
 		const entityTags = topology?.entity_tags ?? [];
-		const entityAppGroupTags = entityTags.filter((t: { is_application_group: boolean }) => t.is_application_group);
+		const entityAppGroupTags = entityTags.filter(
+			(t: { is_application_group: boolean }) => t.is_application_group
+		);
 		console.debug('[SectionTags app-group debug]', {
 			showAppGroupPicker,
 			'allTags.length': allTags.length,
@@ -100,7 +102,7 @@
 			selectedTagIds,
 			selectedAppGroupTagIds,
 			hasAppGroupTag,
-			'appGroupAvailableTags': appGroupAvailableTags.map((t) => t.name),
+			appGroupAvailableTags: appGroupAvailableTags.map((t) => t.name),
 			'elementContext?.host?.tags': elementContext?.host?.tags,
 			entityType
 		});

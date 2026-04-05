@@ -12,7 +12,7 @@
 		useRebuildTopologyMutation,
 		activePerspective,
 		topologyOptions,
-		updateTopologyOptions
+		updateSharedElementRules
 	} from '../../../queries';
 	import type { TopologyNode } from '../../../types/base';
 	import { resolveElementNode, getNodeSelectionIds } from '../../../resolvers';
@@ -111,20 +111,28 @@
 				console.error(
 					'[selectionIds] getNodeSelectionIds threw for node',
 					node.id,
-					'| xyflow type:', node.type,
-					'| data.node_type:', data?.node_type,
-					'| data.element_type:', (data as Record<string, unknown>)?.element_type,
-					'| error:', error
+					'| xyflow type:',
+					node.type,
+					'| data.node_type:',
+					data?.node_type,
+					'| data.element_type:',
+					(data as Record<string, unknown>)?.element_type,
+					'| error:',
+					error
 				);
 			}
 		}
 		const result = { hostIds: [...hostSet], serviceIds: [...serviceSet] };
 		console.debug(
 			'[selectionIds]',
-			nodes.length, 'nodes →',
-			result.hostIds.length, 'hosts,',
-			result.serviceIds.length, 'services',
-			'| topology.services:', topology.services.length
+			nodes.length,
+			'nodes →',
+			result.hostIds.length,
+			'hosts,',
+			result.serviceIds.length,
+			'services',
+			'| topology.services:',
+			topology.services.length
 		);
 		return result;
 	});
@@ -218,7 +226,9 @@
 	// DIAGNOSTIC: log the entire app-group detection chain
 	$effect(() => {
 		const entityTags = topology?.entity_tags ?? [];
-		const entityAppGroupTags = entityTags.filter((t: { is_application_group: boolean }) => t.is_application_group);
+		const entityAppGroupTags = entityTags.filter(
+			(t: { is_application_group: boolean }) => t.is_application_group
+		);
 		console.debug('[app-group debug]', {
 			'allTags.length': allTags.length,
 			'allTags app-group': allTags.filter((t) => t.is_application_group).map((t) => t.name),
@@ -322,19 +332,13 @@
 	);
 
 	function createGroupingRuleFromTags(tagIds: string[]) {
-		updateTopologyOptions((current) => ({
+		updateSharedElementRules((current) => [
 			...current,
-			request: {
-				...current.request,
-				element_rules: [
-					...(current.request.element_rules ?? []),
-					{
-						id: crypto.randomUUID(),
-						rule: { ByTag: { tag_ids: tagIds, title: null } }
-					}
-				]
+			{
+				id: crypto.randomUUID(),
+				rule: { ByTag: { tag_ids: tagIds, title: null } }
 			}
-		}));
+		]);
 		recentlyAddedTagIds = [];
 		// Rebuild topology to apply the new grouping rule
 		if (topology) {

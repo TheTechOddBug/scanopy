@@ -120,7 +120,8 @@ function buildElkGraph(input: ElkLayoutInput): {
 						children: [],
 						layoutOptions: {
 							'elk.algorithm': 'box',
-							'elk.box.packingMode': 'SIMPLE',
+							'elk.box.packingMode': 'RECTANGULAR',
+							'elk.aspectRatio': '1.4',
 							'elk.padding': padding,
 							'elk.nodeSize.constraints': 'MINIMUM_SIZE',
 							'elk.spacing.nodeNode': '25',

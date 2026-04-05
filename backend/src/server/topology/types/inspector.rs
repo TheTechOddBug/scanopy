@@ -50,6 +50,7 @@ pub enum InspectorSection {
     SubnetDetail,
     ElementSummary,
     DependencySummary,
+    ApplicationGroup,
 }
 
 /// Perspective-specific inspector panel configuration.
@@ -86,6 +87,7 @@ impl TopologyPerspective {
                 element_sections: vec![
                     InspectorSection::Identity,
                     InspectorSection::Dependencies,
+                    InspectorSection::ApplicationGroup,
                 ],
                 container_sections: vec![
                     InspectorSection::Identity,

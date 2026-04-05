@@ -22,6 +22,7 @@ import SectionPortBindings from './sections/SectionPortBindings.svelte';
 import SectionSubnetDetail from './sections/SectionSubnetDetail.svelte';
 import SectionElementSummary from './sections/SectionElementSummary.svelte';
 import SectionDependencySummary from './sections/SectionDependencySummary.svelte';
+import SectionApplicationGroup from './sections/SectionApplicationGroup.svelte';
 
 export type InspectorSection =
 	| 'Identity'
@@ -34,7 +35,8 @@ export type InspectorSection =
 	| 'PortBindings'
 	| 'SubnetDetail'
 	| 'ElementSummary'
-	| 'DependencySummary';
+	| 'DependencySummary'
+	| 'ApplicationGroup';
 
 export interface PerspectiveInspectorConfig {
 	element_sections: InspectorSection[];
@@ -56,7 +58,8 @@ const SECTION_COMPONENTS: Record<InspectorSection, Component<any>> = {
 	PortBindings: SectionPortBindings,
 	SubnetDetail: SectionSubnetDetail,
 	ElementSummary: SectionElementSummary,
-	DependencySummary: SectionDependencySummary
+	DependencySummary: SectionDependencySummary,
+	ApplicationGroup: SectionApplicationGroup
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

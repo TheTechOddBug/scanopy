@@ -46,7 +46,8 @@
 		toggleEdgeHover,
 		getEdgeDisplayState,
 		expandedBundles,
-		collapseAllBundles
+		collapseAllBundles,
+		tagHiddenServiceIds
 	} from '../../interactions';
 	import { bundleEdges } from '../../layout/edge-bundling';
 	import { isOverlayEdge } from '../../layout/edge-classification';
@@ -176,6 +177,7 @@
 		void $expandedBundles;
 		void $expandedPortNodeIds;
 		void $topologyOptions.local.bundle_edges;
+		void $tagHiddenServiceIds;
 		void loadTopologyData();
 	}
 
@@ -224,12 +226,49 @@
 		try {
 			if (topology && (topology.edges || topology.nodes)) {
 				const collapsed = get(collapsedContainers);
-				const elementToContainer = buildElementToContainer(topology.nodes);
+				const hiddenServices = get(tagHiddenServiceIds);
+
+				// Filter out hidden service element nodes before layout
+				const layoutNodes =
+					hiddenServices.size > 0
+						? topology.nodes.filter(
+								(n) =>
+									!(
+										n.node_type === 'Element' &&
+										'element_type' in n &&
+										n.element_type === 'Service' &&
+										hiddenServices.has(n.id)
+									)
+							)
+						: topology.nodes;
+
+				const elementToContainer = buildElementToContainer(layoutNodes);
 				const hiddenEdgeTypes = $topologyOptions.local.hide_edge_types ?? [];
 
-				// Build/rebuild the layout graph when topology changes
-				if (!layoutGraph) {
-					layoutGraph = LayoutGraph.fromTopology(topology.nodes);
+				// Run ELK on structure/collapse changes, skip for edge-only re-renders
+				const opts = get(topologyOptions);
+				const sizeKey = `${(opts.request.hide_service_categories ?? []).join(',')}:${opts.request.hide_ports}`;
+				const currentPerspective = get(activePerspective);
+				const rootCollapsedPreview = new Set(
+					[...collapsed].filter((id) => !layoutGraph || !layoutGraph.isSubcontainer(id))
+				);
+				const structureKey =
+					currentPerspective +
+					':' +
+					getStructureKey(topology) +
+					':' +
+					Array.from(rootCollapsedPreview).sort().join(',') +
+					':' +
+					sizeKey +
+					':' +
+					hiddenEdgeTypes.join(',') +
+					':h' +
+					hiddenServices.size;
+				const isNewStructure = sessionStructureKey !== structureKey;
+
+				// Build/rebuild the layout graph when topology or hidden services change
+				if (!layoutGraph || isNewStructure) {
+					layoutGraph = LayoutGraph.fromTopology(layoutNodes);
 				}
 
 				// Sync collapse state from store → graph (handles cascade internally)
@@ -244,28 +283,12 @@
 				);
 
 				// Use the graph to determine visible nodes
-				const visibleNodes = layoutGraph.getVisibleNodes(topology.nodes);
+				const visibleNodes = layoutGraph.getVisibleNodes(layoutNodes);
 
 				// Only root container collapses affect graph structure (need full ELK)
 				const rootCollapsed = new Set(
 					[...collapsed].filter((id) => !layoutGraph!.isSubcontainer(id))
 				);
-
-				// Run ELK on structure/collapse changes, skip for edge-only re-renders
-				const opts = get(topologyOptions);
-				const sizeKey = `${(opts.request.hide_service_categories ?? []).join(',')}:${opts.request.hide_ports}`;
-				const currentPerspective = get(activePerspective);
-				const structureKey =
-					currentPerspective +
-					':' +
-					getStructureKey(topology) +
-					':' +
-					Array.from(rootCollapsed).sort().join(',') +
-					':' +
-					sizeKey +
-					':' +
-					hiddenEdgeTypes.join(',');
-				const isNewStructure = sessionStructureKey !== structureKey;
 
 				// Helper: build SvelteFlow node array from topology nodes
 				const buildFlowNodes = (useGraph: boolean): Node[] => {
@@ -408,7 +431,7 @@
 					sessionStructureKey = structureKey;
 
 					// Rebuild graph and apply ELK result
-					layoutGraph = LayoutGraph.fromTopology(topology.nodes);
+					layoutGraph = LayoutGraph.fromTopology(layoutNodes);
 					layoutGraph.syncCollapseState(collapsed);
 					// Restore expanded sizes for collapsed containers before applying ELK
 					// results — applyElkResult skips them since ELK only has collapsed dims.

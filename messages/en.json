@@ -1150,6 +1150,7 @@
 	"topology_filtersHelp": "Click items to toggle visibility. Selected items will be hidden from the visualization.",
 	"topology_flowNotFound": "Flow element not found",
 	"topology_focusNode": "Focus node",
+	"topology_showGenericServices": "Show generic services",
 	"topology_focusSelection": "Focus selection",
 	"topology_groupBy": "Group by",
 	"topology_groupRuleTitlePlaceholder": "Optional title",

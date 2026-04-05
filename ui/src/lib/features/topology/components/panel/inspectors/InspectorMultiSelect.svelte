@@ -164,16 +164,12 @@
 	const tagsQuery = useTagsQuery();
 	let allTags = $derived(tagsQuery.data ?? []);
 
-	// Get app-group tag IDs from the ByApplicationGroup container rule
-	let appGroupTagIds = $derived.by(() => {
-		const rules = $topologyOptions?.request?.container_rules ?? [];
-		for (const rule of rules) {
-			if (typeof rule.rule === 'object' && 'ByApplicationGroup' in rule.rule) {
-				return rule.rule.ByApplicationGroup.tag_ids ?? [];
-			}
-		}
-		return [];
-	});
+	// Get app-group tag IDs from entity_tags (is_application_group field on Tag)
+	let appGroupTagIds = $derived(
+		(topology?.entity_tags ?? [])
+			.filter((t: { is_application_group: boolean }) => t.is_application_group)
+			.map((t: { id: string }) => t.id)
+	);
 
 	let appGroupTagSet = $derived(new Set(appGroupTagIds));
 

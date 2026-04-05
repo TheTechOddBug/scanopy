@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
-	import { useTagsQuery } from '$lib/features/tags/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import type { TopologyEditState } from '$lib/features/topology/state';
 	import type {
@@ -64,17 +63,24 @@
 		$activePerspective === 'Application' && entityType === 'Service'
 	);
 
-	// App-group tags for the picker
-	const tagsQuery = useTagsQuery();
-	let allTags = $derived(tagsQuery.data ?? []);
-	let appGroupTags = $derived(allTags.filter((t) => t.is_application_group));
+	// App-group tags from topology entity_tags
+	let entityTags = $derived(topology?.entity_tags ?? []);
+	let appGroupTags = $derived(entityTags.filter((t) => t.is_application_group));
 	let appGroupTagIds = $derived(new Set(appGroupTags.map((t) => t.id)));
 
 	// Non-app-group tags for the regular picker (filter out app-group tags)
-	let nonAppGroupTags = $derived(allTags.filter((t) => !t.is_application_group));
+	let nonAppGroupTags = $derived(entityTags.filter((t) => !t.is_application_group));
 
-	// App-group selected tags (only app-group tag IDs from entity's tags)
-	let selectedAppGroupTagIds = $derived(selectedTagIds.filter((id) => appGroupTagIds.has(id)));
+	// App-group selected tags: check direct tags first, then host tags (inheritance)
+	let selectedAppGroupTagIds = $derived.by(() => {
+		const direct = selectedTagIds.filter((id) => appGroupTagIds.has(id));
+		if (direct.length > 0) return direct;
+		// Inherited from host
+		if (elementContext?.host) {
+			return elementContext.host.tags.filter((id) => appGroupTagIds.has(id));
+		}
+		return [];
+	});
 	let hasAppGroupTag = $derived(selectedAppGroupTagIds.length > 0);
 
 	// If already tagged, only show current tag (for removal). Otherwise show all app-group tags.

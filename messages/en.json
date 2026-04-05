@@ -1117,6 +1117,8 @@
 	"topology_exportTheme": "Export Theme",
 	"topology_filtersHelp": "Click items to toggle visibility. Selected items will be hidden from the visualization.",
 	"topology_flowNotFound": "Flow element not found",
+	"tags_applicationGroup": "Application Group",
+	"tags_applicationGroupHelp": "Application group tags are used to group services in the topology's Application perspective. Each host or service can have one application group tag. Services inherit their host's application group unless overridden.",
 	"topology_focusNode": "Focus node",
 	"topology_genericServices": "Generic Services",
 	"topology_focusSelection": "Focus selection",

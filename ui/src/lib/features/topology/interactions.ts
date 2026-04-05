@@ -139,7 +139,9 @@ export function updateTagFilter(topology: Topology | undefined, tagFilter: TagFi
 		}
 	}
 
-	// Service tags -> hide services from display (NOT fade the node)
+	// Service tags -> hide services from display
+	// hiddenServiceIds: hides services within Interface elements (L3 perspective)
+	// hiddenNodeIds: also add service IDs so Service-type element nodes get hidden (Application perspective)
 	for (const service of topology.services) {
 		const isUntagged = service.tags.length === 0;
 		const serviceHasHiddenTag = service.tags.some((t) => hiddenServiceTagIds.includes(t));
@@ -149,6 +151,7 @@ export function updateTagFilter(topology: Topology | undefined, tagFilter: TagFi
 				?.is_generic === true;
 		if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices) || isGeneric) {
 			hiddenServiceIds.add(service.id);
+			hiddenNodeIds.add(service.id);
 		}
 	}
 

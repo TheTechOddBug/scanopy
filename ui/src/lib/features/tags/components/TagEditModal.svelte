@@ -26,6 +26,8 @@
 		common_name,
 		common_saving,
 		common_update,
+		tags_applicationGroup,
+		tags_applicationGroupHelp,
 		tags_createTag,
 		tags_descriptionPlaceholder,
 		tags_tagNamePlaceholder
@@ -202,6 +204,26 @@
 										></button>
 									{/each}
 								</div>
+							</div>
+						{/snippet}
+					</form.Field>
+
+					<!-- Application Group -->
+					<form.Field name="is_application_group">
+						{#snippet children(field)}
+							<div class="space-y-1">
+								<label class="flex items-center gap-2">
+									<input
+										type="checkbox"
+										checked={field.state.value}
+										onchange={(e) => field.handleChange((e.target as HTMLInputElement).checked)}
+										class="h-4 w-4 rounded accent-purple-500"
+									/>
+									<span class="text-secondary text-sm font-medium">{tags_applicationGroup()}</span>
+								</label>
+								<p class="text-tertiary text-xs">
+									{tags_applicationGroupHelp()}
+								</p>
 							</div>
 						{/snippet}
 					</form.Field>

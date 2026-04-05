@@ -279,8 +279,7 @@ impl PerspectiveBuilder for ApplicationBuilder {
                                 "RequestPath edge dropped — service missing from graph"
                             );
                         }
-                        if source_has_node && target_has_node
-                        {
+                        if source_has_node && target_has_node {
                             edges.push(Edge {
                                 id: Uuid::new_v4(),
                                 source: source_id,

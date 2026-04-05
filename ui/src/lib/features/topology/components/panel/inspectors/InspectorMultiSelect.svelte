@@ -21,11 +21,7 @@
 	import { computeCommonTags } from '$lib/shared/utils/tags';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
-	import {
-		useTagsQuery,
-		useBulkAddTagMutation,
-		useBulkRemoveTagMutation
-	} from '$lib/features/tags/queries';
+	import { useBulkAddTagMutation, useBulkRemoveTagMutation } from '$lib/features/tags/queries';
 	import {
 		useCreateDependencyMutation,
 		createEmptyDependencyFormData
@@ -92,41 +88,16 @@
 	});
 
 	// Collect host and service IDs from all selected nodes via the resolver
-	// DIAGNOSTIC: try/catch + logging to debug Application perspective selection
 	let selectionIds = $derived.by(() => {
-		if (!topology) {
-			console.debug('[selectionIds] no topology');
-			return { hostIds: [] as string[], serviceIds: [] as string[] };
-		}
+		if (!topology) return { hostIds: [] as string[], serviceIds: [] as string[] };
 		const hostSet = new Set<string>();
 		const serviceSet = new Set<string>();
 		for (const node of nodes) {
-			try {
-				const data = node.data as TopologyNode;
-				const ids = getNodeSelectionIds(node.id, data, topology);
-				ids.hostIds.forEach((id) => hostSet.add(id));
-				ids.serviceIds.forEach((id) => serviceSet.add(id));
-			} catch (error) {
-				const data = node.data as TopologyNode;
-				console.error(
-					'[selectionIds] getNodeSelectionIds threw for node',
-					node.id,
-					'| xyflow type:', node.type,
-					'| data.node_type:', data?.node_type,
-					'| data.element_type:', (data as Record<string, unknown>)?.element_type,
-					'| error:', error
-				);
-			}
+			const ids = getNodeSelectionIds(node.id, node.data as TopologyNode, topology);
+			ids.hostIds.forEach((id) => hostSet.add(id));
+			ids.serviceIds.forEach((id) => serviceSet.add(id));
 		}
-		const result = { hostIds: [...hostSet], serviceIds: [...serviceSet] };
-		console.debug(
-			'[selectionIds]',
-			nodes.length, 'nodes →',
-			result.hostIds.length, 'hosts,',
-			result.serviceIds.length, 'services',
-			'| topology.services:', topology.services.length
-		);
-		return result;
+		return { hostIds: [...hostSet], serviceIds: [...serviceSet] };
 	});
 
 	let selectedHostIds = $derived(selectionIds.hostIds);
@@ -160,22 +131,18 @@
 		return topology_multiSelectStaleHint();
 	});
 
-	// App-group tag analysis
-	const tagsQuery = useTagsQuery();
-	let allTags = $derived(tagsQuery.data ?? []);
+	// App-group tag analysis — read from topology entity_tags
+	let topoEntityTags = $derived(topology?.entity_tags ?? []);
 
-	// Get app-group tag IDs from entity_tags (is_application_group field on Tag)
 	let appGroupTagIds = $derived(
-		(topology?.entity_tags ?? [])
-			.filter((t: { is_application_group: boolean }) => t.is_application_group)
-			.map((t: { id: string }) => t.id)
+		topoEntityTags.filter((t) => t.is_application_group).map((t) => t.id)
 	);
 
 	let appGroupTagSet = $derived(new Set(appGroupTagIds));
 
 	// Filtered tag lists for pickers
-	let nonAppGroupTags = $derived(allTags.filter((t) => !t.is_application_group));
-	let appGroupTags = $derived(allTags.filter((t) => t.is_application_group));
+	let nonAppGroupTags = $derived(topoEntityTags.filter((t) => !t.is_application_group));
+	let appGroupTags = $derived(topoEntityTags.filter((t) => t.is_application_group));
 
 	// Common app-group tags across selected entities (for app-group picker selectedTagIds)
 	let commonAppGroupTags = $derived(commonTags.filter((id) => appGroupTagSet.has(id)));
@@ -211,29 +178,6 @@
 		});
 	});
 
-	// DIAGNOSTIC: log the entire app-group detection chain
-	$effect(() => {
-		const entityTags = topology?.entity_tags ?? [];
-		const entityAppGroupTags = entityTags.filter((t: { is_application_group: boolean }) => t.is_application_group);
-		console.debug('[app-group debug]', {
-			'allTags.length': allTags.length,
-			'allTags app-group': allTags.filter((t) => t.is_application_group).map((t) => t.name),
-			'entity_tags.length': entityTags.length,
-			'entity_tags app-group': entityAppGroupTags.map((t: { name: string }) => t.name),
-			'$topologyOptions.request.container_rules': $topologyOptions?.request?.container_rules,
-			appGroupTagIds,
-			'appGroupTagSet.size': appGroupTagSet.size,
-			'selectedServices.length': selectedServices.length,
-			'selectedServices tags': selectedServices.map((s) => ({ name: s.name, tags: s.tags })),
-			'selectedHosts tags': selectedHosts.map((h) => ({ name: h.name, tags: h.tags })),
-			commonTags,
-			commonAppGroupTags,
-			serviceAppGroupInfos,
-			appGroupState,
-			'inspectorConfig.show_application_group_picker': inspectorConfig.show_application_group_picker
-		});
-	});
-
 	// Overall app-group selection state
 	let appGroupState = $derived.by(() => {
 		const infos = serviceAppGroupInfos;
@@ -259,7 +203,7 @@
 	// Get the tag object for the current app-group
 	let currentAppGroupTag = $derived.by(() => {
 		if (appGroupState.type !== 'single') return null;
-		return allTags.find((t) => t.id === appGroupState.tagId) ?? null;
+		return topoEntityTags.find((t) => t.id === appGroupState.tagId) ?? null;
 	});
 
 	// Tag handlers — mutation onSuccess handles cache updates optimistically
@@ -312,7 +256,8 @@
 	let recentlyAddedTags = $derived(
 		recentlyAddedTagIds
 			.map(
-				(id) => allTags.find((t) => t.id === id) ?? topology?.entity_tags?.find((t) => t.id === id)
+				(id) =>
+					topoEntityTags.find((t) => t.id === id) ?? topology?.entity_tags?.find((t) => t.id === id)
 			)
 			.filter(Boolean)
 	);
@@ -633,7 +578,7 @@
 			<div class="card card-static space-y-2 p-2">
 				<div class="flex items-center gap-1.5">
 					<TagPickerInline
-						selectedTagIds={commonTags}
+						selectedTagIds={commonTags.filter((id) => !appGroupTagSet.has(id))}
 						onAdd={handleAddTagWithTracking}
 						onRemove={handleRemoveTag}
 						availableTags={nonAppGroupTags}
@@ -662,23 +607,20 @@
 				<div class="card card-static space-y-2 p-2">
 					{#if appGroupState.type === 'cross-group'}
 						<p class="text-tertiary text-xs">{tags_crossGroupSelectionHint()}</p>
+					{:else if appGroupState.type === 'single' && appGroupState.allInherited && currentAppGroupTag}
+						<!-- Inherited: show static badge, no picker (can't remove inherited tag) -->
+						<div class="flex flex-wrap items-center gap-1">
+							<Tag
+								label={currentAppGroupTag.name}
+								color={currentAppGroupTag.color}
+								icon={concepts.getIconComponent('Application')}
+								isShiny={true}
+							/>
+							<span class="text-tertiary text-xs">{tags_inheritedFromHost()}</span>
+						</div>
+						<p class="text-tertiary text-xs">{tags_inheritedOverrideHint()}</p>
 					{:else}
-						{#if appGroupState.type === 'single' && currentAppGroupTag}
-							<div class="flex flex-wrap items-center gap-1">
-								<Tag
-									label={currentAppGroupTag.name}
-									color={currentAppGroupTag.color}
-									icon={concepts.getIconComponent('Application')}
-									isShiny={true}
-								/>
-								{#if appGroupState.allInherited}
-									<span class="text-tertiary text-xs">{tags_inheritedFromHost()}</span>
-								{/if}
-							</div>
-							{#if appGroupState.allInherited}
-								<p class="text-tertiary text-xs">{tags_inheritedOverrideHint()}</p>
-							{/if}
-						{/if}
+						<!-- Direct or ungrouped: show picker -->
 						<TagPickerInline
 							selectedTagIds={commonAppGroupTags}
 							onAdd={handleAddAppGroupTag}

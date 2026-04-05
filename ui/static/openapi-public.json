@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-05T05:50:42.924414Z",
-              "id": "e7a82cd9-a191-4648-9dd7-47d75d5bcacb",
+              "created_at": "2026-04-05T22:49:16.896694Z",
+              "id": "3a30af34-5f53-44b0-80c9-60ea51127393",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-05T05:50:42.924414Z"
+              "updated_at": "2026-04-05T22:49:16.896694Z"
             }
           },
           "error": {
@@ -10734,14 +10734,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-05T05:50:42.909312Z",
-                      "id": "addc9dcb-ed47-4398-bda7-1d210b5cbf56",
+                      "created_at": "2026-04-05T22:49:16.876954Z",
+                      "id": "9d8d0629-67a3-450f-9bc5-07fb4773a35b",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-05T05:50:42.909312Z"
+                      "updated_at": "2026-04-05T22:49:16.876954Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10750,7 +10750,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Denodo",
+                  "service_definition": "HP Printer",
                   "source": {
                     "type": "Manual"
                   },
@@ -11453,14 +11453,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-05T05:50:42.920069Z",
-                  "id": "299052cc-57a8-4189-9694-2701e33ef790",
+                  "created_at": "2026-04-05T22:49:16.891469Z",
+                  "id": "7626647f-43f6-45e9-b4ba-4f0a8044f8c5",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-05T05:50:42.920069Z"
+                  "updated_at": "2026-04-05T22:49:16.891469Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11469,7 +11469,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Denodo",
+              "service_definition": "HP Printer",
               "source": {
                 "type": "Manual"
               },
@@ -12744,14 +12744,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-05T05:50:42.909635Z",
-          "id": "2f532c04-b05a-4a4a-a155-4aa18f02d680",
+          "created_at": "2026-04-05T22:49:16.877356Z",
+          "id": "b9827e67-da16-4142-9ec9-1e9f81ac398e",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-05T05:50:42.909635Z"
+          "updated_at": "2026-04-05T22:49:16.877356Z"
         }
       },
       "BindingBase": {
@@ -13039,7 +13039,9 @@
           "ServiceCategory",
           "ApplicationGroup",
           "NestedTag",
-          "NestedServiceCategory"
+          "NestedServiceCategory",
+          "Virtualizer",
+          "BareMetal"
         ]
       },
       "CreateBindingInput": {
@@ -13268,7 +13270,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Denodo",
+              "service_definition": "HP Printer",
               "tags": [],
               "virtualization": null
             }
@@ -14778,6 +14780,7 @@
         "enum": [
           "primary",
           "overlay",
+          "overlay_hidden",
           "disabled"
         ]
       },
@@ -15002,6 +15005,20 @@
                 "type": "string",
                 "enum": [
                   "Service"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "element_type"
+            ],
+            "properties": {
+              "element_type": {
+                "type": "string",
+                "enum": [
+                  "Host"
                 ]
               }
             }
@@ -15376,6 +15393,12 @@
                     }
                   }
                 }
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "ByVirtualizer"
+                ]
               }
             ],
             "description": "Rules that organize nodes within a container into sub-groups."
@@ -15795,14 +15818,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-05T05:50:42.908880Z",
-                  "id": "c28f24fa-dd86-4700-8689-7ca438e4d9d1",
+                  "created_at": "2026-04-05T22:49:16.876411Z",
+                  "id": "06c29474-8948-4285-8fea-0617780c03ad",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-05T05:50:42.908880Z"
+                  "updated_at": "2026-04-05T22:49:16.876411Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15811,7 +15834,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Denodo",
+              "service_definition": "HP Printer",
               "source": {
                 "type": "Manual"
               },
@@ -17794,14 +17817,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-05T05:50:42.899998Z",
-                        "id": "dcb7fd82-79f4-4bb1-bd17-cda8776d00b4",
+                        "created_at": "2026-04-05T22:49:16.863840Z",
+                        "id": "f9de309a-6040-4149-bccb-b7ed217b4c74",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-05T05:50:42.899998Z"
+                        "updated_at": "2026-04-05T22:49:16.863840Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17810,7 +17833,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Denodo",
+                    "service_definition": "HP Printer",
                     "source": {
                       "type": "Manual"
                     },
@@ -17887,14 +17910,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-05T05:50:42.918989Z",
-                    "id": "a6ef6f3f-8b64-430e-b901-8951834a30ef",
+                    "created_at": "2026-04-05T22:49:16.889950Z",
+                    "id": "be1d46dd-eaf3-4e39-b693-6ecc44a941a0",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-05T05:50:42.918989Z"
+                    "updated_at": "2026-04-05T22:49:16.889950Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -17903,7 +17926,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Denodo",
+                "service_definition": "HP Printer",
                 "source": {
                   "type": "Manual"
                 },
@@ -19095,14 +19118,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-05T05:50:42.909529Z",
-              "id": "1155fb29-5930-4779-8c39-86c29bb53a98",
+              "created_at": "2026-04-05T22:49:16.877223Z",
+              "id": "883fe50d-f1eb-4b0e-8ed4-b683cd8393a7",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-05T05:50:42.909529Z"
+              "updated_at": "2026-04-05T22:49:16.877223Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19111,7 +19134,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Denodo",
+          "service_definition": "HP Printer",
           "source": {
             "type": "Manual"
           },

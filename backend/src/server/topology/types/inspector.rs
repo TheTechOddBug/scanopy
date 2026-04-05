@@ -100,7 +100,9 @@ impl TopologyPerspective {
             Self::Infrastructure => PerspectiveInspectorConfig {
                 element_sections: vec![
                     InspectorSection::Identity,
+                    InspectorSection::HostDetail,
                     InspectorSection::Services,
+                    InspectorSection::OtherInterfaces,
                     InspectorSection::Tags,
                 ],
                 container_sections: vec![

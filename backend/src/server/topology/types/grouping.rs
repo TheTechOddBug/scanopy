@@ -114,6 +114,7 @@ pub enum ElementRule {
         tag_ids: Vec<Uuid>,
         title: Option<String>,
     },
+    ByVirtualizer,
 }
 
 impl ElementRule {
@@ -129,6 +130,7 @@ impl ElementRule {
                 TopologyPerspective::Infrastructure,
                 TopologyPerspective::Application,
             ],
+            ElementRule::ByVirtualizer => &[TopologyPerspective::Infrastructure],
         }
     }
 }
@@ -144,6 +146,7 @@ impl EntityMetadataProvider for ElementRule {
         match self {
             ElementRule::ByServiceCategory { .. } => Color::Purple,
             ElementRule::ByTag { .. } => Color::Orange,
+            ElementRule::ByVirtualizer => Concept::Infrastructure.color(),
         }
     }
 
@@ -151,6 +154,7 @@ impl EntityMetadataProvider for ElementRule {
         match self {
             ElementRule::ByServiceCategory { .. } => Icon::Layers,
             ElementRule::ByTag { .. } => Icon::Tag,
+            ElementRule::ByVirtualizer => Concept::Infrastructure.icon(),
         }
     }
 }
@@ -160,6 +164,7 @@ impl TypeMetadataProvider for ElementRule {
         match self {
             ElementRule::ByServiceCategory { .. } => "Service category",
             ElementRule::ByTag { .. } => "Tag",
+            ElementRule::ByVirtualizer => "Virtualizer",
         }
     }
 
@@ -169,6 +174,7 @@ impl TypeMetadataProvider for ElementRule {
                 "Group nodes by service category within a container"
             }
             ElementRule::ByTag { .. } => "Group nodes by tag within a container",
+            ElementRule::ByVirtualizer => "Group hosts by their virtualizer",
         }
     }
 

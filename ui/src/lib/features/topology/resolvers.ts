@@ -65,6 +65,22 @@ const elementResolvers: Record<
 			subnetId: '',
 			isInfra: false
 		};
+	},
+	Host: (_nodeId, node, topology) => {
+		const hostId = 'host_id' in node ? (node.host_id as string) : undefined;
+		const host = topology.hosts.find((h) => h.id === hostId);
+		const services = topology.services.filter((s) => s.host_id === hostId);
+
+		return {
+			elementType: 'Host' as ElementEntityType,
+			host,
+			iface: undefined,
+			services,
+			hostId,
+			interfaceId: undefined,
+			subnetId: '',
+			isInfra: false
+		};
 	}
 };
 
@@ -80,8 +96,15 @@ function resolveContainer(
 	const containerType = 'container_type' in node ? (node.container_type as string) : 'Subnet';
 	const title = 'header' in node ? (node.header as string | null) : null;
 
-	// ServiceCategory containers don't have subnet entities
-	if (containerType === 'ServiceCategoryContainer') {
+	// Non-subnet containers don't have subnet entities
+	if (
+		containerType === 'ServiceCategory' ||
+		containerType === 'ApplicationGroup' ||
+		containerType === 'NestedTag' ||
+		containerType === 'NestedServiceCategory' ||
+		containerType === 'Virtualizer' ||
+		containerType === 'BareMetal'
+	) {
 		return { subnet: undefined, title, containerType };
 	}
 
@@ -109,6 +132,9 @@ export function getNodeSelectionIds(
 	const hostIds = resolved.hostId ? [resolved.hostId] : [];
 
 	if (resolved.elementType === 'Service') {
+		return { hostIds, serviceIds: resolved.services.map((s) => s.id) };
+	}
+	if (resolved.elementType === 'Host') {
 		return { hostIds, serviceIds: resolved.services.map((s) => s.id) };
 	}
 	// Interface node: services bound to this specific interface on this host
@@ -179,6 +205,8 @@ export function getContainerContents(containerId: string, allNodes: Node[]): Con
 		} else if (nd.element_type === 'Interface') {
 			const ifaceId = (nd as Record<string, unknown>).interface_id as string | undefined;
 			if (ifaceId) interfaceIds.add(ifaceId);
+		} else if (nd.element_type === 'Host') {
+			// Host elements: no additional IDs needed beyond hostId (already added above)
 		}
 	}
 

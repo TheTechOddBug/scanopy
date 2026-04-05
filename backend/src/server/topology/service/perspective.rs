@@ -1,5 +1,6 @@
 use super::{
-    application_builder::ApplicationBuilder, context::TopologyContext, l3_builder::L3Builder,
+    application_builder::ApplicationBuilder, context::TopologyContext,
+    infrastructure_builder::InfrastructureBuilder, l3_builder::L3Builder,
 };
 use crate::server::topology::types::{
     edges::{Edge, TopologyPerspective},
@@ -15,7 +16,8 @@ pub fn builder_for_perspective(perspective: TopologyPerspective) -> Box<dyn Pers
     match perspective {
         TopologyPerspective::L3Logical => Box::new(L3Builder),
         TopologyPerspective::Application => Box::new(ApplicationBuilder),
-        // Future perspectives will have their own builders
+        TopologyPerspective::Infrastructure => Box::new(InfrastructureBuilder),
+        // L2Physical will have its own builder; fall back to L3 for now
         _ => Box::new(L3Builder),
     }
 }

@@ -42,7 +42,7 @@
 		topology_filtersHelp,
 		topology_hideVmOnContainer,
 		topology_hideVmOnContainerHelp,
-		topology_genericServices,
+		common_generic,
 		topology_showGenericServices
 	} from '$lib/paraglide/messages';
 
@@ -434,7 +434,7 @@
 						label={common_byCategory()}
 					/>
 					<div class="space-y-1">
-						<div class="text-tertiary text-xs">{topology_genericServices()}</div>
+						<div class="text-tertiary text-xs">{common_generic()}</div>
 						<label class="flex items-center gap-2">
 							<input
 								type="checkbox"

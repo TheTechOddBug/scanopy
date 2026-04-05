@@ -1,10 +1,8 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 		"appWizard_assignDescription": "Assign hosts to application groups. Services inherit their host's group automatically.",
-	"appWizard_assignEntities": "Assign Hosts",
 	"appWizard_bulkAssign": "Assign to group:",
 	"appWizard_complete": "Complete Setup",
-	"appWizard_defineGroups": "Define Groups",
 	"appWizard_createYourOwn": "Create Your Own",
 	"appWizard_defineGroupsDescription": "Create application groups to visualize which services work together and how they depend on each other.",
 	"appWizard_inheritanceNote": "Services inherit their host's application group. Override individual services by tagging them directly.",

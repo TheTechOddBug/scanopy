@@ -114,6 +114,10 @@
 		if (isActive && $activePerspective === 'application' && appGroupTags.length === 0) {
 			wizardActive = true;
 		}
+		// Hide wizard when leaving Application perspective or topology tab
+		if (!isActive || $activePerspective !== 'application') {
+			wizardActive = false;
+		}
 	});
 
 	let showAppWizard = $derived(isActive && wizardActive);
@@ -420,11 +424,6 @@
 		}
 	}
 
-	function handleWizardClose() {
-		wizardActive = false;
-		activePerspective.set('L3Logical');
-	}
-
 	function handleWizardComplete() {
 		wizardActive = false;
 		const tagIds = appGroupTags.map((t) => t.id);
@@ -679,11 +678,7 @@
 						{isActive}
 					/>
 					{#if showAppWizard}
-						<ApplicationSetupWizard
-							{appGroupTags}
-							onComplete={handleWizardComplete}
-							onClose={handleWizardClose}
-						/>
+						<ApplicationSetupWizard {appGroupTags} onComplete={handleWizardComplete} />
 					{/if}
 				</div>
 			{:else}

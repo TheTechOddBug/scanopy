@@ -96,20 +96,13 @@ function resolveContainer(
 	const containerType = 'container_type' in node ? (node.container_type as string) : 'Subnet';
 	const title = 'header' in node ? (node.header as string | null) : null;
 
-	// Non-subnet containers don't have subnet entities
-	if (
-		containerType === 'ServiceCategory' ||
-		containerType === 'ApplicationGroup' ||
-		containerType === 'NestedTag' ||
-		containerType === 'NestedServiceCategory' ||
-		containerType === 'Virtualizer' ||
-		containerType === 'BareMetal'
-	) {
-		return { subnet: undefined, title, containerType };
+	// Only Subnet containers have a subnet entity to look up
+	if (containerType === 'Subnet') {
+		const subnet = topology.subnets.find((s) => s.id === nodeId);
+		return { subnet, title, containerType };
 	}
 
-	const subnet = topology.subnets.find((s) => s.id === nodeId);
-	return { subnet, title, containerType };
+	return { subnet: undefined, title, containerType };
 }
 
 // Selection context for multi-select operations

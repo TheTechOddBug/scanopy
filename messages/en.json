@@ -572,7 +572,7 @@
 	"dependencies_servicesOnly": "Services only",
 	"dependencies_servicesOnlyHelp": "Services only.",
 	"dependencies_servicesHelp": "Select and order the services in this dependency",
-	"dependencies_servicesInfoBody": "Select the services involved and arrange them in order. Use \"With ports\" to specify exact port bindings for each service.",
+	"dependencies_servicesInfoBody": "Select the services involved and arrange them in order. Use \"With ports\" if you want the topology to show which specific ports traffic flows through.",
 	"dependencies_servicesInfoTitle": "Add services to this dependency",
 	"dependencies_selectBindingRequired": "Select a binding for each service",
 	"dependencies_simpleBezier": "Simple Bezier",

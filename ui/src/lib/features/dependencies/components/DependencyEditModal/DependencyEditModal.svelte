@@ -560,7 +560,7 @@
 									{@const serviceBindings = getBindingsForService(service)}
 									{@const selectedBindingId = bindingSelections.get(service.id) ?? null}
 									{@const showError = bindingsSubmitted && !selectedBindingId}
-									<div class="mt-2 border-t border-gray-200 pt-2 dark:border-gray-700">
+									<div class="mt-2 w-full border-t border-gray-200 pt-2 dark:border-gray-700">
 										<RichSelect
 											options={serviceBindings}
 											selectedValue={selectedBindingId}

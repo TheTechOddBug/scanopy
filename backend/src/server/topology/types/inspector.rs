@@ -69,11 +69,10 @@ impl TopologyPerspective {
             Self::L3Logical => PerspectiveInspectorConfig {
                 element_sections: vec![
                     InspectorSection::Identity,
+                    InspectorSection::HostDetail,
                     InspectorSection::IfEntryData,
                     InspectorSection::Services,
-                    InspectorSection::HostDetail,
                     InspectorSection::OtherInterfaces,
-                    InspectorSection::Tags,
                 ],
                 container_sections: vec![
                     InspectorSection::SubnetDetail,

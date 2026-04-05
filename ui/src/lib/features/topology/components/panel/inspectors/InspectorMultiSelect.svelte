@@ -9,6 +9,7 @@
 		autoRebuild,
 		selectedTopologyId,
 		useTopologiesQuery,
+		useRebuildTopologyMutation,
 		activePerspective,
 		topologyOptions,
 		updateTopologyOptions
@@ -82,6 +83,7 @@
 	const bulkAddTagMutation = useBulkAddTagMutation();
 	const bulkRemoveTagMutation = useBulkRemoveTagMutation();
 	const createDependencyMutation = useCreateDependencyMutation();
+	const rebuildTopologyMutation = useRebuildTopologyMutation();
 
 	// Subscribe to selectedNodes
 	let nodes = $state<Node[]>(get(selectedNodes));
@@ -334,6 +336,10 @@
 			}
 		}));
 		recentlyAddedTagIds = [];
+		// Rebuild topology to apply the new grouping rule
+		if (topology) {
+			rebuildTopologyMutation.mutate(topology);
+		}
 	}
 
 	// Dependency creation state — always visible, no expand/collapse

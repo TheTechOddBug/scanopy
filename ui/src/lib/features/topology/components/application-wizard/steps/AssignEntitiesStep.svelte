@@ -79,7 +79,7 @@
 
 <div class="flex h-full flex-col">
 	<!-- Host list with ListManager -->
-	<div class="min-h-0 flex-1 overflow-y-auto px-1">
+	<div class="min-h-0 flex-1 px-1">
 		<ListManager
 			label=""
 			helpText={appWizard_assignDescription()}

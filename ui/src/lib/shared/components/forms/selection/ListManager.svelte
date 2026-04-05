@@ -239,8 +239,8 @@
 	}
 </script>
 
-<div>
-	<div class="mb-2 flex items-start justify-between gap-4">
+<div class="flex min-h-0 flex-1 flex-col">
+	<div class="mb-2 flex flex-shrink-0 items-start justify-between gap-4">
 		<div class="min-w-0 flex-1">
 			<div class="text-secondary block text-sm font-medium">
 				{label}
@@ -332,7 +332,7 @@
 
 	<!-- Current Items -->
 	{#if items.length > 0}
-		<div class="mb-3 space-y-2">
+		<div class="mb-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
 			{#each items as item, index (itemDisplayComponent.getId(item))}
 				{@const isHighlighted = highlightedIndex === index}
 

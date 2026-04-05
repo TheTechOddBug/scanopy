@@ -37,7 +37,7 @@
 	// Derive the section label from entity/container type metadata
 	let sectionLabel = $derived.by(() => {
 		if (elementContext) {
-			const name = entities.getName(elementContext.elementType);
+			const name = entities.getItem(elementContext.elementType)?.name ?? elementContext.elementType;
 			return inspector_thisEntity({ name });
 		}
 		if (containerContext) {

@@ -265,6 +265,7 @@ impl<'a> DockerScanner<'a> {
                         .map(|n| n.trim_start_matches("/").to_string()),
                     container_id: container.id.clone(),
                     service_id: **docker_service_id,
+                    compose_project: Self::extract_compose_project(container),
                 })),
                 client_responses: &empty_client_responses,
             };
@@ -395,6 +396,7 @@ impl<'a> DockerScanner<'a> {
                                     .map(|n| n.trim_start_matches("/").to_string()),
                                 container_id: container.id.clone(),
                                 service_id: **docker_service_id,
+                                compose_project: Self::extract_compose_project(container),
                             },
                         )),
                         client_responses: &empty_client_responses,
@@ -918,6 +920,14 @@ impl<'a> DockerScanner<'a> {
         }
 
         Ok(endpoint_responses)
+    }
+
+    fn extract_compose_project(container: &ContainerInspectResponse) -> Option<String> {
+        container
+            .config
+            .as_ref()
+            .and_then(|c| c.labels.as_ref())
+            .and_then(|l| l.get("com.docker.compose.project").cloned())
     }
 
     /// Parse HTTP response to extract status code and body

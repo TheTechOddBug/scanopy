@@ -518,6 +518,7 @@ mod tests {
             container_name: Some(container_name.to_string()),
             container_id: Some(Uuid::new_v4().to_string()),
             service_id: Uuid::new_v4(),
+            compose_project: None,
         }))
     }
 
@@ -622,6 +623,7 @@ mod tests {
                 container_name: Some("my-container".to_string()),
                 container_id: Some(container_id.clone()),
                 service_id: Uuid::new_v4(),
+                compose_project: None,
             })),
             vec![],
             None,
@@ -634,6 +636,7 @@ mod tests {
                 container_name: Some("my-container".to_string()),
                 container_id: Some(container_id),
                 service_id: Uuid::new_v4(),
+                compose_project: None,
             })),
             vec![],
             None,

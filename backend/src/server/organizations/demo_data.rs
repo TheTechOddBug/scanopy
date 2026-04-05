@@ -798,6 +798,7 @@ fn create_container_service(
                     container_name: Some(container_name.to_string()),
                     container_id: Some(container_id.to_string()),
                     service_id: docker_daemon_svc_id,
+                    compose_project: Some("media-stack".to_string()),
                 })),
                 source: EntitySource::Manual,
                 tags,

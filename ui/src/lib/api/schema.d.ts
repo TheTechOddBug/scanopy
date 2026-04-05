@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-05T05:50:42.924413Z",
-             *       "id": "a2343f59-9b45-4215-b2f8-755f36ef9034",
+             *       "created_at": "2026-04-05T22:40:36.806613Z",
+             *       "id": "ac5c854c-d744-4ffc-8196-23f2e4e07fcb",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-05T05:50:42.924413Z"
+             *       "updated_at": "2026-04-05T22:40:36.806613Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3156,14 +3156,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-05T05:50:42.909304Z",
-             *               "id": "55c15438-21cc-40df-8d21-efaa28ec315d",
+             *               "created_at": "2026-04-05T22:40:36.786952Z",
+             *               "id": "6ef18121-d9eb-42af-99e0-2dcbc88296f1",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-05T05:50:42.909304Z"
+             *               "updated_at": "2026-04-05T22:40:36.786952Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3172,7 +3172,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Denodo",
+             *           "service_definition": "Amazon Echo",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3428,14 +3428,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-05T05:50:42.920059Z",
-             *           "id": "05ae3f65-117d-4eb3-a2ce-243b956b6f52",
+             *           "created_at": "2026-04-05T22:40:36.801301Z",
+             *           "id": "6688f0d5-c0a3-47e9-9a00-ebc70ba2bdaf",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-05T05:50:42.920059Z"
+             *           "updated_at": "2026-04-05T22:40:36.801301Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3444,7 +3444,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Denodo",
+             *       "service_definition": "Amazon Echo",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3772,14 +3772,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-05T05:50:42.909622Z",
-         *       "id": "8ddc52af-eef6-4cdd-9411-7596e212b06a",
+         *       "created_at": "2026-04-05T22:40:36.787357Z",
+         *       "id": "c6b2f5cf-43a1-4e59-96eb-72b3cfde9c02",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-05T05:50:42.909622Z"
+         *       "updated_at": "2026-04-05T22:40:36.787357Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3964,7 +3964,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Denodo",
+         *           "service_definition": "Amazon Echo",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4483,6 +4483,7 @@ export interface components {
             service_id: string;
         };
         DockerVirtualization: {
+            compose_project?: string | null;
             container_id?: string | null;
             container_name?: string | null;
             /** Format: uuid */
@@ -4505,7 +4506,7 @@ export interface components {
          * @description Whether an edge affects layout (primary) or is drawn after layout (overlay)
          * @enum {string}
          */
-        EdgeClassification: "primary" | "overlay" | "disabled";
+        EdgeClassification: "primary" | "overlay" | "overlay_hidden" | "disabled";
         /** @enum {string} */
         EdgeHandle: "Top" | "Bottom" | "Left" | "Right";
         /** @enum {string} */
@@ -4803,14 +4804,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-05T05:50:42.908874Z",
-         *               "id": "704dbec4-3a57-479f-a9e4-06e8aa8bf980",
+         *               "created_at": "2026-04-05T22:40:36.786422Z",
+         *               "id": "a7478375-b69c-4113-a759-9b513e440f4e",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-05T05:50:42.908874Z"
+         *               "updated_at": "2026-04-05T22:40:36.786422Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4819,7 +4820,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Denodo",
+         *           "service_definition": "Amazon Echo",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5883,14 +5884,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-05T05:50:42.909518Z",
-         *           "id": "f4e3f151-afda-41af-9090-134365741613",
+         *           "created_at": "2026-04-05T22:40:36.787218Z",
+         *           "id": "a61e255f-45b3-4d0f-b10d-1902f8e24278",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-05T05:50:42.909518Z"
+         *           "updated_at": "2026-04-05T22:40:36.787218Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5899,7 +5900,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Denodo",
+         *       "service_definition": "Amazon Echo",
          *       "source": {
          *         "type": "Manual"
          *       },

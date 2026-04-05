@@ -39,6 +39,13 @@
 		)
 	);
 
+	// App group tag IDs for checking if a host already has one
+	let appGroupTagIds = $derived(new Set(appGroupTags.map((t) => t.id)));
+
+	function hasAppGroupTag(entity: { tags: string[] }): boolean {
+		return entity.tags.some((tagId) => appGroupTagIds.has(tagId));
+	}
+
 	// Selection state
 	let selectedHosts: Host[] = $state([]);
 
@@ -57,14 +64,16 @@
 		const hostServices = allServices.filter((s) => s.host_id === host.id);
 		return {
 			showEntityTagPicker: true,
+			tagPickerDisabled: hasAppGroupTag(host),
 			entityTags: appGroupTags,
 			services: hostServices
 		};
 	}
 
-	function getServiceContext(): ServiceDisplayContext {
+	function getServiceContext(service: { tags: string[] }): ServiceDisplayContext {
 		return {
 			showEntityTagPicker: true,
+			tagPickerDisabled: hasAppGroupTag(service),
 			entityTags: appGroupTags
 		};
 	}
@@ -127,7 +136,7 @@
 									<div class="pl-6">
 										<ListSelectItem
 											item={service}
-											context={getServiceContext()}
+											context={getServiceContext(service)}
 											displayComponent={ServiceDisplay}
 										/>
 									</div>
@@ -142,31 +151,27 @@
 
 	<!-- Bulk assign bar -->
 	{#if selectedHosts.length > 0}
-		<div class="card card-static flex items-center gap-3 border-t px-4 py-3 shadow-lg">
-			<div class="flex flex-col">
-				<span class="text-secondary whitespace-nowrap text-sm font-medium">
-					{appWizard_selectedCount({ count: String(selectedHosts.length) })}
-				</span>
-				<span class="text-tertiary whitespace-nowrap text-sm">{appWizard_bulkAssign()}</span>
-			</div>
-			<div class="flex flex-wrap gap-2">
-				{#each appGroupTags as tag (tag.id)}
-					<button
-						type="button"
-						class="cursor-pointer"
-						onclick={() => handleBulkAssign(tag.id)}
-						disabled={bulkAddTagMutation.isPending}
-					>
-						<TagBadge
-							label={tag.name}
-							color={tag.color}
-							icon={concepts.getIconComponent('Application')}
-							isShiny={true}
-							pill={true}
-						/>
-					</button>
-				{/each}
-			</div>
+		<div class="card card-static flex flex-wrap items-center gap-2 border-t px-4 py-3 shadow-lg">
+			<span class="text-secondary whitespace-nowrap text-sm font-medium">
+				{appWizard_selectedCount({ count: String(selectedHosts.length) })}
+			</span>
+			<span class="text-tertiary whitespace-nowrap text-sm">{appWizard_bulkAssign()}</span>
+			{#each appGroupTags as tag (tag.id)}
+				<button
+					type="button"
+					class="cursor-pointer"
+					onclick={() => handleBulkAssign(tag.id)}
+					disabled={bulkAddTagMutation.isPending}
+				>
+					<TagBadge
+						label={tag.name}
+						color={tag.color}
+						icon={concepts.getIconComponent('Application')}
+						isShiny={true}
+						pill={true}
+					/>
+				</button>
+			{/each}
 		</div>
 	{/if}
 </div>

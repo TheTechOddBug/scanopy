@@ -11,6 +11,7 @@
 		showEntityTagPicker?: boolean;
 		tagPickerDisabled?: boolean;
 		entityTags?: import('$lib/features/tags/types/base').Tag[];
+		allowTagCreate?: boolean;
 		showEditableEntityDescription?: boolean;
 		entityDescription?: string | null;
 		entityDescriptionDisabled?: boolean;
@@ -45,7 +46,8 @@
 				selectedTagIds: host.tags,
 				entityId: host.id,
 				entityType: 'Host' as const,
-				availableTags: context.entityTags
+				availableTags: context.entityTags,
+				allowCreate: context.allowTagCreate
 			};
 		}
 	};

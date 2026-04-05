@@ -8,6 +8,7 @@
 		showEntityTagPicker?: boolean;
 		tagPickerDisabled?: boolean;
 		entityTags?: import('$lib/features/tags/types/base').Tag[];
+		allowTagCreate?: boolean;
 	}
 
 	export const ServiceDisplay: EntityDisplayComponent<Service, ServiceDisplayContext> = {
@@ -81,7 +82,8 @@
 				selectedTagIds: service.tags,
 				entityId: service.id,
 				entityType: 'Service' as const,
-				availableTags: context.entityTags
+				availableTags: context.entityTags,
+				allowCreate: context.allowTagCreate
 			};
 		},
 		getCategory: () => null

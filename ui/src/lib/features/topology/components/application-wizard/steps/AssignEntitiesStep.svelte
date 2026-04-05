@@ -76,17 +76,21 @@
 
 	function getHostContext(host: Host): HostDisplayContext {
 		const hostServices = allServices.filter((s) => s.host_id === host.id);
+		const alreadyAssigned = hasAppGroupTag(host);
 		return {
 			showEntityTagPicker: true,
 			entityTags: getEntityTags(host),
+			allowTagCreate: !alreadyAssigned,
 			services: hostServices
 		};
 	}
 
 	function getServiceContext(service: { tags: string[] }): ServiceDisplayContext {
+		const alreadyAssigned = hasAppGroupTag(service);
 		return {
 			showEntityTagPicker: true,
-			entityTags: getEntityTags(service)
+			entityTags: getEntityTags(service),
+			allowTagCreate: !alreadyAssigned
 		};
 	}
 

@@ -95,7 +95,7 @@ impl TypeMetadataProvider for ContainerRule {
 
     fn metadata(&self) -> serde_json::Value {
         serde_json::json!({
-            "is_user_editable": matches!(self, ContainerRule::ByVirtualizingService | ContainerRule::ByApplicationGroup { .. }),
+            "is_user_editable": matches!(self, ContainerRule::ByVirtualizingService),
             "perspectives": self.applicable_perspectives(),
         })
     }

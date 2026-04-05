@@ -88,6 +88,40 @@ function resolveContainer(
 	return { subnet, title, containerType };
 }
 
+// Selection context for multi-select operations
+export interface NodeSelectionIds {
+	hostIds: string[];
+	serviceIds: string[];
+}
+
+/**
+ * Get the host and service IDs represented by an element node.
+ * Handles both Interface nodes (services bound to the interface) and
+ * Service nodes (the service itself) uniformly.
+ */
+export function getNodeSelectionIds(
+	nodeId: string,
+	node: TopologyNode,
+	topology: Topology
+): NodeSelectionIds {
+	const resolved = resolveElementNode(nodeId, node, topology);
+	const hostIds = resolved.hostId ? [resolved.hostId] : [];
+
+	if (resolved.elementType === 'Service') {
+		return { hostIds, serviceIds: resolved.services.map((s) => s.id) };
+	}
+	// Interface node: services bound to this specific interface on this host
+	const serviceIds = topology.services
+		.filter(
+			(s) =>
+				s.host_id &&
+				hostIds.includes(s.host_id) &&
+				s.bindings.some((b) => b.interface_id === resolved.interfaceId || b.interface_id === null)
+		)
+		.map((s) => s.id);
+	return { hostIds, serviceIds };
+}
+
 // Public API
 export function resolveElementNode(
 	nodeId: string,

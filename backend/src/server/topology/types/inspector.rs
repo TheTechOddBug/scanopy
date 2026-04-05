@@ -87,7 +87,6 @@ impl TopologyPerspective {
                 element_sections: vec![
                     InspectorSection::Identity,
                     InspectorSection::Dependencies,
-                    InspectorSection::PortBindings,
                     InspectorSection::Tags,
                 ],
                 container_sections: vec![

@@ -92,7 +92,7 @@
 	// Get dependency reactively - updates when dependencies store changes
 	let group = $derived.by(() => {
 		if (!topology?.dependencies || !edgeTypeMetadata || !edgeData) return null;
-		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
+		if ('group_id' in edgeData) {
 			return topology.dependencies.find((g) => g.id == edgeData.group_id) || null;
 		}
 		return null;

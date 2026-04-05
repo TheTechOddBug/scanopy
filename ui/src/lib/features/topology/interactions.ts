@@ -290,17 +290,16 @@ export function updateConnectedNodes(
 
 	// If multiple nodes are selected
 	if (multiSelectedNodes && multiSelectedNodes.length >= 2) {
+		const topologyEdges = topology?.edges ?? [];
 		for (const node of multiSelectedNodes) {
 			connected.add(node.id);
 			// Add direct neighbors of each selected node
-			for (const edge of allEdges) {
-				const edgeData = edge.data as TopologyEdge | undefined;
-				if (!edgeData) continue;
-				if (edgeData.source === node.id) {
-					connected.add(edgeData.target as string);
+			for (const edge of topologyEdges) {
+				if (edge.source === node.id) {
+					connected.add(edge.target);
 				}
-				if (edgeData.target === node.id) {
-					connected.add(edgeData.source as string);
+				if (edge.target === node.id) {
+					connected.add(edge.source);
 				}
 			}
 		}
@@ -319,68 +318,27 @@ export function updateConnectedNodes(
 			for (const id of contents.subcontainerIds) connected.add(id);
 		}
 
-		// DEBUG: trace edge matching
-		console.log('[highlight-debug] selectedNode.id:', selectedNode.id);
-		console.log('[highlight-debug] allEdges count:', allEdges.length);
-		console.log('[highlight-debug] hiddenEdgeTypes:', hiddenEdgeTypes);
+		// Use topology edges (stable source of truth) rather than xyflow edges
+		// store, which may be empty during re-layout triggered by collapseAllBundles.
+		const topologyEdges = topology?.edges ?? [];
 
-		for (const edge of allEdges) {
-			const edgeData = edge.data as TopologyEdge | undefined;
-			if (!edgeData) continue;
-
+		for (const edge of topologyEdges) {
 			// Skip edges that are disabled (perspective-level) or hidden (user toggle)
-			const classification = classifyEdge(edgeData);
-			if (classification === 'disabled') {
-				console.log(
-					'[highlight-debug] SKIP disabled edge:',
-					edgeData.edge_type,
-					edgeData.source,
-					'->',
-					edgeData.target
-				);
-				continue;
-			}
-			if (hiddenEdgeTypes?.includes(edgeData.edge_type)) {
-				console.log(
-					'[highlight-debug] SKIP hidden edge:',
-					edgeData.edge_type,
-					edgeData.source,
-					'->',
-					edgeData.target
-				);
-				continue;
-			}
-
-			const isBundle = (edgeData as Record<string, unknown>).isBundle;
-			console.log(
-				'[highlight-debug] edge:',
-				edgeData.edge_type,
-				'src:',
-				edgeData.source,
-				'tgt:',
-				edgeData.target,
-				'classification:',
-				classification,
-				'isBundle:',
-				isBundle
-			);
+			if (classifyEdge(edge) === 'disabled') continue;
+			if (hiddenEdgeTypes?.includes(edge.edge_type)) continue;
 
 			// Add directly connected nodes
-			if (edgeData.source === selectedNode.id) {
-				connected.add(edgeData.target as string);
+			if (edge.source === selectedNode.id) {
+				connected.add(edge.target);
 			}
-			if (edgeData.target === selectedNode.id) {
-				connected.add(edgeData.source as string);
+			if (edge.target === selectedNode.id) {
+				connected.add(edge.source);
 			}
 
 			// For visible virtualization edges, also add virtualized container nodes
-			if (edgeData.edge_type === 'ServiceVirtualization') {
-				if (edgeData.source === selectedNode.id || edgeData.target === selectedNode.id) {
-					const virtualizedNodes = getVirtualizedContainerNodes(
-						edgeData.source as string,
-						queryClient,
-						topology
-					);
+			if (edge.edge_type === 'ServiceVirtualization') {
+				if (edge.source === selectedNode.id || edge.target === selectedNode.id) {
+					const virtualizedNodes = getVirtualizedContainerNodes(edge.source, queryClient, topology);
 					virtualizedNodes.forEach((nodeId) => connected.add(nodeId));
 				}
 			}
@@ -404,7 +362,6 @@ export function updateConnectedNodes(
 			}
 		}
 
-		console.log('[highlight-debug] connected set:', [...connected]);
 		connectedNodeIds.set(connected);
 		return;
 	}

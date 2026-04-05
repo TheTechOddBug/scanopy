@@ -37,7 +37,9 @@
 		// Optional pre-resolved tags (e.g. from topology snapshot on share pages)
 		availableTags: availableTagsProp,
 		// When true, tags created inline will have is_application_group set
-		createAsApplicationGroup = false
+		createAsApplicationGroup = false,
+		// When false, hides the inline tag creation option
+		allowCreate = true
 	}: {
 		selectedTagIds?: string[];
 		disabled?: boolean;
@@ -47,6 +49,7 @@
 		onRemove?: (tagId: string) => void;
 		availableTags?: import('$lib/features/tags/types/base').Tag[];
 		createAsApplicationGroup?: boolean;
+		allowCreate?: boolean;
 	} = $props();
 
 	// Entity mode: use generic mutations
@@ -145,7 +148,9 @@
 
 	// Check if user can create tags
 	let canCreateTags = $derived(
-		currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities
+		allowCreate &&
+			currentUser &&
+			permissions.getMetadata(currentUser.permissions).manage_org_entities
 	);
 
 	// Check if typed value matches an existing tag name exactly

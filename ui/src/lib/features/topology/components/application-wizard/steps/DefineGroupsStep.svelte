@@ -5,6 +5,8 @@
 	import { createDefaultTag } from '$lib/features/tags/types/base';
 	import type { Tag as TagType } from '$lib/features/tags/types/base';
 	import { useCreateTagMutation, useDeleteTagMutation } from '$lib/features/tags/queries';
+	import { useQueryClient } from '@tanstack/svelte-query';
+	import { queryKeys } from '$lib/shared/stores/query-keys';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { getSuggestions } from '../suggestions';
 	import { concepts } from '$lib/shared/stores/metadata';
@@ -69,8 +71,13 @@
 		}
 	}
 
+	const queryClient = useQueryClient();
+
 	async function deleteAppGroupTag(tagId: string) {
 		await deleteTagMutation.mutateAsync(tagId);
+		// Invalidate host/service caches so deleted tag IDs are cleaned up
+		queryClient.invalidateQueries({ queryKey: queryKeys.hosts.lists() });
+		queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
 	}
 
 	// MSP client name form

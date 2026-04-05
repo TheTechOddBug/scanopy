@@ -206,6 +206,7 @@
 				entityType={tagPickerProps.entityType}
 				disabled={tagPickerDisabled}
 				availableTags={tagPickerProps.availableTags}
+				allowCreate={tagPickerProps.allowCreate ?? true}
 			/>
 		</div>
 	{/if}

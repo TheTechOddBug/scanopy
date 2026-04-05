@@ -26,6 +26,7 @@ export interface EntityDisplayComponent<T, C> {
 		entityId: string;
 		entityType: EntityDiscriminants;
 		availableTags?: import('$lib/features/tags/types/base').Tag[];
+		allowCreate?: boolean;
 	} | null;
 
 	// Inline editing support

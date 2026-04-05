@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-05T03:27:21.807824Z",
-              "id": "9609cf9f-1722-40c8-ab10-01395c46106a",
+              "created_at": "2026-04-05T05:50:42.924414Z",
+              "id": "e7a82cd9-a191-4648-9dd7-47d75d5bcacb",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-05T03:27:21.807824Z"
+              "updated_at": "2026-04-05T05:50:42.924414Z"
             }
           },
           "error": {
@@ -10734,14 +10734,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-05T03:27:21.790985Z",
-                      "id": "46784799-b196-4808-9d35-dc94c79dd104",
+                      "created_at": "2026-04-05T05:50:42.909312Z",
+                      "id": "addc9dcb-ed47-4398-bda7-1d210b5cbf56",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-05T03:27:21.790985Z"
+                      "updated_at": "2026-04-05T05:50:42.909312Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10750,7 +10750,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Bitwarden",
+                  "service_definition": "Denodo",
                   "source": {
                     "type": "Manual"
                   },
@@ -11453,14 +11453,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-05T03:27:21.803189Z",
-                  "id": "c91bb05a-f41d-4663-ba1d-aa7ea406d310",
+                  "created_at": "2026-04-05T05:50:42.920069Z",
+                  "id": "299052cc-57a8-4189-9694-2701e33ef790",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-05T03:27:21.803189Z"
+                  "updated_at": "2026-04-05T05:50:42.920069Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11469,7 +11469,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Bitwarden",
+              "service_definition": "Denodo",
               "source": {
                 "type": "Manual"
               },
@@ -12744,14 +12744,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-05T03:27:21.791308Z",
-          "id": "022e2f94-5e1a-45e8-9aea-83615e565fab",
+          "created_at": "2026-04-05T05:50:42.909635Z",
+          "id": "2f532c04-b05a-4a4a-a155-4aa18f02d680",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-05T03:27:21.791308Z"
+          "updated_at": "2026-04-05T05:50:42.909635Z"
         }
       },
       "BindingBase": {
@@ -13268,7 +13268,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Bitwarden",
+              "service_definition": "Denodo",
               "tags": [],
               "virtualization": null
             }
@@ -14777,7 +14777,8 @@
         "description": "Whether an edge affects layout (primary) or is drawn after layout (overlay)",
         "enum": [
           "primary",
-          "overlay"
+          "overlay",
+          "disabled"
         ]
       },
       "EdgeHandle": {
@@ -15794,14 +15795,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-05T03:27:21.790386Z",
-                  "id": "9d4cf01b-287b-4a7a-9a23-cacce2ed6a0b",
+                  "created_at": "2026-04-05T05:50:42.908880Z",
+                  "id": "c28f24fa-dd86-4700-8689-7ca438e4d9d1",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-05T03:27:21.790386Z"
+                  "updated_at": "2026-04-05T05:50:42.908880Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15810,7 +15811,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Bitwarden",
+              "service_definition": "Denodo",
               "source": {
                 "type": "Manual"
               },
@@ -17793,14 +17794,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-05T03:27:21.780365Z",
-                        "id": "50ac2647-8397-4879-90d2-1491ec9c55da",
+                        "created_at": "2026-04-05T05:50:42.899998Z",
+                        "id": "dcb7fd82-79f4-4bb1-bd17-cda8776d00b4",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-05T03:27:21.780365Z"
+                        "updated_at": "2026-04-05T05:50:42.899998Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17809,7 +17810,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Bitwarden",
+                    "service_definition": "Denodo",
                     "source": {
                       "type": "Manual"
                     },
@@ -17886,14 +17887,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-05T03:27:21.801902Z",
-                    "id": "d42cc76d-3a0a-4285-9398-96937d87c87e",
+                    "created_at": "2026-04-05T05:50:42.918989Z",
+                    "id": "a6ef6f3f-8b64-430e-b901-8951834a30ef",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-05T03:27:21.801902Z"
+                    "updated_at": "2026-04-05T05:50:42.918989Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -17902,7 +17903,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Bitwarden",
+                "service_definition": "Denodo",
                 "source": {
                   "type": "Manual"
                 },
@@ -19094,14 +19095,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-05T03:27:21.791197Z",
-              "id": "4b7c6776-ff85-4ac7-913c-02ad8a273cb1",
+              "created_at": "2026-04-05T05:50:42.909529Z",
+              "id": "1155fb29-5930-4779-8c39-86c29bb53a98",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-05T03:27:21.791197Z"
+              "updated_at": "2026-04-05T05:50:42.909529Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19110,7 +19111,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Bitwarden",
+          "service_definition": "Denodo",
           "source": {
             "type": "Manual"
           },
@@ -20173,10 +20174,10 @@
         "type": "string",
         "description": "Which topology perspective is being rendered",
         "enum": [
-          "l2_physical",
-          "l3_logical",
-          "infrastructure",
-          "application"
+          "L2Physical",
+          "L3Logical",
+          "Infrastructure",
+          "Application"
         ]
       },
       "TopologyRebuildRequest": {
@@ -20259,10 +20260,10 @@
               "type": "string",
               "description": "Which topology perspective is being rendered",
               "enum": [
-                "l2_physical",
-                "l3_logical",
-                "infrastructure",
-                "application"
+                "L2Physical",
+                "L3Logical",
+                "Infrastructure",
+                "Application"
               ]
             }
           }

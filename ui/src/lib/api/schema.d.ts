@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-05T03:27:21.807824Z",
-             *       "id": "9ee30704-60de-4614-bf6a-af2f3da674f9",
+             *       "created_at": "2026-04-05T05:50:42.924413Z",
+             *       "id": "a2343f59-9b45-4215-b2f8-755f36ef9034",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-05T03:27:21.807824Z"
+             *       "updated_at": "2026-04-05T05:50:42.924413Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3156,14 +3156,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-05T03:27:21.790807Z",
-             *               "id": "64e4bf1c-8c2b-42e7-80e4-e697dbf06473",
+             *               "created_at": "2026-04-05T05:50:42.909304Z",
+             *               "id": "55c15438-21cc-40df-8d21-efaa28ec315d",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-05T03:27:21.790807Z"
+             *               "updated_at": "2026-04-05T05:50:42.909304Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3172,7 +3172,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Bitwarden",
+             *           "service_definition": "Denodo",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3428,14 +3428,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-05T03:27:21.803148Z",
-             *           "id": "1a8b79fc-a1bc-4c4b-aa11-288d68b955d6",
+             *           "created_at": "2026-04-05T05:50:42.920059Z",
+             *           "id": "05ae3f65-117d-4eb3-a2ce-243b956b6f52",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-05T03:27:21.803148Z"
+             *           "updated_at": "2026-04-05T05:50:42.920059Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3444,7 +3444,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Bitwarden",
+             *       "service_definition": "Denodo",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3772,14 +3772,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-05T03:27:21.791182Z",
-         *       "id": "e1e0a9cf-6946-4238-8c58-4ac69d183665",
+         *       "created_at": "2026-04-05T05:50:42.909622Z",
+         *       "id": "8ddc52af-eef6-4cdd-9411-7596e212b06a",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-05T03:27:21.791182Z"
+         *       "updated_at": "2026-04-05T05:50:42.909622Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3964,7 +3964,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Bitwarden",
+         *           "service_definition": "Denodo",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4505,7 +4505,7 @@ export interface components {
          * @description Whether an edge affects layout (primary) or is drawn after layout (overlay)
          * @enum {string}
          */
-        EdgeClassification: "primary" | "overlay";
+        EdgeClassification: "primary" | "overlay" | "disabled";
         /** @enum {string} */
         EdgeHandle: "Top" | "Bottom" | "Left" | "Right";
         /** @enum {string} */
@@ -4803,14 +4803,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-05T03:27:21.790381Z",
-         *               "id": "497ec1b9-0b30-457c-90b1-70eeef74d948",
+         *               "created_at": "2026-04-05T05:50:42.908874Z",
+         *               "id": "704dbec4-3a57-479f-a9e4-06e8aa8bf980",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-05T03:27:21.790381Z"
+         *               "updated_at": "2026-04-05T05:50:42.908874Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4819,7 +4819,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Bitwarden",
+         *           "service_definition": "Denodo",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5883,14 +5883,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-05T03:27:21.791057Z",
-         *           "id": "984417e7-187b-4c85-a90d-c8f02439ef3a",
+         *           "created_at": "2026-04-05T05:50:42.909518Z",
+         *           "id": "f4e3f151-afda-41af-9090-134365741613",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-05T03:27:21.791057Z"
+         *           "updated_at": "2026-04-05T05:50:42.909518Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5899,7 +5899,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Bitwarden",
+         *       "service_definition": "Denodo",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6279,7 +6279,7 @@ export interface components {
          * @description Which topology perspective is being rendered
          * @enum {string}
          */
-        TopologyPerspective: "l2_physical" | "l3_logical" | "infrastructure" | "application";
+        TopologyPerspective: "L2Physical" | "L3Logical" | "Infrastructure" | "Application";
         /**
          * @description Lightweight request type for topology rebuild/refresh operations.
          *

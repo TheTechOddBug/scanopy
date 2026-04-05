@@ -12,7 +12,7 @@
 		ContainerRenderContext
 	} from '$lib/features/topology/resolvers';
 	import { inspector_thisEntity, topology_focusNode } from '$lib/paraglide/messages';
-	import { containerTypes } from '$lib/shared/stores/metadata';
+	import { containerTypes, entities } from '$lib/shared/stores/metadata';
 
 	let {
 		node,

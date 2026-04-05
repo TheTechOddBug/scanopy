@@ -32,7 +32,7 @@ export function getDefaultHiddenEdgeTypes(
 ): EdgeTypeDiscriminants[] {
 	switch (perspective) {
 		case 'L3Logical':
-			return ['HostVirtualization', 'ServiceVirtualization', 'PhysicalLink'];
+			return ['HostVirtualization', 'PhysicalLink'];
 		case 'L2Physical':
 			return ['HostVirtualization', 'ServiceVirtualization', 'RequestPath', 'HubAndSpoke'];
 		case 'Infrastructure':

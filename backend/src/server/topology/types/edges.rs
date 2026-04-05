@@ -110,7 +110,8 @@ impl TypeMetadataProvider for TopologyPerspective {
                 Self::L3Logical => "host interfaces",
                 Self::Infrastructure => "hosts",
                 Self::Application => "services",
-            }
+            },
+            "inspector_config": self.inspector_config()
         })
     }
 }

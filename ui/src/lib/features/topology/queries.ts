@@ -18,6 +18,7 @@ import { writable, derived, get } from 'svelte/store';
 import { UNTAGGED_SENTINEL, GENERIC_SENTINEL } from './interactions';
 import { getDefaultHiddenEdgeTypes } from './layout/edge-classification';
 import type { components } from '$lib/api/schema';
+import perspectivesJson from '$lib/data/perspectives.json';
 
 export type TopologyPerspective = components['schemas']['TopologyPerspective'];
 type PerPerspectiveOptions = Record<TopologyPerspective, TopologyOptions>;
@@ -60,7 +61,7 @@ export function getDefaultTopologyOptions(perspective: TopologyPerspective): Top
 			bundle_edges: true,
 			tag_filter: {
 				hidden_host_tag_ids: [],
-				hidden_service_tag_ids: perspective === 'application' ? [GENERIC_SENTINEL] : [],
+				hidden_service_tag_ids: perspective === 'Application' ? [GENERIC_SENTINEL] : [],
 				hidden_subnet_tag_ids: []
 			},
 			show_minimap: true
@@ -79,12 +80,9 @@ export function getDefaultTopologyOptions(perspective: TopologyPerspective): Top
 /** @deprecated Use getDefaultTopologyOptions('L3Logical') */
 export const defaultTopologyOptions: TopologyOptions = getDefaultTopologyOptions('L3Logical');
 
-const ALL_PERSPECTIVES: TopologyPerspective[] = [
-	'L2Physical',
-	'L3Logical',
-	'Infrastructure',
-	'Application'
-] satisfies TopologyPerspective[];
+const ALL_PERSPECTIVES: TopologyPerspective[] = perspectivesJson.map(
+	(p) => p.id as TopologyPerspective
+);
 
 function buildDefaultPerPerspectiveOptions(): PerPerspectiveOptions {
 	return Object.fromEntries(
@@ -584,6 +582,27 @@ function loadOptionsFromStorage(): PerPerspectiveOptions {
 							sourceArray.length > 0 ? sourceArray : destinationArray
 					})
 				};
+				return migrated;
+			}
+
+			// Migration: if stored data uses old snake_case perspective keys, remap
+			const snakeToId: Record<string, TopologyPerspective> = {
+				l2_physical: 'L2Physical',
+				l3_logical: 'L3Logical',
+				infrastructure: 'Infrastructure',
+				application: 'Application'
+			};
+			const hasSnakeKeys = Object.keys(parsed).some((k) => k in snakeToId);
+			if (hasSnakeKeys) {
+				const migrated: PerPerspectiveOptions = { ...defaults };
+				for (const [oldKey, newKey] of Object.entries(snakeToId)) {
+					if (parsed[oldKey]) {
+						migrated[newKey] = deepmerge(defaults[newKey], parsed[oldKey], {
+							arrayMerge: (destinationArray, sourceArray) =>
+								sourceArray.length > 0 ? sourceArray : destinationArray
+						});
+					}
+				}
 				return migrated;
 			}
 

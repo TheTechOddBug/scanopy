@@ -419,7 +419,7 @@
 						onToggle={toggleServiceTag}
 						entityType="service"
 						hasUntagged={hasUntaggedServices}
-						hasGeneric={$activePerspective === 'application'}
+						hasGeneric={$activePerspective === 'Application'}
 					/>
 					<CategoryFilterGroup
 						categories={allServiceCategoriesWithColors}

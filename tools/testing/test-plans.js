@@ -3,24 +3,6 @@ var TEST_PLANS = [
   "branch": "feat/application-builder",
   "tests": [
     {
-      "id": "application-perspective-shows-services",
-      "category": "Application Perspective",
-      "description": "Application perspective shows services grouped by category",
-      "steps": [
-        "Navigate to the topology view",
-        "Switch to the Application perspective using the perspective selector",
-        "Verify that services are displayed as nodes grouped inside category containers (e.g., Database, Monitoring, ReverseProxy)",
-        "Verify each container shows the category name as its header",
-        "Verify each service node shows its service name"
-      ],
-      "setup": "Ensure the network has at least 3 services across different categories (e.g., a PostgreSQL database service, a Traefik reverse proxy, and a Grafana monitoring service), each with at least one binding.",
-      "expected": "Services appear as element nodes inside their respective category containers. Each container has the category name as header and uses the category's icon/color.",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
       "id": "application-perspective-request-path-edges",
       "category": "Application Perspective",
       "description": "Request path dependency edges connect services in order",
@@ -75,19 +57,6 @@ var TEST_PLANS = [
       "expected": "ServiceVirtualization edges (dashed) connect the Docker service to each containerized service.",
       "flow": "setup",
       "sequence": 5,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "l3-perspective-unaffected",
-      "category": "Regression",
-      "description": "L3 perspective continues to work correctly after refactor",
-      "steps": [
-        "Navigate to the topology view in L3 Logical perspective (default)",
-        "Verify hosts appear as element nodes inside subnet containers",
-        "Verify interface edges, group edges, and virtualization edges display correctly"
-      ],
-      "expected": "L3 perspective renders identically to before the changes. No visual regressions.",
       "status": null,
       "feedback": null
     }
@@ -366,187 +335,105 @@ var TEST_PLANS = [
       "expected": "Nudge shows 'Dependency' terminology and navigates to dependency editor",
       "status": null,
       "feedback": null
+    },
+    {
+      "id": "api-endpoint-dependencies",
+      "category": "API",
+      "description": "API calls use /api/v1/dependencies endpoint",
+      "steps": [
+        "Open browser dev tools Network tab",
+        "Navigate to Dependencies tab",
+        "Observe the API request URLs"
+      ],
+      "expected": "All API calls go to /api/v1/dependencies, not /api/v1/groups",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "existing-dependencies-backward-compat",
+      "category": "Backward Compatibility",
+      "description": "Existing dependencies (migrated from groups) still load correctly",
+      "steps": [
+        "Navigate to Dependencies tab",
+        "View existing dependencies that were migrated from groups",
+        "Open one for editing"
+      ],
+      "setup": "Run the migration on a database with existing groups that have binding_ids. The migration backfills service_id and sets member_type to 'Bindings'.",
+      "expected": "Migrated dependencies display correctly with their binding members intact and can be edited",
+      "status": null,
+      "feedback": null
     }
   ]
 }
 ,
 {
-  "branch": "fix/l3-ui-bugs",
+  "branch": "fix/session-rehydration",
   "tests": [
     {
-      "id": "grid-snapping-uniform-padding",
-      "category": "Bug 1: Grid Snapping",
-      "description": "Verify all nodes have uniform padding within containers",
+      "id": "discovery-card-after-restart",
+      "category": "Session Rehydration",
+      "description": "Discovery card shows session progress after server restart",
       "steps": [
-        "Open the L3 topology view",
-        "Trigger a rebuild",
-        "Inspect container boundaries and node spacing visually",
-        "Verify no nodes have 2x padding gaps compared to their neighbors"
+        "Navigate to the Discovery page",
+        "Start a discovery session on any configured discovery",
+        "Wait until the Discovery card shows scanning progress (phase: Scanning, progress > 0%)",
+        "Restart the server process",
+        "Return to the Discovery page after server is back up",
+        "Observe the Discovery card for the same discovery"
       ],
-      "expected": "All nodes within containers have consistent, uniform spacing. No visible 2x padding gaps between some nodes.",
+      "setup": "Ensure at least one discovery is configured with a daemon connected and a scannable network.",
+      "expected": "The Discovery card should show the active session progress (phase, percentage) after the server restarts and the daemon sends its next update.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "tags-show-on-reload",
-      "category": "Bug 2: Tags on Subcontainer Titles",
-      "description": "Verify tags appear on subcontainer titles immediately after page reload",
-      "setup": "Ensure topology has element rules with ByServiceCategory or ByTag grouping configured.",
+      "id": "duplicate-session-blocked-after-restart",
+      "category": "Session Rehydration",
+      "description": "Cannot start a duplicate session after server restart",
       "steps": [
-        "Open L3 topology and verify tags show next to subcontainer titles",
-        "Hard-reload the page (Cmd+Shift+R)",
-        "Observe the subcontainer titles immediately after reload"
+        "Navigate to the Discovery page",
+        "Start a discovery session",
+        "Wait until the session is actively scanning",
+        "Restart the server process",
+        "Wait for the Discovery card to show the active session again",
+        "Try to start another session for the same discovery"
       ],
-      "expected": "Tags (e.g., 'DNS', 'ReverseProxy') appear next to subcontainer titles immediately after reload, possibly with gray colors initially that update to correct colors once data loads. No rebuild needed.",
+      "setup": "Ensure at least one discovery is configured with a daemon connected and a scannable network.",
+      "expected": "The server should reject the second session start with a conflict error ('A session is already running for this discovery').",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "collapse-expand-position-stable",
-      "category": "Bug 3: Collapse/Expand Position",
-      "description": "Verify collapsing then expanding a subcontainer restores its position without overlap",
+      "id": "homepage-active-discoveries-after-restart",
+      "category": "Session Rehydration",
+      "description": "Homepage active discoveries widget works after server restart",
       "steps": [
-        "Open L3 topology with nested subcontainers visible",
-        "Note the position and size of a subcontainer",
-        "Collapse the subcontainer",
-        "Expand the same subcontainer",
-        "Compare position and size to the original"
+        "Start a discovery session",
+        "Wait until actively scanning",
+        "Restart the server process",
+        "Navigate to the homepage after server is back up"
       ],
-      "expected": "The subcontainer returns to approximately the same position and size. No overlap with neighboring nodes or containers.",
+      "setup": "Ensure at least one discovery is configured with a daemon connected.",
+      "expected": "The ActiveDiscoveries widget on the homepage should show the in-progress discovery session.",
       "flow": "setup",
       "sequence": 3,
       "status": null,
       "feedback": null
-    },
-    {
-      "id": "collapse-expand-with-children",
-      "category": "Bug 3: Collapse/Expand Position",
-      "description": "Verify collapse/expand works correctly when subcontainer has nested children",
-      "steps": [
-        "Open L3 topology with a container that has nested subcontainers",
-        "Collapse a parent subcontainer (children should cascade-collapse)",
-        "Expand the parent subcontainer",
-        "Verify children remain collapsed and parent is correctly sized"
-      ],
-      "expected": "Parent expands to correct size based on collapsed children. No overlap or position shift.",
-      "flow": "setup",
-      "sequence": 4,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "subcontainer-drag-constrained",
-      "category": "Bug 4: Subcontainer Drag Constraint",
-      "description": "Verify subcontainers cannot be dragged outside their parent container",
-      "steps": [
-        "Open L3 topology with nested subcontainers",
-        "Try to drag a subcontainer outside its parent container boundary",
-        "Try to drag an element node outside its container for comparison"
-      ],
-      "expected": "Both subcontainers and element nodes are constrained to their parent container. Neither can be dragged outside.",
-      "flow": "setup",
-      "sequence": 5,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "element-rules-persist-reload",
-      "category": "Bug 5: Element Rules Persistence",
-      "description": "Verify element rules persist across page reloads",
-      "steps": [
-        "Open L3 topology options panel",
-        "Note the current element rules",
-        "Reload the page",
-        "Open options panel again and verify element rules are still present"
-      ],
-      "expected": "Element rules are preserved across page reloads. No rules disappear.",
-      "flow": "setup",
-      "sequence": 6,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "element-rules-persist-perspective-switch",
-      "category": "Bug 5: Element Rules Persistence",
-      "description": "Verify element rules persist when switching perspectives",
-      "steps": [
-        "Open L3 topology and note element rules in options",
-        "Switch to a different perspective (if available)",
-        "Switch back to L3",
-        "Verify element rules are intact"
-      ],
-      "expected": "Element rules are preserved after perspective round-trip. Default rules are not lost.",
-      "flow": "setup",
-      "sequence": 7,
-      "status": null,
-      "feedback": null
     }
   ]
+}
+,
+{
+  "branch": "fix/l3-ui-bugs",
+  "tests": []
 }
 ,
 {
   "branch": "feat/perspective-selector",
-  "tests": [
-    {
-      "id": "perspective-selector-visible",
-      "category": "Perspective Selector",
-      "description": "Perspective selector appears in topology toolbar",
-      "steps": [
-        "Navigate to Topology tab",
-        "Verify a segmented control with 'L3 Logical' and 'Application' options appears in the toolbar after the topology dropdown"
-      ],
-      "expected": "Segmented control is visible with two options. L3 Logical is selected by default. Both options have icons.",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "switch-to-application",
-      "category": "Perspective Selector",
-      "description": "Switching to Application perspective triggers rebuild",
-      "steps": [
-        "On the Topology tab with L3 Logical selected",
-        "Click 'Application' in the perspective selector"
-      ],
-      "expected": "Application becomes highlighted in the selector. The topology rebuilds (layout changes). The toolbar bottom border color changes from blue to purple.",
-      "flow": "setup",
-      "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "switch-back-to-l3",
-      "category": "Perspective Selector",
-      "description": "Switching back to L3 preserves L3 options",
-      "steps": [
-        "With Application perspective active",
-        "Click 'L3 Logical' in the perspective selector"
-      ],
-      "expected": "L3 Logical becomes highlighted. Topology rebuilds back to L3 layout. Toolbar border returns to blue. Previously set L3 options (e.g., hidden edge types) are preserved.",
-      "flow": "setup",
-      "sequence": 3,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "color-cue-changes",
-      "category": "Perspective Selector",
-      "description": "Toolbar color accent reflects active perspective",
-      "steps": [
-        "Toggle between L3 Logical and Application perspectives",
-        "Observe the toolbar bottom border color"
-      ],
-      "expected": "L3 Logical shows a blue bottom border accent. Application shows a purple bottom border accent. The color transition is smooth (0.3s ease).",
-      "flow": "setup",
-      "sequence": 4,
-      "status": null,
-      "feedback": null
-    }
-  ]
+  "tests": []
 }
 ];

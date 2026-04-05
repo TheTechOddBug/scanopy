@@ -8,6 +8,7 @@ export function createDefaultTag(organization_id: string): Tag {
 		name: '',
 		description: null,
 		color: 'Yellow',
+		is_application_group: false,
 		id: uuidv4Sentinel,
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,

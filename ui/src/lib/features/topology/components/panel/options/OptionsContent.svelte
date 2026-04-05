@@ -6,7 +6,7 @@
 		useTopologiesQuery,
 		autoRebuild
 	} from '../../../queries';
-	import { updateTagFilter, hoveredEdgeType } from '../../../interactions';
+	import { updateTagFilter, hoveredEdgeType, GENERIC_SENTINEL } from '../../../interactions';
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
 	import { edgeTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Color } from '$lib/shared/utils/styling';
@@ -18,7 +18,6 @@
 	import GroupingRuleEditor from './GroupingRuleEditor.svelte';
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { activePerspective } from '../../../queries';
 	import {
 		common_hosts,
 		common_services,
@@ -42,7 +41,10 @@
 		common_filters,
 		topology_filtersHelp,
 		topology_hideVmOnContainer,
-		topology_hideVmOnContainerHelp
+		topology_hideVmOnContainerHelp,
+		topology_genericServices,
+		common_show,
+		common_hide
 	} from '$lib/paraglide/messages';
 
 	// Get topology for entity_tags
@@ -71,6 +73,11 @@
 	let hasUntaggedHosts = $derived(topology?.hosts.some((h) => h.tags.length === 0) ?? false);
 	let hasUntaggedServices = $derived(topology?.services.some((s) => s.tags.length === 0) ?? false);
 	let hasUntaggedSubnets = $derived(topology?.subnets.some((s) => s.tags.length === 0) ?? false);
+
+	// Generic services filter state
+	let isGenericHidden = $derived(
+		($topologyOptions.local.tag_filter?.hidden_service_tag_ids ?? []).includes(GENERIC_SENTINEL)
+	);
 
 	// Toggle functions for tag filter
 	function toggleHostTag(tagId: string) {
@@ -419,7 +426,6 @@
 						onToggle={toggleServiceTag}
 						entityType="service"
 						hasUntagged={hasUntaggedServices}
-						hasGeneric={$activePerspective === 'Application'}
 					/>
 					<CategoryFilterGroup
 						categories={allServiceCategoriesWithColors}
@@ -428,6 +434,21 @@
 						disabled={!editState.isEditable}
 						label={common_byCategory()}
 					/>
+				</div>
+
+				<!-- Generic Services -->
+				<div class="space-y-1.5 rounded-lg p-2.5" style="background: var(--color-bg-surface-hover)">
+					<div class="text-secondary text-xs font-semibold uppercase tracking-wide">
+						{topology_genericServices()}
+					</div>
+					<button
+						onclick={() => toggleServiceTag(GENERIC_SENTINEL)}
+						class="text-xs font-medium transition-opacity {isGenericHidden
+							? 'text-tertiary opacity-60 hover:opacity-80'
+							: 'text-secondary opacity-100'}"
+					>
+						{isGenericHidden ? common_show() : common_hide()}
+					</button>
 				</div>
 
 				<!-- Subnets -->

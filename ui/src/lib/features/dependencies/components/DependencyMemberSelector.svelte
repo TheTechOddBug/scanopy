@@ -21,6 +21,9 @@
 		dependencies_servicesInfoBody
 	} from '$lib/paraglide/messages';
 
+	import type { Interface } from '$lib/features/interfaces/types/base';
+	import type { Port } from '$lib/features/ports/types/base';
+
 	interface Props {
 		selectedServiceIds: string[];
 		memberMode: 'Services' | 'Bindings';
@@ -29,6 +32,10 @@
 		availableServices: Service[];
 		selectedServices: Service[];
 		hostsData: { id: string; name: string }[];
+		servicesData?: Service[];
+		interfacesData?: Interface[];
+		portsData?: Port[];
+		isContainerSubnet?: (subnetId: string) => boolean;
 		isLoading?: boolean;
 		onAddService: (serviceId: string) => void;
 		onRemoveService: (index: number) => void;
@@ -45,6 +52,10 @@
 		availableServices,
 		selectedServices,
 		hostsData,
+		servicesData = [],
+		interfacesData = [],
+		portsData = [],
+		isContainerSubnet = () => false,
 		isLoading = false,
 		onAddService,
 		onRemoveService,
@@ -78,7 +89,11 @@
 	}
 
 	let bindingContext = $derived({
-		ports: [] as { id: string; number: number; protocol: string }[]
+		services: servicesData,
+		hosts: hostsData,
+		interfaces: interfacesData,
+		ports: portsData,
+		isContainerSubnet
 	});
 </script>
 

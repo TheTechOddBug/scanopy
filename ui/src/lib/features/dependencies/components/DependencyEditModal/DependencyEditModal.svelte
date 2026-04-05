@@ -479,6 +479,10 @@
 						{availableServices}
 						{selectedServices}
 						{hostsData}
+						{servicesData}
+						interfacesData={interfacesData}
+						portsData={portsData}
+						isContainerSubnet={isContainerSubnetFn}
 						isLoading={isServicesLoading}
 						onAddService={handleAddService}
 						onRemoveService={handleRemoveService}

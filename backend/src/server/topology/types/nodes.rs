@@ -78,6 +78,8 @@ pub enum ContainerType {
     // Subcontainers (nested inside a top-level container)
     NestedTag,
     NestedServiceCategory,
+    Virtualizer,
+    BareMetal,
 }
 
 impl HasId for ContainerType {
@@ -94,6 +96,8 @@ impl EntityMetadataProvider for ContainerType {
             ContainerType::ApplicationGroup => Concept::Application.color(),
             ContainerType::NestedTag => Color::Orange,
             ContainerType::NestedServiceCategory => Color::Purple,
+            ContainerType::Virtualizer => Concept::Infrastructure.color(),
+            ContainerType::BareMetal => EntityDiscriminants::Host.color(),
         }
     }
 
@@ -104,6 +108,8 @@ impl EntityMetadataProvider for ContainerType {
             ContainerType::ApplicationGroup => Concept::Application.icon(),
             ContainerType::NestedTag => Icon::Tag,
             ContainerType::NestedServiceCategory => Icon::Layers,
+            ContainerType::Virtualizer => Concept::Infrastructure.icon(),
+            ContainerType::BareMetal => Icon::Server,
         }
     }
 }
@@ -116,6 +122,8 @@ impl TypeMetadataProvider for ContainerType {
             ContainerType::ApplicationGroup => "Application group",
             ContainerType::NestedTag => "Tag container",
             ContainerType::NestedServiceCategory => "Service category container",
+            ContainerType::Virtualizer => "Virtualizer",
+            ContainerType::BareMetal => "Bare metal",
         }
     }
 
@@ -126,6 +134,8 @@ impl TypeMetadataProvider for ContainerType {
             ContainerType::ApplicationGroup => "Services grouped by application group tag",
             ContainerType::NestedTag => "Elements grouped by tag",
             ContainerType::NestedServiceCategory => "Elements grouped by service category",
+            ContainerType::Virtualizer => "Hosts grouped by virtualizer",
+            ContainerType::BareMetal => "Hosts with no virtualization",
         }
     }
 
@@ -134,17 +144,26 @@ impl TypeMetadataProvider for ContainerType {
             ContainerType::Subnet
             | ContainerType::ServiceCategory
             | ContainerType::ApplicationGroup => TitleStyle::External,
-            ContainerType::NestedTag | ContainerType::NestedServiceCategory => TitleStyle::Inline,
+            ContainerType::NestedTag
+            | ContainerType::NestedServiceCategory
+            | ContainerType::Virtualizer
+            | ContainerType::BareMetal => TitleStyle::Inline,
         };
         let is_subcontainer = matches!(
             self,
-            ContainerType::NestedTag | ContainerType::NestedServiceCategory
+            ContainerType::NestedTag
+                | ContainerType::NestedServiceCategory
+                | ContainerType::Virtualizer
+                | ContainerType::BareMetal
         );
         let (padding_top, padding_side) = match self {
             ContainerType::Subnet
             | ContainerType::ServiceCategory
             | ContainerType::ApplicationGroup => (25, 25),
-            ContainerType::NestedTag | ContainerType::NestedServiceCategory => (50, 25),
+            ContainerType::NestedTag
+            | ContainerType::NestedServiceCategory
+            | ContainerType::Virtualizer
+            | ContainerType::BareMetal => (50, 25),
         };
         let (collapsed_width, collapsed_height) = match self {
             ContainerType::Subnet
@@ -172,6 +191,7 @@ pub enum ElementEntityType {
         interface_id: Option<Uuid>,
     },
     Service {},
+    Host {},
 }
 
 impl Default for ElementEntityType {
@@ -188,6 +208,7 @@ impl From<&ElementEntityType> for EntityDiscriminants {
         match eet {
             ElementEntityType::Interface { .. } => EntityDiscriminants::Interface,
             ElementEntityType::Service {} => EntityDiscriminants::Service,
+            ElementEntityType::Host {} => EntityDiscriminants::Host,
         }
     }
 }
@@ -424,6 +445,58 @@ mod tests {
             EntityDiscriminants::from(&ElementEntityType::Service {}),
             EntityDiscriminants::Service
         );
+        assert_eq!(
+            EntityDiscriminants::from(&ElementEntityType::Host {}),
+            EntityDiscriminants::Host
+        );
+    }
+
+    #[test]
+    fn test_element_host_round_trip() {
+        let container_id = Uuid::new_v4();
+        let host_id = Uuid::new_v4();
+        let node_type = NodeType::Element {
+            container_id,
+            host_id,
+            element: ElementEntityType::Host {},
+        };
+        let json = serde_json::to_value(&node_type).unwrap();
+        assert_eq!(json["node_type"], "Element");
+        assert_eq!(json["element_type"], "Host");
+        assert!(json.get("subnet_id").is_none());
+
+        let deserialized: NodeType = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized, node_type);
+    }
+
+    #[test]
+    fn test_virtualizer_container_round_trip() {
+        let node_type = NodeType::Container {
+            container_type: ContainerType::Virtualizer,
+            parent_container_id: None,
+            layer_hint: None,
+            icon: None,
+            color: None,
+        };
+        let json = serde_json::to_value(&node_type).unwrap();
+        assert_eq!(json["container_type"], "Virtualizer");
+        let deserialized: NodeType = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized, node_type);
+    }
+
+    #[test]
+    fn test_bare_metal_container_round_trip() {
+        let node_type = NodeType::Container {
+            container_type: ContainerType::BareMetal,
+            parent_container_id: None,
+            layer_hint: None,
+            icon: None,
+            color: None,
+        };
+        let json = serde_json::to_value(&node_type).unwrap();
+        assert_eq!(json["container_type"], "BareMetal");
+        let deserialized: NodeType = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized, node_type);
     }
 }
 

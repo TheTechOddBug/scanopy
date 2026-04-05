@@ -332,6 +332,7 @@ impl GraphBuilder {
             Some(ElementMatchData {
                 categories,
                 tag_ids,
+                virtualizer_host_id: None,
             })
         });
     }

@@ -13,6 +13,8 @@ use crate::server::{
 pub struct ElementMatchData {
     pub categories: HashSet<ServiceCategory>,
     pub tag_ids: HashSet<Uuid>,
+    /// The host ID of the virtualizer managing this element (for ByVirtualizer grouping).
+    pub virtualizer_host_id: Option<Uuid>,
 }
 
 /// Apply element rules to nodes, creating nested subcontainers within each parent container.
@@ -28,6 +30,17 @@ pub fn apply_element_rules(
     nodes: &mut Vec<Node>,
     element_rules: &[GraphRule<ElementRule>],
     resolve_element: impl Fn(&Node) -> Option<ElementMatchData>,
+) {
+    apply_element_rules_with_titles(nodes, element_rules, resolve_element, None);
+}
+
+/// Apply element rules with optional virtualizer title mapping.
+/// `virtualizer_titles` maps virtualizer host IDs to display names (for ByVirtualizer subcontainers).
+pub fn apply_element_rules_with_titles(
+    nodes: &mut Vec<Node>,
+    element_rules: &[GraphRule<ElementRule>],
+    resolve_element: impl Fn(&Node) -> Option<ElementMatchData>,
+    virtualizer_titles: Option<&HashMap<Uuid, String>>,
 ) {
     if element_rules.is_empty() {
         return;
@@ -58,61 +71,129 @@ pub fn apply_element_rules(
     let mut reassignments: HashMap<Uuid, Uuid> = HashMap::new();
 
     for GraphRule { id: rule_id, rule } in element_rules {
-        for (parent_id, element_ids) in &elements_by_container {
-            let matched_ids: HashSet<Uuid> = element_ids
-                .iter()
-                .filter(|id| !claimed.contains(id))
-                .filter(|id| {
-                    let Some(data) = match_data.get(id) else {
-                        return false;
-                    };
-                    match rule {
-                        ElementRule::ByServiceCategory { categories, .. } => {
-                            categories.iter().any(|c| data.categories.contains(c))
-                        }
-                        ElementRule::ByTag { tag_ids, .. } => {
-                            tag_ids.iter().any(|t| data.tag_ids.contains(t))
-                        }
+        match rule {
+            ElementRule::ByVirtualizer => {
+                // ByVirtualizer groups elements by their virtualizer_host_id.
+                // Each unique virtualizer gets a Virtualizer subcontainer.
+                // Unclaimed elements with no virtualizer get a BareMetal subcontainer.
+                for (parent_id, element_ids) in &elements_by_container {
+                    let unclaimed: Vec<Uuid> = element_ids
+                        .iter()
+                        .filter(|id| !claimed.contains(id))
+                        .copied()
+                        .collect();
+                    if unclaimed.is_empty() {
+                        continue;
                     }
-                })
-                .copied()
-                .collect();
 
-            if matched_ids.is_empty() {
-                continue;
-            }
+                    // Group by virtualizer_host_id
+                    let mut by_virtualizer: HashMap<Option<Uuid>, Vec<Uuid>> = HashMap::new();
+                    for id in &unclaimed {
+                        let virt_id = match_data.get(id).and_then(|d| d.virtualizer_host_id);
+                        by_virtualizer.entry(virt_id).or_default().push(*id);
+                    }
 
-            let group_id = Uuid::new_v5(
-                &Uuid::NAMESPACE_OID,
-                format!("{parent_id}:{rule_id}").as_bytes(),
-            );
+                    for (virt_host_id, ids) in by_virtualizer {
+                        let (container_type, group_key) = match virt_host_id {
+                            Some(vid) => (
+                                ContainerType::Virtualizer,
+                                format!("{parent_id}:{rule_id}:{vid}"),
+                            ),
+                            None => (
+                                ContainerType::BareMetal,
+                                format!("{parent_id}:{rule_id}:bare-metal"),
+                            ),
+                        };
+                        let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
 
-            let (container_type, title) = match rule {
-                ElementRule::ByServiceCategory { title, .. } => {
-                    (ContainerType::NestedServiceCategory, title.clone())
+                        // Title is set by the builder via virtualizer_titles
+                        new_containers.push(Node {
+                            id: group_id,
+                            node_type: NodeType::Container {
+                                container_type,
+                                parent_container_id: Some(*parent_id),
+                                layer_hint: None,
+                                icon: None,
+                                color: None,
+                            },
+                            position: Default::default(),
+                            size: Default::default(),
+                            header: virtualizer_titles
+                                .as_ref()
+                                .and_then(|t| virt_host_id.and_then(|vid| t.get(&vid).cloned())),
+                            element_rule_id: Some(*rule_id),
+                        });
+
+                        for id in &ids {
+                            reassignments.insert(*id, group_id);
+                        }
+                        claimed.extend(ids);
+                    }
                 }
-                ElementRule::ByTag { title, .. } => (ContainerType::NestedTag, title.clone()),
-            };
-
-            new_containers.push(Node {
-                id: group_id,
-                node_type: NodeType::Container {
-                    container_type,
-                    parent_container_id: Some(*parent_id),
-                    layer_hint: None,
-                    icon: None,
-                    color: None,
-                },
-                position: Default::default(),
-                size: Default::default(),
-                header: title,
-                element_rule_id: Some(*rule_id),
-            });
-
-            for id in &matched_ids {
-                reassignments.insert(*id, group_id);
             }
-            claimed.extend(matched_ids);
+            _ => {
+                // ByServiceCategory, ByTag: filter-based matching
+                for (parent_id, element_ids) in &elements_by_container {
+                    let matched_ids: HashSet<Uuid> = element_ids
+                        .iter()
+                        .filter(|id| !claimed.contains(id))
+                        .filter(|id| {
+                            let Some(data) = match_data.get(id) else {
+                                return false;
+                            };
+                            match rule {
+                                ElementRule::ByServiceCategory { categories, .. } => {
+                                    categories.iter().any(|c| data.categories.contains(c))
+                                }
+                                ElementRule::ByTag { tag_ids, .. } => {
+                                    tag_ids.iter().any(|t| data.tag_ids.contains(t))
+                                }
+                                ElementRule::ByVirtualizer => unreachable!(),
+                            }
+                        })
+                        .copied()
+                        .collect();
+
+                    if matched_ids.is_empty() {
+                        continue;
+                    }
+
+                    let group_id = Uuid::new_v5(
+                        &Uuid::NAMESPACE_OID,
+                        format!("{parent_id}:{rule_id}").as_bytes(),
+                    );
+
+                    let (container_type, title) = match rule {
+                        ElementRule::ByServiceCategory { title, .. } => {
+                            (ContainerType::NestedServiceCategory, title.clone())
+                        }
+                        ElementRule::ByTag { title, .. } => {
+                            (ContainerType::NestedTag, title.clone())
+                        }
+                        ElementRule::ByVirtualizer => unreachable!(),
+                    };
+
+                    new_containers.push(Node {
+                        id: group_id,
+                        node_type: NodeType::Container {
+                            container_type,
+                            parent_container_id: Some(*parent_id),
+                            layer_hint: None,
+                            icon: None,
+                            color: None,
+                        },
+                        position: Default::default(),
+                        size: Default::default(),
+                        header: title,
+                        element_rule_id: Some(*rule_id),
+                    });
+
+                    for id in &matched_ids {
+                        reassignments.insert(*id, group_id);
+                    }
+                    claimed.extend(matched_ids);
+                }
+            }
         }
     }
 

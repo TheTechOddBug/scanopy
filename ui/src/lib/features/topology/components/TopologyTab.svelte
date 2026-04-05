@@ -663,7 +663,7 @@
 			{#if isLoading}
 				<Loading />
 			{:else if currentTopology}
-				<div class="relative">
+				<div class="relative" id="topology-view-area">
 					<TopologyOptionsPanel
 						{isReadOnly}
 						onClearSelection={clearMultiSelect}
@@ -678,6 +678,13 @@
 						onRebuild={handleRefresh}
 						{isActive}
 					/>
+					{#if showAppWizard}
+						<ApplicationSetupWizard
+							{appGroupTags}
+							onComplete={handleWizardComplete}
+							onClose={handleWizardClose}
+						/>
+					{/if}
 				</div>
 			{:else}
 				<div class="card card-static text-secondary">
@@ -695,14 +702,6 @@
 		{/if}
 	{/if}
 </SvelteFlowProvider>
-
-{#if showAppWizard}
-	<ApplicationSetupWizard
-		{appGroupTags}
-		onComplete={handleWizardComplete}
-		onClose={handleWizardClose}
-	/>
-{/if}
 
 <TopologyModal
 	name="topology-editor"

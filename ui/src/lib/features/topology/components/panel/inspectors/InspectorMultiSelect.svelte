@@ -14,7 +14,7 @@
 		updateTopologyOptions
 	} from '../../../queries';
 	import type { TopologyNode } from '../../../types/base';
-	import { resolveElementNode } from '../../../resolvers';
+	import { resolveElementNode, getNodeSelectionIds } from '../../../resolvers';
 	import type { DependencyType, EdgeStyle } from '$lib/features/dependencies/types/base';
 	import { getTopologyEditState } from '../../../state';
 	import { computeCommonTags } from '$lib/shared/utils/tags';
@@ -30,8 +30,6 @@
 		createEmptyDependencyFormData
 	} from '$lib/features/dependencies/queries';
 	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
-	import EntityTag from '$lib/shared/components/data/EntityTag.svelte';
-	import { entityRef } from '$lib/shared/components/data/types';
 	import { entities, dependencyTypes, concepts } from '$lib/shared/stores/metadata';
 	import { getInspectorConfig } from './perspective-config';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
@@ -46,8 +44,6 @@
 		topology_multiSelectNoBindings,
 		topology_multiSelectPickBinding,
 		topology_multiSelectCreateGroupRebuildWarning,
-		common_hosts,
-		common_services,
 		topology_multiSelectLockedHint,
 		topology_multiSelectStaleHint,
 		topology_multiSelectReadOnlyHint,
@@ -93,46 +89,24 @@
 		nodes = value;
 	});
 
-	// Get unique host IDs from selected interface nodes
-	let selectedHostIds = $derived.by(() => {
-		if (!topology) return [];
-		const hostIds: string[] = [];
+	// Collect host and service IDs from all selected nodes via the resolver
+	let selectionIds = $derived.by(() => {
+		if (!topology) return { hostIds: [] as string[], serviceIds: [] as string[] };
+		const hostSet = new Set<string>();
+		const serviceSet = new Set<string>();
 		for (const node of nodes) {
-			const resolved = resolveElementNode(node.id, node.data as TopologyNode, topology);
-			if (resolved.hostId && !hostIds.includes(resolved.hostId)) {
-				hostIds.push(resolved.hostId);
-			}
+			const ids = getNodeSelectionIds(node.id, node.data as TopologyNode, topology);
+			ids.hostIds.forEach((id) => hostSet.add(id));
+			ids.serviceIds.forEach((id) => serviceSet.add(id));
 		}
-		return hostIds;
+		return { hostIds: [...hostSet], serviceIds: [...serviceSet] };
 	});
 
-	// Get hosts from topology
+	let selectedHostIds = $derived(selectionIds.hostIds);
 	let selectedHosts = $derived(
 		topology ? topology.hosts.filter((h) => selectedHostIds.includes(h.id)) : []
 	);
-
-	// Get services bound to selected interfaces
-	let selectedServiceIds = $derived.by(() => {
-		if (!topology) return [];
-		const serviceIds: string[] = [];
-		for (const node of nodes) {
-			const resolved = resolveElementNode(node.id, node.data as TopologyNode, topology);
-			if (!resolved.interfaceId) continue;
-			for (const service of topology.services) {
-				if (serviceIds.includes(service.id)) continue;
-				for (const binding of service.bindings) {
-					if (binding.interface_id === resolved.interfaceId || binding.interface_id === null) {
-						if (service.host_id && selectedHostIds.includes(service.host_id)) {
-							serviceIds.push(service.id);
-							break;
-						}
-					}
-				}
-			}
-		}
-		return serviceIds;
-	});
-
+	let selectedServiceIds = $derived(selectionIds.serviceIds);
 	let selectedServices = $derived(
 		topology ? topology.services.filter((s) => selectedServiceIds.includes(s.id)) : []
 	);
@@ -140,13 +114,8 @@
 	// Perspective-driven config
 	let inspectorConfig = $derived(getInspectorConfig($activePerspective));
 
-	// Tag entity type toggle — default from perspective config
-	let tagEntityType: 'Host' | 'Service' = $state('Host');
-
-	// Update default tag entity type when perspective changes
-	$effect(() => {
-		tagEntityType = inspectorConfig.bulk_tag_entity as 'Host' | 'Service';
-	});
+	// Tag entity type — fixed by perspective config (no user toggle)
+	let tagEntityType = $derived(inspectorConfig.bulk_tag_entity as 'Host' | 'Service');
 
 	let tagEntityIds = $derived(tagEntityType === 'Host' ? selectedHostIds : selectedServiceIds);
 	let tagEntities = $derived(tagEntityType === 'Host' ? selectedHosts : selectedServices);
@@ -266,14 +235,30 @@
 		await handleAddTag(tagId);
 	}
 
-	function createGroupingRuleFromTags(tagIds: string[]) {
-		const tags = tagIds
-			.map((id) =>
-				tagEntities.length > 0 ? topology?.entity_tags?.find((t) => t.id === id) : null
-			)
-			.filter(Boolean);
-		const title = tags.map((t) => t?.name).join(' + ');
+	// Check if a ByTag rule already exists covering the recently added tags
+	let existingRuleCoversRecentTags = $derived.by(() => {
+		if (recentlyAddedTagIds.length === 0) return false;
+		const rules = $topologyOptions?.request?.element_rules ?? [];
+		const recentSet = new Set(recentlyAddedTagIds);
+		return rules.some((rule) => {
+			if (typeof rule.rule === 'object' && 'ByTag' in rule.rule) {
+				const ruleTagIds = rule.rule.ByTag.tag_ids;
+				return ruleTagIds.some((id: string) => recentSet.has(id));
+			}
+			return false;
+		});
+	});
 
+	// Resolve recently added tags to tag objects for display
+	let recentlyAddedTags = $derived(
+		recentlyAddedTagIds
+			.map(
+				(id) => allTags.find((t) => t.id === id) ?? topology?.entity_tags?.find((t) => t.id === id)
+			)
+			.filter(Boolean)
+	);
+
+	function createGroupingRuleFromTags(tagIds: string[]) {
 		updateTopologyOptions((current) => ({
 			...current,
 			request: {
@@ -282,7 +267,7 @@
 					...(current.request.element_rules ?? []),
 					{
 						id: crypto.randomUUID(),
-						rule: { ByTag: { tag_ids: tagIds, title } }
+						rule: { ByTag: { tag_ids: tagIds, title: null } }
 					}
 				]
 			}
@@ -581,46 +566,24 @@
 		<div class="space-y-2">
 			<span class="text-secondary block text-sm font-medium">{common_tags()}</span>
 			<div class="card card-static space-y-2 p-2">
-				<!-- Entity type toggle -->
-				<div class="flex items-center gap-1">
-					<SegmentedControl
-						options={[
-							{ value: 'Host', label: common_hosts() },
-							{ value: 'Service', label: common_services() }
-						]}
-						selected={tagEntityType}
-						onchange={(v) => (tagEntityType = v as 'Host' | 'Service')}
-					/>
-				</div>
-				<!-- Entity names as EntityTag pills -->
-				{#if tagEntities.length > 0}
-					{@const IconComponent = entities.getIconComponent(tagEntityType)}
-					{@const color = entities.getColorHelper(tagEntityType).color}
-					<div class="flex flex-wrap gap-1">
-						{#each tagEntities as entity (entity.id)}
-							<EntityTag
-								entityRef={entityRef(tagEntityType, entity.id, entity)}
-								label={entity.name}
-								icon={IconComponent}
-								{color}
-							/>
-						{/each}
-					</div>
-				{/if}
 				<div class="flex items-center gap-1.5">
-					<span class="text-tertiary shrink-0 text-xs">{common_tags()}:</span>
 					<TagPickerInline
 						selectedTagIds={commonTags}
 						onAdd={handleAddTagWithTracking}
 						onRemove={handleRemoveTag}
 					/>
 				</div>
-				{#if recentlyAddedTagIds.length > 0}
+				{#if recentlyAddedTagIds.length > 0 && !existingRuleCoversRecentTags}
 					<button
-						class="btn-secondary w-full text-xs"
+						class="btn-secondary flex w-full items-center justify-center gap-1.5 text-xs"
 						onclick={() => createGroupingRuleFromTags(recentlyAddedTagIds)}
 					>
-						{inspector_createGroupingRuleFromTag()}
+						<span>{inspector_createGroupingRuleFromTag()}</span>
+						{#each recentlyAddedTags as tag (tag?.id)}
+							{#if tag}
+								<Tag label={tag.name} color={tag.color} />
+							{/if}
+						{/each}
 					</button>
 				{/if}
 			</div>

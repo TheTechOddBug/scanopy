@@ -2,6 +2,8 @@
 	import type { Node } from '@xyflow/svelte';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import type { ElementRenderContext } from '$lib/features/topology/resolvers';
+	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
+	import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
 	import {
 		common_dependenciesLabel,
 		common_inbound,
@@ -31,9 +33,8 @@
 		return topology.dependencies.filter((d) => {
 			const members = d.members;
 			if (members.type === 'Services') {
-				// Service is a target (last in the chain for RequestPath, spoke for HubAndSpoke)
 				const idx = members.service_ids.indexOf(service!.id);
-				return idx > 0; // Not the source (first)
+				return idx > 0;
 			}
 			if (members.type === 'Bindings') {
 				const serviceBindingIds = service!.bindings.map((b) => b.id);
@@ -60,22 +61,6 @@
 	});
 
 	let hasDeps = $derived(inboundDeps.length > 0 || outboundDeps.length > 0);
-
-	function getDepServiceNames(dep: Topology['dependencies'][number]): string[] {
-		const members = dep.members;
-		if (members.type === 'Services') {
-			return members.service_ids.map(
-				(id) => topology.services.find((s) => s.id === id)?.name ?? id
-			);
-		}
-		if (members.type === 'Bindings') {
-			return members.binding_ids.map((bid) => {
-				const svc = topology.services.find((s) => s.bindings.some((b) => b.id === bid));
-				return svc?.name ?? bid;
-			});
-		}
-		return [];
-	}
 </script>
 
 <div>
@@ -91,14 +76,12 @@
 					>
 					<div class="space-y-1">
 						{#each outboundDeps as dep (dep.id)}
-							<div class="card card-static text-sm">
-								<div class="flex items-center gap-2">
-									<span class="text-primary font-medium">{dep.name}</span>
-									<span class="text-tertiary text-xs">{dep.dependency_type}</span>
-								</div>
-								<p class="text-tertiary mt-0.5 truncate text-xs">
-									{getDepServiceNames(dep).join(' → ')}
-								</p>
+							<div class="card card-static">
+								<EntityDisplayWrapper
+									item={dep}
+									context={{}}
+									displayComponent={DependencyDisplay}
+								/>
 							</div>
 						{/each}
 					</div>
@@ -111,14 +94,12 @@
 					>
 					<div class="space-y-1">
 						{#each inboundDeps as dep (dep.id)}
-							<div class="card card-static text-sm">
-								<div class="flex items-center gap-2">
-									<span class="text-primary font-medium">{dep.name}</span>
-									<span class="text-tertiary text-xs">{dep.dependency_type}</span>
-								</div>
-								<p class="text-tertiary mt-0.5 truncate text-xs">
-									{getDepServiceNames(dep).join(' → ')}
-								</p>
+							<div class="card card-static">
+								<EntityDisplayWrapper
+									item={dep}
+									context={{}}
+									displayComponent={DependencyDisplay}
+								/>
 							</div>
 						{/each}
 					</div>

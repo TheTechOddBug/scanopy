@@ -4,7 +4,6 @@
 	import type { Topology, TopologyNode } from '$lib/features/topology/types/base';
 	import {
 		inspector_elementSummary,
-		common_hosts,
 		common_services,
 		common_interfaces
 	} from '$lib/paraglide/messages';
@@ -46,19 +45,14 @@
 <div>
 	<span class="text-secondary mb-2 block text-sm font-medium">{inspector_elementSummary()}</span>
 	<div class="card card-static space-y-1 text-sm">
+		<div class="flex justify-between">
+			<span class="text-tertiary">{common_interfaces()}</span>
+			<span class="text-primary">{summary.elementCount}</span>
+		</div>
 		{#if summary.hasServices}
 			<div class="flex justify-between">
 				<span class="text-tertiary">{common_services()}</span>
 				<span class="text-primary">{summary.serviceCount}</span>
-			</div>
-		{:else}
-			<div class="flex justify-between">
-				<span class="text-tertiary">{common_hosts()}</span>
-				<span class="text-primary">{summary.hostCount}</span>
-			</div>
-			<div class="flex justify-between">
-				<span class="text-tertiary">{common_interfaces()}</span>
-				<span class="text-primary">{summary.elementCount}</span>
 			</div>
 		{/if}
 	</div>

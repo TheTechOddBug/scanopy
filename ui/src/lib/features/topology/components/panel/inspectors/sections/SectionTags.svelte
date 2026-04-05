@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
+	import { useTagsQuery } from '$lib/features/tags/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import type { TopologyEditState } from '$lib/features/topology/state';
 	import type {
@@ -8,7 +9,8 @@
 		ContainerRenderContext
 	} from '$lib/features/topology/resolvers';
 	import type { EntityDiscriminants } from '$lib/features/tags/queries';
-	import { common_tags } from '$lib/paraglide/messages';
+	import { activePerspective } from '$lib/features/topology/queries';
+	import { common_tags, tags_applicationGroup } from '$lib/paraglide/messages';
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let {
@@ -30,9 +32,7 @@
 	// Determine the entity for tagging based on context
 	let entityId = $derived.by((): string | undefined => {
 		if (elementContext) {
-			// For Interface elements: tag the host
 			if (elementContext.elementType === 'Interface') return elementContext.hostId;
-			// For Service elements: tag the service
 			if (elementContext.services.length > 0) return elementContext.services[0].id;
 		}
 		if (containerContext?.subnet) return containerContext.subnet.id;
@@ -58,6 +58,15 @@
 		if (containerContext?.subnet) return containerContext.subnet.tags;
 		return [];
 	});
+
+	// Show app-group picker for Service elements in Application perspective
+	let showAppGroupPicker = $derived(
+		$activePerspective === 'Application' && entityType === 'Service'
+	);
+
+	// App-group tags for the picker (filtered from all tags)
+	const tagsQuery = useTagsQuery();
+	let appGroupTags = $derived((tagsQuery.data ?? []).filter((t) => t.is_application_group));
 </script>
 
 {#if entityId && entityType}
@@ -71,4 +80,18 @@
 			availableTags={isReadonly ? topology.entity_tags : undefined}
 		/>
 	</div>
+
+	{#if showAppGroupPicker}
+		<div>
+			<span class="text-secondary mb-2 block text-sm font-medium">{tags_applicationGroup()}</span>
+			<TagPickerInline
+				{selectedTagIds}
+				{entityId}
+				{entityType}
+				disabled={!editState.isEditable}
+				availableTags={appGroupTags}
+				createAsApplicationGroup={true}
+			/>
+		</div>
+	{/if}
 {/if}

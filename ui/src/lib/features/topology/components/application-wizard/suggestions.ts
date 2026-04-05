@@ -8,10 +8,40 @@ export const USE_CASE_SUGGESTIONS: Record<string, string[]> = {
 		'Monitoring',
 		'Network Infrastructure',
 		'Development',
-		'Smart Home'
+		'Gaming',
+		'Productivity',
+		'Backup',
+		'Security/Cameras',
+		'DNS/Ad Blocking',
+		'VPN',
+		'File Storage'
 	],
-	company: ['Production', 'Staging', 'Internal Tools', 'Monitoring', 'CI/CD', 'Shared Services'],
-	msp: ['Shared Infrastructure', 'Monitoring']
+	company: [
+		'Production',
+		'Staging',
+		'Internal Tools',
+		'Monitoring',
+		'CI/CD',
+		'Shared Services',
+		'Authentication',
+		'Database',
+		'API Gateway',
+		'Logging',
+		'Security',
+		'Backup'
+	],
+	msp: [
+		'Shared Infrastructure',
+		'Monitoring',
+		'Backup',
+		'Security',
+		'VPN',
+		'DNS',
+		'Logging',
+		'Authentication',
+		'File Storage',
+		'Communication'
+	]
 };
 
 export const DEFAULT_SUGGESTIONS = [
@@ -19,7 +49,10 @@ export const DEFAULT_SUGGESTIONS = [
 	'Database',
 	'Monitoring',
 	'Storage',
-	'Infrastructure'
+	'Infrastructure',
+	'Authentication',
+	'Logging',
+	'Backup'
 ];
 
 export function getSuggestions(useCase: string | null | undefined): string[] {

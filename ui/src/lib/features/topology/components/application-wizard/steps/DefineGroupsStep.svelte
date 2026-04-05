@@ -10,17 +10,14 @@
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { getSuggestions } from '../suggestions';
 	import { concepts } from '$lib/shared/stores/metadata';
+	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import {
 		appWizard_createYourOwn,
 		appWizard_defineGroupsDescription,
 		appWizard_noGroupsYet,
 		appWizard_suggestedGroups,
-		appWizard_mspAddClient,
-		appWizard_mspClientPlaceholder,
-		appWizard_mspClientExplanation
+		appWizard_mspCallout
 	} from '$lib/paraglide/messages';
-	import { createForm } from '@tanstack/svelte-form';
-	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 
 	let {
 		appGroupTags
@@ -79,21 +76,17 @@
 		queryClient.invalidateQueries({ queryKey: queryKeys.hosts.lists() });
 		queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
 	}
-
-	// MSP client name form
-	const clientForm = createForm(() => ({
-		defaultValues: { clientName: '' },
-		onSubmit: async ({ value }) => {
-			await createAppGroupTag(value.clientName);
-			clientForm.reset();
-		}
-	}));
 </script>
 
 <div class="space-y-6">
 	<p class="text-secondary text-sm">
 		{appWizard_defineGroupsDescription()}
 	</p>
+
+	<!-- MSP callout -->
+	{#if isMsp}
+		<InlineInfo title={appWizard_mspCallout()} />
+	{/if}
 
 	<!-- Suggested groups as application-styled tags -->
 	{#if availableSuggestions.length > 0}
@@ -120,38 +113,6 @@
 					</button>
 				{/each}
 			</div>
-		</div>
-	{/if}
-
-	<!-- MSP client input -->
-	{#if isMsp}
-		<div>
-			<p class="text-tertiary mb-2 text-sm">{appWizard_mspClientExplanation()}</p>
-			<form
-				onsubmit={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					clientForm.handleSubmit();
-				}}
-				class="flex items-end gap-2"
-			>
-				<div class="flex-1">
-					<clientForm.Field name="clientName">
-						{#snippet children(field)}
-							<TextInput
-								label=""
-								id="client-name"
-								{field}
-								placeholder={appWizard_mspClientPlaceholder()}
-								disabled={isCreating}
-							/>
-						{/snippet}
-					</clientForm.Field>
-				</div>
-				<button type="submit" class="btn-primary" disabled={isCreating}>
-					{appWizard_mspAddClient()}
-				</button>
-			</form>
 		</div>
 	{/if}
 

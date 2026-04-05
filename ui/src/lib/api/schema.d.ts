@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-04T23:12:56.077845Z",
-             *       "id": "5333506f-34be-492e-990a-ba208b1ea680",
+             *       "created_at": "2026-04-05T03:27:21.807824Z",
+             *       "id": "9ee30704-60de-4614-bf6a-af2f3da674f9",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-04T23:12:56.077845Z"
+             *       "updated_at": "2026-04-05T03:27:21.807824Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3156,14 +3156,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-04T23:12:56.067012Z",
-             *               "id": "27d24a19-de1b-4809-859d-ea68798eebc3",
+             *               "created_at": "2026-04-05T03:27:21.790807Z",
+             *               "id": "64e4bf1c-8c2b-42e7-80e4-e697dbf06473",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-04T23:12:56.067012Z"
+             *               "updated_at": "2026-04-05T03:27:21.790807Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3172,7 +3172,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Kubernetes",
+             *           "service_definition": "Bitwarden",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3428,14 +3428,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-04T23:12:56.074665Z",
-             *           "id": "89064592-7800-4eda-9354-13cdce45eeb5",
+             *           "created_at": "2026-04-05T03:27:21.803148Z",
+             *           "id": "1a8b79fc-a1bc-4c4b-aa11-288d68b955d6",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-04T23:12:56.074665Z"
+             *           "updated_at": "2026-04-05T03:27:21.803148Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3444,7 +3444,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Kubernetes",
+             *       "service_definition": "Bitwarden",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3530,6 +3530,7 @@ export interface components {
              *       "created_at": "2026-01-15T10:30:00Z",
              *       "description": "Production environment resources",
              *       "id": "550e8400-e29b-41d4-a716-44665544000a",
+             *       "is_application_group": false,
              *       "name": "production",
              *       "organization_id": "550e8400-e29b-41d4-a716-446655440001",
              *       "updated_at": "2026-01-15T10:30:00Z"
@@ -3771,14 +3772,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-04T23:12:56.067221Z",
-         *       "id": "762a3885-fbb1-4978-a1d7-ad1b58df4a92",
+         *       "created_at": "2026-04-05T03:27:21.791182Z",
+         *       "id": "e1e0a9cf-6946-4238-8c58-4ac69d183665",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-04T23:12:56.067221Z"
+         *       "updated_at": "2026-04-05T03:27:21.791182Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3898,7 +3899,7 @@ export interface components {
         /** @enum {string} */
         Color: "Pink" | "Rose" | "Red" | "Orange" | "Green" | "Emerald" | "Teal" | "Cyan" | "Blue" | "Indigo" | "Purple" | "Gray" | "Yellow";
         /** @enum {string} */
-        ContainerType: "Subnet" | "ServiceCategory" | "NestedTag" | "NestedServiceCategory";
+        ContainerType: "Subnet" | "ServiceCategory" | "ApplicationGroup" | "NestedTag" | "NestedServiceCategory";
         /**
          * @description Input for creating a binding with a service.
          *     `service_id` and `network_id` are assigned by the server after the service is created.
@@ -3963,7 +3964,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Kubernetes",
+         *           "service_definition": "Bitwarden",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4635,9 +4636,12 @@ export interface components {
             /**
              * @description Rules that change which containers exist and how they nest.
              *     Container titles are data-driven (subnet CIDR, host names), not user-configurable.
-             * @enum {string}
              */
-            rule: "BySubnet" | "ByVirtualizingService";
+            rule: "BySubnet" | "ByVirtualizingService" | {
+                ByApplicationGroup: {
+                    tag_ids?: string[];
+                };
+            };
         };
         /** @description Generic wrapper that gives any rule type a stable UUID identity. */
         GraphRule_ElementRule: {
@@ -4799,14 +4803,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-04T23:12:56.066726Z",
-         *               "id": "65e47d4d-3fcf-471b-889a-89fd97007088",
+         *               "created_at": "2026-04-05T03:27:21.790381Z",
+         *               "id": "497ec1b9-0b30-457c-90b1-70eeef74d948",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-04T23:12:56.066726Z"
+         *               "updated_at": "2026-04-05T03:27:21.790381Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4815,7 +4819,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Kubernetes",
+         *           "service_definition": "Bitwarden",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5879,14 +5883,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-04T23:12:56.067149Z",
-         *           "id": "00816499-f54f-4e84-9b61-fe217af07450",
+         *           "created_at": "2026-04-05T03:27:21.791057Z",
+         *           "id": "984417e7-187b-4c85-a90d-c8f02439ef3a",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-04T23:12:56.067149Z"
+         *           "updated_at": "2026-04-05T03:27:21.791057Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5895,7 +5899,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Kubernetes",
+         *       "service_definition": "Bitwarden",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6084,6 +6088,7 @@ export interface components {
          *       "created_at": "2026-01-15T10:30:00Z",
          *       "description": "Production environment resources",
          *       "id": "550e8400-e29b-41d4-a716-44665544000a",
+         *       "is_application_group": false,
          *       "name": "production",
          *       "organization_id": "550e8400-e29b-41d4-a716-446655440001",
          *       "updated_at": "2026-01-15T10:30:00Z"
@@ -6100,6 +6105,7 @@ export interface components {
         TagBase: {
             color: components["schemas"]["Color"];
             description?: string | null;
+            is_application_group?: boolean;
             name: string;
             /** Format: uuid */
             organization_id: string;

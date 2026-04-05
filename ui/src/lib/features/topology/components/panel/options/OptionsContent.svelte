@@ -18,6 +18,7 @@
 	import GroupingRuleEditor from './GroupingRuleEditor.svelte';
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { activePerspective } from '../../../queries';
 	import {
 		common_hosts,
 		common_services,
@@ -417,6 +418,7 @@
 						onToggle={toggleServiceTag}
 						entityType="service"
 						hasUntagged={hasUntaggedServices}
+						hasGeneric={$activePerspective === 'application'}
 					/>
 					<CategoryFilterGroup
 						categories={allServiceCategoriesWithColors}

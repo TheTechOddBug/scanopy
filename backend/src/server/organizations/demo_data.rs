@@ -217,6 +217,7 @@ fn generate_tags(organization_id: Uuid, now: DateTime<Utc>) -> Vec<Tag> {
                 description: Some(description.to_string()),
                 color: *color,
                 organization_id,
+                is_application_group: false,
             },
         })
         .collect()

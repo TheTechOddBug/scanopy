@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 import type { Edge } from '@xyflow/svelte';
 import type { Node } from '@xyflow/svelte';
 import type { QueryClient } from '@tanstack/svelte-query';
-import { edgeTypes, subnetTypes } from '$lib/shared/stores/metadata';
+import { edgeTypes, serviceDefinitions, subnetTypes } from '$lib/shared/stores/metadata';
 import type { TopologyEdge, TopologyNode, Topology } from './types/base';
 import { resolveElementNode } from './resolvers';
 import { getHostFromInterfaceIdFromCache } from '../hosts/queries';
@@ -31,6 +31,8 @@ export const searchOpen = writable<boolean>(false);
 
 // Special sentinel value for "Untagged" pseudo-tag
 export const UNTAGGED_SENTINEL = '__untagged__';
+// Special sentinel value for "Generic Services" pseudo-tag
+export const GENERIC_SENTINEL = '__generic__';
 
 // Tag hover state for highlighting nodes with a specific tag
 export interface HoveredTag {
@@ -121,6 +123,7 @@ export function updateTagFilter(topology: Topology | undefined, tagFilter: TagFi
 	const hideUntaggedHosts = hiddenHostTagIds.includes(UNTAGGED_SENTINEL);
 	const hideUntaggedServices = hiddenServiceTagIds.includes(UNTAGGED_SENTINEL);
 	const hideUntaggedSubnets = hiddenSubnetTagIds.includes(UNTAGGED_SENTINEL);
+	const hideGenericServices = hiddenServiceTagIds.includes(GENERIC_SENTINEL);
 
 	const hiddenNodeIds = new Set<string>();
 	const hiddenServiceIds = new Set<string>();
@@ -140,7 +143,11 @@ export function updateTagFilter(topology: Topology | undefined, tagFilter: TagFi
 	for (const service of topology.services) {
 		const isUntagged = service.tags.length === 0;
 		const serviceHasHiddenTag = service.tags.some((t) => hiddenServiceTagIds.includes(t));
-		if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices)) {
+		const isGeneric =
+			hideGenericServices &&
+			(serviceDefinitions.getMetadata(service.service_definition) as { is_generic?: boolean })
+				?.is_generic === true;
+		if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices) || isGeneric) {
 			hiddenServiceIds.add(service.id);
 		}
 	}

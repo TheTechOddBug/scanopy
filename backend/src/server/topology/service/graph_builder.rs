@@ -529,6 +529,7 @@ mod tests {
                 description: None,
                 color: Color::Yellow,
                 organization_id: Uuid::new_v4(),
+                is_application_group: false,
             },
         }
     }

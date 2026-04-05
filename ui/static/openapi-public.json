@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-04T23:12:56.077926Z",
-              "id": "831611d0-cf35-46a6-9a20-b411ad913386",
+              "created_at": "2026-04-05T03:27:21.807824Z",
+              "id": "9609cf9f-1722-40c8-ab10-01395c46106a",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-04T23:12:56.077926Z"
+              "updated_at": "2026-04-05T03:27:21.807824Z"
             }
           },
           "error": {
@@ -10734,14 +10734,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-04T23:12:56.066984Z",
-                      "id": "88a1637f-1a7d-405e-acb4-4a6d840922fb",
+                      "created_at": "2026-04-05T03:27:21.790985Z",
+                      "id": "46784799-b196-4808-9d35-dc94c79dd104",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-04T23:12:56.066984Z"
+                      "updated_at": "2026-04-05T03:27:21.790985Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10750,7 +10750,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Kubernetes",
+                  "service_definition": "Bitwarden",
                   "source": {
                     "type": "Manual"
                   },
@@ -11453,14 +11453,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-04T23:12:56.074766Z",
-                  "id": "dd3692d0-6b96-44a4-ba28-5cb55527569d",
+                  "created_at": "2026-04-05T03:27:21.803189Z",
+                  "id": "c91bb05a-f41d-4663-ba1d-aa7ea406d310",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-04T23:12:56.074766Z"
+                  "updated_at": "2026-04-05T03:27:21.803189Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11469,7 +11469,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Kubernetes",
+              "service_definition": "Bitwarden",
               "source": {
                 "type": "Manual"
               },
@@ -11713,6 +11713,7 @@
               "created_at": "2026-01-15T10:30:00Z",
               "description": "Production environment resources",
               "id": "550e8400-e29b-41d4-a716-44665544000a",
+              "is_application_group": false,
               "name": "production",
               "organization_id": "550e8400-e29b-41d4-a716-446655440001",
               "updated_at": "2026-01-15T10:30:00Z"
@@ -12743,14 +12744,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-04T23:12:56.067195Z",
-          "id": "c438ed19-6518-4987-9817-d2216f978daf",
+          "created_at": "2026-04-05T03:27:21.791308Z",
+          "id": "022e2f94-5e1a-45e8-9aea-83615e565fab",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-04T23:12:56.067195Z"
+          "updated_at": "2026-04-05T03:27:21.791308Z"
         }
       },
       "BindingBase": {
@@ -13036,6 +13037,7 @@
         "enum": [
           "Subnet",
           "ServiceCategory",
+          "ApplicationGroup",
           "NestedTag",
           "NestedServiceCategory"
         ]
@@ -13266,7 +13268,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Kubernetes",
+              "service_definition": "Bitwarden",
               "tags": [],
               "virtualization": null
             }
@@ -15265,12 +15267,41 @@
             "format": "uuid"
           },
           "rule": {
-            "type": "string",
-            "description": "Rules that change which containers exist and how they nest.\nContainer titles are data-driven (subnet CIDR, host names), not user-configurable.",
-            "enum": [
-              "BySubnet",
-              "ByVirtualizingService"
-            ]
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "BySubnet"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "ByVirtualizingService"
+                ]
+              },
+              {
+                "type": "object",
+                "required": [
+                  "ByApplicationGroup"
+                ],
+                "properties": {
+                  "ByApplicationGroup": {
+                    "type": "object",
+                    "properties": {
+                      "tag_ids": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "description": "Rules that change which containers exist and how they nest.\nContainer titles are data-driven (subnet CIDR, host names), not user-configurable."
           }
         }
       },
@@ -15763,14 +15794,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-04T23:12:56.066699Z",
-                  "id": "7f268704-9ddf-43e4-8990-829c8bc2b950",
+                  "created_at": "2026-04-05T03:27:21.790386Z",
+                  "id": "9d4cf01b-287b-4a7a-9a23-cacce2ed6a0b",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-04T23:12:56.066699Z"
+                  "updated_at": "2026-04-05T03:27:21.790386Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15779,7 +15810,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Kubernetes",
+              "service_definition": "Bitwarden",
               "source": {
                 "type": "Manual"
               },
@@ -17762,14 +17793,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-04T23:12:56.061584Z",
-                        "id": "e0816355-5ca9-4eff-8f0a-c4c8283eea4a",
+                        "created_at": "2026-04-05T03:27:21.780365Z",
+                        "id": "50ac2647-8397-4879-90d2-1491ec9c55da",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-04T23:12:56.061584Z"
+                        "updated_at": "2026-04-05T03:27:21.780365Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17778,7 +17809,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Kubernetes",
+                    "service_definition": "Bitwarden",
                     "source": {
                       "type": "Manual"
                     },
@@ -17855,14 +17886,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-04T23:12:56.073856Z",
-                    "id": "31e72dff-6804-4224-b66a-f49f7493631e",
+                    "created_at": "2026-04-05T03:27:21.801902Z",
+                    "id": "d42cc76d-3a0a-4285-9398-96937d87c87e",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-04T23:12:56.073856Z"
+                    "updated_at": "2026-04-05T03:27:21.801902Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -17871,7 +17902,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Kubernetes",
+                "service_definition": "Bitwarden",
                 "source": {
                   "type": "Manual"
                 },
@@ -18014,6 +18045,7 @@
                 "created_at": "2026-01-15T10:30:00Z",
                 "description": "Production environment resources",
                 "id": "550e8400-e29b-41d4-a716-44665544000a",
+                "is_application_group": false,
                 "name": "production",
                 "organization_id": "550e8400-e29b-41d4-a716-446655440001",
                 "updated_at": "2026-01-15T10:30:00Z"
@@ -19062,14 +19094,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-04T23:12:56.067122Z",
-              "id": "3af1779c-2ba1-4e04-aa12-5c0b0135429e",
+              "created_at": "2026-04-05T03:27:21.791197Z",
+              "id": "4b7c6776-ff85-4ac7-913c-02ad8a273cb1",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-04T23:12:56.067122Z"
+              "updated_at": "2026-04-05T03:27:21.791197Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19078,7 +19110,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Kubernetes",
+          "service_definition": "Bitwarden",
           "source": {
             "type": "Manual"
           },
@@ -19655,6 +19687,7 @@
           "created_at": "2026-01-15T10:30:00Z",
           "description": "Production environment resources",
           "id": "550e8400-e29b-41d4-a716-44665544000a",
+          "is_application_group": false,
           "name": "production",
           "organization_id": "550e8400-e29b-41d4-a716-446655440001",
           "updated_at": "2026-01-15T10:30:00Z"
@@ -19676,6 +19709,9 @@
               "string",
               "null"
             ]
+          },
+          "is_application_group": {
+            "type": "boolean"
           },
           "name": {
             "type": "string"

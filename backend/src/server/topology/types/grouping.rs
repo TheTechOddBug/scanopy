@@ -1,4 +1,5 @@
 use crate::server::services::r#impl::categories::ServiceCategory;
+use crate::server::shared::concepts::Concept;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use crate::server::shared::types::{Color, Icon};
 use crate::server::topology::types::base::TopologyRequestOptions;
@@ -27,21 +28,15 @@ impl<T> GraphRule<T> {
 /// Rules that change which containers exist and how they nest.
 /// Container titles are data-driven (subnet CIDR, host names), not user-configurable.
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-    Serialize,
-    Deserialize,
-    ToSchema,
-    EnumIter,
-    IntoStaticStr,
+    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema, EnumIter, IntoStaticStr,
 )]
 pub enum ContainerRule {
     BySubnet,
     ByVirtualizingService,
+    ByApplicationGroup {
+        #[serde(default)]
+        tag_ids: Vec<Uuid>,
+    },
 }
 
 impl ContainerRule {
@@ -52,6 +47,7 @@ impl ContainerRule {
                 TopologyPerspective::L3Logical,
                 TopologyPerspective::Infrastructure,
             ],
+            ContainerRule::ByApplicationGroup { .. } => &[TopologyPerspective::Application],
         }
     }
 }
@@ -67,6 +63,7 @@ impl EntityMetadataProvider for ContainerRule {
         match self {
             ContainerRule::BySubnet => Color::Blue,
             ContainerRule::ByVirtualizingService => Color::Teal,
+            ContainerRule::ByApplicationGroup { .. } => Concept::Application.color(),
         }
     }
 
@@ -74,6 +71,7 @@ impl EntityMetadataProvider for ContainerRule {
         match self {
             ContainerRule::BySubnet => Icon::Network,
             ContainerRule::ByVirtualizingService => Icon::Boxes,
+            ContainerRule::ByApplicationGroup { .. } => Concept::Application.icon(),
         }
     }
 }
@@ -83,6 +81,7 @@ impl TypeMetadataProvider for ContainerRule {
         match self {
             ContainerRule::BySubnet => "Subnet",
             ContainerRule::ByVirtualizingService => "Docker bridges",
+            ContainerRule::ByApplicationGroup { .. } => "Application Group",
         }
     }
 
@@ -90,12 +89,13 @@ impl TypeMetadataProvider for ContainerRule {
         match self {
             ContainerRule::BySubnet => "Group nodes by network subnet",
             ContainerRule::ByVirtualizingService => "Merge Docker bridge subnets under their host",
+            ContainerRule::ByApplicationGroup { .. } => "Group services by application group tag",
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
         serde_json::json!({
-            "is_user_editable": matches!(self, ContainerRule::ByVirtualizingService),
+            "is_user_editable": matches!(self, ContainerRule::ByVirtualizingService | ContainerRule::ByApplicationGroup { .. }),
             "perspectives": self.applicable_perspectives(),
         })
     }
@@ -212,6 +212,12 @@ impl GroupingConfig {
         self.container_rules
             .iter()
             .any(|r| matches!(r.rule, ContainerRule::ByVirtualizingService))
+    }
+
+    pub fn has_application_group_rule(&self) -> bool {
+        self.container_rules
+            .iter()
+            .any(|r| matches!(r.rule, ContainerRule::ByApplicationGroup { .. }))
     }
 }
 

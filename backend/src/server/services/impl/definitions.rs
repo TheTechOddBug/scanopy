@@ -182,6 +182,7 @@ impl TypeMetadataProvider for Box<dyn ServiceDefinition> {
             "can_be_added": self.can_be_manually_added(),
             "manages_virtualization": self.manages_virtualization(),
             "is_gateway": self.is_gateway(),
+            "is_generic": ServiceDefinition::is_generic(&**self),
             "has_logo": self.has_logo(),
             "logo_ext": logo_ext,
             "logo_needs_white_background": self.logo_needs_white_background(),

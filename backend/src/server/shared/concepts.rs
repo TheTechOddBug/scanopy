@@ -29,6 +29,10 @@ pub enum Concept {
     Storage,
     Virtualization,
     SNMP,
+    L2,
+    L3,
+    Application,
+    Infrastructure,
 }
 
 impl HasId for Concept {
@@ -48,6 +52,10 @@ impl EntityMetadataProvider for Concept {
             Concept::Storage => Color::Green,
             Concept::Virtualization => Color::Indigo,
             Concept::SNMP => Color::Pink,
+            Concept::L2 => Color::Emerald,
+            Concept::L3 => Color::Blue,
+            Concept::Application => Color::Purple,
+            Concept::Infrastructure => Color::Orange,
         }
     }
 
@@ -61,6 +69,10 @@ impl EntityMetadataProvider for Concept {
             Concept::Storage => Icon::HardDrive,
             Concept::Virtualization => Icon::Boxes,
             Concept::SNMP => Icon::Activity,
+            Concept::L2 => Icon::Cable,
+            Concept::L3 => Icon::Network,
+            Concept::Application => Icon::AppWindow,
+            Concept::Infrastructure => Icon::Server,
         }
     }
 }

@@ -1,3 +1,4 @@
+use crate::server::shared::concepts::Concept;
 use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use crate::server::shared::types::{Color, Icon};
@@ -72,6 +73,7 @@ pub enum ContainerType {
     #[default]
     Subnet,
     ServiceCategory,
+    ApplicationGroup,
 
     // Subcontainers (nested inside a top-level container)
     NestedTag,
@@ -89,6 +91,7 @@ impl EntityMetadataProvider for ContainerType {
         match self {
             ContainerType::Subnet => Color::Blue,
             ContainerType::ServiceCategory => EntityDiscriminants::Service.color(),
+            ContainerType::ApplicationGroup => Concept::Application.color(),
             ContainerType::NestedTag => Color::Orange,
             ContainerType::NestedServiceCategory => Color::Purple,
         }
@@ -98,6 +101,7 @@ impl EntityMetadataProvider for ContainerType {
         match self {
             ContainerType::Subnet => Icon::Network,
             ContainerType::ServiceCategory => EntityDiscriminants::Service.icon(),
+            ContainerType::ApplicationGroup => Concept::Application.icon(),
             ContainerType::NestedTag => Icon::Tag,
             ContainerType::NestedServiceCategory => Icon::Layers,
         }
@@ -109,6 +113,7 @@ impl TypeMetadataProvider for ContainerType {
         match self {
             ContainerType::Subnet => "Subnet",
             ContainerType::ServiceCategory => "Service category",
+            ContainerType::ApplicationGroup => "Application group",
             ContainerType::NestedTag => "Tag container",
             ContainerType::NestedServiceCategory => "Service category container",
         }
@@ -118,6 +123,7 @@ impl TypeMetadataProvider for ContainerType {
         match self {
             ContainerType::Subnet => "Network subnet container",
             ContainerType::ServiceCategory => "Services grouped by category",
+            ContainerType::ApplicationGroup => "Services grouped by application group tag",
             ContainerType::NestedTag => "Elements grouped by tag",
             ContainerType::NestedServiceCategory => "Elements grouped by service category",
         }
@@ -125,7 +131,9 @@ impl TypeMetadataProvider for ContainerType {
 
     fn metadata(&self) -> serde_json::Value {
         let title_style = match self {
-            ContainerType::Subnet | ContainerType::ServiceCategory => TitleStyle::External,
+            ContainerType::Subnet
+            | ContainerType::ServiceCategory
+            | ContainerType::ApplicationGroup => TitleStyle::External,
             ContainerType::NestedTag | ContainerType::NestedServiceCategory => TitleStyle::Inline,
         };
         let is_subcontainer = matches!(
@@ -133,11 +141,15 @@ impl TypeMetadataProvider for ContainerType {
             ContainerType::NestedTag | ContainerType::NestedServiceCategory
         );
         let (padding_top, padding_side) = match self {
-            ContainerType::Subnet | ContainerType::ServiceCategory => (25, 25),
+            ContainerType::Subnet
+            | ContainerType::ServiceCategory
+            | ContainerType::ApplicationGroup => (25, 25),
             ContainerType::NestedTag | ContainerType::NestedServiceCategory => (45, 20),
         };
         let (collapsed_width, collapsed_height) = match self {
-            ContainerType::Subnet | ContainerType::ServiceCategory => (200, 80),
+            ContainerType::Subnet
+            | ContainerType::ServiceCategory
+            | ContainerType::ApplicationGroup => (200, 80),
             _ => (250, 40),
         };
         serde_json::json!({

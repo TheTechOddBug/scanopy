@@ -68,19 +68,19 @@ impl HasId for TopologyPerspective {
 impl EntityMetadataProvider for TopologyPerspective {
     fn color(&self) -> Color {
         match self {
-            Self::L2Physical => Color::Emerald,
-            Self::L3Logical => Color::Blue,
-            Self::Infrastructure => Color::Orange,
-            Self::Application => Color::Purple,
+            Self::L2Physical => Concept::L2.color(),
+            Self::L3Logical => Concept::L3.color(),
+            Self::Infrastructure => Concept::Infrastructure.color(),
+            Self::Application => Concept::Application.color(),
         }
     }
 
     fn icon(&self) -> Icon {
         match self {
-            Self::L2Physical => Icon::Cable,
-            Self::L3Logical => Icon::Network,
-            Self::Infrastructure => Icon::Server,
-            Self::Application => Icon::AppWindow,
+            Self::L2Physical => Concept::L2.icon(),
+            Self::L3Logical => Concept::L3.icon(),
+            Self::Infrastructure => Concept::Infrastructure.icon(),
+            Self::Application => Concept::Application.icon(),
         }
     }
 }

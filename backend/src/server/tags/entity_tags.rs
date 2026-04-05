@@ -390,7 +390,13 @@ impl EntityTagService {
         organization_id: Uuid,
     ) -> Result<(), Error> {
         // Validate tag exists and belongs to organization
-        self.validate_tag(tag_id, organization_id).await?;
+        let tag = self.validate_tag_full(tag_id, organization_id).await?;
+
+        // Check application group constraint
+        if tag.base.is_application_group {
+            self.validate_single_app_group_tag(entity_id, &entity_type, Some(tag_id))
+                .await?;
+        }
 
         // Add to junction table
         self.storage
@@ -430,9 +436,19 @@ impl EntityTagService {
             return Ok(());
         }
 
-        // Validate all tags
+        // Validate all tags and check application group constraint
+        let mut app_group_count = 0;
         for tag_id in &tag_ids {
-            self.validate_tag(*tag_id, organization_id).await?;
+            let tag = self.validate_tag_full(*tag_id, organization_id).await?;
+            if tag.base.is_application_group {
+                app_group_count += 1;
+            }
+        }
+        if app_group_count > 1 {
+            return Err(anyhow!(
+                "Only one application group tag allowed per {}. Services inherit their host's application group unless overridden with their own.",
+                entity_type
+            ));
         }
 
         // Replace tags
@@ -480,7 +496,7 @@ impl EntityTagService {
         }
 
         // Validate tag exists and belongs to organization
-        self.validate_tag(tag_id, organization_id).await?;
+        self.validate_tag_full(tag_id, organization_id).await?;
 
         // Bulk add
         let count = self
@@ -517,7 +533,12 @@ impl EntityTagService {
     // =========================================================================
 
     /// Validate that a tag exists and belongs to the specified organization.
-    async fn validate_tag(&self, tag_id: Uuid, organization_id: Uuid) -> Result<(), Error> {
+    /// Returns the full Tag for further checks.
+    async fn validate_tag_full(
+        &self,
+        tag_id: Uuid,
+        organization_id: Uuid,
+    ) -> Result<super::r#impl::base::Tag, Error> {
         use crate::server::shared::services::traits::CrudService;
 
         match self.tag_service.get_by_id(&tag_id).await {
@@ -528,10 +549,37 @@ impl EntityTagService {
                         tag_id
                     ));
                 }
-                Ok(())
+                Ok(tag)
             }
             Ok(None) => Err(anyhow!("Tag {} not found", tag_id)),
             Err(e) => Err(anyhow!("Failed to validate tag {}: {}", tag_id, e)),
         }
+    }
+
+    /// Validate that an entity doesn't already have a different application group tag.
+    /// `exclude_tag_id` is the tag being added (don't count it against the limit).
+    async fn validate_single_app_group_tag(
+        &self,
+        entity_id: Uuid,
+        entity_type: &EntityDiscriminants,
+        exclude_tag_id: Option<Uuid>,
+    ) -> Result<(), Error> {
+        use crate::server::shared::services::traits::CrudService;
+
+        let existing_tag_ids = self.storage.get_for_entity(&entity_id, entity_type).await?;
+        for existing_id in &existing_tag_ids {
+            if exclude_tag_id == Some(*existing_id) {
+                continue;
+            }
+            if let Ok(Some(existing_tag)) = self.tag_service.get_by_id(existing_id).await
+                && existing_tag.base.is_application_group
+            {
+                return Err(anyhow!(
+                    "Only one application group tag allowed per {}. Services inherit their host's application group unless overridden with their own.",
+                    entity_type
+                ));
+            }
+        }
+        Ok(())
     }
 }

@@ -5,7 +5,7 @@
 	import { createDefaultTag } from '$lib/features/tags/types/base';
 	import { createColorHelper, AVAILABLE_COLORS, type Color } from '$lib/shared/utils/styling';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
-	import { permissions } from '$lib/shared/stores/metadata';
+	import { concepts, permissions } from '$lib/shared/stores/metadata';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 
 	/**
@@ -170,6 +170,8 @@
 						<Tag
 							label={tag?.name}
 							color={tag?.color}
+							icon={tag?.is_application_group ? concepts.getIconComponent('Application') : null}
+							isShiny={tag?.is_application_group ?? false}
 							pill={true}
 							removable={!disabled}
 							onRemove={() => removeTag(tagId)}

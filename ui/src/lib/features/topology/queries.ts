@@ -15,7 +15,7 @@ import type { Organization } from '$lib/features/organizations/types';
 import { uuidv4Sentinel, utcTimeZoneSentinel } from '$lib/shared/utils/formatting';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
 import { writable, derived, get } from 'svelte/store';
-import { UNTAGGED_SENTINEL } from './interactions';
+import { UNTAGGED_SENTINEL, GENERIC_SENTINEL } from './interactions';
 import { getDefaultHiddenEdgeTypes } from './layout/edge-classification';
 import type { components } from '$lib/api/schema';
 
@@ -25,20 +25,15 @@ type PerPerspectiveOptions = Record<TopologyPerspective, TopologyOptions>;
 /** Strip UI-only sentinel values from options before sending to the API */
 export function sanitizeOptionsForApi(options: TopologyOptions): TopologyOptions {
 	const tf = options.local?.tag_filter;
+	const isSentinel = (id: string) => id === UNTAGGED_SENTINEL || id === GENERIC_SENTINEL;
 	return {
 		...options,
 		local: {
 			...options.local,
 			tag_filter: {
-				hidden_host_tag_ids: (tf?.hidden_host_tag_ids ?? []).filter(
-					(id) => id !== UNTAGGED_SENTINEL
-				),
-				hidden_service_tag_ids: (tf?.hidden_service_tag_ids ?? []).filter(
-					(id) => id !== UNTAGGED_SENTINEL
-				),
-				hidden_subnet_tag_ids: (tf?.hidden_subnet_tag_ids ?? []).filter(
-					(id) => id !== UNTAGGED_SENTINEL
-				)
+				hidden_host_tag_ids: (tf?.hidden_host_tag_ids ?? []).filter((id) => !isSentinel(id)),
+				hidden_service_tag_ids: (tf?.hidden_service_tag_ids ?? []).filter((id) => !isSentinel(id)),
+				hidden_subnet_tag_ids: (tf?.hidden_subnet_tag_ids ?? []).filter((id) => !isSentinel(id))
 			}
 		}
 	};
@@ -65,7 +60,7 @@ export function getDefaultTopologyOptions(perspective: TopologyPerspective): Top
 			bundle_edges: true,
 			tag_filter: {
 				hidden_host_tag_ids: [],
-				hidden_service_tag_ids: [],
+				hidden_service_tag_ids: perspective === 'application' ? [GENERIC_SENTINEL] : [],
 				hidden_subnet_tag_ids: []
 			},
 			show_minimap: true

@@ -15,6 +15,7 @@
 		pill = false,
 		title = '',
 		removable = false,
+		isShiny = false,
 		onRemove
 	}: {
 		icon?: IconComponent | null;
@@ -26,6 +27,7 @@
 		pill?: boolean;
 		title?: string;
 		removable?: boolean;
+		isShiny?: boolean;
 		onRemove?: () => void;
 	} = $props();
 
@@ -42,11 +44,8 @@
 		class="inline-flex items-center gap-1 {pill
 			? 'rounded-full'
 			: 'rounded'} px-2 py-0.5 text-xs font-medium
-		{isUnknown
-			? unknownClasses
-			: disabled
-				? 'text-tertiary bg-gray-700/30'
-				: `${bgColor} ${textColor}`}"
+		{isUnknown ? unknownClasses : disabled ? 'text-tertiary bg-gray-700/30' : `${bgColor} ${textColor}`}
+		{isShiny ? 'tag-shiny' : ''}"
 	>
 		{#if icon}
 			{@const Icon = icon}
@@ -91,3 +90,53 @@
 		{@render content()}
 	</div>
 {/if}
+
+<style>
+	:global(.tag-shiny) {
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.tag-shiny)::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			120deg,
+			transparent 0%,
+			transparent 30%,
+			rgba(255, 255, 255, 0.25) 45%,
+			rgba(255, 255, 255, 0.35) 50%,
+			rgba(255, 255, 255, 0.25) 55%,
+			transparent 70%,
+			transparent 100%
+		);
+		transform: translateX(-100%);
+		animation: tag-sheen 0.8s ease-out 0.3s forwards;
+		pointer-events: none;
+	}
+
+	:global(.tag-shiny:hover)::after {
+		animation: tag-sheen-hover 0.6s ease-out forwards;
+	}
+
+	@keyframes tag-sheen {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(100%);
+		}
+	}
+
+	@keyframes tag-sheen-hover {
+		from {
+			transform: translateX(-100%);
+			opacity: 0.7;
+		}
+		to {
+			transform: translateX(100%);
+			opacity: 0.7;
+		}
+	}
+</style>

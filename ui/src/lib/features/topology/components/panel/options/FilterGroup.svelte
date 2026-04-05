@@ -1,6 +1,15 @@
 <script lang="ts">
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import type { Color } from '$lib/shared/utils/styling';
+	import type { IconComponent } from '$lib/shared/utils/types';
+
+	export interface FilterItem {
+		value: string;
+		label: string;
+		color: Color;
+		icon?: IconComponent | null;
+		isShiny?: boolean;
+	}
 
 	let {
 		items,
@@ -12,7 +21,7 @@
 		disabled = false,
 		label
 	}: {
-		items: { value: string; label: string; color: Color }[];
+		items: FilterItem[];
 		selectedValues: string[];
 		mode: 'include' | 'exclude';
 		onToggle: (value: string) => void;
@@ -51,7 +60,7 @@
 						? 'opacity-50 hover:opacity-75'
 						: 'opacity-100'}"
 			>
-				<Tag label={item.label} color={item.color} />
+				<Tag label={item.label} color={item.color} icon={item.icon} isShiny={item.isShiny} />
 			</button>
 		{/each}
 	</div>

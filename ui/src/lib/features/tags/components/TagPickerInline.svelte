@@ -15,6 +15,7 @@
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { onMount } from 'svelte';
 	import { common_creating, tags_addTag, tags_createTagQuoted } from '$lib/paraglide/messages';
+	import { concepts } from '$lib/shared/stores/metadata';
 
 	/**
 	 * Compact inline tag picker for use in cards and bulk actions.
@@ -259,6 +260,8 @@
 		<Tag
 			label={tag?.name}
 			color={tag?.color}
+			icon={tag?.is_application_group ? concepts.getIconComponent('Application') : null}
+			isShiny={tag?.is_application_group ?? false}
 			pill={!disabled}
 			removable={!disabled && !!(onRemove || isEntityMode)}
 			onRemove={() => handleRemoveTag(tagId)}

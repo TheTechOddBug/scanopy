@@ -71,8 +71,7 @@
 			if (category) {
 				tags.push({
 					label: serviceCategories.getName(category),
-					color: serviceCategories.getColorString(category),
-					title: serviceCategories.getDescription(category) || undefined
+					color: serviceCategories.getColorString(category)
 				});
 			}
 

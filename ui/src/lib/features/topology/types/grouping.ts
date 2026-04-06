@@ -13,26 +13,25 @@ export function getContainerRuleDiscriminant(rule: ContainerRule): ContainerRule
 	return Object.keys(rule)[0] as ContainerRuleType;
 }
 
-export type ElementRuleType = 'ByServiceCategory' | 'ByTag' | 'ByVirtualizer';
+export type ElementRuleType = 'ByServiceCategory' | 'ByTag' | 'ByVirtualizer' | 'ByStack';
 
 export function getElementRuleType(rule: ElementRule): ElementRuleType {
-	if (rule === 'ByVirtualizer') return 'ByVirtualizer';
-	if (typeof rule === 'object' && 'ByServiceCategory' in rule) return 'ByServiceCategory';
+	if (typeof rule === 'string') return rule;
+	if ('ByServiceCategory' in rule) return 'ByServiceCategory';
 	return 'ByTag';
 }
 
 export function getElementRuleTitle(rule: ElementRule): string | null | undefined {
-	if (rule === 'ByVirtualizer') return null;
-	if (typeof rule === 'object' && 'ByServiceCategory' in rule) return rule.ByServiceCategory.title;
-	if (typeof rule === 'object' && 'ByTag' in rule) return rule.ByTag.title;
-	return null;
+	if (typeof rule === 'string') return null;
+	if ('ByServiceCategory' in rule) return rule.ByServiceCategory.title;
+	return rule.ByTag.title;
 }
 
 export function setElementRuleTitle(rule: ElementRule, title: string | null): ElementRule {
-	if (rule === 'ByVirtualizer') return rule;
-	if (typeof rule === 'object' && 'ByServiceCategory' in rule)
+	if (typeof rule === 'string') return rule;
+	if ('ByServiceCategory' in rule)
 		return { ByServiceCategory: { ...rule.ByServiceCategory, title } };
-	if (typeof rule === 'object' && 'ByTag' in rule) return { ByTag: { ...rule.ByTag, title } };
+	if ('ByTag' in rule) return { ByTag: { ...rule.ByTag, title } };
 	return rule;
 }
 

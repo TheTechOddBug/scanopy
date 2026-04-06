@@ -528,16 +528,30 @@ const perPerspectiveOptions = writable<PerPerspectiveOptions>(loadOptionsFromSto
 // Shared element rules — cross-perspective, single source of truth
 export const sharedElementRules = writable<ElementGraphRule[]>(loadElementRulesFromStorage());
 
-// Public store: resolves to the active perspective's options with shared element rules merged in
+// Public store: resolves to the active perspective's options with shared element rules merged in.
+// Shared rules are filtered to only include rules applicable to the active perspective.
 export const topologyOptions = derived(
 	[perPerspectiveOptions, activePerspective, sharedElementRules],
 	([$allOptions, $perspective, $elementRules]) => {
 		const opts = $allOptions[$perspective];
+		const applicableRules = $elementRules.filter((gr) => {
+			const ruleId = typeof gr.rule === 'string' ? gr.rule : Object.keys(gr.rule)[0];
+			const meta = _elementRuleTypes.find((r) => r.id === ruleId);
+			return (meta?.metadata as { perspectives?: string[] })?.perspectives?.includes($perspective);
+		});
+		// Merge perspective defaults with applicable shared rules (shared overrides by type)
+		const sharedTypes = new Set(
+			applicableRules.map((gr) => (typeof gr.rule === 'string' ? gr.rule : Object.keys(gr.rule)[0]))
+		);
+		const perspectiveDefaults = (opts.request.element_rules ?? []).filter((gr) => {
+			const t = typeof gr.rule === 'string' ? gr.rule : Object.keys(gr.rule)[0];
+			return !sharedTypes.has(t);
+		});
 		return {
 			...opts,
 			request: {
 				...opts.request,
-				element_rules: $elementRules
+				element_rules: [...perspectiveDefaults, ...applicableRules]
 			}
 		};
 	}

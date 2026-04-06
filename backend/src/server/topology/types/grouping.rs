@@ -220,6 +220,15 @@ impl GroupingConfig {
             }
         }
 
+        // Filter rules to only those applicable to the active perspective
+        let perspective = options.perspective;
+        config
+            .container_rules
+            .retain(|gr| gr.rule.applicable_perspectives().contains(&perspective));
+        config
+            .element_rules
+            .retain(|gr| gr.rule.applicable_perspectives().contains(&perspective));
+
         config
     }
 

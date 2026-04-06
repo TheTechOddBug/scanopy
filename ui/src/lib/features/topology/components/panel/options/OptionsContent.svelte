@@ -73,13 +73,16 @@
 	let hasUntaggedSubnets = $derived(topology?.subnets.some((s) => s.tags.length === 0) ?? false);
 
 	// Which tag filter categories apply to this perspective
-	let tagFilterCategories = $derived(
-		(
-			perspectives.getMetadata($activePerspective) as {
-				tag_filter_categories?: string[];
-			} | null
-		)?.tag_filter_categories ?? ['host', 'service', 'subnet']
+	let perspectiveMetaObj = $derived(
+		perspectives.getMetadata($activePerspective) as {
+			tag_filter_categories?: string[];
+			category_filter?: boolean;
+		} | null
 	);
+	let tagFilterCategories = $derived(
+		perspectiveMetaObj?.tag_filter_categories ?? ['host', 'service', 'subnet']
+	);
+	let hasCategoryFilter = $derived(perspectiveMetaObj?.category_filter ?? false);
 
 	// Toggle functions for tag filter
 	function toggleHostTag(tagId: string) {
@@ -392,25 +395,27 @@
 							entityType="service"
 							hasUntagged={hasUntaggedServices}
 						/>
-						<div
-							class="border-l-2 pl-2"
-							style="border-left-color: {perspectiveMeta?.color
-								? COLOR_MAP[perspectiveMeta.color as Color]?.rgb
-								: 'transparent'}"
-						>
-							<CategoryFilterGroup
-								categories={allServiceCategoriesWithColors}
-								hiddenCategories={(
-									($topologyOptions.request.hide_service_categories ?? {}) as Record<
-										string,
-										string[]
-									>
-								)[$activePerspective] ?? []}
-								onToggle={toggleServiceCategory}
-								disabled={!editState.isEditable}
-								label={common_byCategory()}
-							/>
-						</div>
+						{#if hasCategoryFilter}
+							<div
+								class="border-l-2 pl-2"
+								style="border-left-color: {perspectiveMeta?.color
+									? COLOR_MAP[perspectiveMeta.color as Color]?.rgb
+									: 'transparent'}"
+							>
+								<CategoryFilterGroup
+									categories={allServiceCategoriesWithColors}
+									hiddenCategories={(
+										($topologyOptions.request.hide_service_categories ?? {}) as Record<
+											string,
+											string[]
+										>
+									)[$activePerspective] ?? []}
+									onToggle={toggleServiceCategory}
+									disabled={!editState.isEditable}
+									label={common_byCategory()}
+								/>
+							</div>
+						{/if}
 					</div>
 				{/if}
 

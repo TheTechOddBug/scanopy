@@ -55,6 +55,7 @@
 		topology_addContainerRule,
 		topology_addElementRule,
 		topology_elementGroupingHelp,
+		topology_elementRuleNotApplicable,
 		topology_groupRuleTitlePlaceholder
 	} from '$lib/paraglide/messages';
 	import perspectivesJson from '$lib/data/perspectives.json';
@@ -93,6 +94,27 @@
 	// Metadata lookups
 	const containerRuleMeta = Object.fromEntries(typedContainerRuleTypes.map((m) => [m.id, m]));
 	const elementRuleMeta = Object.fromEntries(typedElementRuleTypes.map((m) => [m.id, m]));
+
+	// Perspective name lookup for tooltip
+	const perspectiveNames = Object.fromEntries(perspectivesJson.map((p) => [p.id, p.name ?? p.id]));
+
+	/** Whether an element rule applies to the current perspective */
+	function isElementRuleApplicable(item: ElementGraphRule): boolean {
+		const ruleId = getElementRuleType(item.rule);
+		const meta = elementRuleMeta[ruleId];
+		const perspectives = meta?.metadata?.perspectives;
+		return !perspectives || perspectives.includes(currentPerspective);
+	}
+
+	/** Tooltip for a disabled (non-applicable) element rule */
+	function getElementRuleDisabledTooltip(item: ElementGraphRule): string | undefined {
+		if (isElementRuleApplicable(item)) return undefined;
+		const ruleId = getElementRuleType(item.rule);
+		const meta = elementRuleMeta[ruleId];
+		const perspectives = meta?.metadata?.perspectives ?? [];
+		const names = perspectives.map((p: string) => perspectiveNames[p] ?? p);
+		return topology_elementRuleNotApplicable({ perspectives: names.join(', ') });
+	}
 
 	// Service categories available in topology
 	let serviceCategoriesWithColors = $derived.by(() => {
@@ -192,7 +214,7 @@
 		if (optionId === 'ByApplicationGroup') {
 			rule = { ByApplicationGroup: { tag_ids: [] } };
 		} else {
-			rule = optionId as 'BySubnet' | 'ByVirtualizingService';
+			rule = optionId as 'BySubnet' | 'MergeDockerBridges';
 		}
 		updateContainerRules([...containerRules, makeGraphRule(rule)]);
 	}
@@ -441,7 +463,9 @@
 	itemDisplayComponent={elementRuleDisplayComponent}
 	allowReorder={true}
 	allowDuplicates={true}
-	allowItemEdit={(item) => typeof item.rule !== 'string'}
+	allowItemEdit={(item) => typeof item.rule !== 'string' && isElementRuleApplicable(item)}
+	allowItemRemove={isElementRuleApplicable}
+	allowItemReorder={isElementRuleApplicable}
 	editIcon={getElementEditIcon}
 	editButtonClass={getElementEditButtonClass}
 	isItemEditing={isElementItemEditing}
@@ -455,6 +479,8 @@
 		<GroupingRuleItem
 			label={getElementRuleLabel(item)}
 			description={elementRuleMeta[getElementRuleType(item.rule)]?.description ?? undefined}
+			disabled={!isElementRuleApplicable(item)}
+			disabledTooltip={getElementRuleDisabledTooltip(item)}
 		/>
 	{/snippet}
 	{#snippet itemExpandedSnippet({ item, index })}

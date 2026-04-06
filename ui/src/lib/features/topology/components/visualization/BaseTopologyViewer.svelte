@@ -438,9 +438,9 @@
 				const sortFlowNodes = (flowNodes: Node[]) =>
 					flowNodes.sort((a, b) => depthOf(a) - depthOf(b));
 
-				if (isNewStructure) {
-					const isPerspectiveTransition = perspectiveChanged && topologyChanged;
+				const isPerspectiveTransition = isNewStructure && perspectiveChanged && topologyChanged;
 
+				if (isNewStructure) {
 					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
 					const elementNodeSizes = new Map<string, { x: number; y: number }>();
 
@@ -577,11 +577,7 @@
 				const needsLayout = isNewStructure || portsChanged || collapseChanged;
 				const allNodes = sortFlowNodes(buildFlowNodes(needsLayout));
 
-				// Clear edges, set positioned nodes (keep isMeasuring until paint completes)
-				edges.set([]);
-				nodes.set(allNodes);
-
-				// Build base edges: filter out edges with collapsed endpoints
+				// Build edges (pure data — no DOM dependency)
 				let baseEdges: TopologyEdge[];
 				const extraFlowEdges: Edge[] = [];
 
@@ -685,20 +681,31 @@
 				// Add aggregated collapse edges
 				flowEdges.push(...extraFlowEdges);
 
-				pendingEdges = flowEdges;
+				if (isPerspectiveTransition) {
+					// Perspective switch: set nodes and edges atomically in one synchronous
+					// batch so Svelte renders them in a single frame — no flash of nodes-without-edges
+					nodes.set(allNodes);
+					edges.set(flowEdges);
+				} else {
+					// Normal path: clear edges, set nodes, wait for render, then set edges
+					edges.set([]);
+					nodes.set(allNodes);
 
-				// Wait for nodes to render, then set edges
-				await tick();
-				if (pendingEdges.length > 0) {
-					edges.set(pendingEdges);
-					pendingEdges = [];
+					pendingEdges = flowEdges;
+
+					// Wait for nodes to render, then set edges
+					await tick();
+					if (pendingEdges.length > 0) {
+						edges.set(pendingEdges);
+						pendingEdges = [];
+					}
+
+					// Reveal after positioned nodes + edges have painted
+					// Double rAF ensures the compositing pass completes before revealing
+					await tick();
+					await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+					isMeasuring = false;
 				}
-
-				// Reveal after positioned nodes + edges have painted
-				// Double rAF ensures the compositing pass completes before revealing
-				await tick();
-				await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-				isMeasuring = false;
 
 				lastRenderedTopoKey = topoKey;
 				lastRenderedPerspective = currentPerspective;

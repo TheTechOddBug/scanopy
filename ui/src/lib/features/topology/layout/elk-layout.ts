@@ -35,8 +35,8 @@ async function getElk(): Promise<import('elkjs/lib/elk-api')['default']> {
 const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 	'elk.algorithm': 'layered',
 	'elk.direction': 'DOWN',
-	'elk.layered.spacing.nodeNodeBetweenLayers': '100',
-	'elk.layered.spacing.edgeNodeBetweenLayers': '50',
+	'elk.layered.spacing.nodeNodeBetweenLayers': '60',
+	'elk.layered.spacing.edgeNodeBetweenLayers': '30',
 	'elk.spacing.componentComponent': '75',
 	'elk.spacing.nodeNode': '50',
 	'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
@@ -106,7 +106,7 @@ function buildElkGraph(input: ElkLayoutInput): {
 						layoutOptions: {
 							'elk.algorithm': 'box',
 							'elk.box.packingMode': 'SIMPLE',
-							'elk.aspectRatio': '2',
+							'elk.aspectRatio': '1.4',
 							'elk.padding': padding,
 							'elk.nodeSize.constraints': 'MINIMUM_SIZE',
 							'elk.spacing.nodeNode': '25'
@@ -125,10 +125,16 @@ function buildElkGraph(input: ElkLayoutInput): {
 		}
 	}
 
-	// Sort sub-group children within each parent for deterministic placement
+	// Sort children: elements first (alphabetical), then subcontainers (alphabetical).
+	// This groups subcontainers together in the box grid instead of interleaving them.
 	for (const [, parent] of containers) {
 		if (parent.children && parent.children.length > 0) {
-			parent.children.sort((a, b) => a.id.localeCompare(b.id));
+			parent.children.sort((a, b) => {
+				const aIsSub = containerIds.has(a.id) ? 1 : 0;
+				const bIsSub = containerIds.has(b.id) ? 1 : 0;
+				if (aIsSub !== bIsSub) return aIsSub - bIsSub;
+				return a.id.localeCompare(b.id);
+			});
 		}
 	}
 
@@ -182,7 +188,7 @@ function buildElkGraph(input: ElkLayoutInput): {
 		if (parentContainerMap.has(containerId)) continue; // skip subcontainers
 
 		const opts = container.layoutOptions ?? {};
-		const aspectRatio = parseFloat(opts['elk.aspectRatio'] ?? '2');
+		const aspectRatio = parseFloat(opts['elk.aspectRatio'] ?? '1.4');
 		const spacing = parseFloat(opts['elk.spacing.nodeNode'] ?? '25');
 		const paddingStr = opts['elk.padding'] ?? '';
 		const padMatch = paddingStr.match(/top=(\d+).*left=(\d+)/);

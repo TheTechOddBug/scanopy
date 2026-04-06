@@ -389,6 +389,11 @@
 									(r) => (r as { id: string }).id === ruleId
 								)
 							: null}
+						{@const groupServiceDef = (groupNode as Record<string, unknown>)
+							?.associated_service_definition as string | undefined}
+						{@const groupLogoComponent = groupServiceDef
+							? serviceDefinitions.getIconComponent(groupServiceDef)
+							: null}
 						{@const labels = (() => {
 							if (!rule) return [];
 							const r = (rule as { rule: Record<string, unknown> }).rule;
@@ -419,6 +424,10 @@
 							class="flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-2 py-1 dark:border-gray-600"
 							style="background: var(--color-topology-subgroup-bg);"
 						>
+							{#if groupLogoComponent}
+								{@const GroupLogo = groupLogoComponent}
+								<GroupLogo class="h-4 w-4 flex-shrink-0" />
+							{/if}
 							{#if sHeader}
 								<span class="text-tertiary text-xs">{sHeader}{labels.length > 0 ? ':' : ''}</span>
 							{/if}

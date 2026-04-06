@@ -94,23 +94,19 @@ pub fn apply_element_rules_with_titles(
                     }
 
                     for (virt_host_id, ids) in by_virtualizer {
-                        let (container_type, group_key) = match virt_host_id {
-                            Some(vid) => (
-                                ContainerType::Virtualizer,
-                                format!("{parent_id}:{rule_id}:{vid}"),
-                            ),
-                            None => (
-                                ContainerType::BareMetal,
-                                format!("{parent_id}:{rule_id}:bare-metal"),
-                            ),
+                        // Only create Virtualizer subcontainers for hosts that have a virtualizer.
+                        // Hosts without a virtualizer (None) stay ungrouped in their parent.
+                        let Some(vid) = virt_host_id else {
+                            continue;
                         };
+
+                        let group_key = format!("{parent_id}:{rule_id}:{vid}");
                         let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
 
-                        // Title is set by the builder via virtualizer_titles
                         new_containers.push(Node {
                             id: group_id,
                             node_type: NodeType::Container {
-                                container_type,
+                                container_type: ContainerType::Virtualizer,
                                 parent_container_id: Some(*parent_id),
                                 layer_hint: None,
                                 icon: None,
@@ -120,7 +116,7 @@ pub fn apply_element_rules_with_titles(
                             size: Default::default(),
                             header: virtualizer_titles
                                 .as_ref()
-                                .and_then(|t| virt_host_id.and_then(|vid| t.get(&vid).cloned())),
+                                .and_then(|t| t.get(&vid).cloned()),
                             element_rule_id: Some(*rule_id),
                         });
 

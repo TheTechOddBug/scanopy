@@ -308,14 +308,14 @@ mod tests {
         let builder = InfrastructureBuilder;
         let (nodes, _edges) = builder.build(&ctx, &infra_grouping());
 
-        // 2 elements + 1 BareMetal subcontainer
+        // 1 Root container + 2 elements (no BareMetal — bare metal hosts stay ungrouped)
         let elements: Vec<&Node> = nodes
             .iter()
             .filter(|n| matches!(n.node_type, NodeType::Element { .. }))
             .collect();
         assert_eq!(elements.len(), 2);
 
-        let containers: Vec<&Node> = nodes
+        let bare_metal: Vec<&Node> = nodes
             .iter()
             .filter(|n| {
                 matches!(
@@ -327,7 +327,7 @@ mod tests {
                 )
             })
             .collect();
-        assert_eq!(containers.len(), 1);
+        assert_eq!(bare_metal.len(), 0);
     }
 
     #[test]
@@ -356,7 +356,7 @@ mod tests {
         let builder = InfrastructureBuilder;
         let (nodes, _edges) = builder.build(&ctx, &infra_grouping());
 
-        // 3 host elements + 1 Virtualizer subcontainer + 1 BareMetal subcontainer
+        // 3 host elements + 1 Root + 1 Virtualizer subcontainer
         let elements: Vec<&Node> = nodes
             .iter()
             .filter(|n| matches!(n.node_type, NodeType::Element { .. }))
@@ -393,20 +393,17 @@ mod tests {
             .collect();
         assert_eq!(vm_elements.len(), 2);
 
-        // Hypervisor host should be in BareMetal container
-        let bare_metal: Vec<&Node> = nodes
+        // Hypervisor host stays ungrouped in Root (no BareMetal container)
+        let hypervisor_element = elements
             .iter()
-            .filter(|n| {
-                matches!(
-                    n.node_type,
-                    NodeType::Container {
-                        container_type: ContainerType::BareMetal,
-                        ..
-                    }
-                )
-            })
-            .collect();
-        assert_eq!(bare_metal.len(), 1);
+            .find(|n| n.header.as_deref() == Some("pve-01"))
+            .expect("Hypervisor should be an element");
+        if let NodeType::Element { container_id, .. } = &hypervisor_element.node_type {
+            assert_eq!(
+                *container_id, FLAT_ROOT_ID,
+                "Hypervisor should remain in Root"
+            );
+        }
     }
 
     #[test]
@@ -438,8 +435,8 @@ mod tests {
         let builder = InfrastructureBuilder;
         let (nodes, _edges) = builder.build(&ctx, &infra_grouping());
 
-        // 5 host elements + 1 Root + 1 Virtualizer + 1 BareMetal = 8
-        assert_eq!(nodes.len(), 8);
+        // 5 host elements + 1 Root + 1 Virtualizer = 7 (no BareMetal)
+        assert_eq!(nodes.len(), 7);
 
         let virtualizers: Vec<&Node> = nodes
             .iter()
@@ -454,20 +451,6 @@ mod tests {
             })
             .collect();
         assert_eq!(virtualizers.len(), 1);
-
-        let bare_metals: Vec<&Node> = nodes
-            .iter()
-            .filter(|n| {
-                matches!(
-                    n.node_type,
-                    NodeType::Container {
-                        container_type: ContainerType::BareMetal,
-                        ..
-                    }
-                )
-            })
-            .collect();
-        assert_eq!(bare_metals.len(), 1);
     }
 
     #[test]

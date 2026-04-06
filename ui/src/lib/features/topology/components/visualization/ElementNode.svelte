@@ -151,6 +151,24 @@
 						} as ElementRenderData;
 					}
 
+					// Host elements: show host name with service summary
+					if (elementType === 'Host') {
+						if (!host || !resolved.hostId) return null;
+						const serviceCount = visibleServicesForHost.length;
+						return {
+							elementType,
+							footerText:
+								serviceCount > 0 ? `${serviceCount} service${serviceCount !== 1 ? 's' : ''}` : null,
+							services: [],
+							hiddenOpenPorts: [],
+							headerText: (data as TopologyNode).header ?? null,
+							bodyText: host.name,
+							showServices: false,
+							isVirtualized: host.virtualization !== null,
+							interface_id: id
+						} as ElementRenderData;
+					}
+
 					// Interface elements: existing behavior
 					if (!host || !resolved.hostId) return null;
 

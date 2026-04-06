@@ -383,6 +383,7 @@ mod tests {
             service::context::TopologyContext,
             types::{
                 base::TopologyOptions,
+                edges::TopologyPerspective,
                 grouping::{ContainerRule, ElementRule, GraphRule, GroupingConfig},
                 nodes::NodeType,
             },
@@ -756,6 +757,7 @@ mod tests {
         let tags = vec![app_tag_a, app_tag_b];
 
         let mut options = TopologyOptions::default();
+        options.request.perspective = TopologyPerspective::Application;
         options.request.container_rules = vec![GraphRule::new(ContainerRule::ByApplicationGroup {
             tag_ids: vec![],
         })];
@@ -896,6 +898,7 @@ mod tests {
         let tags = vec![app_tag_a, app_tag_b];
 
         let mut options = TopologyOptions::default();
+        options.request.perspective = TopologyPerspective::Application;
         options.request.container_rules = vec![GraphRule::new(ContainerRule::ByApplicationGroup {
             tag_ids: vec![],
         })];

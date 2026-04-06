@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Lock } from 'lucide-svelte';
+	import { tooltip } from '$lib/shared/actions/tooltip';
 
 	let {
 		label,
@@ -19,7 +20,8 @@
 <div
 	class="flex flex-col"
 	class:opacity-40={disabled}
-	title={disabled ? disabledTooltip : undefined}
+	use:tooltip
+	data-tooltip={disabled ? disabledTooltip : null}
 >
 	<div class="flex items-center gap-2">
 		<span class="text-sm" class:text-primary={!disabled} class:text-tertiary={disabled}

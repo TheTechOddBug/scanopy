@@ -8,14 +8,10 @@
 	} from '../../../queries';
 	import { hoveredEdgeType } from '../../../interactions';
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
-	import {
-		edgeTypes,
-		perspectives,
-		serviceCategories,
-		serviceDefinitions
-	} from '$lib/shared/stores/metadata';
+	import { edgeTypes, perspectives, serviceCategories } from '$lib/shared/stores/metadata';
 	import { activePerspective } from '../../../queries';
-	import type { Color } from '$lib/shared/utils/styling';
+	import { type Color, COLOR_MAP } from '$lib/shared/utils/styling';
+	import perspectivesJson from '$lib/data/perspectives.json';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 	import TagFilterGroup from './TagFilterGroup.svelte';
 	import OptionToggle from './OptionToggle.svelte';
@@ -182,37 +178,19 @@
 		hoveredEdgeType.set(null);
 	}
 
-	// Categories present in the topology's services
-	let topologyCategoryIds = $derived.by(() => {
-		if (!topology?.services) return new Set<string>();
-		const ids = new Set<string>();
-		for (const service of topology.services) {
-			const category = serviceDefinitions.getCategory(service.service_definition);
-			if (category) ids.add(category);
-		}
-		return ids;
-	});
+	let perspectiveMeta = $derived(perspectivesJson.find((p) => p.id === $activePerspective));
 
-	// Stable category list: show categories present in topology OR in hidden list.
-	// Uses service-categories fixture for names/colors and descriptions.
+	// All service categories from fixture (not filtered by topology services)
 	let allServiceCategoriesWithColors = $derived.by(() => {
-		const hiddenMap = ($topologyOptions.request.hide_service_categories ?? {}) as Record<
-			string,
-			string[]
-		>;
-		const hiddenCategories = new Set(hiddenMap[$activePerspective] ?? []);
-		const result: { value: string; label: string; color: Color; tooltip?: string }[] = [];
-
 		const allCats = serviceCategories.getItems();
-		for (const cat of allCats) {
-			if (!topologyCategoryIds.has(cat.id) && !hiddenCategories.has(cat.id)) continue;
-			const color = serviceCategories.getColorString(cat.id);
-			const label = cat.name ?? cat.id;
-			const tooltip = cat.description || undefined;
-			result.push({ value: cat.id, label, color, tooltip });
-		}
-
-		return result.sort((a, b) => a.label.localeCompare(b.label));
+		return allCats
+			.map((cat) => ({
+				value: cat.id,
+				label: cat.name ?? cat.id,
+				color: serviceCategories.getColorString(cat.id),
+				tooltip: cat.description || undefined
+			}))
+			.sort((a, b) => a.label.localeCompare(b.label));
 	});
 
 	// Build edge types with colors from edges present in the topology
@@ -414,15 +392,25 @@
 							entityType="service"
 							hasUntagged={hasUntaggedServices}
 						/>
-						<CategoryFilterGroup
-							categories={allServiceCategoriesWithColors}
-							hiddenCategories={(
-								($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>
-							)[$activePerspective] ?? []}
-							onToggle={toggleServiceCategory}
-							disabled={!editState.isEditable}
-							label={common_byCategory()}
-						/>
+						<div
+							class="border-l-2 pl-2"
+							style="border-left-color: {perspectiveMeta?.color
+								? COLOR_MAP[perspectiveMeta.color as Color]?.rgb
+								: 'transparent'}"
+						>
+							<CategoryFilterGroup
+								categories={allServiceCategoriesWithColors}
+								hiddenCategories={(
+									($topologyOptions.request.hide_service_categories ?? {}) as Record<
+										string,
+										string[]
+									>
+								)[$activePerspective] ?? []}
+								onToggle={toggleServiceCategory}
+								disabled={!editState.isEditable}
+								label={common_byCategory()}
+							/>
+						</div>
 					</div>
 				{/if}
 

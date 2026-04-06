@@ -147,17 +147,21 @@ function buildElkGraph(input: ElkLayoutInput): {
 		}
 	}
 
-	// Build element→root container mapping (resolve through subcontainers)
-	const elementToContainer = new Map<string, string>();
+	// Build dual element→container mappings:
+	// - immediate: direct parent container (may be a subcontainer)
+	// - root: resolved through subcontainers to root-level container
+	const elementToImmediateContainer = new Map<string, string>();
+	const elementToRootContainer = new Map<string, string>();
 	for (const node of input.nodes) {
 		if (node.node_type === 'Element') {
-			let parentId = node.container_id;
+			const parentId = node.container_id;
 			if (typeof parentId === 'string' && containers.has(parentId)) {
-				// Walk up to root container for cross-container edge routing
-				while (parentContainerMap.has(parentId)) {
-					parentId = parentContainerMap.get(parentId)!;
+				elementToImmediateContainer.set(node.id, parentId);
+				let rootId = parentId;
+				while (parentContainerMap.has(rootId)) {
+					rootId = parentContainerMap.get(rootId)!;
 				}
-				elementToContainer.set(node.id, parentId);
+				elementToRootContainer.set(node.id, rootId);
 			}
 		}
 	}
@@ -171,27 +175,27 @@ function buildElkGraph(input: ElkLayoutInput): {
 		);
 	}
 
-	// Build cross-container edge metadata per element node for edge-aware positioning
+	// Build cross-container edge metadata per element node for edge-aware positioning.
+	// Uses immediate containers so cross-subcontainer edges (within the same root) are counted.
 	const elementExternalEdgeInfo = new Map<
 		string,
 		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
 	>();
-	// Consider all non-disabled edges for positioning metadata.
-	// Any active edge (whether visible, hidden-by-default, or layout-only) can indicate
-	// that a node should be near a container boundary.
 	for (const edge of input.edges) {
 		if (isDisabledEdge(edge)) continue;
-		// Resolve container: element→parent container, or the node itself if it IS a container
-		// (ServiceVirtualization edges can target a container node directly)
-		const srcContainer =
-			elementToContainer.get(edge.source) ??
+		// Use immediate container for edge detection, but root container for layer direction
+		const srcImm =
+			elementToImmediateContainer.get(edge.source) ??
 			(containerIds.has(edge.source) ? edge.source : undefined);
-		const tgtContainer =
-			elementToContainer.get(edge.target) ??
+		const tgtImm =
+			elementToImmediateContainer.get(edge.target) ??
 			(containerIds.has(edge.target) ? edge.target : undefined);
-		if (srcContainer && tgtContainer && srcContainer !== tgtContainer) {
-			const srcLayer = containerLayerId.get(srcContainer) ?? 999;
-			const tgtLayer = containerLayerId.get(tgtContainer) ?? 999;
+		if (srcImm && tgtImm && srcImm !== tgtImm) {
+			// Use root container layers for vertical direction (subcontainers don't have layer hints)
+			const srcRoot = elementToRootContainer.get(edge.source) ?? srcImm;
+			const tgtRoot = elementToRootContainer.get(edge.target) ?? tgtImm;
+			const srcLayer = containerLayerId.get(srcRoot) ?? 999;
+			const tgtLayer = containerLayerId.get(tgtRoot) ?? 999;
 			for (const [elementId, myLayer, otherLayer] of [
 				[edge.source, srcLayer, tgtLayer],
 				[edge.target, tgtLayer, srcLayer]
@@ -230,22 +234,31 @@ function buildElkGraph(input: ElkLayoutInput): {
 		}
 	}
 
-	// With SEPARATE_CHILDREN, create container-level edges from cross-container
-	// element edges. Direction is normalized to respect layer hierarchy (lower layerId → higher).
+	// Create container-level edges at two levels:
+	// 1. Root-level: cross-root-container edges for the root layered layout
+	// 2. Subcontainer-level: cross-child edges within a root container
 	const edges: ElkExtendedEdge[] = [];
 	const seenContainerEdges = new Set<string>();
+	const seenInnerEdges = new Map<string, Set<string>>(); // rootId → set of "from->to"
+	const rootsWithCrossChildEdges = new Set<string>();
 	let edgeIndex = 0;
+
 	for (const edge of input.edges) {
 		if (!affectsLayout(edge)) continue;
 
-		const srcContainer = elementToContainer.get(edge.source);
-		const tgtContainer = elementToContainer.get(edge.target);
-		if (srcContainer && tgtContainer && srcContainer !== tgtContainer) {
-			// Normalize direction: source should have lower layerId (higher on screen)
-			const srcLayer = containerLayerId.get(srcContainer) ?? 999;
-			const tgtLayer = containerLayerId.get(tgtContainer) ?? 999;
-			const [from, to] =
-				srcLayer <= tgtLayer ? [srcContainer, tgtContainer] : [tgtContainer, srcContainer];
+		const srcImm = elementToImmediateContainer.get(edge.source);
+		const tgtImm = elementToImmediateContainer.get(edge.target);
+		const srcRoot = elementToRootContainer.get(edge.source);
+		const tgtRoot = elementToRootContainer.get(edge.target);
+
+		if (!srcImm || !tgtImm) continue;
+		if (srcImm === tgtImm) continue; // same immediate container — no edge needed
+
+		if (srcRoot && tgtRoot && srcRoot !== tgtRoot) {
+			// Cross-root-container edge: add to root-level ELK graph
+			const srcLayer = containerLayerId.get(srcRoot) ?? 999;
+			const tgtLayer = containerLayerId.get(tgtRoot) ?? 999;
+			const [from, to] = srcLayer <= tgtLayer ? [srcRoot, tgtRoot] : [tgtRoot, srcRoot];
 
 			const key = `${from}->${to}`;
 			if (!seenContainerEdges.has(key)) {
@@ -256,6 +269,45 @@ function buildElkGraph(input: ElkLayoutInput): {
 					targets: [to]
 				});
 			}
+		} else if (srcRoot === tgtRoot && srcRoot) {
+			// Cross-child edge within same root: add to root container's inner edges.
+			// If an element is directly in the root (not in a subcontainer), use the
+			// element ID as edge endpoint; otherwise use the subcontainer ID.
+			const srcNode = srcImm === srcRoot ? edge.source : srcImm;
+			const tgtNode = tgtImm === tgtRoot ? edge.target : tgtImm;
+			if (srcNode === tgtNode) continue; // both in same node, skip
+
+			rootsWithCrossChildEdges.add(srcRoot);
+			const key = `${srcNode}->${tgtNode}`;
+			if (!seenInnerEdges.has(srcRoot)) seenInnerEdges.set(srcRoot, new Set());
+			const seen = seenInnerEdges.get(srcRoot)!;
+			if (!seen.has(key) && !seen.has(`${tgtNode}->${srcNode}`)) {
+				seen.add(key);
+				const rootContainer = containers.get(srcRoot);
+				if (rootContainer) {
+					if (!rootContainer.edges) rootContainer.edges = [];
+					rootContainer.edges.push({
+						id: `elk-inner-edge-${edgeIndex++}`,
+						sources: [srcNode],
+						targets: [tgtNode]
+					});
+				}
+			}
+		}
+	}
+
+	// Switch root containers with cross-child edges from box to layered.
+	// The layered algorithm uses the inner edges to position subcontainers and elements
+	// so that connected children are adjacent.
+	for (const rootId of rootsWithCrossChildEdges) {
+		const container = containers.get(rootId);
+		if (container?.layoutOptions) {
+			container.layoutOptions['elk.algorithm'] = 'layered';
+			container.layoutOptions['elk.direction'] = 'DOWN';
+			container.layoutOptions['elk.layered.nodePlacement.strategy'] = 'NETWORK_SIMPLEX';
+			container.layoutOptions['elk.layered.crossingMinimization.strategy'] = 'LAYER_SWEEP';
+			container.layoutOptions['elk.layered.layering.strategy'] = 'NETWORK_SIMPLEX';
+			delete container.layoutOptions['elk.box.packingMode'];
 		}
 	}
 
@@ -555,15 +607,19 @@ function mapElkResults(
 	const bridgeNodeSides = new Map<string, HandleSide>();
 
 	if (layoutResult.children) {
-		// Apply edge-aware position swaps before extracting positions
+		// Apply edge-aware position swaps before extracting positions.
+		// Skip containers using 'layered' algorithm — ELK already optimized placement.
+		const isBoxLayout = (node: ElkNode) =>
+			!node.layoutOptions?.['elk.algorithm'] || node.layoutOptions['elk.algorithm'] === 'box';
+
 		for (const child of layoutResult.children) {
-			if (containerIds.has(child.id)) {
+			if (containerIds.has(child.id) && isBoxLayout(child)) {
 				const sides = applyEdgeAwareSwaps(child, elementExternalEdgeInfo, containerIds);
 				for (const [id, side] of sides) bridgeNodeSides.set(id, side);
 				// Also apply to nested sub-group containers
 				if (child.children) {
 					for (const subChild of child.children) {
-						if (containerIds.has(subChild.id)) {
+						if (containerIds.has(subChild.id) && isBoxLayout(subChild)) {
 							const subSides = applyEdgeAwareSwaps(subChild, elementExternalEdgeInfo, containerIds);
 							for (const [id, side] of subSides) bridgeNodeSides.set(id, side);
 						}

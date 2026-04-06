@@ -212,7 +212,83 @@ impl EntityMetadataProvider for ServiceCategory {
 
 impl TypeMetadataProvider for ServiceCategory {
     fn name(&self) -> &'static str {
-        self.into()
+        use ServiceCategory::*;
+        match self {
+            NetworkCore => "Network Core",
+            NetworkAccess => "Network Access",
+            NetworkAppliance => "Network Appliance",
+            RemoteAccess => "Remote Access",
+            Storage => "Storage",
+            Backup => "Backup",
+            Media => "Media",
+            HomeAutomation => "Home Automation",
+            Virtualization => "Virtualization",
+            DNS => "DNS",
+            VPN => "VPN",
+            Monitoring => "Monitoring",
+            AdBlock => "Ad Blocking",
+            ReverseProxy => "Reverse Proxy",
+            Workstation => "Workstation",
+            Mobile => "Mobile",
+            IoT => "IoT",
+            Printer => "Printer",
+            Database => "Database",
+            Development => "Development",
+            Dashboard => "Dashboard",
+            MessageQueue => "Message Queue",
+            IdentityAndAccess => "Identity & Access",
+            Office => "Office",
+            ProjectManagement => "Project Management",
+            Messaging => "Messaging",
+            Conferencing => "Conferencing",
+            Telephony => "Telephony",
+            Email => "Email",
+            Publishing => "Publishing",
+            Unknown => "Unknown",
+            Custom => "Custom",
+            Scanopy => "Scanopy",
+            OpenPorts => "Open Ports",
+        }
+    }
+
+    fn description(&self) -> &'static str {
+        use ServiceCategory::*;
+        match self {
+            NetworkCore => "Core network services like DHCP, NTP, gateways, and switches",
+            NetworkAccess => "WiFi access points, mesh routers, and network access devices",
+            NetworkAppliance => "Router, firewall, and VPN platforms like pfSense and MikroTik",
+            RemoteAccess => "Remote access protocols like SSH, Telnet, and RDP",
+            Storage => "Network-attached storage, file servers, and object storage",
+            Backup => "Backup and data protection services",
+            Media => "Media servers and streaming services like Plex and Jellyfin",
+            HomeAutomation => "Smart home platforms like Home Assistant and openHAB",
+            Virtualization => "Hypervisors and container platforms like Docker and Proxmox",
+            DNS => "DNS servers and resolvers",
+            VPN => "VPN servers like OpenVPN and WireGuard",
+            Monitoring => "Monitoring, observability, and SNMP agents",
+            AdBlock => "Network-level ad and tracker blocking",
+            ReverseProxy => "Reverse proxies and API gateways like Nginx and Traefik",
+            Workstation => "Desktop computers and laptops",
+            Mobile => "Phones and tablets",
+            IoT => "Smart devices, sensors, and connected appliances",
+            Printer => "Printers and print servers",
+            Database => "Database servers like PostgreSQL, MySQL, and Redis",
+            Development => "Dev tools, CI/CD pipelines, and configuration management",
+            Dashboard => "Dashboard and homepage applications",
+            MessageQueue => "Message brokers and streaming platforms like Kafka and RabbitMQ",
+            IdentityAndAccess => "Identity providers, SSO, and secret management",
+            Office => "Document editing, notes, and file management",
+            ProjectManagement => "Task tracking, wikis, and project boards",
+            Messaging => "Team chat and messaging platforms",
+            Conferencing => "Video and audio conferencing",
+            Telephony => "VoIP and PBX infrastructure",
+            Email => "Email servers and relay services",
+            Publishing => "CMS, blogs, and forums",
+            Unknown => "Services that could not be identified",
+            Custom => "User-defined custom services",
+            Scanopy => "Scanopy platform services",
+            OpenPorts => "Unclaimed open ports without a matched service",
+        }
     }
 
     fn metadata(&self) -> serde_json::Value {

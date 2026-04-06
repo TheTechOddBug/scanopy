@@ -266,7 +266,7 @@
 
 <div class="flex min-w-0 flex-wrap items-center gap-1 overflow-hidden">
 	<!-- Selected tags -->
-	{#each selectedTagIds as tagId (tagId)}
+	{#each selectedTagIds.filter((id) => getTag(id)) as tagId (tagId)}
 		{@const tag = getTag(tagId)}
 		<Tag
 			label={tag?.name}

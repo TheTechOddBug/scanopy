@@ -103,7 +103,6 @@ impl TopologyPerspective {
                     InspectorSection::HostDetail,
                     InspectorSection::Services,
                     InspectorSection::OtherInterfaces,
-                    InspectorSection::Tags,
                 ],
                 container_sections: vec![
                     InspectorSection::Identity,

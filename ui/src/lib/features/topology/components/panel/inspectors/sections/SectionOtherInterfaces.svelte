@@ -4,7 +4,11 @@
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import type { ElementRenderContext } from '$lib/features/topology/resolvers';
-	import { inspector_otherInterface, inspector_otherInterfaces } from '$lib/paraglide/messages';
+	import {
+		common_interfaces,
+		inspector_otherInterface,
+		inspector_otherInterfaces
+	} from '$lib/paraglide/messages';
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let {
@@ -17,9 +21,13 @@
 		elementContext?: ElementRenderContext;
 	} = $props();
 
+	let isInterfaceElement = $derived(!!elementContext?.interfaceId);
+
 	let otherInterfaces = $derived(
 		topology.interfaces.filter(
-			(i) => i.host_id === elementContext?.hostId && i.id !== elementContext?.interfaceId
+			(i) =>
+				i.host_id === elementContext?.hostId &&
+				(!isInterfaceElement || i.id !== elementContext?.interfaceId)
 		)
 	);
 
@@ -29,7 +37,11 @@
 {#if otherInterfaces.length > 0}
 	<div>
 		<span class="text-secondary mb-2 block text-sm font-medium">
-			{otherInterfaces.length > 1 ? inspector_otherInterfaces() : inspector_otherInterface()}
+			{isInterfaceElement
+				? otherInterfaces.length > 1
+					? inspector_otherInterfaces()
+					: inspector_otherInterface()
+				: common_interfaces()}
 		</span>
 		<div class="space-y-1">
 			{#each otherInterfaces as iface (iface.id)}

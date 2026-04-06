@@ -486,7 +486,11 @@
 	{#snippet itemExpandedSnippet({ item, index })}
 		{#if isElementEditing(item) && typeof item.rule !== 'string'}
 			{@const rule = item.rule}
-			<div class="mt-2 w-full space-y-3 border-t border-gray-200 pt-2 dark:border-gray-700">
+			<!-- eslint-disable-next-line svelte/no-static-element-interactions -->
+			<div
+				onclick={(e) => e.stopPropagation()}
+				class="mt-2 w-full space-y-3 border-t border-gray-200 pt-2 dark:border-gray-700"
+			>
 				<!-- Title input -->
 				<input
 					type="text"

@@ -186,8 +186,8 @@
 							footerText: null,
 							services: servicesOnHost,
 							hiddenOpenPorts,
-							headerText: null,
-							bodyText: host.name,
+							headerText: host.name || host.hostname || null,
+							bodyText: showServices ? null : (host.name || host.hostname),
 							showServices,
 							isVirtualized: host.virtualization !== null,
 							interface_id: id

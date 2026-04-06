@@ -122,6 +122,7 @@ pub fn apply_element_rules_with_titles(
                                 .as_ref()
                                 .and_then(|t| t.get(&vid).cloned()),
                             element_rule_id: Some(*rule_id),
+                            absorbs_edges: rule.absorbs_edges(),
                         });
 
                         for id in &ids {
@@ -175,6 +176,7 @@ pub fn apply_element_rules_with_titles(
                             size: Default::default(),
                             header: Some(project),
                             element_rule_id: Some(*rule_id),
+                            absorbs_edges: rule.absorbs_edges(),
                         });
 
                         for id in &ids {
@@ -220,6 +222,7 @@ pub fn apply_element_rules_with_titles(
                         size: Default::default(),
                         header: title.clone(),
                         element_rule_id: Some(*rule_id),
+                        absorbs_edges: rule.absorbs_edges(),
                     });
 
                     for id in &matched_ids {
@@ -264,6 +267,7 @@ pub fn apply_element_rules_with_titles(
                         size: Default::default(),
                         header: title.clone(),
                         element_rule_id: Some(*rule_id),
+                        absorbs_edges: rule.absorbs_edges(),
                     });
 
                     for id in &matched_ids {

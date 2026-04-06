@@ -299,7 +299,11 @@
 
 				// Run ELK on structure/collapse changes, skip for edge-only re-renders
 				const opts = get(topologyOptions);
-				const sizeKey = `${(opts.request.hide_service_categories ?? []).join(',')}:${opts.request.hide_ports}`;
+				const hiddenCatsMap = (opts.request.hide_service_categories ?? {}) as Record<
+					string,
+					string[]
+				>;
+				const sizeKey = `${(hiddenCatsMap[currentPerspective] ?? []).join(',')}:${opts.request.hide_ports}`;
 				const rootCollapsedPreview = new Set(
 					[...collapsed].filter((id) => !layoutGraph || !layoutGraph.isSubcontainer(id))
 				);

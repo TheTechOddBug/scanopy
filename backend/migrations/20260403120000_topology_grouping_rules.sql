@@ -1,7 +1,7 @@
--- Convert legacy grouping boolean fields in topology options to container_rules + element_rules arrays
--- Rules are wrapped in GraphRule with a stable UUID identity
+-- Convert legacy grouping fields to per-perspective container_rules HashMap,
+-- expanded element_rules Vec, and per-perspective hide_service_categories HashMap.
 
--- Step 1: Build container_rules and element_rules from legacy fields and update options.request
+-- Step 1: Build new structure from legacy fields
 UPDATE topologies
 SET options = jsonb_set(
     options,
@@ -12,27 +12,47 @@ SET options = jsonb_set(
         - 'group_docker_bridges_by_host'
         - 'left_zone_service_categories'
         - 'show_gateway_in_left_zone'
-        -- Add container_rules array (GraphRule<ContainerRule>)
+        - 'perspective_overrides'
+
+        -- container_rules: HashMap<Perspective, Vec<GraphRule<ContainerRule>>>
         || jsonb_build_object('container_rules',
-            (
-                -- Always include BySubnet
-                jsonb_build_array(
-                    jsonb_build_object('id', gen_random_uuid(), 'rule', 'BySubnet')
-                )
-                -- Conditionally include ByVirtualizingService (default was true)
-                || CASE
-                    WHEN COALESCE((options->'request'->>'group_docker_bridges_by_host')::boolean, true)
-                    THEN jsonb_build_array(
-                        jsonb_build_object('id', gen_random_uuid(), 'rule', 'ByVirtualizingService')
+            jsonb_build_object(
+                'L3Logical', (
+                    -- Always include BySubnet for L3
+                    jsonb_build_array(
+                        jsonb_build_object('id', gen_random_uuid(), 'rule', 'BySubnet')
                     )
-                    ELSE '[]'::jsonb
-                END
+                    -- Conditionally include ByVirtualizingService (legacy default was true)
+                    || CASE
+                        WHEN COALESCE((options->'request'->>'group_docker_bridges_by_host')::boolean, true)
+                        THEN jsonb_build_array(
+                            jsonb_build_object('id', gen_random_uuid(), 'rule', 'ByVirtualizingService')
+                        )
+                        ELSE '[]'::jsonb
+                    END
+                ),
+                'L2Physical', '[]'::jsonb,
+                'Infrastructure', (
+                    CASE
+                        WHEN COALESCE((options->'request'->>'group_docker_bridges_by_host')::boolean, true)
+                        THEN jsonb_build_array(
+                            jsonb_build_object('id', gen_random_uuid(), 'rule', 'ByVirtualizingService')
+                        )
+                        ELSE '[]'::jsonb
+                    END
+                ),
+                'Application', jsonb_build_array(
+                    jsonb_build_object('id', gen_random_uuid(), 'rule',
+                        jsonb_build_object('ByApplicationGroup', jsonb_build_object('tag_ids', '[]'::jsonb))
+                    )
+                )
             )
         )
-        -- Add element_rules array (GraphRule<LeafRule>)
+
+        -- element_rules: Vec<GraphRule<ElementRule>> with all 4 types
         || jsonb_build_object('element_rules',
             (
-                -- Conditionally include ByServiceCategory
+                -- ByServiceCategory from legacy left_zone_service_categories
                 CASE
                     WHEN jsonb_array_length(COALESCE(options->'request'->'left_zone_service_categories', '["DNS","ReverseProxy"]'::jsonb)) > 0
                     THEN jsonb_build_array(
@@ -41,13 +61,40 @@ SET options = jsonb_set(
                             'rule', jsonb_build_object(
                                 'ByServiceCategory', jsonb_build_object(
                                     'categories', COALESCE(options->'request'->'left_zone_service_categories', '["DNS","ReverseProxy"]'::jsonb),
-                                    'title', COALESCE(options->'local'->>'left_zone_title', 'Infrastructure')
+                                    'title', 'Network Services'
                                 )
                             )
                         )
                     )
                     ELSE '[]'::jsonb
                 END
+                -- ByTag (empty default)
+                || jsonb_build_array(
+                    jsonb_build_object(
+                        'id', gen_random_uuid(),
+                        'rule', jsonb_build_object(
+                            'ByTag', jsonb_build_object('tag_ids', '[]'::jsonb, 'title', 'null'::jsonb)
+                        )
+                    )
+                )
+                -- ByVirtualizer
+                || jsonb_build_array(
+                    jsonb_build_object('id', gen_random_uuid(), 'rule', 'ByVirtualizer')
+                )
+                -- ByStack
+                || jsonb_build_array(
+                    jsonb_build_object('id', gen_random_uuid(), 'rule', 'ByStack')
+                )
+            )
+        )
+
+        -- hide_service_categories: HashMap<Perspective, Vec<ServiceCategory>>
+        || jsonb_build_object('hide_service_categories',
+            jsonb_build_object(
+                'L3Logical', COALESCE(options->'request'->'hide_service_categories', '["OpenPorts"]'::jsonb),
+                'L2Physical', '["OpenPorts"]'::jsonb,
+                'Infrastructure', '["OpenPorts"]'::jsonb,
+                'Application', '["OpenPorts"]'::jsonb
             )
         )
     )

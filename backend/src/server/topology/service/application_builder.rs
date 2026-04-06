@@ -762,9 +762,12 @@ mod tests {
 
         let mut options = TopologyOptions::default();
         options.request.perspective = TopologyPerspective::Application;
-        options.request.container_rules = vec![GraphRule::new(ContainerRule::ByApplicationGroup {
-            tag_ids: vec![],
-        })];
+        options.request.container_rules.insert(
+            TopologyPerspective::Application,
+            vec![GraphRule::new(ContainerRule::ByApplicationGroup {
+                tag_ids: vec![],
+            })],
+        );
         options.request.element_rules = vec![GraphRule::new(ElementRule::ByTag {
             tag_ids: vec![monitoring_tag_id],
             title: Some("Monitored".to_string()),
@@ -903,9 +906,12 @@ mod tests {
 
         let mut options = TopologyOptions::default();
         options.request.perspective = TopologyPerspective::Application;
-        options.request.container_rules = vec![GraphRule::new(ContainerRule::ByApplicationGroup {
-            tag_ids: vec![],
-        })];
+        options.request.container_rules.insert(
+            TopologyPerspective::Application,
+            vec![GraphRule::new(ContainerRule::ByApplicationGroup {
+                tag_ids: vec![],
+            })],
+        );
         // Default ByServiceCategory PLUS a ByTag rule
         options.request.element_rules = vec![
             GraphRule::new(ElementRule::ByServiceCategory {

@@ -7,6 +7,7 @@
 		useTopologiesQuery,
 		selectedTopologyId,
 		topologyOptions,
+		activePerspective,
 		autoRebuild
 	} from '$lib/features/topology/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
@@ -48,7 +49,11 @@
 
 	// Target can be either a subnet (grouped) or a service (not grouped)
 	let isGrouped = $derived(
-		($topologyOptions.request.container_rules ?? []).some((r) => r.rule === 'ByVirtualizingService')
+		(
+			(($topologyOptions.request.container_rules ?? {}) as Record<string, { rule: unknown }[]>)[
+				$activePerspective
+			] ?? []
+		).some((r) => r.rule === 'ByVirtualizingService')
 	);
 	// Get containerized services - all if grouped, or just the one in edge.target if not
 	let containerizedServices = $derived(

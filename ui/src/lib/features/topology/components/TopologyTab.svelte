@@ -138,7 +138,9 @@
 			currentTopology,
 			$topologyOptions.local.tag_filter,
 			$activePerspective,
-			$topologyOptions.request.hide_service_categories ?? []
+			(($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>)[
+				$activePerspective
+			] ?? []
 		);
 	});
 
@@ -441,18 +443,27 @@
 	function handleWizardComplete() {
 		wizardOpen = false;
 		const tagIds = appGroupTags.map((t) => t.id);
-		updateTopologyOptions((current) => ({
-			...current,
-			request: {
-				...current.request,
-				container_rules: [
-					...(current.request.container_rules ?? []).filter(
-						(r) => typeof r.rule === 'string' || !('ByApplicationGroup' in r.rule)
-					),
-					makeGraphRule({ ByApplicationGroup: { tag_ids: tagIds } })
-				]
-			}
-		}));
+		updateTopologyOptions((current) => {
+			const allRules = (current.request.container_rules ?? {}) as Record<string, unknown[]>;
+			const appRules = (allRules['Application'] ?? []) as { rule: unknown }[];
+			return {
+				...current,
+				request: {
+					...current.request,
+					container_rules: {
+						...allRules,
+						Application: [
+							...appRules.filter(
+								(r) =>
+									typeof r.rule === 'string' ||
+									!('ByApplicationGroup' in (r.rule as Record<string, unknown>))
+							),
+							makeGraphRule({ ByApplicationGroup: { tag_ids: tagIds } })
+						]
+					}
+				}
+			};
+		});
 		// Refresh rather than rebuild — safer if topology entered conflict state during wizard
 		handleRefresh();
 	}

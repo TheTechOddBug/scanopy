@@ -135,18 +135,22 @@
 	}
 
 	function toggleServiceCategory(category: string) {
+		const perspective = $activePerspective;
 		updateTopologyOptions((opts) => {
-			const hidden = opts.request.hide_service_categories ?? [];
-			const idx = hidden.indexOf(category as (typeof hidden)[number]);
-			const newHidden = idx !== -1
-				? hidden.filter((c) => c !== category)
-				: [...hidden, category as (typeof hidden)[number]];
+			const allHidden = (opts.request.hide_service_categories ?? {}) as Record<string, string[]>;
+			const hidden = allHidden[perspective] ?? [];
+			const idx = hidden.indexOf(category);
+			const newHidden =
+				idx !== -1 ? hidden.filter((c: string) => c !== category) : [...hidden, category];
 
 			return {
 				...opts,
 				request: {
 					...opts.request,
-					hide_service_categories: newHidden
+					hide_service_categories: {
+						...allHidden,
+						[perspective]: newHidden
+					}
 				}
 			};
 		});
@@ -192,7 +196,11 @@
 	// Stable category list: show categories present in topology OR in hidden list.
 	// Uses service-categories fixture for names/colors and descriptions.
 	let allServiceCategoriesWithColors = $derived.by(() => {
-		const hiddenCategories = new Set($topologyOptions.request.hide_service_categories ?? []);
+		const hiddenMap = ($topologyOptions.request.hide_service_categories ?? {}) as Record<
+			string,
+			string[]
+		>;
+		const hiddenCategories = new Set(hiddenMap[$activePerspective] ?? []);
 		const result: { value: string; label: string; color: Color; tooltip?: string }[] = [];
 
 		const allCats = serviceCategories.getItems();
@@ -408,7 +416,9 @@
 						/>
 						<CategoryFilterGroup
 							categories={allServiceCategoriesWithColors}
-							hiddenCategories={$topologyOptions.request.hide_service_categories ?? []}
+							hiddenCategories={(
+								($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>
+							)[$activePerspective] ?? []}
 							onToggle={toggleServiceCategory}
 							disabled={!editState.isEditable}
 							label={common_byCategory()}

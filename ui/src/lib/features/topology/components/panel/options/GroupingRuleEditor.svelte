@@ -70,9 +70,11 @@
 	const tagsQuery = useTagsQuery();
 	let allTags = $derived(tagsQuery.data ?? []);
 
-	// Container rules from options
+	// Container rules for the active perspective (per-perspective HashMap)
 	let containerRules = $derived(
-		($topologyOptions.request.container_rules as ContainerGraphRule[] | undefined) ?? []
+		((
+			$topologyOptions.request.container_rules as Record<string, ContainerGraphRule[]> | undefined
+		)?.[$activePerspective] ?? []) as ContainerGraphRule[]
 	);
 
 	// Element rules from shared store (committed state, cross-perspective)
@@ -175,7 +177,13 @@
 	function updateContainerRules(newRules: ContainerGraphRule[]) {
 		updateTopologyOptions((opts) => ({
 			...opts,
-			request: { ...opts.request, container_rules: newRules }
+			request: {
+				...opts.request,
+				container_rules: {
+					...(opts.request.container_rules as Record<string, ContainerGraphRule[]>),
+					[$activePerspective]: newRules
+				}
+			}
 		}));
 	}
 

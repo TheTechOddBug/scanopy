@@ -22,12 +22,8 @@ import { UNTAGGED_SENTINEL } from './interactions';
 import { getDefaultHiddenEdgeTypes } from './layout/edge-classification';
 import type { components } from '$lib/api/schema';
 import perspectivesJson from '$lib/data/perspectives.json';
-import { perspectives } from '$lib/shared/stores/metadata';
-import type { ServiceCategoryMetadata } from '$lib/shared/stores/metadata';
-import serviceCategoriesJson from '$lib/data/service-categories.json';
 
 export type TopologyPerspective = components['schemas']['TopologyPerspective'];
-type PerPerspectiveOptions = Record<TopologyPerspective, TopologyOptions>;
 
 /** Strip UI-only sentinel values from options before sending to the API */
 export function sanitizeOptionsForApi(options: TopologyOptions): TopologyOptions {
@@ -46,128 +42,93 @@ export function sanitizeOptionsForApi(options: TopologyOptions): TopologyOptions
 	};
 }
 
-// Default container rules, derived from fixture metadata per perspective
-function getDefaultContainerRules(perspective: TopologyPerspective): ContainerGraphRule[] {
-	return _containerRuleTypes
-		.filter((r) => (r.metadata as { perspectives?: string[] })?.perspectives?.includes(perspective))
-		.map((r) => {
-			if (r.id === 'ByApplicationGroup') {
-				return makeGraphRule({ ByApplicationGroup: { tag_ids: [] } } as ContainerRule);
-			}
-			return makeGraphRule(r.id as ContainerRule);
-		});
-}
-
-// Legacy default for backward compatibility
-export const defaultContainerRules: ContainerGraphRule[] = getDefaultContainerRules('L3Logical');
-
-// Default element rules, derived from fixture metadata per perspective
-function getDefaultElementRules(perspective: TopologyPerspective): ElementGraphRule[] {
-	return _elementRuleTypes
-		.filter((r) => (r.metadata as { perspectives?: string[] })?.perspectives?.includes(perspective))
-		.map((r) => {
-			if (r.id === 'ByServiceCategory') {
-				return makeGraphRule({ ByServiceCategory: { categories: [], title: null } });
-			}
-			if (r.id === 'ByTag') {
-				return makeGraphRule({ ByTag: { tag_ids: [], title: null } });
-			}
-			// Parameterless rules (e.g. ByVirtualizer)
-			return makeGraphRule(r.id as string);
-		});
-}
-
-// Union of all perspective defaults — one rule per type across all perspectives.
-// Used as initial value before topology hydration.
-function getUnionDefaultElementRules(): ElementGraphRule[] {
-	const seen = new Set<string>();
-	const result: ElementGraphRule[] = [];
-	for (const r of _elementRuleTypes) {
-		if (!seen.has(r.id)) {
-			seen.add(r.id);
-			if (r.id === 'ByServiceCategory') {
-				result.push(makeGraphRule({ ByServiceCategory: { categories: [], title: null } }));
-			} else if (r.id === 'ByTag') {
-				result.push(makeGraphRule({ ByTag: { tag_ids: [], title: null } }));
-			} else {
-				result.push(makeGraphRule(r.id as string));
-			}
-		}
-	}
-	return result;
-}
-
-// Legacy default for backward compatibility
-export const defaultElementRules: ElementGraphRule[] = getUnionDefaultElementRules();
-
 type ServiceCategory = components['schemas']['ServiceCategory'];
-
-/**
- * Compute the default hidden service categories for a perspective + use case.
- * Uses the `application_relevant_use_cases` metadata from service-categories.json.
- * Categories whose relevance list does NOT include the org's use case are hidden.
- */
-function getDefaultHiddenCategories(
-	perspective: TopologyPerspective,
-	useCase: string
-): ServiceCategory[] {
-	const hasCategoryFilter = (
-		perspectives.getMetadata(perspective) as { category_filter?: boolean } | null
-	)?.category_filter;
-
-	if (!hasCategoryFilter) {
-		return ['OpenPorts'];
-	}
-
-	const hidden: ServiceCategory[] = ['OpenPorts'];
-	for (const cat of serviceCategoriesJson) {
-		const meta = cat.metadata as ServiceCategoryMetadata | null;
-		if (meta && !meta.application_relevant_use_cases.includes(useCase)) {
-			hidden.push(cat.id as ServiceCategory);
-		}
-	}
-	return hidden;
-}
-
-export function getDefaultTopologyOptions(
-	perspective: TopologyPerspective,
-	useCase: string = 'other'
-): TopologyOptions {
-	return {
-		local: {
-			hide_edge_types: getDefaultHiddenEdgeTypes(perspective),
-			no_fade_edges: false,
-			hide_resize_handles: false,
-			bundle_edges: true,
-			tag_filter: {
-				hidden_host_tag_ids: [],
-				hidden_service_tag_ids: [],
-				hidden_subnet_tag_ids: []
-			},
-			show_minimap: true
-		},
-		request: {
-			hide_ports: false,
-			hide_vm_title_on_docker_container: false,
-			hide_service_categories: getDefaultHiddenCategories(perspective, useCase),
-			container_rules: getDefaultContainerRules(perspective),
-			element_rules: getDefaultElementRules(perspective),
-			perspective
-		}
-	};
-}
-
-/** @deprecated Use getDefaultTopologyOptions('L3Logical') */
-export const defaultTopologyOptions: TopologyOptions = getDefaultTopologyOptions('L3Logical');
+type TopologyLocalOptions = components['schemas']['TopologyLocalOptions'];
 
 const ALL_PERSPECTIVES: TopologyPerspective[] = perspectivesJson.map(
 	(p) => p.id as TopologyPerspective
 );
 
-function buildDefaultPerPerspectiveOptions(): PerPerspectiveOptions {
-	return Object.fromEntries(
-		ALL_PERSPECTIVES.map((p) => [p, getDefaultTopologyOptions(p)])
-	) as PerPerspectiveOptions;
+/** Default local options for a given perspective (UI-only, not sent to backend as rules) */
+function getDefaultLocalOptions(perspective: TopologyPerspective): TopologyLocalOptions {
+	return {
+		hide_edge_types: getDefaultHiddenEdgeTypes(perspective),
+		no_fade_edges: false,
+		hide_resize_handles: false,
+		bundle_edges: true,
+		tag_filter: {
+			hidden_host_tag_ids: [],
+			hidden_service_tag_ids: [],
+			hidden_subnet_tag_ids: []
+		},
+		show_minimap: true
+	};
+}
+
+/** Build default per-perspective local options */
+function initDefaultLocalOptions(): Record<TopologyPerspective, TopologyLocalOptions> {
+	return Object.fromEntries(ALL_PERSPECTIVES.map((p) => [p, getDefaultLocalOptions(p)])) as Record<
+		TopologyPerspective,
+		TopologyLocalOptions
+	>;
+}
+
+/**
+ * Default request options matching the backend's TopologyRequestOptions::default().
+ * Container rules and hidden categories are per-perspective HashMaps.
+ * Element rules are shared cross-perspective.
+ */
+function defaultRequestOptions(): components['schemas']['TopologyRequestOptions'] {
+	// Build container rules per perspective from fixture metadata
+	const containerRules: Record<string, ContainerGraphRule[]> = {};
+	for (const p of ALL_PERSPECTIVES) {
+		containerRules[p] = _containerRuleTypes
+			.filter((r) => (r.metadata as { perspectives?: string[] })?.perspectives?.includes(p))
+			.map((r) => {
+				if (r.id === 'ByApplicationGroup') {
+					return makeGraphRule({ ByApplicationGroup: { tag_ids: [] } } as ContainerRule);
+				}
+				return makeGraphRule(r.id as ContainerRule);
+			});
+	}
+
+	// Element rules: one of each type (shared cross-perspective)
+	const seen = new Set<string>();
+	const elementRules: ElementGraphRule[] = [];
+	for (const r of _elementRuleTypes) {
+		if (!seen.has(r.id)) {
+			seen.add(r.id);
+			if (r.id === 'ByServiceCategory') {
+				elementRules.push(
+					makeGraphRule({
+						ByServiceCategory: {
+							categories: ['DNS', 'ReverseProxy'],
+							title: 'Network Services'
+						}
+					})
+				);
+			} else if (r.id === 'ByTag') {
+				elementRules.push(makeGraphRule({ ByTag: { tag_ids: [], title: null } }));
+			} else {
+				elementRules.push(makeGraphRule(r.id as string));
+			}
+		}
+	}
+
+	// Hidden categories: OpenPorts for all perspectives
+	const hideServiceCategories: Record<string, ServiceCategory[]> = {};
+	for (const p of ALL_PERSPECTIVES) {
+		hideServiceCategories[p] = ['OpenPorts'];
+	}
+
+	return {
+		hide_ports: false,
+		hide_vm_title_on_docker_container: false,
+		hide_service_categories: hideServiceCategories,
+		container_rules: containerRules,
+		element_rules: elementRules,
+		perspective: 'L3Logical'
+	};
 }
 
 /**
@@ -519,7 +480,10 @@ export function createEmptyTopologyFormData(networkId: string): Topology {
 		network_id: networkId,
 		edges: [],
 		nodes: [],
-		options: structuredClone(defaultTopologyOptions),
+		options: {
+			local: getDefaultLocalOptions('L3Logical'),
+			request: defaultRequestOptions()
+		},
 		hosts: [],
 		interfaces: [],
 		services: [],
@@ -567,94 +531,88 @@ export const previewEdges = writable<Edge[]>([]);
 export const autoRebuild = writable<boolean>(loadAutoRebuildFromStorage());
 export const activePerspective = writable<TopologyPerspective>('L3Logical');
 
-// Internal per-perspective options record (hydrated from topology on load)
-const perPerspectiveOptions = writable<PerPerspectiveOptions>(buildDefaultPerPerspectiveOptions());
+// Single source of truth for topology options.
+// request: backend state (container_rules/hide_service_categories are per-perspective HashMaps)
+// perPerspectiveLocal: UI-only local options per perspective
+const topologyOptionsStore = writable<{
+	request: components['schemas']['TopologyRequestOptions'];
+	perPerspectiveLocal: Record<TopologyPerspective, TopologyLocalOptions>;
+}>({
+	request: defaultRequestOptions(),
+	perPerspectiveLocal: initDefaultLocalOptions()
+});
 
-// Shared element rules — cross-perspective, single source of truth.
-// Initialized with union defaults; hydrated from topology on load.
-export const sharedElementRules = writable<ElementGraphRule[]>(getUnionDefaultElementRules());
+// Derived: element rules from the single store (for backward compat with GroupingRuleEditor)
+export const sharedElementRules = derived(topologyOptionsStore, ($store) => {
+	return ($store.request.element_rules ?? []) as ElementGraphRule[];
+});
 
-// Public store: resolves to the active perspective's options with shared element rules
-// filtered to only those applicable to the active perspective (for display).
+// Public derived store: projects the active perspective's view of topology options
 export const topologyOptions = derived(
-	[perPerspectiveOptions, activePerspective, sharedElementRules],
-	([$allOptions, $perspective, $elementRules]) => {
-		const opts = $allOptions[$perspective];
-		const applicableRules = $elementRules.filter((gr) => {
-			const ruleId = typeof gr.rule === 'string' ? gr.rule : Object.keys(gr.rule)[0];
-			const meta = _elementRuleTypes.find((r) => r.id === ruleId);
-			return (meta?.metadata as { perspectives?: string[] })?.perspectives?.includes($perspective);
-		});
-		return {
-			...opts,
-			request: {
-				...opts.request,
-				element_rules: applicableRules
-			}
-		};
-	}
+	[topologyOptionsStore, activePerspective],
+	([$store, $perspective]) => ({
+		local: $store.perPerspectiveLocal[$perspective],
+		request: {
+			...$store.request,
+			perspective: $perspective
+		}
+	})
 );
 
-// Helper to update the active perspective's options
+// Helper to update the active perspective's local options or request scalars
 export function updateTopologyOptions(
 	updater: (current: TopologyOptions) => TopologyOptions
 ): void {
 	const perspective = get(activePerspective);
-	perPerspectiveOptions.update((all) => ({
-		...all,
-		[perspective]: updater(all[perspective])
-	}));
-}
-
-// Writable-like setter for the active perspective's options (for compatibility)
-export function setTopologyOptions(options: TopologyOptions): void {
-	const perspective = get(activePerspective);
-	perPerspectiveOptions.update((all) => ({
-		...all,
-		[perspective]: options
-	}));
+	topologyOptionsStore.update((store) => {
+		const currentView: TopologyOptions = {
+			local: store.perPerspectiveLocal[perspective],
+			request: { ...store.request, perspective }
+		};
+		const updated = updater(currentView);
+		return {
+			request: { ...updated.request },
+			perPerspectiveLocal: {
+				...store.perPerspectiveLocal,
+				[perspective]: updated.local
+			}
+		};
+	});
 }
 
 // Update shared element rules (cross-perspective)
 export function updateSharedElementRules(
 	updater: (current: ElementGraphRule[]) => ElementGraphRule[]
 ): void {
-	sharedElementRules.update(updater);
+	topologyOptionsStore.update((store) => ({
+		...store,
+		request: {
+			...store.request,
+			element_rules: updater((store.request.element_rules ?? []) as ElementGraphRule[])
+		}
+	}));
 }
 
 /**
- * Build options for API requests. Sends ALL element rules (unfiltered) so the
- * backend stores the full set. Includes perspective_overrides to persist
- * per-perspective container rules.
+ * Build options for API requests. Reads directly from the source store —
+ * container_rules and hide_service_categories are already per-perspective HashMaps.
  */
 function buildOptionsForApi(): TopologyOptions {
-	const opts = get(topologyOptions);
-	const currentPerspective = get(activePerspective);
-	const allOpts = get(perPerspectiveOptions);
-
-	// Build perspective overrides for other perspectives' container rules
-	const overrides: Record<string, { container_rules?: unknown[] }> = {};
-	for (const [p, pOpts] of Object.entries(allOpts)) {
-		if (p !== currentPerspective) {
-			overrides[p] = { container_rules: pOpts.request.container_rules };
-		}
-	}
-
+	const store = get(topologyOptionsStore);
+	const perspective = get(activePerspective);
 	return sanitizeOptionsForApi({
-		...opts,
+		local: store.perPerspectiveLocal[perspective],
 		request: {
-			...opts.request,
-			perspective: currentPerspective,
-			element_rules: get(sharedElementRules),
-			perspective_overrides: Object.keys(overrides).length > 0 ? overrides : undefined
+			...store.request,
+			perspective
 		}
-	} as TopologyOptions);
+	});
 }
 
 /**
- * Hydrate reactive stores from a topology's backend-stored options.
- * Called on initial topology selection. SSE updates only hydrate rules,
- * not perspective (to avoid resetting user's perspective switch mid-flight).
+ * Hydrate stores from a topology's backend-stored options.
+ * Called on initial topology selection and SSE updates.
+ * SSE updates preserve the user's perspective and local options for other perspectives.
  */
 let hydrating = false;
 export function hydrateStoresFromTopology(topology: Topology, isInitial = true): void {
@@ -669,46 +627,23 @@ export function hydrateStoresFromTopology(topology: Topology, isInitial = true):
 			activePerspective.set(storedPerspective);
 		}
 
-		// Set element rules from topology (the full unfiltered set)
-		if (opts.request.element_rules?.length) {
-			sharedElementRules.set(opts.request.element_rules as ElementGraphRule[]);
-		}
-
-		// Build per-perspective options
 		if (isInitial) {
-			// Full rebuild: start from defaults, apply topology + overrides
-			const allOpts = buildDefaultPerPerspectiveOptions();
-			allOpts[storedPerspective] = opts as TopologyOptions;
-
-			const overrides = (opts.request as Record<string, unknown>).perspective_overrides as
-				| Record<string, { container_rules?: ContainerGraphRule[] }>
-				| undefined;
-			if (overrides) {
-				for (const [p, pOverrides] of Object.entries(overrides)) {
-					const perspective = p as TopologyPerspective;
-					if (
-						perspective !== storedPerspective &&
-						allOpts[perspective] &&
-						pOverrides.container_rules
-					) {
-						allOpts[perspective] = {
-							...allOpts[perspective],
-							request: {
-								...allOpts[perspective].request,
-								container_rules: pOverrides.container_rules
-							}
-						};
-					}
+			// Full hydration: use backend request options + default local options
+			topologyOptionsStore.set({
+				request: opts.request,
+				perPerspectiveLocal: {
+					...initDefaultLocalOptions(),
+					[storedPerspective]: opts.local
 				}
-			}
-
-			perPerspectiveOptions.set(allOpts);
+			});
 		} else {
-			// SSE update: only update the perspective that was rebuilt,
-			// preserve all other perspectives' state
-			perPerspectiveOptions.update((current) => ({
-				...current,
-				[storedPerspective]: opts as TopologyOptions
+			// SSE update: update request options, preserve local options for other perspectives
+			topologyOptionsStore.update((current) => ({
+				request: opts.request,
+				perPerspectiveLocal: {
+					...current.perPerspectiveLocal,
+					[storedPerspective]: opts.local
+				}
 			}));
 		}
 	} finally {
@@ -741,8 +676,10 @@ export function consumePreferredNetwork(): string | null {
 }
 
 export function resetTopologyOptions(): void {
-	perPerspectiveOptions.set(buildDefaultPerPerspectiveOptions());
-	sharedElementRules.set(getUnionDefaultElementRules());
+	topologyOptionsStore.set({
+		request: defaultRequestOptions(),
+		perPerspectiveLocal: initDefaultLocalOptions()
+	});
 	if (browser) {
 		localStorage.removeItem(EXPANDED_STORAGE_KEY);
 	}
@@ -815,30 +752,34 @@ let autoRebuildInitialized = false;
 let perspectiveInitialized = false;
 
 if (browser) {
-	let optionsRebuildTimeout: ReturnType<typeof setTimeout>;
-	perPerspectiveOptions.subscribe(() => {
+	let rebuildTimeout: ReturnType<typeof setTimeout>;
+
+	function triggerRebuild(debounceMs = 500): void {
+		clearTimeout(rebuildTimeout);
+		rebuildTimeout = setTimeout(() => {
+			if (!get(autoRebuild)) return;
+			const topologyId = get(selectedTopologyId);
+			if (!topologyId) return;
+
+			const topologies = queryClient.getQueryData<Topology[]>(queryKeys.topology.all);
+			const topology = topologies?.find((t) => t.id === topologyId);
+			if (!topology) return;
+
+			apiClient.POST('/api/v1/topology/{id}/rebuild', {
+				params: { path: { id: topologyId } },
+				body: {
+					network_id: topology.network_id,
+					options: buildOptionsForApi(),
+					nodes: topology.nodes,
+					edges: topology.edges
+				}
+			});
+		}, debounceMs);
+	}
+
+	topologyOptionsStore.subscribe(() => {
 		if (optionsInitialized && !hydrating) {
-			// Trigger a debounced rebuild when options change
-			clearTimeout(optionsRebuildTimeout);
-			optionsRebuildTimeout = setTimeout(() => {
-				if (!get(autoRebuild)) return;
-				const topologyId = get(selectedTopologyId);
-				if (!topologyId) return;
-
-				const topologies = queryClient.getQueryData<Topology[]>(queryKeys.topology.all);
-				const topology = topologies?.find((t) => t.id === topologyId);
-				if (!topology) return;
-
-				apiClient.POST('/api/v1/topology/{id}/rebuild', {
-					params: { path: { id: topologyId } },
-					body: {
-						network_id: topology.network_id,
-						options: buildOptionsForApi(),
-						nodes: topology.nodes,
-						edges: topology.edges
-					}
-				});
-			}, 500);
+			triggerRebuild();
 		}
 		optionsInitialized = true;
 	});
@@ -857,25 +798,9 @@ if (browser) {
 		autoRebuildInitialized = true;
 	});
 
-	// Trigger a rebuild when the active perspective changes
 	activePerspective.subscribe(() => {
 		if (perspectiveInitialized && !hydrating) {
-			const topologyId = get(selectedTopologyId);
-			if (!topologyId) return;
-
-			const topologies = queryClient.getQueryData<Topology[]>(queryKeys.topology.all);
-			const topology = topologies?.find((t) => t.id === topologyId);
-			if (!topology) return;
-
-			apiClient.POST('/api/v1/topology/{id}/rebuild', {
-				params: { path: { id: topologyId } },
-				body: {
-					network_id: topology.network_id,
-					options: buildOptionsForApi(),
-					nodes: topology.nodes,
-					edges: topology.edges
-				}
-			});
+			triggerRebuild(0);
 		}
 		perspectiveInitialized = true;
 	});

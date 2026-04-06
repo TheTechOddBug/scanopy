@@ -7,6 +7,7 @@
 		selectedNodes as globalSelectedNodes,
 		selectedTopologyId,
 		topologyOptions,
+		activePerspective,
 		useTopologiesQuery
 	} from '../../queries';
 	import type { TopologyNode, ElementRenderData, Topology } from '../../types/base';
@@ -130,7 +131,10 @@
 					// Service elements: simpler rendering — single service with host name
 					if (elementType === 'Service') {
 						const service = resolved.services[0];
-						const hiddenCategories = $topologyOptions.request.hide_service_categories ?? [];
+						const hiddenCategories =
+							(
+								($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>
+							)[$activePerspective] ?? [];
 						type CategoryType = (typeof hiddenCategories)[number];
 						const isCategoryHidden =
 							service &&
@@ -171,7 +175,10 @@
 					// Interface elements: existing behavior
 					if (!host || !resolved.hostId) return null;
 
-					const hiddenCategories = $topologyOptions.request.hide_service_categories ?? [];
+					const hiddenCategories =
+						(($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>)[
+							$activePerspective
+						] ?? [];
 
 					// All services bound to this interface (after tag filtering)
 					const allServicesOnInterface = visibleServicesForHost

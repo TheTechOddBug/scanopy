@@ -203,33 +203,27 @@ pub struct GroupingConfig {
 
 impl GroupingConfig {
     pub fn from_request_options(options: &TopologyRequestOptions) -> Self {
-        let mut config = GroupingConfig {
-            container_rules: options.container_rules.clone(),
-            element_rules: options.element_rules.clone(),
-        };
-
-        // Apply perspective-specific overrides when present
-        if let Some(ref overrides_map) = options.perspective_overrides
-            && let Some(overrides) = overrides_map.get(&options.perspective)
-        {
-            if let Some(ref rules) = overrides.container_rules {
-                config.container_rules = rules.clone();
-            }
-            if let Some(ref rules) = overrides.element_rules {
-                config.element_rules = rules.clone();
-            }
-        }
-
-        // Filter rules to only those applicable to the active perspective
         let perspective = options.perspective;
-        config
-            .container_rules
-            .retain(|gr| gr.rule.applicable_perspectives().contains(&perspective));
-        config
-            .element_rules
-            .retain(|gr| gr.rule.applicable_perspectives().contains(&perspective));
 
-        config
+        // Container rules: look up current perspective directly (per-perspective HashMap)
+        let container_rules = options
+            .container_rules
+            .get(&perspective)
+            .cloned()
+            .unwrap_or_default();
+
+        // Element rules: filter shared set by applicable perspectives
+        let element_rules = options
+            .element_rules
+            .iter()
+            .filter(|gr| gr.rule.applicable_perspectives().contains(&perspective))
+            .cloned()
+            .collect();
+
+        GroupingConfig {
+            container_rules,
+            element_rules,
+        }
     }
 
     pub fn should_group_docker_bridges(&self) -> bool {
@@ -252,20 +246,23 @@ mod tests {
 
     #[test]
     fn test_from_default_options() {
+        // Default perspective is L3Logical, which gets BySubnet + ByVirtualizingService
         let options = TopologyRequestOptions::default();
         let config = GroupingConfig::from_request_options(&options);
 
         assert!(config.should_group_docker_bridges());
         assert_eq!(config.container_rules.len(), 2);
-        assert_eq!(config.element_rules.len(), 1);
+        // L3Logical gets ByServiceCategory + ByTag (2 of the 4 default element rules)
+        assert_eq!(config.element_rules.len(), 2);
     }
 
     #[test]
     fn test_no_docker_grouping() {
-        let options = TopologyRequestOptions {
-            container_rules: vec![GraphRule::new(ContainerRule::BySubnet)],
-            ..Default::default()
-        };
+        let mut options = TopologyRequestOptions::default();
+        options.container_rules.insert(
+            TopologyPerspective::L3Logical,
+            vec![GraphRule::new(ContainerRule::BySubnet)],
+        );
         let config = GroupingConfig::from_request_options(&options);
 
         assert!(!config.should_group_docker_bridges());

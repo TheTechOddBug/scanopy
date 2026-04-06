@@ -17,7 +17,8 @@ use crate::server::topology::types::layout::{Ixy, Uxy};
 use crate::server::topology::types::nodes::Node;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display, hash::Hash};
+use std::{collections::HashMap, fmt::Display};
+use strum::IntoEnumIterator;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -245,43 +246,61 @@ impl Default for TopologyLocalOptions {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, Hash, ToSchema)]
-pub struct PerspectiveOptionOverrides {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub container_rules: Option<Vec<GraphRule<ContainerRule>>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub element_rules: Option<Vec<GraphRule<ElementRule>>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub hide_service_categories: Option<Vec<ServiceCategory>>,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, ToSchema)]
 pub struct TopologyRequestOptions {
     pub hide_vm_title_on_docker_container: bool,
     pub hide_ports: bool,
-    pub hide_service_categories: Vec<ServiceCategory>,
+    #[serde(default = "default_hide_service_categories")]
+    pub hide_service_categories: HashMap<TopologyPerspective, Vec<ServiceCategory>>,
     #[serde(default = "default_container_rules")]
-    pub container_rules: Vec<GraphRule<ContainerRule>>,
+    pub container_rules: HashMap<TopologyPerspective, Vec<GraphRule<ContainerRule>>>,
     #[serde(default = "default_element_rules")]
     pub element_rules: Vec<GraphRule<ElementRule>>,
     #[serde(default)]
     pub perspective: TopologyPerspective,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub perspective_overrides: Option<HashMap<TopologyPerspective, PerspectiveOptionOverrides>>,
 }
 
-fn default_container_rules() -> Vec<GraphRule<ContainerRule>> {
-    vec![
-        GraphRule::new(ContainerRule::BySubnet),
-        GraphRule::new(ContainerRule::ByVirtualizingService),
-    ]
+fn default_hide_service_categories() -> HashMap<TopologyPerspective, Vec<ServiceCategory>> {
+    TopologyPerspective::iter()
+        .map(|p| (p, vec![ServiceCategory::OpenPorts]))
+        .collect()
+}
+
+fn default_container_rules() -> HashMap<TopologyPerspective, Vec<GraphRule<ContainerRule>>> {
+    use ContainerRule::*;
+
+    // Build from applicable_perspectives: for each rule type, add it to every perspective it applies to
+    let all_rules: Vec<GraphRule<ContainerRule>> = vec![
+        GraphRule::new(BySubnet),
+        GraphRule::new(ByVirtualizingService),
+        GraphRule::new(ByApplicationGroup { tag_ids: vec![] }),
+    ];
+
+    let mut map: HashMap<TopologyPerspective, Vec<GraphRule<ContainerRule>>> =
+        TopologyPerspective::iter().map(|p| (p, vec![])).collect();
+
+    for gr in all_rules {
+        for &perspective in gr.rule.applicable_perspectives() {
+            map.entry(perspective).or_default().push(gr.clone());
+        }
+    }
+
+    map
 }
 
 fn default_element_rules() -> Vec<GraphRule<ElementRule>> {
-    vec![GraphRule::new(ElementRule::ByServiceCategory {
-        categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
-        title: Some("Infrastructure".into()),
-    })]
+    vec![
+        GraphRule::new(ElementRule::ByServiceCategory {
+            categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
+            title: Some("Network Services".into()),
+        }),
+        GraphRule::new(ElementRule::ByTag {
+            tag_ids: vec![],
+            title: None,
+        }),
+        GraphRule::new(ElementRule::ByVirtualizer),
+        GraphRule::new(ElementRule::ByStack),
+    ]
 }
 
 impl Default for TopologyRequestOptions {
@@ -289,11 +308,10 @@ impl Default for TopologyRequestOptions {
         Self {
             hide_vm_title_on_docker_container: false,
             hide_ports: false,
-            hide_service_categories: vec![ServiceCategory::OpenPorts],
+            hide_service_categories: default_hide_service_categories(),
             container_rules: default_container_rules(),
             element_rules: default_element_rules(),
             perspective: TopologyPerspective::default(),
-            perspective_overrides: None,
         }
     }
 }

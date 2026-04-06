@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-06T01:47:11.089827Z",
-              "id": "6595fc71-52a0-4f3a-9be7-2b0b7b35ee89",
+              "created_at": "2026-04-06T15:23:49.769387Z",
+              "id": "4ef79c1d-6db8-4196-b2d2-8a14e92c40ed",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-06T01:47:11.089827Z"
+              "updated_at": "2026-04-06T15:23:49.769387Z"
             }
           },
           "error": {
@@ -10734,14 +10734,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-06T01:47:11.072668Z",
-                      "id": "70cce05b-7623-4b25-91c8-461b6ba070da",
+                      "created_at": "2026-04-06T15:23:49.750119Z",
+                      "id": "3b20f20e-d679-470b-9902-d83218c4a2ca",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-06T01:47:11.072668Z"
+                      "updated_at": "2026-04-06T15:23:49.750119Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10750,7 +10750,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Asterisk",
+                  "service_definition": "Jira",
                   "source": {
                     "type": "Manual"
                   },
@@ -11453,14 +11453,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-06T01:47:11.085079Z",
-                  "id": "13cee77a-ffdb-4b6b-a3e1-11036439b043",
+                  "created_at": "2026-04-06T15:23:49.764108Z",
+                  "id": "63bf087b-88ca-4f12-b822-d30ec6c9406a",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-06T01:47:11.085079Z"
+                  "updated_at": "2026-04-06T15:23:49.764108Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11469,7 +11469,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Asterisk",
+              "service_definition": "Jira",
               "source": {
                 "type": "Manual"
               },
@@ -12744,14 +12744,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-06T01:47:11.073008Z",
-          "id": "c47f6ef0-b245-4d15-a5a1-f696a6ac8e88",
+          "created_at": "2026-04-06T15:23:49.750498Z",
+          "id": "cdddaa69-adb7-4908-a138-aa271b913346",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-06T01:47:11.073008Z"
+          "updated_at": "2026-04-06T15:23:49.750498Z"
         }
       },
       "BindingBase": {
@@ -13273,7 +13273,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Asterisk",
+              "service_definition": "Jira",
               "tags": [],
               "virtualization": null
             }
@@ -15833,14 +15833,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-06T01:47:11.072185Z",
-                  "id": "07c1e7ea-7429-484a-849a-97db02225a85",
+                  "created_at": "2026-04-06T15:23:49.749576Z",
+                  "id": "7bff2ec6-cb7a-48ff-b4d1-d2e2c0a60604",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-06T01:47:11.072185Z"
+                  "updated_at": "2026-04-06T15:23:49.749576Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15849,7 +15849,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Asterisk",
+              "service_definition": "Jira",
               "source": {
                 "type": "Manual"
               },
@@ -17829,14 +17829,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-06T01:47:11.062106Z",
-                        "id": "b3561c17-7880-4e37-86ab-b2d1da70ac11",
+                        "created_at": "2026-04-06T15:23:49.737319Z",
+                        "id": "a2f1093e-e55e-456f-a600-e0e50b75a718",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-06T01:47:11.062106Z"
+                        "updated_at": "2026-04-06T15:23:49.737319Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17845,7 +17845,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Asterisk",
+                    "service_definition": "Jira",
                     "source": {
                       "type": "Manual"
                     },
@@ -17922,14 +17922,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-06T01:47:11.083794Z",
-                    "id": "0c69ed16-bab1-47c3-984b-00cb5ecf3764",
+                    "created_at": "2026-04-06T15:23:49.762702Z",
+                    "id": "ee3e1cae-8e64-434d-bbd3-23ca73a7c5bf",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-06T01:47:11.083794Z"
+                    "updated_at": "2026-04-06T15:23:49.762702Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -17938,7 +17938,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Asterisk",
+                "service_definition": "Jira",
                 "source": {
                   "type": "Manual"
                 },
@@ -18337,38 +18337,6 @@
             "format": "int32",
             "description": "Number of results to skip. Default: 0.",
             "minimum": 0
-          }
-        }
-      },
-      "PerspectiveOptionOverrides": {
-        "type": "object",
-        "properties": {
-          "container_rules": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/GraphRule_ContainerRule"
-            }
-          },
-          "element_rules": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/GraphRule_ElementRule"
-            }
-          },
-          "hide_service_categories": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/ServiceCategory"
-            }
           }
         }
       },
@@ -19130,14 +19098,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-06T01:47:11.072886Z",
-              "id": "71752f93-9553-4e34-9bab-eade68b6fc07",
+              "created_at": "2026-04-06T15:23:49.750365Z",
+              "id": "703c6301-3e26-4083-98c4-f164ed32b884",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-06T01:47:11.072886Z"
+              "updated_at": "2026-04-06T15:23:49.750365Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19146,7 +19114,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Asterisk",
+          "service_definition": "Jira",
           "source": {
             "type": "Manual"
           },
@@ -20252,14 +20220,26 @@
         "type": "object",
         "required": [
           "hide_vm_title_on_docker_container",
-          "hide_ports",
-          "hide_service_categories"
+          "hide_ports"
         ],
         "properties": {
           "container_rules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GraphRule_ContainerRule"
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/GraphRule_ContainerRule"
+              }
+            },
+            "propertyNames": {
+              "type": "string",
+              "description": "Which topology perspective is being rendered",
+              "enum": [
+                "L2Physical",
+                "L3Logical",
+                "Infrastructure",
+                "Application"
+              ]
             }
           },
           "element_rules": {
@@ -20272,24 +20252,12 @@
             "type": "boolean"
           },
           "hide_service_categories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ServiceCategory"
-            }
-          },
-          "hide_vm_title_on_docker_container": {
-            "type": "boolean"
-          },
-          "perspective": {
-            "$ref": "#/components/schemas/TopologyPerspective"
-          },
-          "perspective_overrides": {
-            "type": [
-              "object",
-              "null"
-            ],
+            "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/PerspectiveOptionOverrides"
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ServiceCategory"
+              }
             },
             "propertyNames": {
               "type": "string",
@@ -20301,6 +20269,12 @@
                 "Application"
               ]
             }
+          },
+          "hide_vm_title_on_docker_container": {
+            "type": "boolean"
+          },
+          "perspective": {
+            "$ref": "#/components/schemas/TopologyPerspective"
           }
         }
       },

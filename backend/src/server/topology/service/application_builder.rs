@@ -12,7 +12,7 @@ use crate::server::{
     shared::{concepts::Concept, types::metadata::EntityMetadataProvider},
     tags::r#impl::base::Tag,
     topology::types::{
-        edges::{Edge, EdgeClassification, EdgeHandle, EdgeType},
+        edges::{Edge, EdgeHandle, EdgeType, EdgeViewConfig},
         grouping::GroupingConfig,
         nodes::{ContainerType, ElementEntityType, Node, NodeType},
     },
@@ -326,7 +326,7 @@ impl ViewBuilder for ApplicationBuilder {
                                 source_handle: EdgeHandle::Bottom,
                                 target_handle: EdgeHandle::Top,
                                 is_multi_hop: false,
-                                classification: EdgeClassification::default(),
+                                view_config: EdgeViewConfig::default(),
                             });
                         }
                     }
@@ -350,7 +350,7 @@ impl ViewBuilder for ApplicationBuilder {
                                     source_handle: EdgeHandle::Bottom,
                                     target_handle: EdgeHandle::Top,
                                     is_multi_hop: false,
-                                    classification: EdgeClassification::default(),
+                                    view_config: EdgeViewConfig::default(),
                                 });
                             }
                         }
@@ -377,7 +377,7 @@ impl ViewBuilder for ApplicationBuilder {
                     source_handle: EdgeHandle::Bottom,
                     target_handle: EdgeHandle::Top,
                     is_multi_hop: false,
-                    classification: EdgeClassification::default(),
+                    view_config: EdgeViewConfig::default(),
                 });
             }
         }

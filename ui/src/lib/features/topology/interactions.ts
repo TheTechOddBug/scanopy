@@ -4,7 +4,7 @@ import type { Node } from '@xyflow/svelte';
 import type { QueryClient } from '@tanstack/svelte-query';
 import { edgeTypes, views, serviceDefinitions, subnetTypes } from '$lib/shared/stores/metadata';
 import type { TopologyEdge, TopologyNode, Topology } from './types/base';
-import { classifyEdge } from './layout/edge-classification';
+import { isDisabledEdge } from './layout/edge-classification';
 import { getContainerContents } from './resolvers';
 import { getHostFromInterfaceIdFromCache } from '../hosts/queries';
 import {
@@ -339,7 +339,7 @@ export function updateConnectedNodes(
 
 		for (const edge of topologyEdges) {
 			// Skip edges that are disabled (view-level) or hidden (user toggle)
-			if (classifyEdge(edge) === 'disabled') continue;
+			if (isDisabledEdge(edge)) continue;
 			if (hiddenEdgeTypes?.includes(edge.edge_type)) continue;
 
 			// Add directly connected nodes

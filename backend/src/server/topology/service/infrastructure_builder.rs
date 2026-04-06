@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
+    edge_builder::EdgeBuilder,
     element_rules::{ElementMatchData, apply_element_rules_with_titles},
     view::ViewBuilder,
 };
@@ -11,7 +12,7 @@ use crate::server::{
     if_entries::r#impl::base::Neighbor,
     services::r#impl::{definitions::ServiceDefinitionExt, virtualization::ServiceVirtualization},
     topology::types::{
-        edges::{DiscoveryProtocol, Edge, EdgeClassification, EdgeHandle, EdgeType},
+        edges::{DiscoveryProtocol, Edge, EdgeHandle, EdgeType, EdgeViewConfig},
         grouping::GroupingConfig,
         nodes::{ContainerType, ElementEntityType, Node, NodeType},
     },
@@ -211,6 +212,9 @@ impl ViewBuilder for InfrastructureBuilder {
         // Post-process: set associated_service_definition on Virtualizer/Stack subcontainers
         Self::set_subcontainer_service_definitions(&mut nodes, &virtualizer_map, ctx);
 
+        // HostVirtualization edges — connect hypervisor hosts to their VMs
+        edges.extend(EdgeBuilder::create_vm_host_edges_by_host(ctx));
+
         // PhysicalLink overlay edges — connect hosts based on LLDP/CDP neighbor data.
         // Track processed pairs to avoid duplicate edges (A→B and B→A from bidirectional LLDP).
         let mut processed_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
@@ -266,7 +270,7 @@ impl ViewBuilder for InfrastructureBuilder {
                 source_handle: EdgeHandle::Bottom,
                 target_handle: EdgeHandle::Top,
                 is_multi_hop: false,
-                classification: EdgeClassification::default(),
+                view_config: EdgeViewConfig::default(),
             });
         }
 
@@ -541,11 +545,13 @@ mod tests {
     }
 
     #[test]
-    fn test_no_virtualization_edges() {
+    fn test_virtualization_edges_created() {
         let hypervisor = make_host("pve-01");
         let proxmox_service = make_service(hypervisor.id);
         let vm = make_proxmox_vm("vm-1", proxmox_service.id);
 
+        let hypervisor_id = hypervisor.id;
+        let vm_id = vm.id;
         let hosts = vec![hypervisor, vm];
         let services = vec![proxmox_service];
         let options = TopologyOptions::default();
@@ -565,8 +571,14 @@ mod tests {
         let builder = InfrastructureBuilder;
         let (_nodes, edges) = builder.build(&ctx, &infra_grouping());
 
-        // No virtualization edges — containment IS the relationship.
-        // Only PhysicalLink edges would appear (none in this test since no if_entries).
-        assert!(edges.is_empty());
+        // HostVirtualization edge connects hypervisor host to VM host
+        assert_eq!(edges.len(), 1);
+        let edge = &edges[0];
+        assert_eq!(edge.source, hypervisor_id);
+        assert_eq!(edge.target, vm_id);
+        assert!(matches!(
+            edge.edge_type,
+            EdgeType::HostVirtualization { .. }
+        ));
     }
 }

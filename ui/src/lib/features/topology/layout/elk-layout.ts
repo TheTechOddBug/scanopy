@@ -1,11 +1,8 @@
 import type { ElkNode, ElkExtendedEdge } from 'elkjs';
-import type { TopologyNode, TopologyEdge, Topology } from '../types/base';
-import type { components } from '$lib/api/schema';
-import { classifyEdge } from './edge-classification';
+import type { TopologyNode } from '../types/base';
+import { isDisabledEdge, affectsLayout } from './edge-classification';
 import { containerTypes } from '$lib/shared/stores/metadata';
 import type { LayoutInput, LayoutResult } from './engine';
-
-type SubnetType = components['schemas']['SubnetType'];
 
 /** @deprecated Use LayoutInput from engine.ts */
 export type ElkLayoutInput = LayoutInput;
@@ -61,7 +58,7 @@ function getLayerHint(node: TopologyNode): number {
 /**
  * Build an ELK graph from topology data.
  * Containers become parent nodes; elements become children inside their container.
- * Only primary edges are included (overlay edges don't affect layout).
+ * Only layout-affecting edges are included in the ELK graph.
  */
 function buildElkGraph(input: ElkLayoutInput): {
 	graph: ElkNode;
@@ -179,13 +176,11 @@ function buildElkGraph(input: ElkLayoutInput): {
 		string,
 		{ hasUpwardEdge: boolean; hasDownwardEdge: boolean; externalEdgeCount: number }
 	>();
-	// Consider all VISIBLE edge types for positioning metadata (not just primary).
-	// Primary/overlay classification only matters for container-level ELK edges —
-	// for element positioning, any visible cross-container edge indicates the node
-	// should be near the boundary (e.g., ServiceVirtualization edges to Docker Bridge).
-	const hiddenEdgeSet = new Set(input.hiddenEdgeTypes ?? []);
+	// Consider all non-disabled edges for positioning metadata.
+	// Any active edge (whether visible, hidden-by-default, or layout-only) can indicate
+	// that a node should be near a container boundary.
 	for (const edge of input.edges) {
-		if (hiddenEdgeSet.has(edge.edge_type) || edge.classification === 'disabled') continue;
+		if (isDisabledEdge(edge)) continue;
 		// Resolve container: element→parent container, or the node itself if it IS a container
 		// (ServiceVirtualization edges can target a container node directly)
 		const srcContainer =
@@ -241,7 +236,7 @@ function buildElkGraph(input: ElkLayoutInput): {
 	const seenContainerEdges = new Set<string>();
 	let edgeIndex = 0;
 	for (const edge of input.edges) {
-		if (classifyEdge(edge) !== 'primary') continue;
+		if (!affectsLayout(edge)) continue;
 
 		const srcContainer = elementToContainer.get(edge.source);
 		const tgtContainer = elementToContainer.get(edge.target);
@@ -492,6 +487,16 @@ function applyEdgeAwareSwaps(
 			}
 		}
 
+		// Within buckets, sort by edge count so elements with more cross-container
+		// edges are placed closest to the container boundary
+		const byEdgeCount = (a: ElkNode, b: ElkNode) => {
+			const ac = elementExternalEdgeInfo.get(a.id)?.externalEdgeCount ?? 0;
+			const bc = elementExternalEdgeInfo.get(b.id)?.externalEdgeCount ?? 0;
+			return bc - ac;
+		};
+		upward.sort(byEdgeCount);
+		downward.sort(byEdgeCount);
+
 		const reordered = [...upward, ...middle, ...downward];
 		let y = startY;
 		for (const node of reordered) {
@@ -585,7 +590,7 @@ function mapElkResults(
 	// Only compute handles for edges that will actually be rendered (not hidden or disabled)
 	const hiddenEdgeSet = new Set(input.hiddenEdgeTypes ?? []);
 	const renderedEdges = input.edges.filter(
-		(e) => !hiddenEdgeSet.has(e.edge_type) && e.classification !== 'disabled'
+		(e) => !hiddenEdgeSet.has(e.edge_type) && !isDisabledEdge(e)
 	);
 
 	for (const edge of renderedEdges) {

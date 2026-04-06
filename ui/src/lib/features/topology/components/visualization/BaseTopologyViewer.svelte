@@ -51,7 +51,7 @@
 	} from '../../interactions';
 	import { bundleEdges } from '../../layout/edge-bundling';
 	import { elevateEdgesToContainers } from '../../layout/edge-elevation';
-	import { isOverlayEdge } from '../../layout/edge-classification';
+	import { isDisabledEdge, isDashedEdge } from '../../layout/edge-classification';
 	import { onMount, tick, setContext } from 'svelte';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
@@ -644,7 +644,7 @@
 				}
 
 				// Filter visible edges (disabled edges excluded entirely, hidden types excluded before bundling)
-				const nonDisabledEdges = baseEdges.filter((e) => e.classification !== 'disabled');
+				const nonDisabledEdges = baseEdges.filter((e) => !isDisabledEdge(e));
 				const visibleEdges = nonDisabledEdges.filter((e) => !hiddenEdgeTypes.includes(e.edge_type));
 
 				let flowEdges: Edge[];
@@ -684,7 +684,7 @@
 									bundleCount: bundle.count,
 									bundleEdges: bundle.edges,
 									bundleStrokeWidth,
-									bundleIsOverlay: isOverlayEdge(representative)
+									bundleIsOverlay: isDashedEdge(representative)
 								})
 							);
 						}

@@ -412,10 +412,10 @@ impl TopologyService {
         let builder = super::view::builder_for_view(options.request.view);
         let (all_nodes, mut all_edges) = builder.build(&ctx, &grouping);
 
-        // Set edge classification based on view
+        // Set per-view edge configuration
         let view = options.request.view;
         for edge in &mut all_edges {
-            edge.classification = view.classify_edge((&edge.edge_type).into());
+            edge.view_config = view.edge_view_config((&edge.edge_type).into());
         }
 
         let final_edges = all_edges;

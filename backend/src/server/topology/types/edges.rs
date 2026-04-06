@@ -24,17 +24,40 @@ pub enum DiscoveryProtocol {
     CDP,
 }
 
-/// Whether an edge affects layout (primary) or is drawn after layout (overlay)
+/// Whether an edge is visible by default or hidden behind a toggle
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum EdgeClassification {
+pub enum EdgeDefaultVisibility {
     #[default]
-    Primary,
-    /// Overlay edge, visible by default in UI toggle
-    Overlay,
-    /// Overlay edge, hidden by default in UI toggle
-    OverlayHidden,
+    Visible,
+    Hidden,
+}
+
+/// Visual stroke style for an edge
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum EdgeStroke {
+    #[default]
+    Solid,
+    Dashed,
+}
+
+/// Per-view configuration for an edge: disabled (not in this view) or active with properties
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum EdgeViewConfig {
+    /// Edge is not available in this view
+    #[default]
     Disabled,
+    /// Edge is active in this view with specific properties
+    Active {
+        /// Whether ELK should use this edge for layout positioning
+        affects_layout: bool,
+        /// Whether the edge is shown by default or hidden behind a toggle
+        default_visibility: EdgeDefaultVisibility,
+        /// Visual stroke style
+        stroke: EdgeStroke,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]
@@ -50,7 +73,7 @@ pub struct Edge {
     pub target_handle: EdgeHandle,
     pub is_multi_hop: bool,
     #[serde(default)]
-    pub classification: EdgeClassification,
+    pub view_config: EdgeViewConfig,
 }
 
 #[derive(
@@ -194,15 +217,6 @@ impl TypeMetadataProvider for EdgeType {
             EdgeType::PhysicalLink { .. } => EdgeStyle::SmoothStep.into(),
         };
 
-        let is_dashed = match &self {
-            EdgeType::RequestPath { .. } => false,
-            EdgeType::HubAndSpoke { .. } => false,
-            EdgeType::Interface { .. } => true,
-            EdgeType::HostVirtualization { .. } => true,
-            EdgeType::ServiceVirtualization { .. } => true,
-            EdgeType::PhysicalLink { .. } => false, // Solid line for physical links
-        };
-
         let has_start_marker = false;
 
         let has_end_marker = match &self {
@@ -225,7 +239,6 @@ impl TypeMetadataProvider for EdgeType {
         let is_physical_edge = matches!(self, EdgeType::PhysicalLink { .. });
 
         serde_json::json!({
-            "is_dashed": is_dashed,
             "has_start_marker": has_start_marker,
             "has_end_marker": has_end_marker,
             "edge_style": edge_style,
@@ -259,23 +272,31 @@ mod tests {
     }
 
     #[test]
-    fn edge_classification_serde_round_trips() {
-        // All variants round-trip correctly
-        for (classification, expected_str) in [
-            (EdgeClassification::Primary, "primary"),
-            (EdgeClassification::Overlay, "overlay"),
-            (EdgeClassification::OverlayHidden, "overlay_hidden"),
-            (EdgeClassification::Disabled, "disabled"),
-        ] {
-            let json = serde_json::to_value(classification).unwrap();
-            assert_eq!(json, expected_str);
-            let deserialized: EdgeClassification = serde_json::from_value(json).unwrap();
-            assert_eq!(deserialized, classification);
-        }
+    fn edge_view_config_serde_round_trips() {
+        // Disabled variant
+        let disabled = EdgeViewConfig::Disabled;
+        let json = serde_json::to_value(disabled).unwrap();
+        assert_eq!(json["type"], "disabled");
+        let deserialized: EdgeViewConfig = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized, disabled);
+
+        // Active variant
+        let active = EdgeViewConfig::Active {
+            affects_layout: true,
+            default_visibility: EdgeDefaultVisibility::Hidden,
+            stroke: EdgeStroke::Dashed,
+        };
+        let json = serde_json::to_value(active).unwrap();
+        assert_eq!(json["type"], "active");
+        assert_eq!(json["affects_layout"], true);
+        assert_eq!(json["default_visibility"], "hidden");
+        assert_eq!(json["stroke"], "dashed");
+        let deserialized: EdgeViewConfig = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized, active);
     }
 
     #[test]
-    fn classification_default_is_primary() {
-        assert_eq!(EdgeClassification::default(), EdgeClassification::Primary);
+    fn view_config_default_is_disabled() {
+        assert_eq!(EdgeViewConfig::default(), EdgeViewConfig::Disabled);
     }
 }

@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { computeElkLayout, type ElkLayoutInput } from '$lib/features/topology/layout/elk-layout';
 import {
-	classifyEdge,
-	isOverlayEdge,
+	isDisabledEdge,
+	isDashedEdge,
+	affectsLayout,
+	isHiddenByDefault,
 	getDefaultHiddenEdgeTypes
 } from '$lib/features/topology/layout/edge-classification';
 import type { components } from '$lib/api/schema';
@@ -54,7 +56,11 @@ function makeEdge(
 	source: string,
 	target: string,
 	edgeType: string = 'Interface',
-	classification?: 'primary' | 'overlay'
+	viewConfig?: {
+		affects_layout: boolean;
+		default_visibility?: 'visible' | 'hidden';
+		stroke?: 'solid' | 'dashed';
+	}
 ): TopologyEdge {
 	return {
 		edge_type: edgeType,
@@ -62,8 +68,20 @@ function makeEdge(
 		target,
 		source_handle: 'Bottom',
 		target_handle: 'Top',
-		...(classification && { classification })
+		view_config: viewConfig
+			? {
+					type: 'active' as const,
+					affects_layout: viewConfig.affects_layout,
+					default_visibility: viewConfig.default_visibility ?? 'visible',
+					stroke: viewConfig.stroke ?? 'solid'
+				}
+			: { type: 'disabled' as const }
 	} as TopologyEdge;
+}
+
+/** Shorthand for a layout-affecting visible solid edge */
+function primaryEdge(source: string, target: string, edgeType: string = 'Interface'): TopologyEdge {
+	return makeEdge(source, target, edgeType, { affects_layout: true });
 }
 
 function makeSubnet(id: string, subnetType: SubnetType): Subnet {
@@ -140,30 +158,52 @@ function makeTopology(
 
 // --- Edge Classification Tests ---
 
-describe('classifyEdge', () => {
-	it('defaults to overlay when no classification field is present', () => {
+describe('edge view config helpers', () => {
+	it('treats edges without view_config as disabled', () => {
+		const edge = { edge_type: 'Interface', source: 'a', target: 'b' } as TopologyEdge;
+		expect(isDisabledEdge(edge)).toBe(true);
+		expect(affectsLayout(edge)).toBe(false);
+	});
+
+	it('isDisabledEdge returns true for disabled config', () => {
 		const edge = makeEdge('a', 'b', 'Interface');
-		expect(classifyEdge(edge)).toBe('overlay');
+		expect(isDisabledEdge(edge)).toBe(true);
 	});
 
-	it('uses explicit classification field when present', () => {
-		const edge = makeEdge('a', 'b', 'Interface', 'primary');
-		expect(classifyEdge(edge)).toBe('primary');
-
-		const overlay = makeEdge('a', 'b', 'RequestPath', 'overlay');
-		expect(classifyEdge(overlay)).toBe('overlay');
+	it('isDisabledEdge returns false for active config', () => {
+		const edge = makeEdge('a', 'b', 'Interface', { affects_layout: true });
+		expect(isDisabledEdge(edge)).toBe(false);
 	});
 
-	it('isOverlayEdge returns true for edges without classification', () => {
-		expect(isOverlayEdge(makeEdge('a', 'b', 'HostVirtualization'))).toBe(true);
-		expect(isOverlayEdge(makeEdge('a', 'b', 'Interface'))).toBe(true);
+	it('affectsLayout reads from view config', () => {
+		expect(affectsLayout(makeEdge('a', 'b', 'Interface', { affects_layout: true }))).toBe(true);
+		expect(affectsLayout(makeEdge('a', 'b', 'Interface', { affects_layout: false }))).toBe(false);
+		expect(affectsLayout(makeEdge('a', 'b', 'Interface'))).toBe(false); // disabled
 	});
 
-	it('isOverlayEdge returns false for edges classified as primary', () => {
-		expect(isOverlayEdge(makeEdge('a', 'b', 'Interface', 'primary'))).toBe(false);
+	it('isDashedEdge reads stroke from view config', () => {
+		expect(
+			isDashedEdge(makeEdge('a', 'b', 'Interface', { affects_layout: true, stroke: 'dashed' }))
+		).toBe(true);
+		expect(
+			isDashedEdge(makeEdge('a', 'b', 'Interface', { affects_layout: true, stroke: 'solid' }))
+		).toBe(false);
 	});
 
-	it('getDefaultHiddenEdgeTypes returns correct types per perspective', () => {
+	it('isHiddenByDefault reads default_visibility from view config', () => {
+		expect(
+			isHiddenByDefault(
+				makeEdge('a', 'b', 'Interface', { affects_layout: true, default_visibility: 'hidden' })
+			)
+		).toBe(true);
+		expect(
+			isHiddenByDefault(
+				makeEdge('a', 'b', 'Interface', { affects_layout: true, default_visibility: 'visible' })
+			)
+		).toBe(false);
+	});
+
+	it('getDefaultHiddenEdgeTypes returns correct types per view', () => {
 		const l3 = getDefaultHiddenEdgeTypes('L3Logical');
 		expect(l3).toContain('HostVirtualization');
 		expect(l3).toContain('PhysicalLink');
@@ -172,15 +212,14 @@ describe('classifyEdge', () => {
 
 		const l2 = getDefaultHiddenEdgeTypes('L2Physical');
 		expect(l2).not.toContain('PhysicalLink');
-		expect(l2).toContain('RequestPath');
 
 		const infra = getDefaultHiddenEdgeTypes('Infrastructure');
 		expect(infra).not.toContain('HostVirtualization');
-		expect(infra).toContain('PhysicalLink');
+		expect(infra).toContain('Interface');
 
 		const app = getDefaultHiddenEdgeTypes('Application');
 		expect(app).not.toContain('RequestPath');
-		expect(app).toContain('PhysicalLink');
+		expect(app).toContain('ServiceVirtualization');
 	});
 });
 
@@ -224,8 +263,8 @@ describe('computeElkLayout', () => {
 		];
 
 		const edges: TopologyEdge[] = [
-			makeEdge(elem1, elem3, 'Interface', 'primary'), // primary: ext -> gw
-			makeEdge(elem3, elem4, 'Interface', 'primary'), // primary: gw -> lan
+			primaryEdge(elem1, elem3, 'Interface'), // primary: ext -> gw
+			primaryEdge(elem3, elem4, 'Interface'), // primary: gw -> lan
 			makeEdge(elem1, elem4, 'HostVirtualization') // overlay: should be ignored by layout
 		];
 
@@ -277,8 +316,8 @@ describe('computeElkLayout', () => {
 		];
 
 		const edges: TopologyEdge[] = [
-			makeEdge(elem1, elem2, 'Interface', 'primary'),
-			makeEdge(elem2, elem3, 'Interface', 'primary')
+			primaryEdge(elem1, elem2, 'Interface'),
+			primaryEdge(elem2, elem3, 'Interface')
 		];
 
 		const subnets = [
@@ -309,7 +348,7 @@ describe('computeElkLayout', () => {
 			makeElement(elem2, subnetId)
 		];
 
-		const edges: TopologyEdge[] = [makeEdge(elem1, elem2, 'Interface', 'primary')];
+		const edges: TopologyEdge[] = [primaryEdge(elem1, elem2, 'Interface')];
 		const subnets = [makeSubnet(subnetId, 'Lan')];
 
 		const input = makeTopology(nodes, edges, subnets);
@@ -375,7 +414,7 @@ describe('computeElkLayout', () => {
 		// Create some primary edges between adjacent subnets
 		const edges: TopologyEdge[] = [];
 		for (let i = 0; i < elementIds.length - 1; i += 3) {
-			edges.push(makeEdge(elementIds[i], elementIds[i + 1], 'Interface', 'primary'));
+			edges.push(primaryEdge(elementIds[i], elementIds[i + 1], 'Interface'));
 		}
 
 		const input = makeTopology(nodes, edges, subnets);
@@ -411,7 +450,7 @@ describe('computeElkLayout', () => {
 			makeElement(elem3, groupId)
 		];
 
-		const edges: TopologyEdge[] = [makeEdge(elem1, elem2, 'Interface', 'primary')];
+		const edges: TopologyEdge[] = [primaryEdge(elem1, elem2, 'Interface')];
 		const subnets = [makeSubnet(subnetId, 'Lan')];
 
 		const input = makeTopology(nodes, edges, subnets);
@@ -483,7 +522,7 @@ describe('computeElkLayout', () => {
 		expect(containerSize.width).toBeLessThan(180 * 8 + 25 * 7); // ~1615px
 	});
 
-	it('does not pass overlay edges to ELK layout', async () => {
+	it('does not pass disabled edges to ELK layout', async () => {
 		const subnetId = uuid();
 		const elem1 = uuid();
 		const elem2 = uuid();
@@ -494,7 +533,7 @@ describe('computeElkLayout', () => {
 			makeElement(elem2, subnetId)
 		];
 
-		// Only overlay edges — no primary edges to drive layout
+		// Only disabled edges — no layout-affecting edges to drive layout
 		const edges: TopologyEdge[] = [
 			makeEdge(elem1, elem2, 'HostVirtualization'),
 			makeEdge(elem1, elem2, 'RequestPath')
@@ -503,7 +542,7 @@ describe('computeElkLayout', () => {
 		const subnets = [makeSubnet(subnetId, 'Lan')];
 		const input = makeTopology(nodes, edges, subnets);
 
-		// Should succeed even with no primary edges
+		// Should succeed even with no layout-affecting edges
 		const result = await computeElkLayout(input);
 		expect(result.nodePositions.size).toBeGreaterThan(0);
 	});

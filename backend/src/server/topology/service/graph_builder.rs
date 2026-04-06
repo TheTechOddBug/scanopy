@@ -330,14 +330,29 @@ impl GraphBuilder {
             {
                 tag_ids.extend(service.base.tags.iter().copied());
             }
-            // Resolve compose_project from host's Docker services
+            // Resolve compose_project from services bound to this interface (preferred)
+            // or from all host Docker services if no interface
             let compose_project = {
                 let mut projects: HashSet<&str> = HashSet::new();
-                for service in ctx
-                    .services
-                    .iter()
-                    .filter(|s| s.base.host_id == child.host_id)
-                {
+                let services_iter: Box<dyn Iterator<Item = _>> =
+                    if let Some(iface_id) = child.interface_id {
+                        // Interface-specific: only services bound to this interface
+                        Box::new(ctx.services.iter().filter(move |s| {
+                            s.base.host_id == child.host_id
+                                && s.base
+                                    .bindings
+                                    .iter()
+                                    .any(|b| b.interface_id() == Some(iface_id))
+                        }))
+                    } else {
+                        // Fallback: all services on the host
+                        Box::new(
+                            ctx.services
+                                .iter()
+                                .filter(|s| s.base.host_id == child.host_id),
+                        )
+                    };
+                for service in services_iter {
                     if let Some(ServiceVirtualization::Docker(dv)) = &service.base.virtualization
                         && let Some(ref project) = dv.compose_project
                     {

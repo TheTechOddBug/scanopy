@@ -13,19 +13,22 @@ export function getContainerRuleDiscriminant(rule: ContainerRule): ContainerRule
 	return Object.keys(rule)[0] as ContainerRuleType;
 }
 
-export type ElementRuleType = 'ByServiceCategory' | 'ByTag';
+export type ElementRuleType = 'ByServiceCategory' | 'ByTag' | 'ByVirtualizer' | 'ByStack';
 
 export function getElementRuleType(rule: ElementRule): ElementRuleType {
+	if (typeof rule === 'string') return rule;
 	if ('ByServiceCategory' in rule) return 'ByServiceCategory';
 	return 'ByTag';
 }
 
 export function getElementRuleTitle(rule: ElementRule): string | null | undefined {
+	if (typeof rule === 'string') return null;
 	if ('ByServiceCategory' in rule) return rule.ByServiceCategory.title;
 	return rule.ByTag.title;
 }
 
 export function setElementRuleTitle(rule: ElementRule, title: string | null): ElementRule {
+	if (typeof rule === 'string') return rule;
 	if ('ByServiceCategory' in rule)
 		return { ByServiceCategory: { ...rule.ByServiceCategory, title } };
 	return { ByTag: { ...rule.ByTag, title } };

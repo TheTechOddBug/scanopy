@@ -12,6 +12,8 @@
 	} from '../../../types/grouping';
 	import {
 		setElementRuleTitle,
+		getElementRuleType,
+		getElementRuleTitle,
 		makeGraphRule,
 		getContainerRuleDiscriminant
 	} from '../../../types/grouping';
@@ -216,22 +218,13 @@
 
 	const elementRuleDisplayComponent = {
 		getId: (item: ElementGraphRule) => item.id,
-		getLabel: (item: ElementGraphRule) => {
-			if ('ByServiceCategory' in item.rule) return 'ByServiceCategory';
-			return 'ByTag';
-		}
+		getLabel: (item: ElementGraphRule) => getElementRuleType(item.rule)
 	};
 
 	function getElementRuleLabel(item: ElementGraphRule): string {
-		const rule = item.rule;
-		const title =
-			'ByServiceCategory' in rule
-				? rule.ByServiceCategory.title
-				: 'ByTag' in rule
-					? rule.ByTag.title
-					: null;
-		const typeName =
-			elementRuleMeta['ByServiceCategory' in rule ? 'ByServiceCategory' : 'ByTag']?.name ?? '';
+		const ruleType = getElementRuleType(item.rule);
+		const title = getElementRuleTitle(item.rule);
+		const typeName = elementRuleMeta[ruleType]?.name ?? '';
 		return title ?? typeName;
 	}
 
@@ -247,6 +240,10 @@
 				break;
 			case 'ByTag':
 				newRule = { ByTag: { tag_ids: [], title: null } };
+				break;
+			case 'ByVirtualizer':
+			case 'ByStack':
+				newRule = optionId;
 				break;
 			default:
 				return;
@@ -424,7 +421,7 @@
 		<GroupingRuleItem label={getElementRuleLabel(item)} />
 	{/snippet}
 	{#snippet itemExpandedSnippet({ item, index })}
-		{#if isElementEditing(item)}
+		{#if isElementEditing(item) && typeof item.rule !== 'string'}
 			{@const rule = item.rule}
 			<div class="mt-2 w-full space-y-3 border-t border-gray-200 pt-2 dark:border-gray-700">
 				<!-- Title input -->
@@ -432,11 +429,7 @@
 					type="text"
 					class="input-field w-full py-1 text-sm"
 					placeholder={topology_groupRuleTitlePlaceholder()}
-					value={('ByServiceCategory' in rule
-						? rule.ByServiceCategory.title
-						: 'ByTag' in rule
-							? rule.ByTag.title
-							: null) ?? ''}
+					value={getElementRuleTitle(item.rule) ?? ''}
 					oninput={(e) =>
 						handleElementTitleChange(index, (e.currentTarget as HTMLInputElement).value || null)}
 					disabled={!editState.isEditable}

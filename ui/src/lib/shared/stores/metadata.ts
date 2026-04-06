@@ -159,7 +159,6 @@ export interface SubnetTypeMetadata {
 }
 
 export interface EdgeTypeMetadata {
-	is_dashed: boolean;
 	has_start_marker: boolean;
 	has_end_marker: boolean;
 	edge_style: 'Straight' | 'Smoothstep' | 'Bezier' | 'Simplebezier' | 'Step';

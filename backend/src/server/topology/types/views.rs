@@ -11,7 +11,7 @@ use strum::IntoEnumIterator;
 use strum_macros::{EnumIter, IntoStaticStr};
 use utoipa::ToSchema;
 
-use super::edges::{EdgeClassification, EdgeTypeDiscriminants};
+use super::edges::{EdgeDefaultVisibility, EdgeStroke, EdgeTypeDiscriminants, EdgeViewConfig};
 
 // ---------------------------------------------------------------------------
 // TopologyView enum
@@ -169,12 +169,12 @@ impl TypeMetadataProvider for TopologyView {
     }
 
     fn metadata(&self) -> serde_json::Value {
-        let edge_classifications: serde_json::Map<String, serde_json::Value> =
+        let edge_view_configs: serde_json::Map<String, serde_json::Value> =
             EdgeTypeDiscriminants::iter()
                 .map(|et| {
                     (
                         et.to_string(),
-                        serde_json::to_value(self.classify_edge(et)).unwrap(),
+                        serde_json::to_value(self.edge_view_config(et)).unwrap(),
                     )
                 })
                 .collect();
@@ -183,7 +183,7 @@ impl TypeMetadataProvider for TopologyView {
             "element_config": self.element_config(),
             "element_label": self.element_label(),
             "element_label_singular": self.element_label_singular(),
-            "edge_classifications": edge_classifications,
+            "edge_view_configs": edge_view_configs,
             "inspector_config": self.inspector_config()
         })
     }
@@ -240,44 +240,47 @@ impl TopologyView {
         }
     }
 
-    /// Classify an edge type for this view.
+    /// Per-view configuration for each edge type.
     /// All match arms are exhaustive — adding a new EdgeTypeDiscriminants variant
-    /// will cause a compile error here, forcing a classification decision.
-    pub fn classify_edge(&self, edge_type: EdgeTypeDiscriminants) -> EdgeClassification {
-        use EdgeClassification::*;
+    /// will cause a compile error here, forcing a configuration decision.
+    pub fn edge_view_config(&self, edge_type: EdgeTypeDiscriminants) -> EdgeViewConfig {
+        use EdgeDefaultVisibility::*;
+        use EdgeStroke::*;
         use EdgeTypeDiscriminants::*;
+
+        let active = |affects_layout, visibility, stroke| EdgeViewConfig::Active {
+            affects_layout,
+            default_visibility: visibility,
+            stroke,
+        };
+
         match self {
             Self::L3Logical => match edge_type {
-                Interface => Primary,
-                ServiceVirtualization => Primary,
-                HostVirtualization => OverlayHidden,
-                PhysicalLink => OverlayHidden,
-                RequestPath => Overlay,
-                HubAndSpoke => Overlay,
+                Interface => active(true, Visible, Solid),
+                ServiceVirtualization => active(true, Visible, Solid),
+                RequestPath => active(false, Visible, Dashed),
+                HubAndSpoke => active(false, Visible, Dashed),
+                HostVirtualization => active(false, Hidden, Dashed),
+                PhysicalLink => active(false, Hidden, Dashed),
             },
             Self::L2Physical => match edge_type {
-                PhysicalLink => Primary,
-                Interface => Overlay,
-                HostVirtualization => OverlayHidden,
-                ServiceVirtualization => OverlayHidden,
-                RequestPath => OverlayHidden,
-                HubAndSpoke => OverlayHidden,
+                PhysicalLink => active(true, Visible, Solid),
+                Interface => active(false, Hidden, Dashed),
+                HostVirtualization | ServiceVirtualization | RequestPath | HubAndSpoke => {
+                    EdgeViewConfig::Disabled
+                }
             },
             Self::Infrastructure => match edge_type {
-                HostVirtualization => Primary,
-                ServiceVirtualization => Primary,
-                Interface => Overlay,
-                RequestPath => OverlayHidden,
-                HubAndSpoke => OverlayHidden,
-                PhysicalLink => OverlayHidden,
+                HostVirtualization => active(true, Visible, Solid),
+                ServiceVirtualization => active(true, Visible, Solid),
+                Interface => active(false, Hidden, Dashed),
+                PhysicalLink | RequestPath | HubAndSpoke => EdgeViewConfig::Disabled,
             },
             Self::Application => match edge_type {
-                RequestPath => Primary,
-                HubAndSpoke => Primary,
-                Interface => OverlayHidden,
-                HostVirtualization => OverlayHidden,
-                ServiceVirtualization => OverlayHidden,
-                PhysicalLink => OverlayHidden,
+                RequestPath => active(true, Visible, Solid),
+                HubAndSpoke => active(true, Visible, Solid),
+                ServiceVirtualization => active(true, Hidden, Dashed),
+                Interface | HostVirtualization | PhysicalLink => EdgeViewConfig::Disabled,
             },
         }
     }
@@ -362,58 +365,116 @@ mod tests {
     use super::*;
     use strum::IntoEnumIterator;
 
-    // -- Edge classification tests --
+    // -- Edge view config tests --
+
+    fn active(
+        affects_layout: bool,
+        visibility: EdgeDefaultVisibility,
+        stroke: EdgeStroke,
+    ) -> EdgeViewConfig {
+        EdgeViewConfig::Active {
+            affects_layout,
+            default_visibility: visibility,
+            stroke,
+        }
+    }
 
     #[test]
-    fn classify_edge_l3() {
-        use EdgeClassification::*;
+    fn edge_view_config_l3() {
+        use EdgeDefaultVisibility::*;
+        use EdgeStroke::*;
         use EdgeTypeDiscriminants::*;
         let v = TopologyView::L3Logical;
-        assert_eq!(v.classify_edge(Interface), Primary);
-        assert_eq!(v.classify_edge(ServiceVirtualization), Primary);
-        assert_eq!(v.classify_edge(HostVirtualization), OverlayHidden);
-        assert_eq!(v.classify_edge(PhysicalLink), OverlayHidden);
-        assert_eq!(v.classify_edge(RequestPath), Overlay);
-        assert_eq!(v.classify_edge(HubAndSpoke), Overlay);
+        assert_eq!(v.edge_view_config(Interface), active(true, Visible, Solid));
+        assert_eq!(
+            v.edge_view_config(ServiceVirtualization),
+            active(true, Visible, Solid)
+        );
+        assert_eq!(
+            v.edge_view_config(RequestPath),
+            active(false, Visible, Dashed)
+        );
+        assert_eq!(
+            v.edge_view_config(HubAndSpoke),
+            active(false, Visible, Dashed)
+        );
+        assert_eq!(
+            v.edge_view_config(HostVirtualization),
+            active(false, Hidden, Dashed)
+        );
+        assert_eq!(
+            v.edge_view_config(PhysicalLink),
+            active(false, Hidden, Dashed)
+        );
     }
 
     #[test]
-    fn classify_edge_l2() {
-        use EdgeClassification::*;
+    fn edge_view_config_l2() {
+        use EdgeDefaultVisibility::*;
+        use EdgeStroke::*;
         use EdgeTypeDiscriminants::*;
         let v = TopologyView::L2Physical;
-        assert_eq!(v.classify_edge(PhysicalLink), Primary);
-        assert_eq!(v.classify_edge(Interface), Overlay);
-        assert_eq!(v.classify_edge(HostVirtualization), OverlayHidden);
-        assert_eq!(v.classify_edge(ServiceVirtualization), OverlayHidden);
-        assert_eq!(v.classify_edge(RequestPath), OverlayHidden);
-        assert_eq!(v.classify_edge(HubAndSpoke), OverlayHidden);
+        assert_eq!(
+            v.edge_view_config(PhysicalLink),
+            active(true, Visible, Solid)
+        );
+        assert_eq!(v.edge_view_config(Interface), active(false, Hidden, Dashed));
+        assert_eq!(
+            v.edge_view_config(HostVirtualization),
+            EdgeViewConfig::Disabled
+        );
+        assert_eq!(
+            v.edge_view_config(ServiceVirtualization),
+            EdgeViewConfig::Disabled
+        );
+        assert_eq!(v.edge_view_config(RequestPath), EdgeViewConfig::Disabled);
+        assert_eq!(v.edge_view_config(HubAndSpoke), EdgeViewConfig::Disabled);
     }
 
     #[test]
-    fn classify_edge_infrastructure() {
-        use EdgeClassification::*;
+    fn edge_view_config_infrastructure() {
+        use EdgeDefaultVisibility::*;
+        use EdgeStroke::*;
         use EdgeTypeDiscriminants::*;
         let v = TopologyView::Infrastructure;
-        assert_eq!(v.classify_edge(HostVirtualization), Primary);
-        assert_eq!(v.classify_edge(ServiceVirtualization), Primary);
-        assert_eq!(v.classify_edge(Interface), Overlay);
-        assert_eq!(v.classify_edge(RequestPath), OverlayHidden);
-        assert_eq!(v.classify_edge(HubAndSpoke), OverlayHidden);
-        assert_eq!(v.classify_edge(PhysicalLink), OverlayHidden);
+        assert_eq!(
+            v.edge_view_config(HostVirtualization),
+            active(true, Visible, Solid)
+        );
+        assert_eq!(
+            v.edge_view_config(ServiceVirtualization),
+            active(true, Visible, Solid)
+        );
+        assert_eq!(v.edge_view_config(Interface), active(false, Hidden, Dashed));
+        assert_eq!(v.edge_view_config(PhysicalLink), EdgeViewConfig::Disabled);
+        assert_eq!(v.edge_view_config(RequestPath), EdgeViewConfig::Disabled);
+        assert_eq!(v.edge_view_config(HubAndSpoke), EdgeViewConfig::Disabled);
     }
 
     #[test]
-    fn classify_edge_application() {
-        use EdgeClassification::*;
+    fn edge_view_config_application() {
+        use EdgeDefaultVisibility::*;
+        use EdgeStroke::*;
         use EdgeTypeDiscriminants::*;
         let v = TopologyView::Application;
-        assert_eq!(v.classify_edge(RequestPath), Primary);
-        assert_eq!(v.classify_edge(HubAndSpoke), Primary);
-        assert_eq!(v.classify_edge(Interface), OverlayHidden);
-        assert_eq!(v.classify_edge(HostVirtualization), OverlayHidden);
-        assert_eq!(v.classify_edge(ServiceVirtualization), OverlayHidden);
-        assert_eq!(v.classify_edge(PhysicalLink), OverlayHidden);
+        assert_eq!(
+            v.edge_view_config(RequestPath),
+            active(true, Visible, Solid)
+        );
+        assert_eq!(
+            v.edge_view_config(HubAndSpoke),
+            active(true, Visible, Solid)
+        );
+        assert_eq!(
+            v.edge_view_config(ServiceVirtualization),
+            active(true, Hidden, Dashed)
+        );
+        assert_eq!(v.edge_view_config(Interface), EdgeViewConfig::Disabled);
+        assert_eq!(
+            v.edge_view_config(HostVirtualization),
+            EdgeViewConfig::Disabled
+        );
+        assert_eq!(v.edge_view_config(PhysicalLink), EdgeViewConfig::Disabled);
     }
 
     #[test]

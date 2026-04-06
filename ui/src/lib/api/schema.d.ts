@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-06T19:25:08.577128Z",
-             *       "id": "27abb0ba-5630-4c39-abc8-a16afd687e09",
+             *       "created_at": "2026-04-06T21:21:01.150404Z",
+             *       "id": "f162fa35-72e2-4b47-80e5-e0147fab3fa0",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-06T19:25:08.577128Z"
+             *       "updated_at": "2026-04-06T21:21:01.150404Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3156,14 +3156,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-06T19:25:08.561607Z",
-             *               "id": "2cbff36e-eef8-4d14-9959-4ab1cc343ef5",
+             *               "created_at": "2026-04-06T21:21:01.130840Z",
+             *               "id": "6b33190d-5181-496f-8b84-e6a83f1f51b0",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-06T19:25:08.561607Z"
+             *               "updated_at": "2026-04-06T21:21:01.130840Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3172,7 +3172,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Kubernetes",
+             *           "service_definition": "Ollama",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3428,14 +3428,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-06T19:25:08.572697Z",
-             *           "id": "2d71a068-6b06-437f-9a20-734569644440",
+             *           "created_at": "2026-04-06T21:21:01.145115Z",
+             *           "id": "d79ccab6-8358-4a62-b9ca-6d7bdb0e8408",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-06T19:25:08.572697Z"
+             *           "updated_at": "2026-04-06T21:21:01.145115Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3444,7 +3444,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Kubernetes",
+             *       "service_definition": "Ollama",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3772,14 +3772,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-06T19:25:08.561802Z",
-         *       "id": "691cfebe-6b92-4fe6-9e67-25b7107074e8",
+         *       "created_at": "2026-04-06T21:21:01.131253Z",
+         *       "id": "d408b1c4-edd3-480d-8bb2-2d9cf0150386",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-06T19:25:08.561802Z"
+         *       "updated_at": "2026-04-06T21:21:01.131253Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3964,7 +3964,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Kubernetes",
+         *           "service_definition": "Ollama",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4490,7 +4490,6 @@ export interface components {
             service_id: string;
         };
         Edge: components["schemas"]["EdgeType"] & {
-            classification?: components["schemas"]["EdgeClassification"];
             /** Format: uuid */
             id: string;
             is_multi_hop: boolean;
@@ -4501,14 +4500,20 @@ export interface components {
             /** Format: uuid */
             target: string;
             target_handle: components["schemas"]["EdgeHandle"];
+            view_config?: components["schemas"]["EdgeViewConfig"];
         };
         /**
-         * @description Whether an edge affects layout (primary) or is drawn after layout (overlay)
+         * @description Whether an edge is visible by default or hidden behind a toggle
          * @enum {string}
          */
-        EdgeClassification: "primary" | "overlay" | "overlay_hidden" | "disabled";
+        EdgeDefaultVisibility: "visible" | "hidden";
         /** @enum {string} */
         EdgeHandle: "Top" | "Bottom" | "Left" | "Right";
+        /**
+         * @description Visual stroke style for an edge
+         * @enum {string}
+         */
+        EdgeStroke: "solid" | "dashed";
         /** @enum {string} */
         EdgeStyle: "Straight" | "SmoothStep" | "Step" | "Bezier" | "SimpleBezier";
         EdgeType: {
@@ -4557,6 +4562,20 @@ export interface components {
         };
         /** @enum {string} */
         EdgeTypeDiscriminants: "Interface" | "HostVirtualization" | "ServiceVirtualization" | "RequestPath" | "HubAndSpoke" | "PhysicalLink";
+        /** @description Per-view configuration for an edge: disabled (not in this view) or active with properties */
+        EdgeViewConfig: {
+            /** @enum {string} */
+            type: "disabled";
+        } | {
+            /** @description Whether ELK should use this edge for layout positioning */
+            affects_layout: boolean;
+            /** @description Whether the edge is shown by default or hidden behind a toggle */
+            default_visibility: components["schemas"]["EdgeDefaultVisibility"];
+            /** @description Visual stroke style */
+            stroke: components["schemas"]["EdgeStroke"];
+            /** @enum {string} */
+            type: "active";
+        };
         ElementEntityType: {
             /** @enum {string} */
             element_type: "Interface";
@@ -4807,14 +4826,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-06T19:25:08.561328Z",
-         *               "id": "97af0f3f-7996-48ae-b22e-93c45d3b64de",
+         *               "created_at": "2026-04-06T21:21:01.130293Z",
+         *               "id": "b475f448-0813-4024-ba71-69d28a518ab5",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-06T19:25:08.561328Z"
+         *               "updated_at": "2026-04-06T21:21:01.130293Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4823,7 +4842,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Kubernetes",
+         *           "service_definition": "Ollama",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5261,6 +5280,11 @@ export interface components {
             subnet_count: number;
         };
         Node: components["schemas"]["NodeType"] & {
+            /**
+             * @description When true, edges targeting elements inside this container are elevated to target
+             *     the container itself. Set by rules that declare `absorbs_edges` (e.g. MergeDockerBridges, ByStack).
+             */
+            absorbs_edges?: boolean;
             /**
              * Format: uuid
              * @description ID of the element rule that created this container (for NestedTag/NestedServiceCategory)
@@ -5887,14 +5911,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-06T19:25:08.561732Z",
-         *           "id": "1aeae04d-cf90-4886-94e0-715921e60884",
+         *           "created_at": "2026-04-06T21:21:01.131117Z",
+         *           "id": "ea0dadb8-7389-4845-9815-d40112b48257",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-06T19:25:08.561732Z"
+         *           "updated_at": "2026-04-06T21:21:01.131117Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5903,7 +5927,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Kubernetes",
+         *       "service_definition": "Ollama",
          *       "source": {
          *         "type": "Manual"
          *       },

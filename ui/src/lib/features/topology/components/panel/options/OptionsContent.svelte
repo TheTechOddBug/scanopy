@@ -7,6 +7,7 @@
 		autoRebuild
 	} from '../../../queries';
 	import { hoveredEdgeType } from '../../../interactions';
+	import { isDisabledEdge } from '../../../layout/edge-classification';
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
 	import { edgeTypes, views, serviceCategories } from '$lib/shared/stores/metadata';
 	import { activeView } from '../../../queries';
@@ -206,14 +207,14 @@
 	});
 
 	// Build edge types with colors from edges present in the topology
-	// Filter out edge types where all edges have classification === 'disabled'
+	// Filter out edge types where all edges are disabled in this view
 	let edgeTypesWithColors = $derived.by(() => {
 		if (!topology?.edges) return [];
 		const seen: Record<string, boolean> = {};
 		const result: { value: string; label: string; color: Color }[] = [];
 		for (const edge of topology.edges) {
 			const edgeType = edge.edge_type;
-			if (edgeType && !seen[edgeType] && edge.classification !== 'disabled') {
+			if (edgeType && !seen[edgeType] && !isDisabledEdge(edge)) {
 				seen[edgeType] = true;
 				const colorHelper = edgeTypes.getColorHelper(edgeType);
 				result.push({ value: edgeType, label: edgeType, color: colorHelper.color });

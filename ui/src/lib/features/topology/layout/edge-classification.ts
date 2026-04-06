@@ -3,39 +3,46 @@ import type { components } from '$lib/api/schema';
 import { views } from '$lib/shared/stores/metadata';
 
 type EdgeTypeDiscriminants = components['schemas']['EdgeTypeDiscriminants'];
+type EdgeViewConfig = components['schemas']['EdgeViewConfig'];
 type TopologyView = components['schemas']['TopologyView'];
 
-export type EdgeClassification = 'primary' | 'overlay' | 'overlay_hidden' | 'disabled';
-
-/**
- * Classify an edge as primary (affects layout), overlay (drawn after layout),
- * or disabled (not shown in this view).
- * Uses the backend-provided `classification` field; defaults to overlay if absent.
- */
-export function classifyEdge(edge: TopologyEdge): EdgeClassification {
-	if ('classification' in edge && (edge as Record<string, unknown>).classification) {
-		return (edge as Record<string, unknown>).classification as EdgeClassification;
-	}
-	return 'overlay';
+/** Get the view config from an edge, defaulting to Disabled if absent. */
+export function getViewConfig(edge: TopologyEdge): EdgeViewConfig {
+	const vc = (edge as Record<string, unknown>).view_config as EdgeViewConfig | undefined;
+	return vc ?? { type: 'disabled' };
 }
 
-export function isOverlayEdge(edge: TopologyEdge): boolean {
-	const c = classifyEdge(edge);
-	return c === 'overlay' || c === 'overlay_hidden';
-}
-
+/** Whether this edge is disabled (not available) in the current view. */
 export function isDisabledEdge(edge: TopologyEdge): boolean {
-	return classifyEdge(edge) === 'disabled';
+	return getViewConfig(edge).type === 'disabled';
+}
+
+/** Whether this edge should affect ELK layout positioning. */
+export function affectsLayout(edge: TopologyEdge): boolean {
+	const vc = getViewConfig(edge);
+	return vc.type === 'active' && vc.affects_layout;
+}
+
+/** Whether this edge is hidden by default (togglable). */
+export function isHiddenByDefault(edge: TopologyEdge): boolean {
+	const vc = getViewConfig(edge);
+	return vc.type === 'active' && vc.default_visibility === 'hidden';
+}
+
+/** Whether this edge uses dashed stroke in the current view. */
+export function isDashedEdge(edge: TopologyEdge): boolean {
+	const vc = getViewConfig(edge);
+	return vc.type === 'active' && vc.stroke === 'dashed';
 }
 
 /** Returns the edge types that should be hidden by default for a given view.
- * Reads from view metadata — edge types classified as `overlay_hidden`. */
+ * Reads from view metadata — edge types with default_visibility = 'hidden'. */
 export function getDefaultHiddenEdgeTypes(view: TopologyView): EdgeTypeDiscriminants[] {
 	const meta = views.getMetadata(view) as {
-		edge_classifications?: Record<string, string>;
+		edge_view_configs?: Record<string, EdgeViewConfig>;
 	} | null;
-	if (!meta?.edge_classifications) return [];
-	return Object.entries(meta.edge_classifications)
-		.filter(([, c]) => c === 'overlay_hidden')
+	if (!meta?.edge_view_configs) return [];
+	return Object.entries(meta.edge_view_configs)
+		.filter(([, c]) => c.type === 'active' && c.default_visibility === 'hidden')
 		.map(([id]) => id as EdgeTypeDiscriminants);
 }

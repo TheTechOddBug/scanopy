@@ -30,7 +30,7 @@
 		hoveredEdgeType,
 		toggleBundleExpanded
 	} from '../../interactions';
-	import { isOverlayEdge } from '../../layout/edge-classification';
+	import { isDashedEdge } from '../../layout/edge-classification';
 	import type { Node, Edge as FlowEdge } from '@xyflow/svelte';
 
 	let {
@@ -102,7 +102,7 @@
 		edgeData ? $topologyOptions.local.hide_edge_types.includes(edgeData.edge_type) : false
 	);
 
-	let isOverlay = $derived(isBundle ? bundleIsOverlay : edgeData ? isOverlayEdge(edgeData) : false);
+	let isDashed = $derived(isBundle ? bundleIsOverlay : edgeData ? isDashedEdge(edgeData) : false);
 
 	// Get display state from helper - Make reactive to hover stores
 	let displayState = $derived.by(() => {
@@ -167,7 +167,7 @@
 		if (isBundle) return bundleStrokeWidth;
 		if (isEdgeTypeHovered) return 3;
 		if (!$topologyOptions.local.no_fade_edges && (shouldShowFull || isPreview)) return 3;
-		if (isOverlay) return 1.5;
+		if (isDashed) return 1.5;
 		return 2;
 	});
 	let baseOpacity = $derived.by(() => {
@@ -180,7 +180,7 @@
 		// Fade if either endpoint is hidden by tag filter
 		if (isEndpointHiddenByTagFilter) return 0.4;
 		// Overlay edges: reduced opacity unless highlighted
-		if (isOverlay && !shouldShowFull) return 0.5;
+		if (isDashed && !shouldShowFull) return 0.5;
 		// Fade based on selection state
 		if (!$topologyOptions.local.no_fade_edges && !shouldShowFull) return 0.4;
 		return 1;
@@ -211,7 +211,7 @@
 		} else if (useMultiColorDash && !isSelected) {
 			// Other group edges, subtler highlight
 			strokeColor = isDark ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.4)';
-		} else if (!isGroupEdge && isOverlay) {
+		} else if (!isGroupEdge && isDashed) {
 			dashArray = 'stroke-dasharray: 6 3;';
 		}
 

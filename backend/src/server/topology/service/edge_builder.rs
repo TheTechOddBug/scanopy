@@ -13,7 +13,7 @@ use crate::server::{
     topology::{
         service::context::TopologyContext,
         types::{
-            edges::{DiscoveryProtocol, Edge, EdgeClassification, EdgeHandle, EdgeType},
+            edges::{DiscoveryProtocol, Edge, EdgeHandle, EdgeType, EdgeViewConfig},
             nodes::Node,
         },
     },
@@ -146,7 +146,7 @@ impl EdgeBuilder {
                             source_handle: EdgeHandle::Bottom,
                             target_handle: EdgeHandle::Top,
                             is_multi_hop,
-                            classification: EdgeClassification::default(),
+                            view_config: EdgeViewConfig::default(),
                         })
                     })
                     .collect::<Vec<Edge>>()
@@ -221,7 +221,7 @@ impl EdgeBuilder {
                                     source_handle: EdgeHandle::Bottom,
                                     target_handle: EdgeHandle::Top,
                                     is_multi_hop,
-                                    classification: EdgeClassification::default(),
+                                    view_config: EdgeViewConfig::default(),
                                 });
                             }
                             None
@@ -229,6 +229,35 @@ impl EdgeBuilder {
                         .collect();
                 }
                 Vec::new()
+            })
+            .collect()
+    }
+
+    /// Create host-level HostVirtualization edges (hypervisor host → VM host).
+    /// Unlike `create_vm_host_edges` which uses interface IDs, this uses host IDs
+    /// as source/target for views where elements are hosts (e.g. Infrastructure).
+    pub fn create_vm_host_edges_by_host(ctx: &TopologyContext) -> Vec<Edge> {
+        ctx.hosts
+            .iter()
+            .filter_map(|h| {
+                if let Some(HostVirtualization::Proxmox(pv)) = &h.base.virtualization {
+                    let proxmox_service = ctx.get_service_by_id(pv.service_id)?;
+                    Some(Edge {
+                        id: Uuid::new_v4(),
+                        source: proxmox_service.base.host_id,
+                        target: h.id,
+                        edge_type: EdgeType::HostVirtualization {
+                            vm_service_id: pv.service_id,
+                        },
+                        label: None,
+                        source_handle: EdgeHandle::Bottom,
+                        target_handle: EdgeHandle::Top,
+                        is_multi_hop: false,
+                        view_config: EdgeViewConfig::default(),
+                    })
+                } else {
+                    None
+                }
             })
             .collect()
     }
@@ -287,7 +316,7 @@ impl EdgeBuilder {
                                 source_handle: EdgeHandle::Bottom,
                                 target_handle: EdgeHandle::Top,
                                 is_multi_hop,
-                                classification: EdgeClassification::default(),
+                                view_config: EdgeViewConfig::default(),
                             })
                         })
                         .collect::<Vec<_>>()
@@ -353,7 +382,7 @@ impl EdgeBuilder {
                     source_handle: EdgeHandle::Bottom,
                     target_handle: EdgeHandle::Top,
                     is_multi_hop,
-                    classification: EdgeClassification::default(),
+                    view_config: EdgeViewConfig::default(),
                 })
             })
             .collect()
@@ -436,7 +465,7 @@ impl EdgeBuilder {
             source_handle: EdgeHandle::Bottom,
             target_handle: EdgeHandle::Top,
             is_multi_hop,
-            classification: EdgeClassification::default(),
+            view_config: EdgeViewConfig::default(),
         })
     }
 }

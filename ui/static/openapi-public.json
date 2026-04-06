@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-06T19:25:08.577130Z",
-              "id": "49a46435-e205-415c-b004-c47ac9adaf8d",
+              "created_at": "2026-04-06T21:21:01.150527Z",
+              "id": "5c7d5e74-4d57-42e8-aac7-89fadd186e21",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-06T19:25:08.577130Z"
+              "updated_at": "2026-04-06T21:21:01.150527Z"
             }
           },
           "error": {
@@ -10734,14 +10734,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-06T19:25:08.561642Z",
-                      "id": "a63dedf3-a4ed-4799-af34-b7edc3a62647",
+                      "created_at": "2026-04-06T21:21:01.130834Z",
+                      "id": "81d24baa-893d-4566-9b47-aa8d32963efc",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-06T19:25:08.561642Z"
+                      "updated_at": "2026-04-06T21:21:01.130834Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10750,7 +10750,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Kubernetes",
+                  "service_definition": "Ollama",
                   "source": {
                     "type": "Manual"
                   },
@@ -11453,14 +11453,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-06T19:25:08.572815Z",
-                  "id": "e6509a70-5950-4896-80c7-f79bcdf6585b",
+                  "created_at": "2026-04-06T21:21:01.145156Z",
+                  "id": "693bb616-ee3b-4867-bb70-0dce5b36b1db",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-06T19:25:08.572815Z"
+                  "updated_at": "2026-04-06T21:21:01.145156Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11469,7 +11469,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Kubernetes",
+              "service_definition": "Ollama",
               "source": {
                 "type": "Manual"
               },
@@ -12744,14 +12744,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-06T19:25:08.561852Z",
-          "id": "7b329def-76ff-43ce-9e6c-c488609fbfb5",
+          "created_at": "2026-04-06T21:21:01.131250Z",
+          "id": "3ed0b99b-5759-465f-b1a7-81c07609a334",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-06T19:25:08.561852Z"
+          "updated_at": "2026-04-06T21:21:01.131250Z"
         }
       },
       "BindingBase": {
@@ -13273,7 +13273,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Kubernetes",
+              "service_definition": "Ollama",
               "tags": [],
               "virtualization": null
             }
@@ -14749,9 +14749,6 @@
               "is_multi_hop"
             ],
             "properties": {
-              "classification": {
-                "$ref": "#/components/schemas/EdgeClassification"
-              },
               "id": {
                 "type": "string",
                 "format": "uuid"
@@ -14778,19 +14775,20 @@
               },
               "target_handle": {
                 "$ref": "#/components/schemas/EdgeHandle"
+              },
+              "view_config": {
+                "$ref": "#/components/schemas/EdgeViewConfig"
               }
             }
           }
         ]
       },
-      "EdgeClassification": {
+      "EdgeDefaultVisibility": {
         "type": "string",
-        "description": "Whether an edge affects layout (primary) or is drawn after layout (overlay)",
+        "description": "Whether an edge is visible by default or hidden behind a toggle",
         "enum": [
-          "primary",
-          "overlay",
-          "overlay_hidden",
-          "disabled"
+          "visible",
+          "hidden"
         ]
       },
       "EdgeHandle": {
@@ -14800,6 +14798,14 @@
           "Bottom",
           "Left",
           "Right"
+        ]
+      },
+      "EdgeStroke": {
+        "type": "string",
+        "description": "Visual stroke style for an edge",
+        "enum": [
+          "solid",
+          "dashed"
         ]
       },
       "EdgeStyle": {
@@ -14975,6 +14981,56 @@
           "HubAndSpoke",
           "PhysicalLink"
         ]
+      },
+      "EdgeViewConfig": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Edge is not available in this view",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "disabled"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Edge is active in this view with specific properties",
+            "required": [
+              "affects_layout",
+              "default_visibility",
+              "stroke",
+              "type"
+            ],
+            "properties": {
+              "affects_layout": {
+                "type": "boolean",
+                "description": "Whether ELK should use this edge for layout positioning"
+              },
+              "default_visibility": {
+                "$ref": "#/components/schemas/EdgeDefaultVisibility",
+                "description": "Whether the edge is shown by default or hidden behind a toggle"
+              },
+              "stroke": {
+                "$ref": "#/components/schemas/EdgeStroke",
+                "description": "Visual stroke style"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "active"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Per-view configuration for an edge: disabled (not in this view) or active with properties"
       },
       "ElementEntityType": {
         "oneOf": [
@@ -15833,14 +15889,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-06T19:25:08.561342Z",
-                  "id": "1d696a92-6a8e-414d-a6ea-0938b60bedbb",
+                  "created_at": "2026-04-06T21:21:01.130285Z",
+                  "id": "40ebe24c-ccb4-4d6b-881d-82202c28c180",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-06T19:25:08.561342Z"
+                  "updated_at": "2026-04-06T21:21:01.130285Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15849,7 +15905,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Kubernetes",
+              "service_definition": "Ollama",
               "source": {
                 "type": "Manual"
               },
@@ -17008,6 +17064,10 @@
               "size"
             ],
             "properties": {
+              "absorbs_edges": {
+                "type": "boolean",
+                "description": "When true, edges targeting elements inside this container are elevated to target\nthe container itself. Set by rules that declare `absorbs_edges` (e.g. MergeDockerBridges, ByStack)."
+              },
               "element_rule_id": {
                 "type": [
                   "string",
@@ -17836,14 +17896,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-06T19:25:08.552506Z",
-                        "id": "1756cafa-a1f3-4237-9284-bf5b9d27e649",
+                        "created_at": "2026-04-06T21:21:01.118017Z",
+                        "id": "91014974-7ba1-4510-8e25-d248c9890d7e",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-06T19:25:08.552506Z"
+                        "updated_at": "2026-04-06T21:21:01.118017Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17852,7 +17912,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Kubernetes",
+                    "service_definition": "Ollama",
                     "source": {
                       "type": "Manual"
                     },
@@ -17929,14 +17989,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-06T19:25:08.571875Z",
-                    "id": "32058b8b-ca30-4d29-b0ab-057575e5cba0",
+                    "created_at": "2026-04-06T21:21:01.143772Z",
+                    "id": "de9054e1-bf07-4966-b9e5-7225af151a8c",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-06T19:25:08.571875Z"
+                    "updated_at": "2026-04-06T21:21:01.143772Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -17945,7 +18005,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Kubernetes",
+                "service_definition": "Ollama",
                 "source": {
                   "type": "Manual"
                 },
@@ -19105,14 +19165,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-06T19:25:08.561779Z",
-              "id": "9b6c2ee3-c5a7-418b-9a01-0d4737c51c03",
+              "created_at": "2026-04-06T21:21:01.131109Z",
+              "id": "7ef0d7af-e580-4c3f-9e73-8dad97eba77b",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-06T19:25:08.561779Z"
+              "updated_at": "2026-04-06T21:21:01.131109Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19121,7 +19181,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Kubernetes",
+          "service_definition": "Ollama",
           "source": {
             "type": "Manual"
           },

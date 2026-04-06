@@ -8,7 +8,12 @@
 	} from '../../../queries';
 	import { hoveredEdgeType } from '../../../interactions';
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
-	import { edgeTypes, perspectives, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import {
+		edgeTypes,
+		perspectives,
+		serviceCategories,
+		serviceDefinitions
+	} from '$lib/shared/stores/metadata';
 	import { activePerspective } from '../../../queries';
 	import type { Color } from '$lib/shared/utils/styling';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
@@ -195,13 +200,18 @@
 	let serviceCategoriesWithColors = $derived.by(() => {
 		if (!topology?.services) return [];
 		const seen: Record<string, boolean> = {};
-		const result: { value: string; label: string; color: Color }[] = [];
+		const result: { value: string; label: string; color: Color; tooltip?: string }[] = [];
 		for (const service of topology.services) {
 			const category = serviceDefinitions.getCategory(service.service_definition);
 			if (category && !seen[category]) {
 				seen[category] = true;
 				const color = serviceDefinitions.getColorHelper(service.service_definition).color;
-				result.push({ value: category, label: category, color });
+				result.push({
+					value: category,
+					label: serviceCategories.getName(category),
+					color,
+					tooltip: serviceCategories.getDescription(category) || undefined
+				});
 			}
 		}
 		return result.sort((a, b) => a.label.localeCompare(b.label));
@@ -227,7 +237,12 @@
 			const def = allDefs.find((d) => d.category === category);
 			if (def) {
 				const color = serviceDefinitions.getColorHelper(def.id).color;
-				result.push({ value: category, label: category, color });
+				result.push({
+					value: category,
+					label: serviceCategories.getName(category),
+					color,
+					tooltip: serviceCategories.getDescription(category) || undefined
+				});
 			}
 		}
 

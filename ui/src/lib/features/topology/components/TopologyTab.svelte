@@ -156,7 +156,7 @@
 		value: p.id,
 		label: '',
 		icon: perspectives.getIconComponent(p.id),
-		tooltip: p.name
+		tooltip: p.description
 	}));
 	let perspectiveColorStyle = $derived(perspectives.getColorHelper($activePerspective));
 

@@ -265,6 +265,7 @@
 		const removedId = elementRules[index]?.id;
 		updateElementRules(elementRules.filter((_, i) => i !== index));
 		if (editingElementId === removedId) editingElementId = null;
+		if (topology) rebuildMutation.mutate(topology);
 	}
 
 	function handleElementMoveUp(fromIndex: number) {
@@ -272,6 +273,7 @@
 		const newRules = [...elementRules];
 		[newRules[fromIndex - 1], newRules[fromIndex]] = [newRules[fromIndex], newRules[fromIndex - 1]];
 		updateElementRules(newRules);
+		if (topology) rebuildMutation.mutate(topology);
 	}
 
 	function handleElementMoveDown(fromIndex: number) {
@@ -279,6 +281,7 @@
 		const newRules = [...elementRules];
 		[newRules[fromIndex], newRules[fromIndex + 1]] = [newRules[fromIndex + 1], newRules[fromIndex]];
 		updateElementRules(newRules);
+		if (topology) rebuildMutation.mutate(topology);
 	}
 
 	function handleElementEdit(_item: ElementGraphRule, index: number) {

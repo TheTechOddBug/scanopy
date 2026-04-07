@@ -176,15 +176,12 @@
 		/>
 	</div>
 
-	<!-- Empty state -->
-	{#if appGroupTags.length === 0}
-		<p class="text-tertiary text-center text-sm italic">
+	<!-- Footnote / empty state -->
+	<p class="text-tertiary text-center text-sm italic">
+		{#if appGroupTags.length === 0}
 			{appWizard_noGroupsYet()}
-		</p>
-	{/if}
-
-	<!-- Footnote -->
-	<p class="text-tertiary text-xs">
+			{' '}
+		{/if}
 		{appWizard_membershipFootnote()}
 	</p>
 </div>

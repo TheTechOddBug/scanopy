@@ -115,7 +115,7 @@
 			if (get(optionsPanelExpanded)) {
 				const vp = getViewport();
 				setViewport({
-					x: vp.x - OPTIONS_PANEL_WIDTH_PX / 2,
+					x: vp.x + OPTIONS_PANEL_WIDTH_PX / 2,
 					y: vp.y,
 					zoom: vp.zoom
 				});

@@ -113,7 +113,7 @@ function buildElkGraph(
 						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
 						'elk.spacing.nodeNode': '8',
 						'elk.layered.spacing.nodeNodeBetweenLayers': '15',
-						'elk.aspectRatio': '0.5'
+						'elk.aspectRatio': '1.0'
 					}
 				: {
 						'elk.algorithm': 'box',
@@ -149,11 +149,6 @@ function buildElkGraph(
 		const parent = containers.get(parentId);
 		const child = containers.get(childId);
 		if (parent && child && parent.children) {
-			// L2: subcontainers at top (FIRST layer) so edges reach them without
-			// traversing the Down port grid
-			if (useLayeredChildren && child.layoutOptions) {
-				child.layoutOptions['elk.layered.layering.layerConstraint'] = 'FIRST';
-			}
 			parent.children.push(child);
 		}
 	}

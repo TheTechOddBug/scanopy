@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::server::{
+    if_entries::r#impl::base::IfOperStatus,
     services::r#impl::categories::ServiceCategory,
     topology::types::{
         grouping::{ElementRule, GraphRule},
@@ -22,8 +23,8 @@ pub struct ElementMatchData {
     pub native_vlan_id: Option<u16>,
     /// Whether this port has tagged VLANs (for ByTrunkPort grouping).
     pub is_trunk_port: bool,
-    /// Port operational status string (for ByPortOpStatus grouping).
-    pub oper_status: Option<String>,
+    /// Port operational status (for ByPortOpStatus grouping).
+    pub oper_status: Option<IfOperStatus>,
 }
 
 /// Apply element rules to nodes, creating nested subcontainers within each parent container.
@@ -338,26 +339,27 @@ pub fn apply_element_rules_with_titles(
                     }
 
                     // Group by oper_status
-                    let mut by_status: HashMap<String, Vec<Uuid>> = HashMap::new();
+                    let mut by_status: HashMap<IfOperStatus, Vec<Uuid>> = HashMap::new();
                     for id in &unclaimed {
-                        if let Some(status) =
-                            match_data.get(id).and_then(|d| d.oper_status.clone())
-                        {
+                        if let Some(status) = match_data.get(id).and_then(|d| d.oper_status) {
                             by_status.entry(status).or_default().push(*id);
                         }
                     }
 
                     for (status, ids) in by_status {
-                        let group_key = format!("{parent_id}:{rule_id}:status:{status}");
+                        let status_name = format!("{:?}", status);
+                        let group_key =
+                            format!("{parent_id}:{rule_id}:status:{}", status as i32);
                         let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
 
                         // Color per status for the filled circle icon
-                        let color = match status.as_str() {
-                            "Up" => "Green",
-                            "Down" | "LowerLayerDown" => "Red",
-                            "Testing" => "Amber",
-                            "Dormant" => "Blue",
-                            _ => "Gray",
+                        let color = match status {
+                            IfOperStatus::Up => "Green",
+                            IfOperStatus::Down | IfOperStatus::LowerLayerDown => "Red",
+                            IfOperStatus::Testing => "Amber",
+                            IfOperStatus::Dormant => "Blue",
+                            IfOperStatus::Unknown => "Gray",
+                            IfOperStatus::NotPresent => "Gray",
                         };
 
                         new_containers.push(Node {
@@ -372,7 +374,7 @@ pub fn apply_element_rules_with_titles(
                             },
                             position: Default::default(),
                             size: Default::default(),
-                            header: Some(status),
+                            header: Some(status_name),
                             element_rule_id: Some(*rule_id),
                             will_accept_edges: rule.will_accept_edges(),
                         });

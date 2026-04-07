@@ -37,7 +37,7 @@ interface SimNode extends SimulationNodeDatum {
 }
 
 const SNAP = 25;
-const PADDING = 40;
+const PADDING = 25;
 const ORIGIN_PAD = 50;
 
 /**
@@ -126,9 +126,9 @@ export function computeForceLayout(nodes: ForceNode[], links: ForceLink[]): Forc
 	const simulation = forceSimulation<SimNode>(simNodes)
 		.force(
 			'link',
-			forceLink<SimNode, SimulationLinkDatum<SimNode>>(simLinks).distance(200).strength(0.3)
+			forceLink<SimNode, SimulationLinkDatum<SimNode>>(simLinks).distance(120).strength(0.5)
 		)
-		.force('charge', forceManyBody().strength(-800))
+		.force('charge', forceManyBody().strength(-400))
 		.force('center', forceCenter(0, 0))
 		.force('collide', forceRectCollide(PADDING))
 		.stop();

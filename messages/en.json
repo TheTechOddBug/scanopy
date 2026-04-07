@@ -544,7 +544,7 @@
 	"daemons_troubleshoot_testingConnection": "Testing connection to your daemon...",
 	"daemons_troubleshoot_troubleTitle": "Your daemon hasn't connected to this server",
 	"daemons_troubleshoot_troubleTitleServerPoll": "The server hasn't been able to connect to your daemon",
-	"daemons_troubleshoot_viewDiscovery": "View Discovery Progress",
+	"daemons_troubleshoot_viewDiscovery": "View Network Diagram",
 	"daemons_troubleshoot_waitingDesc": "This usually takes less than a minute. Make sure the daemon is running.",
 	"daemons_troubleshoot_waitingTitle": "Waiting for your daemon to connect to the server...",
 	"daemons_updateAvailable": "An update is available for daemon",

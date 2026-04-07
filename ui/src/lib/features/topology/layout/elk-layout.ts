@@ -102,14 +102,27 @@ function buildElkGraph(
 
 			// Layered children: ELK optimizes child ordering for crossing minimization
 			// Box children: grid packing by size (default for most views)
-			const childLayoutOptions: Record<string, string> = {
-				'elk.algorithm': 'box',
-				'elk.box.packingMode': 'SIMPLE',
-				'elk.aspectRatio': useLayeredChildren ? '2.5' : '1.4',
-				'elk.padding': padding,
-				'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-				'elk.spacing.nodeNode': useLayeredChildren ? '10' : '25'
-			};
+			const childLayoutOptions: Record<string, string> = useLayeredChildren
+				? {
+						// Layered DOWN: subcontainers (FIRST) at top, then port grid, Down ports (LAST) at bottom.
+						// Ports within the same layer are ordered by crossing minimization.
+						'elk.algorithm': 'layered',
+						'elk.direction': 'DOWN',
+						'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+						'elk.padding': padding,
+						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
+						'elk.spacing.nodeNode': '8',
+						'elk.layered.spacing.nodeNodeBetweenLayers': '15',
+						'elk.aspectRatio': '3.0'
+					}
+				: {
+						'elk.algorithm': 'box',
+						'elk.box.packingMode': 'SIMPLE',
+						'elk.aspectRatio': '1.4',
+						'elk.padding': padding,
+						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
+						'elk.spacing.nodeNode': '25'
+					};
 
 			const elkNode: ElkNode = isCollapsed
 				? {
@@ -136,6 +149,11 @@ function buildElkGraph(
 		const parent = containers.get(parentId);
 		const child = containers.get(childId);
 		if (parent && child && parent.children) {
+			// L2: subcontainers at top (FIRST layer) so edges reach them without
+			// traversing the Down port grid
+			if (useLayeredChildren && child.layoutOptions) {
+				child.layoutOptions['elk.layered.layering.layerConstraint'] = 'FIRST';
+			}
 			parent.children.push(child);
 		}
 	}
@@ -197,17 +215,24 @@ function buildElkGraph(
 			};
 			elements.sort((a, b) => statusOrder(a.node) - statusOrder(b.node));
 
-			// COFFMAN_GRAHAM + layerBound handles multi-column splitting.
-			// considerModelOrder preserves the status sort order where possible.
+			// Layered DOWN with layer constraints:
+			// - Up ports: no constraint (middle layers, close to subcontainers)
+			// - Down ports: LAST layer (bottom, away from edges)
 			for (const { node, size } of elements) {
+				const status = statusOrder(node);
+				const opts: Record<string, string> = {
+					'elk.nodeSize.constraints': 'MINIMUM_SIZE',
+					'elk.nodeSize.minimum': `(${size.x},${size.y})`
+				};
+				if (status === 1) {
+					// Down ports go to last layer
+					opts['elk.layered.layering.layerConstraint'] = 'LAST';
+				}
 				parent.children!.push({
 					id: node.id,
 					width: size.x,
 					height: size.y,
-					layoutOptions: {
-						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-						'elk.nodeSize.minimum': `(${size.x},${size.y})`
-					}
+					layoutOptions: opts
 				});
 			}
 		} else {

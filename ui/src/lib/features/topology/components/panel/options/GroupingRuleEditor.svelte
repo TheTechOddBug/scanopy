@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Edit, Check } from 'lucide-svelte';
+	import { Edit, Check, Eye, EyeOff } from 'lucide-svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import { SimpleOptionDisplay } from '$lib/shared/components/forms/selection/display/SimpleOptionDisplay';
 	import FilterGroup from './FilterGroup.svelte';
@@ -56,7 +56,11 @@
 		topology_addElementRule,
 		topology_elementGroupingHelp,
 		topology_elementRuleNotApplicable,
-		topology_groupRuleTitlePlaceholder
+		topology_groupRuleTitlePlaceholder,
+		topology_showDisabledRules,
+		topology_hideDisabledRules,
+		topology_showAllToReorder,
+		topology_noHiddenRules
 	} from '$lib/paraglide/messages';
 	import viewsJson from '$lib/data/views.json';
 
@@ -91,6 +95,9 @@
 	// Editing state tracked by rule UUID
 	let editingElementId = $state<string | null>(null);
 
+	// Show/hide disabled (non-applicable) element rules
+	let hideDisabledElementRules = $state(false);
+
 	// Metadata lookups
 	const containerRuleMeta = Object.fromEntries(typedContainerRuleTypes.map((m) => [m.id, m]));
 	const elementRuleMeta = Object.fromEntries(typedElementRuleTypes.map((m) => [m.id, m]));
@@ -115,6 +122,20 @@
 		const names = applicableViews.map((p: string) => viewNames[p] ?? p);
 		return topology_elementRuleNotApplicable({ perspectives: names.join(', ') });
 	}
+
+	// Filtered element rules and index mapping for show/hide toggle
+	let visibleElementRules = $derived(
+		hideDisabledElementRules ? elementRules.filter((r) => isElementRuleApplicable(r)) : elementRules
+	);
+	let visibleToRealIndexMap = $derived(
+		hideDisabledElementRules
+			? elementRules.reduce<number[]>((map, r, i) => {
+					if (isElementRuleApplicable(r)) map.push(i);
+					return map;
+				}, [])
+			: elementRules.map((_, i) => i)
+	);
+	let hiddenCount = $derived(elementRules.length - visibleElementRules.length);
 
 	// Service categories available in topology
 	let serviceCategoriesWithColors = $derived.by(() => {
@@ -370,6 +391,14 @@
 		return isElementEditing(item);
 	}
 
+	// Wrappers that map visible indices to real indices when filtering
+	function handleVisibleElementRemove(visibleIndex: number) {
+		handleElementRemove(visibleToRealIndexMap[visibleIndex]);
+	}
+	function handleVisibleElementEdit(item: ElementGraphRule, visibleIndex: number) {
+		handleElementEdit(item, visibleToRealIndexMap[visibleIndex]);
+	}
+
 	function bufferElementEdit(updater: (rules: ElementGraphRule[]) => ElementGraphRule[]) {
 		pendingElementRules = updater(elementRules);
 	}
@@ -464,7 +493,7 @@
 	label={topology_elementGrouping({ label: elementGroupingLabel })}
 	helpText={topology_elementGroupingHelp()}
 	placeholder={topology_addElementRule()}
-	items={elementRules}
+	items={visibleElementRules}
 	options={elementAddOptions}
 	optionDisplayComponent={SimpleOptionDisplay}
 	itemDisplayComponent={elementRuleDisplayComponent}
@@ -473,15 +502,39 @@
 	allowItemEdit={(item) => typeof item.rule !== 'string' && isElementRuleApplicable(item)}
 	allowItemRemove={isElementRuleApplicable}
 	allowItemReorder={isElementRuleEditable}
+	reorderDisabledTooltip={hideDisabledElementRules ? topology_showAllToReorder() : undefined}
 	editIcon={getElementEditIcon}
 	editButtonClass={getElementEditButtonClass}
 	isItemEditing={isElementItemEditing}
 	onAdd={handleElementAdd}
-	onRemove={handleElementRemove}
+	onRemove={handleVisibleElementRemove}
 	onMoveUp={handleElementMoveUp}
 	onMoveDown={handleElementMoveDown}
-	onEdit={handleElementEdit}
+	onEdit={handleVisibleElementEdit}
 >
+	{#snippet headerSnippet()}
+		<button
+			type="button"
+			class="btn-icon flex items-center gap-1 text-xs"
+			class:opacity-50={hiddenCount === 0}
+			disabled={hiddenCount === 0}
+			title={hiddenCount === 0
+				? topology_noHiddenRules()
+				: hideDisabledElementRules
+					? topology_showDisabledRules()
+					: topology_hideDisabledRules({ count: String(hiddenCount) })}
+			onclick={() => (hideDisabledElementRules = !hideDisabledElementRules)}
+		>
+			{#if hideDisabledElementRules}
+				<EyeOff size={14} />
+			{:else}
+				<Eye size={14} />
+			{/if}
+			{#if hiddenCount > 0}
+				<span class="text-tertiary">({hiddenCount})</span>
+			{/if}
+		</button>
+	{/snippet}
 	{#snippet itemSnippet({ item })}
 		<GroupingRuleItem
 			label={getElementRuleLabel(item)}
@@ -491,6 +544,7 @@
 		/>
 	{/snippet}
 	{#snippet itemExpandedSnippet({ item, index })}
+		{@const realIndex = visibleToRealIndexMap[index]}
 		{#if isElementEditing(item) && typeof item.rule !== 'string'}
 			{@const rule = item.rule}
 			<!-- eslint-disable-next-line svelte/no-static-element-interactions -->
@@ -505,7 +559,10 @@
 					placeholder={topology_groupRuleTitlePlaceholder()}
 					value={getElementRuleTitle(item.rule) ?? ''}
 					oninput={(e) =>
-						handleElementTitleChange(index, (e.currentTarget as HTMLInputElement).value || null)}
+						handleElementTitleChange(
+							realIndex,
+							(e.currentTarget as HTMLInputElement).value || null
+						)}
 					disabled={!editState.isEditable}
 				/>
 
@@ -515,7 +572,7 @@
 						items={serviceCategoriesWithColors}
 						selectedValues={rule.ByServiceCategory.categories}
 						mode="include"
-						onToggle={(cat) => toggleCategory(index, cat as ServiceCategory)}
+						onToggle={(cat) => toggleCategory(realIndex, cat as ServiceCategory)}
 						disabled={!editState.isEditable}
 						nativeTooltip={true}
 					/>
@@ -524,7 +581,7 @@
 						items={allTagsWithColors}
 						selectedValues={rule.ByTag.tag_ids}
 						mode="include"
-						onToggle={(tagId) => handleTagToggle(index, tagId)}
+						onToggle={(tagId) => handleTagToggle(realIndex, tagId)}
 						disabled={!editState.isEditable}
 					/>
 				{/if}

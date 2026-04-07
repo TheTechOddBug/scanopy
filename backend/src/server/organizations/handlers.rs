@@ -611,12 +611,22 @@ pub async fn populate_demo_data(
         .create_many(&demo_data.discoveries)
         .await?;
 
-    // 9. Dependencies — pre-generated with service IDs during DemoData::generate()
-    state
+    // 9. Dependencies — pre-generated during DemoData::generate()
+    // create_many bypasses per-entity service logic, so persist members separately.
+    let created_deps = state
         .services
         .dependency_service
         .create_many(&demo_data.dependencies, entity.clone())
         .await?;
+    for dep in &created_deps {
+        if !dep.base.members.is_empty() {
+            state
+                .services
+                .dependency_service
+                .save_members_for_dependency(&dep.id, &dep.base.members)
+                .await?;
+        }
+    }
 
     // 10. Topologies (depends on networks)
     state

@@ -96,18 +96,21 @@ pub struct NetworkCredentialAssignment {
     pub credential_ids: Vec<Uuid>,
 }
 
-/// Pre-generated service UUIDs for dependency wiring.
-/// Created at the top level and passed to both host/service and dependency generators.
+/// Pre-generated UUIDs for dependency wiring.
+/// Service IDs for HubAndSpoke deps (service-level members),
+/// binding IDs for RequestPath deps (port-level members).
 struct DependencyServiceIds {
-    pfsense: Uuid,
+    // HubAndSpoke: service-level members
     prometheus_hq: Uuid,
     grafana_hq: Uuid,
     uptime_kuma: Uuid,
-    traefik_hq: Uuid,
-    gitea_hq: Uuid,
-    haproxy_dc: Uuid,
-    app01_dc: Uuid,
-    mariadb_dc: Uuid,
+    // RequestPath: binding-level members
+    pfsense_binding: Uuid,
+    traefik_hq_binding: Uuid,
+    gitea_hq_binding: Uuid,
+    haproxy_dc_binding: Uuid,
+    app01_dc_binding: Uuid,
+    mariadb_dc_binding: Uuid,
 }
 
 /// Container for all demo data entities
@@ -136,15 +139,15 @@ impl DemoData {
 
         // Pre-generate service UUIDs used by both host/service and dependency generators
         let dep_svc_ids = DependencyServiceIds {
-            pfsense: Uuid::new_v4(),
             prometheus_hq: Uuid::new_v4(),
             grafana_hq: Uuid::new_v4(),
             uptime_kuma: Uuid::new_v4(),
-            traefik_hq: Uuid::new_v4(),
-            gitea_hq: Uuid::new_v4(),
-            haproxy_dc: Uuid::new_v4(),
-            app01_dc: Uuid::new_v4(),
-            mariadb_dc: Uuid::new_v4(),
+            pfsense_binding: Uuid::new_v4(),
+            traefik_hq_binding: Uuid::new_v4(),
+            gitea_hq_binding: Uuid::new_v4(),
+            haproxy_dc_binding: Uuid::new_v4(),
+            app01_dc_binding: Uuid::new_v4(),
+            mariadb_dc_binding: Uuid::new_v4(),
         };
 
         // Generate all entities in dependency order
@@ -968,16 +971,17 @@ fn generate_hosts_and_services(
     let pve_dc_svc_id = Uuid::new_v4(); // Proxmox VE on dc-proxmox-hv01
     let docker_dc_svc_id = Uuid::new_v4(); // Docker daemon on dc-docker01
 
-    // Service UUIDs for dependency wiring (pre-generated at top level)
-    let pfsense_svc_id = dep_svc_ids.pfsense;
+    // Service UUIDs for HubAndSpoke dependency wiring (pre-generated at top level)
     let prometheus_hq_svc_id = dep_svc_ids.prometheus_hq;
     let grafana_hq_svc_id = dep_svc_ids.grafana_hq;
     let uptime_kuma_svc_id = dep_svc_ids.uptime_kuma;
-    let traefik_hq_svc_id = dep_svc_ids.traefik_hq;
-    let gitea_hq_svc_id = dep_svc_ids.gitea_hq;
-    let haproxy_dc_svc_id = dep_svc_ids.haproxy_dc;
-    let app01_dc_svc_id = dep_svc_ids.app01_dc;
-    let mariadb_dc_svc_id = dep_svc_ids.mariadb_dc;
+    // Binding UUIDs for RequestPath dependency wiring (pre-generated at top level)
+    let pfsense_binding_id = dep_svc_ids.pfsense_binding;
+    let traefik_hq_binding_id = dep_svc_ids.traefik_hq_binding;
+    let gitea_hq_binding_id = dep_svc_ids.gitea_hq_binding;
+    let haproxy_dc_binding_id = dep_svc_ids.haproxy_dc_binding;
+    let app01_dc_binding_id = dep_svc_ids.app01_dc_binding;
+    let mariadb_dc_binding_id = dep_svc_ids.mariadb_dc_binding;
 
     // ========================================================================
     // HEADQUARTERS NETWORK — 30 hosts
@@ -1017,8 +1021,7 @@ fn generate_hosts_and_services(
         let interfaces = vec![interface];
         let mut ports = Vec::new();
         let mut services = Vec::new();
-        if let Some((svc, port)) = create_service_with_id(
-            pfsense_svc_id,
+        if let Some((mut svc, port)) = create_service(
             "pfSense",
             "pfSense",
             &host,
@@ -1027,6 +1030,7 @@ fn generate_hosts_and_services(
             critical_tag.into_iter().collect(),
             now,
         ) {
+            svc.base.bindings[0].id = pfsense_binding_id;
             if let Some(p) = port {
                 ports.push(p);
             }
@@ -1541,7 +1545,7 @@ fn generate_hosts_and_services(
             services.push(svc);
         }
 
-        // Traefik container (pre-generated ID for dependency wiring)
+        // Traefik container (pre-generated binding ID for dependency wiring)
         if let Some((mut svc, port)) = create_container_service(
             "Traefik",
             "Traefik",
@@ -1554,13 +1558,13 @@ fn generate_hosts_and_services(
             web_tier_tag.into_iter().collect(),
             now,
         ) {
-            svc.id = traefik_hq_svc_id;
+            svc.base.bindings[0].id = traefik_hq_binding_id;
             if let Some(p) = port {
                 ports.push(p);
             }
             services.push(svc);
         }
-        // Gitea container (pre-generated ID for dependency wiring)
+        // Gitea container (pre-generated binding ID for dependency wiring)
         if let Some((mut svc, port)) = create_container_service(
             "Gitea",
             "Gitea",
@@ -1573,7 +1577,7 @@ fn generate_hosts_and_services(
             devops_tag.into_iter().collect(),
             now,
         ) {
-            svc.id = gitea_hq_svc_id;
+            svc.base.bindings[0].id = gitea_hq_binding_id;
             if let Some(p) = port {
                 ports.push(p);
             }
@@ -2133,8 +2137,7 @@ fn generate_hosts_and_services(
         let interfaces = vec![interface];
         let mut ports = Vec::new();
         let mut services = Vec::new();
-        if let Some((svc, port)) = create_service_with_id(
-            haproxy_dc_svc_id,
+        if let Some((mut svc, port)) = create_service(
             "HAProxy",
             "HAProxy",
             &host,
@@ -2143,6 +2146,7 @@ fn generate_hosts_and_services(
             web_tier_tag.into_iter().collect(),
             now,
         ) {
+            svc.base.bindings[0].id = haproxy_dc_binding_id;
             if let Some(p) = port {
                 ports.push(p);
             }
@@ -2173,8 +2177,7 @@ fn generate_hosts_and_services(
         let interfaces = vec![interface];
         let mut ports = Vec::new();
         let mut services = Vec::new();
-        if let Some((svc, port)) = create_service_with_id(
-            app01_dc_svc_id,
+        if let Some((mut svc, port)) = create_service(
             "Web Service",
             "Web Application",
             &host,
@@ -2183,6 +2186,7 @@ fn generate_hosts_and_services(
             web_tier_tag.into_iter().collect(),
             now,
         ) {
+            svc.base.bindings[0].id = app01_dc_binding_id;
             if let Some(p) = port {
                 ports.push(p);
             }
@@ -2373,8 +2377,7 @@ fn generate_hosts_and_services(
         let interfaces = vec![interface];
         let mut ports = Vec::new();
         let mut services = Vec::new();
-        if let Some((svc, port)) = create_service_with_id(
-            mariadb_dc_svc_id,
+        if let Some((mut svc, port)) = create_service(
             "MariaDB",
             "MariaDB",
             &host,
@@ -2383,6 +2386,7 @@ fn generate_hosts_and_services(
             database_tag.into_iter().collect(),
             now,
         ) {
+            svc.base.bindings[0].id = mariadb_dc_binding_id;
             if let Some(p) = port {
                 ports.push(p);
             }
@@ -4443,8 +4447,12 @@ fn generate_dependencies(
                 "Traffic path from firewall through reverse proxy to code hosting".to_string(),
             ),
             dependency_type: DependencyType::RequestPath,
-            members: DependencyMembers::Services {
-                service_ids: vec![svc_ids.pfsense, svc_ids.traefik_hq, svc_ids.gitea_hq],
+            members: DependencyMembers::Bindings {
+                binding_ids: vec![
+                    svc_ids.pfsense_binding,
+                    svc_ids.traefik_hq_binding,
+                    svc_ids.gitea_hq_binding,
+                ],
             },
             source: EntitySource::Manual,
             color: Color::Cyan,
@@ -4468,8 +4476,12 @@ fn generate_dependencies(
                     .to_string(),
             ),
             dependency_type: DependencyType::RequestPath,
-            members: DependencyMembers::Services {
-                service_ids: vec![svc_ids.haproxy_dc, svc_ids.app01_dc, svc_ids.mariadb_dc],
+            members: DependencyMembers::Bindings {
+                binding_ids: vec![
+                    svc_ids.haproxy_dc_binding,
+                    svc_ids.app01_dc_binding,
+                    svc_ids.mariadb_dc_binding,
+                ],
             },
             source: EntitySource::Manual,
             color: Color::Blue,

@@ -271,4 +271,17 @@ impl DependencyService {
             entity_tag_service,
         }
     }
+
+    /// Persist dependency members to the junction table.
+    /// Used by bulk creation paths (e.g. demo data) where `create_many`
+    /// bypasses per-entity service logic.
+    pub async fn save_members_for_dependency(
+        &self,
+        dependency_id: &Uuid,
+        members: &DependencyMembers,
+    ) -> Result<()> {
+        self.member_storage
+            .save_for_dependency(dependency_id, members)
+            .await
+    }
 }

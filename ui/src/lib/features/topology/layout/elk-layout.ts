@@ -38,6 +38,7 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 	'elk.layered.spacing.nodeNodeBetweenLayers': '30',
 	'elk.layered.spacing.edgeNodeBetweenLayers': '15',
 	'elk.edgeRouting': 'POLYLINE',
+	'elk.layered.spacing.edgeEdgeBetweenLayers': '10',
 	'elk.spacing.componentComponent': '50',
 	'elk.spacing.nodeNode': '40',
 	'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
@@ -168,17 +169,72 @@ function buildElkGraph(input: ElkLayoutInput): {
 		}
 	}
 
-	// Sort children: elements first (alphabetical), then subcontainers (alphabetical).
-	// Must run AFTER elements are added above.
-	for (const [containerId, parent] of containers) {
-		if (!parent.children || parent.children.length < 2) continue;
-		if (parentContainerMap.has(containerId)) continue; // only sort root containers
-		const elemCount = parent.children.filter((c) => !containerIds.has(c.id)).length;
-		const subCount = parent.children.filter((c) => containerIds.has(c.id)).length;
-		parent.children.sort((a, b) => {
+	// Helper: resolve an edge endpoint to its root container
+	const resolveRoot = (id: string): string | undefined => {
+		const fromElem = elementToRootContainer.get(id);
+		if (fromElem) return fromElem;
+		if (!containerIds.has(id)) return undefined;
+		let rootId = id;
+		while (parentContainerMap.has(rootId)) {
+			rootId = parentContainerMap.get(rootId)!;
+		}
+		return rootId;
+	};
+
+	// Build element → target root container(s) mapping for edge-aware sorting.
+	// Elements connecting to the same target should be adjacent in the grid so
+	// their ports cluster together, giving ELK meaningful crossing information.
+	const elementTargets = new Map<string, Set<string>>();
+	for (const edge of input.edges) {
+		if (!affectsLayout(edge)) continue;
+		const srcRoot = resolveRoot(edge.source);
+		const tgtRoot = resolveRoot(edge.target);
+		if (!srcRoot || !tgtRoot || srcRoot === tgtRoot) continue;
+
+		// Map source element → target container
+		if (elementToRootContainer.has(edge.source)) {
+			if (!elementTargets.has(edge.source)) elementTargets.set(edge.source, new Set());
+			elementTargets.get(edge.source)!.add(tgtRoot);
+		}
+		// Map target element → source container (reverse direction)
+		if (elementToRootContainer.has(edge.target)) {
+			if (!elementTargets.has(edge.target)) elementTargets.set(edge.target, new Set());
+			elementTargets.get(edge.target)!.add(srcRoot);
+		}
+	}
+
+	// Sort children: elements grouped by target, then elements without edges, then subcontainers.
+	// Within target groups, elements connecting to the same target are adjacent.
+	// Group order is by first target ID (arbitrary but stable) — ELK will reorder
+	// the target containers to match via crossing minimization.
+	for (const [containerId, container] of containers) {
+		if (!container.children || container.children.length < 2) continue;
+		if (parentContainerMap.has(containerId)) continue;
+
+		container.children.sort((a, b) => {
 			const aIsSub = containerIds.has(a.id) ? 1 : 0;
 			const bIsSub = containerIds.has(b.id) ? 1 : 0;
 			if (aIsSub !== bIsSub) return aIsSub - bIsSub;
+			if (aIsSub && bIsSub) return a.id.localeCompare(b.id);
+
+			// Both are elements: sort by target group
+			const aTargets = elementTargets.get(a.id);
+			const bTargets = elementTargets.get(b.id);
+			const aHasEdge = aTargets && aTargets.size > 0;
+			const bHasEdge = bTargets && bTargets.size > 0;
+
+			// Elements without edges go in the middle (sort group 1)
+			// Elements with edges go at the edges of the grid (sort group 0 or 2)
+			// — but we just need them grouped by target, so put them all before no-edge elements
+			if (aHasEdge && !bHasEdge) return -1;
+			if (!aHasEdge && bHasEdge) return 1;
+			if (!aHasEdge && !bHasEdge) return a.id.localeCompare(b.id);
+
+			// Both have edges: group by primary target (sorted target IDs as group key)
+			const aKey = Array.from(aTargets!).sort().join(',');
+			const bKey = Array.from(bTargets!).sort().join(',');
+			if (aKey !== bKey) return aKey.localeCompare(bKey);
+
 			return a.id.localeCompare(b.id);
 		});
 	}
@@ -230,18 +286,6 @@ function buildElkGraph(input: ElkLayoutInput): {
 	const containerPorts = new Map<string, { id: string; x: number; side: string }[]>();
 	const seenEdges = new Set<string>();
 	let edgeIndex = 0;
-
-	// Helper: resolve an edge endpoint to its root container
-	const resolveRoot = (id: string): string | undefined => {
-		const fromElem = elementToRootContainer.get(id);
-		if (fromElem) return fromElem;
-		if (!containerIds.has(id)) return undefined;
-		let rootId = id;
-		while (parentContainerMap.has(rootId)) {
-			rootId = parentContainerMap.get(rootId)!;
-		}
-		return rootId;
-	};
 
 	for (const edge of input.edges) {
 		if (!affectsLayout(edge)) continue;

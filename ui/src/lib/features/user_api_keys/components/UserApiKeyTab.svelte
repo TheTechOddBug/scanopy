@@ -20,7 +20,7 @@
 	} from '../queries';
 	import type { TabProps } from '$lib/shared/types';
 	import { downloadCsv } from '$lib/shared/utils/csvExport';
-	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
+
 	import {
 		common_apiKeys,
 		common_create,
@@ -172,11 +172,6 @@
 <div class="space-y-6">
 	<TabHeader title={common_apiKeys()} subtitle={userApiKeys_subtitle()}>
 		<svelte:fragment slot="actions">
-			<InlineSuccess
-				title="Share your integration with the community!"
-				dismissableKey="share-integration"
-				body="Creating an integration that you think others might benefit from? Scanopy will be adding an integration library in an upcoming release. Go to the <a class='underline hover:no-underline' target='_blank' href='https://github.com/scanopy/integrations'>Scanopy integrations GitHub</a> and create a PR to get started."
-			></InlineSuccess>
 			{#if !isReadOnly && hasApiAccess}
 				{#if !isEmailVerified}
 					<span data-tooltip="Please verify email to create an API key" use:tooltip>

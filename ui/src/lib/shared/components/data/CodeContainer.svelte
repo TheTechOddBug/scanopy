@@ -8,6 +8,7 @@
 	import 'prismjs/components/prism-powershell';
 	import 'prismjs/themes/prism-twilight.css';
 	import { common_copied, common_copy, common_failedToCopy } from '$lib/paraglide/messages';
+	import { useConfigQuery, isCloud } from '$lib/shared/stores/config-query';
 
 	export let code: string;
 	export let expandable: boolean = true;
@@ -18,6 +19,7 @@
 	export let hideCopyButton: boolean = false;
 	export let preventSelect: boolean = false;
 
+	const configQuery = useConfigQuery();
 	const isLocalhost =
 		window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -71,7 +73,14 @@
 
 	{#if expanded}
 		<div translate="no" class="code-wrapper {maxHeight ? maxHeight + ' overflow-y-auto' : ''}">
-			<div class="min-w-0 flex-1 {preventSelect && !isLocalhost ? 'prevent-select' : ''}">
+			<div
+				class="min-w-0 flex-1 {preventSelect &&
+				!isLocalhost &&
+				$configQuery.data &&
+				isCloud($configQuery.data)
+					? 'prevent-select'
+					: ''}"
+			>
 				<Prism {language} showCopyButton={false} source={code} showLineNumbers={true} />
 			</div>
 			{#if isSecureContext && !hideCopyButton}

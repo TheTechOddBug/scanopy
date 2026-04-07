@@ -558,7 +558,7 @@
 	}
 
 	function handleViewDiscovery() {
-		onNavigate?.('discovery-scans');
+		onNavigate?.('topology');
 		handleOnClose();
 	}
 

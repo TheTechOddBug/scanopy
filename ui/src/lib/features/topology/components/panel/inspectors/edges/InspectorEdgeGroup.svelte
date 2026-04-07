@@ -8,6 +8,10 @@
 		BindingWithServiceDisplay,
 		type BindingWithServiceContext
 	} from '$lib/shared/components/forms/selection/display/BindingWithServiceDisplay.svelte';
+	import {
+		ServiceDisplay,
+		type ServiceDisplayContext
+	} from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
 	import { ArrowDown } from 'lucide-svelte';
 	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
@@ -168,29 +172,43 @@
 		{/if}
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Services</span>
-		{#each group.members ?? [] as member (member.service_id + (member.binding_id ?? ''))}
-			{@const binding = member.binding_id}
-			{@const bindingService = binding ? getServiceForBindingFromTopology(binding) : null}
-			{@const bindingHost = bindingService ? getHostForService(bindingService.host_id) : null}
-			{@const bindingData = binding ? getBindingFromTopology(binding) : null}
-			{#if bindingService && bindingHost && bindingData}
-				<div
-					class={isRequestPath
-						? `card card-static ${binding == sourceBindingId || binding == targetBindingId ? 'ring-1 ring-gray-500' : ''}`
-						: `card card-static ${binding == sourceBindingId ? `ring-1 ${groupColor.ring}` : binding == targetBindingId ? 'ring-1 ring-gray-500' : ''}`}
-				>
-					<EntityDisplayWrapper
-						context={bindingContext}
-						item={bindingData}
-						displayComponent={BindingWithServiceDisplay}
-					/>
-				</div>
-				{#if binding == sourceBindingId && isRequestPath}
-					<div class="flex flex-col items-center">
-						<ArrowDown class="text-secondary h-5 w-5" />
+		{#if group.members.type === 'Bindings'}
+			{#each group.members.binding_ids as bindingId (bindingId)}
+				{@const bindingService = getServiceForBindingFromTopology(bindingId)}
+				{@const bindingHost = bindingService ? getHostForService(bindingService.host_id) : null}
+				{@const bindingData = getBindingFromTopology(bindingId)}
+				{#if bindingService && bindingHost && bindingData}
+					<div
+						class={isRequestPath
+							? `card card-static ${bindingId == sourceBindingId || bindingId == targetBindingId ? 'ring-1 ring-gray-500' : ''}`
+							: `card card-static ${bindingId == sourceBindingId ? `ring-1 ${groupColor.ring}` : bindingId == targetBindingId ? 'ring-1 ring-gray-500' : ''}`}
+					>
+						<EntityDisplayWrapper
+							context={bindingContext}
+							item={bindingData}
+							displayComponent={BindingWithServiceDisplay}
+						/>
+					</div>
+					{#if bindingId == sourceBindingId && isRequestPath}
+						<div class="flex flex-col items-center">
+							<ArrowDown class="text-secondary h-5 w-5" />
+						</div>
+					{/if}
+				{/if}
+			{/each}
+		{:else if group.members.type === 'Services'}
+			{#each group.members.service_ids as serviceId (serviceId)}
+				{@const service = topology?.services.find((s) => s.id === serviceId)}
+				{#if service}
+					<div class="card card-static">
+						<EntityDisplayWrapper
+							context={{} satisfies ServiceDisplayContext}
+							item={service}
+							displayComponent={ServiceDisplay}
+						/>
 					</div>
 				{/if}
-			{/if}
-		{/each}
+			{/each}
+		{/if}
 	{/if}
 </div>

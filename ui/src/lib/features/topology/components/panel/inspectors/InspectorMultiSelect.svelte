@@ -302,7 +302,7 @@
 	let groupEdgeStyle: EdgeStyle = $state('SmoothStep');
 
 	// Preview toggle with localStorage persistence
-	let showPreview = $state(true);
+	let showPreview = $state(false);
 	if (browser) {
 		try {
 			const stored = localStorage.getItem(PREVIEW_STORAGE_KEY);

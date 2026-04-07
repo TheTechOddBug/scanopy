@@ -1095,6 +1095,11 @@
 				<Controls
 					showZoom={true}
 					showFitView={true}
+					fitViewOptions={{
+						padding: $optionsPanelExpanded
+							? { top: 0.2, right: 0.2, bottom: 0.2, left: `${OPTIONS_PANEL_FITVIEW_PADDING_PX}px` }
+							: 0.2
+					}}
 					showLock={false}
 					class="!static !m-0 !rounded !border !border-gray-300 !bg-white !shadow-lg dark:!border-gray-600 dark:!bg-gray-800 [&_button:hover]:!bg-gray-100 dark:[&_button:hover]:!bg-gray-600 [&_button]:!border-gray-300 [&_button]:!bg-gray-50 [&_button]:!text-gray-700 dark:[&_button]:!border-gray-600 dark:[&_button]:!bg-gray-700 dark:[&_button]:!text-gray-100"
 				/>

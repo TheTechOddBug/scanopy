@@ -107,7 +107,7 @@ function buildElkGraph(
 						// Layered DOWN: subcontainers (FIRST) at top, then port grid, Down ports (LAST) at bottom.
 						// Ports within the same layer are ordered by crossing minimization.
 						'elk.algorithm': 'layered',
-						'elk.direction': 'DOWN',
+						'elk.direction': 'UP',
 						'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
 						'elk.padding': padding,
 						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
@@ -149,10 +149,6 @@ function buildElkGraph(
 		const parent = containers.get(parentId);
 		const child = containers.get(childId);
 		if (parent && child && parent.children) {
-			// L2: force subcontainers (with connected Up ports) to the top layer
-			if (useLayeredChildren && child.layoutOptions) {
-				child.layoutOptions['elk.layered.layering.layerConstraint'] = 'FIRST';
-			}
 			parent.children.push(child);
 		}
 	}
@@ -214,25 +210,18 @@ function buildElkGraph(
 			};
 			elements.sort((a, b) => statusOrder(a.node) - statusOrder(b.node));
 
-			// Layered DOWN with layer constraints:
-			// - Up ports: FIRST (top, near subcontainers and incoming edges)
-			// - Down ports: LAST (bottom, away from edges)
+			// UP direction: edge targets (subcontainers with connected ports)
+			// naturally go to upper layers (top). Down ports with no edges
+			// stay in lower layers (bottom).
 			for (const { node, size } of elements) {
-				const status = statusOrder(node);
-				const opts: Record<string, string> = {
-					'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-					'elk.nodeSize.minimum': `(${size.x},${size.y})`
-				};
-				if (status === 0) {
-					opts['elk.layered.layering.layerConstraint'] = 'FIRST';
-				} else if (status === 1) {
-					opts['elk.layered.layering.layerConstraint'] = 'LAST';
-				}
 				parent.children!.push({
 					id: node.id,
 					width: size.x,
 					height: size.y,
-					layoutOptions: opts
+					layoutOptions: {
+						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
+						'elk.nodeSize.minimum': `(${size.x},${size.y})`
+					}
 				});
 			}
 		} else {

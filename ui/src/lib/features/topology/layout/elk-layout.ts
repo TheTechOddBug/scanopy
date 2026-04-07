@@ -104,19 +104,10 @@ function buildElkGraph(
 			// Box children: grid packing by size (default for most views)
 			const childLayoutOptions: Record<string, string> = useLayeredChildren
 				? {
-						// Layered layout with COFFMAN_GRAHAM bounds ports to N per column.
-						// DOWN direction stacks ports vertically, creating columns left-to-right.
-						// considerModelOrder preserves status sort (Up ports first).
-						'elk.algorithm': 'layered',
-						'elk.direction': 'DOWN',
-						'elk.layered.layering.strategy': 'COFFMAN_GRAHAM',
-						'elk.layered.layering.coffmanGraham.layerBound': '8',
-						'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
-						'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+						// INCLUDE_CHILDREN: root handles layout — container just sets padding
 						'elk.padding': padding,
 						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-						'elk.spacing.nodeNode': '8',
-						'elk.layered.spacing.nodeNodeBetweenLayers': '8'
+						'elk.spacing.nodeNode': '10'
 					}
 				: {
 						'elk.algorithm': 'box',
@@ -152,11 +143,6 @@ function buildElkGraph(
 		const parent = containers.get(parentId);
 		const child = containers.get(childId);
 		if (parent && child && parent.children) {
-			// L2: subcontainers hold connected Up ports — place them in the first
-			// layer so edges from above don't traverse through Down port rows
-			if (useLayeredChildren && child.layoutOptions) {
-				child.layoutOptions['elk.layered.layering.layerConstraint'] = 'FIRST';
-			}
 			parent.children.push(child);
 		}
 	}
@@ -241,6 +227,29 @@ function buildElkGraph(
 						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
 						'elk.nodeSize.minimum': `(${size.x},${size.y})`
 					}
+				});
+			}
+		}
+	}
+
+	// L2: add dummy chain edges between ports within each container.
+	// Without edges between ports, COFFMAN_GRAHAM puts them all in one layer.
+	// A chain (port0→port1→port2→...) creates precedence constraints that,
+	// combined with layerBound=8, spread ports across ceil(N/8) layers.
+	// The chain follows status sort order (Up first → Down last), so Up ports
+	// end up in earlier layers (closer to incoming edges).
+	if (useLayeredChildren) {
+		let dummyIdx = 0;
+		for (const [, parent] of containers) {
+			if (!parent.children || parent.children.length < 2) continue;
+			// Only chain element nodes (not nested subcontainers)
+			const elementChildren = parent.children.filter((c) => !containerIds.has(c.id));
+			for (let i = 0; i < elementChildren.length - 1; i++) {
+				if (!parent.edges) parent.edges = [];
+				parent.edges.push({
+					id: `elk-chain-${dummyIdx++}`,
+					sources: [elementChildren[i].id],
+					targets: [elementChildren[i + 1].id]
 				});
 			}
 		}
@@ -563,7 +572,16 @@ function buildElkGraph(
 		.filter(([id]) => !parentContainerMap.has(id))
 		.map(([, node]) => node);
 
-	const rootOptions = ROOT_LAYOUT_OPTIONS;
+	const rootOptions = useLayeredChildren
+		? {
+				...ROOT_LAYOUT_OPTIONS,
+				'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+				'elk.direction': 'RIGHT',
+				'elk.layered.layering.strategy': 'COFFMAN_GRAHAM',
+				'elk.layered.layering.coffmanGraham.layerBound': '8',
+				'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES'
+			}
+		: ROOT_LAYOUT_OPTIONS;
 
 	const graph: ElkNode = {
 		id: 'root',

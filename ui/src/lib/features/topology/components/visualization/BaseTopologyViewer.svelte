@@ -26,6 +26,8 @@
 	import {
 		previewEdges,
 		selectedNodes,
+		selectedEdge as selectedEdgeStore,
+		selectedNode as selectedNodeStore,
 		topologyOptions,
 		activeView,
 		optionsPanelExpanded,
@@ -223,6 +225,10 @@
 		void selectedNode;
 		void selectedEdge;
 		void $selectedNodes;
+		// Also react to store changes (store preserves selection through panning
+		// even when props clear, so connected-node highlights persist)
+		void $selectedEdgeStore;
+		void $selectedNodeStore;
 
 		if (topology && (topology.edges || topology.nodes)) {
 			const currentEdges = get(edges);
@@ -232,9 +238,15 @@
 			// depend on $topologyOptions (which would cause a race with the
 			// loadTopologyData block that also depends on it).
 			const opts = get(topologyOptions);
+
+			// Use store values for connected-node highlights: the store preserves
+			// selection during panning (props clear unconditionally in handlePaneClick),
+			// so highlights persist through pan operations.
+			const storeSelectedNode = get(selectedNodeStore);
+			const storeSelectedEdge = get(selectedEdgeStore);
 			updateConnectedNodes(
-				selectedNode,
-				selectedEdge,
+				storeSelectedNode ?? selectedNode,
+				storeSelectedEdge ?? selectedEdge,
 				currentEdges,
 				currentNodes,
 				queryClient,
@@ -243,7 +255,8 @@
 				opts.local.hide_edge_types ?? []
 			);
 
-			// Update edge animated state based on selection
+			// Update edge animated state based on selection (use props — they
+			// clear unconditionally so animation stops immediately on any pane interaction)
 			const updatedEdges = currentEdges.map((edge) => {
 				const { shouldAnimate } = getEdgeDisplayState(edge, selectedNode, selectedEdge);
 
@@ -982,8 +995,8 @@
 
 	function handlePaneClick({ event }: { event: MouseEvent }) {
 		collapseAllBundles();
+		selectedEdge = null;
 		if (!viewportMoved) {
-			selectedEdge = null;
 			selectedNode = null;
 		}
 		if (onPaneSelect) {

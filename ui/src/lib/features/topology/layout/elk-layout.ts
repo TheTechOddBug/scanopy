@@ -105,10 +105,11 @@ function buildElkGraph(
 			const childLayoutOptions: Record<string, string> = {
 				'elk.algorithm': 'box',
 				'elk.box.packingMode': 'SIMPLE',
-				'elk.aspectRatio': useLayeredChildren ? '1.0' : '1.4',
+				'elk.aspectRatio': useLayeredChildren ? '0.3' : '1.4',
 				'elk.padding': padding,
 				'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-				'elk.spacing.nodeNode': useLayeredChildren ? '10' : '25'
+				'elk.spacing.nodeNode': '25',
+				'elk.spacing.componentComponent': '25'
 			};
 
 			const elkNode: ElkNode = isCollapsed
@@ -136,6 +137,10 @@ function buildElkGraph(
 		const parent = containers.get(parentId);
 		const child = containers.get(childId);
 		if (parent && child && parent.children) {
+			// L2: high priority so box SIMPLE packs subcontainers first (top)
+			if (useLayeredChildren && child.layoutOptions) {
+				child.layoutOptions['elk.priority'] = '100';
+			}
 			parent.children.push(child);
 		}
 	}
@@ -182,6 +187,8 @@ function buildElkGraph(
 		if (!parent?.children) continue;
 
 		if (useLayeredChildren) {
+			console.log(`[L2-DEBUG] Container ${parentId.substring(0,8)}: ${elements.length} elements, ${parent.children.length} existing children (subs)`);
+
 			// Sort: Up ports first, then Down, then others
 			const statusOrder = (n: TopologyNode): number => {
 				const status = (n as Record<string, unknown>).oper_status as string | undefined;
@@ -292,8 +299,8 @@ function buildElkGraph(
 			const bIsSub = containerIds.has(b.id) ? 1 : 0;
 
 			if (useLayeredChildren) {
-				// L2 sort: subcontainers first (sorted by Up count desc), then Up elements, then Down elements
-				if (aIsSub !== bIsSub) return bIsSub - aIsSub; // subcontainers first
+				// L2 sort: try subcontainers LAST to test if box reverses order
+				if (aIsSub !== bIsSub) return aIsSub - bIsSub; // subcontainers last
 				if (aIsSub && bIsSub) {
 					// Both subcontainers: sort by Up port count descending
 					const aUp = subcontainerUpCount.get(a.id) ?? 0;
@@ -328,6 +335,7 @@ function buildElkGraph(
 
 			return a.id.localeCompare(b.id);
 		});
+
 	}
 
 	// Create port-based edges for cross-container connections.
@@ -491,6 +499,9 @@ function buildElkGraph(
 	}
 
 	// Switch root containers with cross-child edges from box to layered
+	if (useLayeredChildren) {
+		console.log('[L2-DEBUG] rootsWithCrossChildEdges:', Array.from(rootsWithCrossChildEdges).map(id => id.substring(0, 8)));
+	}
 	for (const rootId of rootsWithCrossChildEdges) {
 		const container = containers.get(rootId);
 		if (container?.layoutOptions) {
@@ -549,7 +560,14 @@ function buildElkGraph(
 		.filter(([id]) => !parentContainerMap.has(id))
 		.map(([, node]) => node);
 
-	const rootOptions = ROOT_LAYOUT_OPTIONS;
+	const rootOptions = useLayeredChildren
+		? {
+				...ROOT_LAYOUT_OPTIONS,
+				'elk.direction': 'RIGHT',
+				'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+				'elk.layered.nodePlacement.bk.fixedAlignment': 'LEFTUP'
+			}
+		: ROOT_LAYOUT_OPTIONS;
 
 	const graph: ElkNode = {
 		id: 'root',

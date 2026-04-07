@@ -281,26 +281,6 @@
 				let collapsed = get(collapsedContainers);
 				const hiddenServices = get(tagHiddenServiceIds);
 
-				// Auto-collapse containers whose type has collapsed_by_default metadata.
-				// Only collapse containers we haven't seen before (so user can expand them).
-				{
-					const autoCollapseIds = topology.nodes
-						.filter((n) => {
-							if (n.node_type !== 'Container') return false;
-							if (collapsed.has(n.id) || seenAutoCollapseIds.has(n.id)) return false;
-							const ct = (n as Record<string, unknown>).container_type as string | undefined;
-							return ct ? containerTypes.getMetadata(ct).collapsed_by_default === true : false;
-						})
-						.map((n) => n.id);
-					if (autoCollapseIds.length > 0) {
-						for (const id of autoCollapseIds) seenAutoCollapseIds.add(id);
-						// eslint-disable-next-line svelte/prefer-svelte-reactivity -- temporary value for store update
-						const next = new Set(collapsed);
-						for (const id of autoCollapseIds) next.add(id);
-						collapsedContainers.set(next);
-						collapsed = next;
-					}
-				}
 
 				// Perspective switch fix: when switching views while all containers were
 				// collapsed, the old perspective's container IDs become stale. Detect this
@@ -659,6 +639,27 @@
 
 					// Cache measured sizes for this view so return visits skip measurement
 					viewSizeCache.set(currentView, new Map(elementNodeSizes));
+
+					// Auto-collapse containers whose type has collapsed_by_default metadata.
+					// Runs after layout so expanded sizes are cached for correct expand later.
+					// Only collapse containers we haven't seen before (so user can expand them).
+					{
+						const autoCollapseIds = topology.nodes
+							.filter((n) => {
+								if (n.node_type !== 'Container') return false;
+								if (collapsed.has(n.id) || seenAutoCollapseIds.has(n.id)) return false;
+								const ct = (n as Record<string, unknown>).container_type as string | undefined;
+								return ct ? containerTypes.getMetadata(ct).collapsed_by_default === true : false;
+							})
+							.map((n) => n.id);
+						if (autoCollapseIds.length > 0) {
+							for (const id of autoCollapseIds) seenAutoCollapseIds.add(id);
+							// eslint-disable-next-line svelte/prefer-svelte-reactivity -- temporary value for store update
+							const next = new Set(collapsed);
+							for (const id of autoCollapseIds) next.add(id);
+							collapsedContainers.set(next);
+						}
+					}
 				}
 
 				// Local size adjustment for port expansion (no full ELK re-layout)
@@ -703,10 +704,6 @@
 					edgeHandles = new Map();
 					prevView = currentView;
 				}
-
-				// Save current state before rebuilding
-				const currentEdges = get(edges);
-				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
 
 				// Build final nodes with positions from graph
 				const needsLayout = isNewStructure || portsChanged || collapseChanged;
@@ -792,7 +789,7 @@
 
 					// Unbundled edges render normally
 					for (const edge of unbundled) {
-						flowEdges.push(createFlowEdge(edge, edgeIndex++, animatedStates));
+						flowEdges.push(createFlowEdge(edge, edgeIndex++));
 					}
 
 					for (const bundle of bundles) {
@@ -801,7 +798,7 @@
 							const fanTotal = bundle.edges.length;
 							for (let i = 0; i < fanTotal; i++) {
 								flowEdges.push(
-									createFlowEdge(bundle.edges[i], edgeIndex++, animatedStates, {
+									createFlowEdge(bundle.edges[i], edgeIndex++, {
 										bundleId: bundle.id,
 										bundleFanIndex: i,
 										bundleFanTotal: fanTotal
@@ -813,7 +810,7 @@
 							const representative = bundle.edges[0];
 							const bundleStrokeWidth = Math.min(2 + 0.5 * (bundle.count - 1), 6);
 							flowEdges.push(
-								createFlowEdge(representative, edgeIndex++, animatedStates, {
+								createFlowEdge(representative, edgeIndex++, {
 									isBundle: true,
 									bundleId: bundle.id,
 									bundleCount: bundle.count,
@@ -826,15 +823,13 @@
 					}
 				} else {
 					// Bundling disabled: render all visible edges individually
-					flowEdges = visibleEdges.map((edge, index) =>
-						createFlowEdge(edge, index, animatedStates)
-					);
+					flowEdges = visibleEdges.map((edge, index) => createFlowEdge(edge, index));
 				}
 
 				// Add hidden edges (they get filtered by CustomEdge's hideEdge logic)
 				const hiddenEdges = nonDisabledEdges.filter((e) => hiddenEdgeTypes.includes(e.edge_type));
 				for (const edge of hiddenEdges) {
-					flowEdges.push(createFlowEdge(edge, flowEdges.length, animatedStates));
+					flowEdges.push(createFlowEdge(edge, flowEdges.length));
 				}
 
 				// Add aggregated collapse edges
@@ -884,7 +879,6 @@
 	function createFlowEdge(
 		edge: TopologyEdge,
 		index: number,
-		animatedStates: Map<string, boolean | undefined>,
 		extraData?: Record<string, unknown>
 	): Edge {
 		const edgeType = edge.edge_type as string;
@@ -905,8 +899,7 @@
 				} as EdgeMarkerType);
 
 		const edgeId = `edge-${index}`;
-
-		return {
+		const flowEdge: Edge = {
 			id: edgeId,
 			source: edge.source,
 			target: edge.target,
@@ -921,9 +914,15 @@
 			type: 'custom',
 			label: edge.label ?? undefined,
 			data: { ...edge, edgeIndex: index, ...extraData },
-			animated: animatedStates.get(edgeId) ?? false,
+			animated: false,
 			interactionWidth: 50
 		};
+
+		// Compute animation from current selection state (not stale cache)
+		const { shouldAnimate } = getEdgeDisplayState(flowEdge, selectedNode, selectedEdge);
+		flowEdge.animated = shouldAnimate;
+
+		return flowEdge;
 	}
 
 	function handleNodeDragStop({
@@ -983,8 +982,8 @@
 
 	function handlePaneClick({ event }: { event: MouseEvent }) {
 		collapseAllBundles();
-		selectedEdge = null;
 		if (!viewportMoved) {
+			selectedEdge = null;
 			selectedNode = null;
 		}
 		if (onPaneSelect) {

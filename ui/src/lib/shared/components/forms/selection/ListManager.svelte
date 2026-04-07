@@ -248,9 +248,14 @@
 <div class={stickyHeader ? 'flex min-h-0 flex-1 flex-col' : ''}>
 	<div class={`mb-2 flex items-start justify-between gap-4${stickyHeader ? ' flex-shrink-0' : ''}`}>
 		<div class="min-w-0 flex-1">
-			<div class="text-secondary block text-sm font-medium">
-				{label}
-				{#if required}<span class="text-danger">*</span>{/if}
+			<div class="text-secondary flex items-center gap-2 text-sm font-medium">
+				<span>
+					{label}
+					{#if required}<span class="text-danger">*</span>{/if}
+				</span>
+				{#if headerSnippet}
+					{@render headerSnippet()}
+				{/if}
 			</div>
 			{#if helpSnippet}
 				<div class="text-tertiary mt-1 text-sm">
@@ -262,10 +267,6 @@
 				</p>
 			{/if}
 		</div>
-
-		{#if headerSnippet}
-			{@render headerSnippet()}
-		{/if}
 
 		{#if allowSelection && items.length > 0}
 			{@const anySelected = selectedItems.length > 0}

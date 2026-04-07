@@ -74,7 +74,8 @@ function makeEdge(
 					affects_layout: viewConfig.affects_layout,
 					default_visibility: viewConfig.default_visibility ?? 'visible',
 					stroke: viewConfig.stroke ?? 'solid',
-					highlight_behavior: 'when_visible'
+					highlight_behavior: 'when_visible',
+					will_target_container: false
 				}
 			: { type: 'disabled' as const }
 	} as TopologyEdge;

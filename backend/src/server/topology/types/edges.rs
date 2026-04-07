@@ -72,6 +72,9 @@ pub enum EdgeViewConfig {
         stroke: EdgeStroke,
         /// When this edge contributes to node highlighting on selection
         highlight_behavior: EdgeHighlightBehavior,
+        /// Whether this edge should be elevated to target an accepting container
+        /// instead of the element inside it
+        will_target_container: bool,
     },
 }
 
@@ -301,6 +304,7 @@ mod tests {
             default_visibility: EdgeDefaultVisibility::Hidden,
             stroke: EdgeStroke::Dashed,
             highlight_behavior: EdgeHighlightBehavior::Always,
+            will_target_container: true,
         };
         let json = serde_json::to_value(active).unwrap();
         assert_eq!(json["type"], "active");
@@ -308,6 +312,7 @@ mod tests {
         assert_eq!(json["default_visibility"], "hidden");
         assert_eq!(json["stroke"], "dashed");
         assert_eq!(json["highlight_behavior"], "always");
+        assert_eq!(json["will_target_container"], true);
         let deserialized: EdgeViewConfig = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized, active);
     }

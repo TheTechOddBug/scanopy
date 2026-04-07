@@ -251,39 +251,42 @@ impl TopologyView {
         use EdgeStroke::*;
         use EdgeTypeDiscriminants::*;
 
-        let active = |affects_layout, visibility, stroke, highlight| EdgeViewConfig::Active {
-            affects_layout,
-            default_visibility: visibility,
-            stroke,
-            highlight_behavior: highlight,
+        let active = |affects_layout, visibility, stroke, highlight, will_target_container| {
+            EdgeViewConfig::Active {
+                affects_layout,
+                default_visibility: visibility,
+                stroke,
+                highlight_behavior: highlight,
+                will_target_container,
+            }
         };
 
         match self {
             Self::L3Logical => match edge_type {
-                Interface => active(true, Visible, Solid, WhenVisible),
-                ServiceVirtualization => active(true, Visible, Solid, WhenVisible),
-                RequestPath => active(false, Visible, Dashed, WhenVisible),
-                HubAndSpoke => active(false, Visible, Dashed, WhenVisible),
-                HostVirtualization => active(false, Hidden, Dashed, WhenVisible),
-                PhysicalLink => active(false, Hidden, Dashed, WhenVisible),
+                Interface => active(true, Visible, Solid, WhenVisible, false),
+                ServiceVirtualization => active(true, Visible, Solid, WhenVisible, true),
+                RequestPath => active(false, Visible, Dashed, WhenVisible, false),
+                HubAndSpoke => active(false, Visible, Dashed, WhenVisible, false),
+                HostVirtualization => active(false, Hidden, Dashed, WhenVisible, true),
+                PhysicalLink => active(false, Hidden, Dashed, WhenVisible, false),
             },
             Self::L2Physical => match edge_type {
-                PhysicalLink => active(true, Visible, Solid, WhenVisible),
-                Interface => active(false, Hidden, Dashed, WhenVisible),
+                PhysicalLink => active(true, Visible, Solid, WhenVisible, false),
+                Interface => active(false, Hidden, Dashed, WhenVisible, false),
                 HostVirtualization | ServiceVirtualization | RequestPath | HubAndSpoke => {
                     EdgeViewConfig::Disabled
                 }
             },
             Self::Infrastructure => match edge_type {
-                HostVirtualization => active(true, Hidden, Dashed, Always),
-                ServiceVirtualization => active(true, Hidden, Dashed, Always),
-                Interface => active(false, Hidden, Dashed, WhenVisible),
+                HostVirtualization => active(true, Hidden, Dashed, Always, true),
+                ServiceVirtualization => active(true, Hidden, Dashed, Always, true),
+                Interface => active(false, Hidden, Dashed, WhenVisible, false),
                 PhysicalLink | RequestPath | HubAndSpoke => EdgeViewConfig::Disabled,
             },
             Self::Application => match edge_type {
-                RequestPath => active(true, Visible, Solid, WhenVisible),
-                HubAndSpoke => active(true, Visible, Solid, WhenVisible),
-                ServiceVirtualization => active(true, Hidden, Dashed, Always),
+                RequestPath => active(true, Visible, Solid, WhenVisible, false),
+                HubAndSpoke => active(true, Visible, Solid, WhenVisible, false),
+                ServiceVirtualization => active(true, Hidden, Dashed, Always, true),
                 Interface | HostVirtualization | PhysicalLink => EdgeViewConfig::Disabled,
             },
         }

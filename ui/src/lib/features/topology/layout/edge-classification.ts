@@ -48,6 +48,12 @@ export function getHighlightBehavior(edge: TopologyEdge): 'when_visible' | 'alwa
 	);
 }
 
+/** Whether this edge should be elevated to target an accepting container. */
+export function willTargetContainer(edge: TopologyEdge): boolean {
+	const vc = getViewConfig(edge);
+	return vc.type === 'active' && vc.will_target_container;
+}
+
 /** Returns the edge types that should be hidden by default for a given view.
  * Reads from view metadata — edge types with default_visibility = 'hidden'. */
 export function getDefaultHiddenEdgeTypes(view: TopologyView): EdgeTypeDiscriminants[] {

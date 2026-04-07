@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-07T00:06:49.335815Z",
-              "id": "6192f1e9-2e07-49e0-918c-52981e78600b",
+              "created_at": "2026-04-07T01:01:09.869865Z",
+              "id": "c905f1b4-ba83-4f50-b35c-5f6a3c2f4ef2",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-07T00:06:49.335815Z"
+              "updated_at": "2026-04-07T01:01:09.869865Z"
             }
           },
           "error": {
@@ -10734,14 +10734,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-07T00:06:49.317131Z",
-                      "id": "8bea0676-26bb-4669-a8d1-60be005c2d7a",
+                      "created_at": "2026-04-07T01:01:09.852635Z",
+                      "id": "70adcf43-1e57-4a48-967d-86c89177a725",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-07T00:06:49.317131Z"
+                      "updated_at": "2026-04-07T01:01:09.852635Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10750,7 +10750,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Beszel Agent",
+                  "service_definition": "Tasmota",
                   "source": {
                     "type": "Manual"
                   },
@@ -11453,14 +11453,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-07T00:06:49.330959Z",
-                  "id": "91ff707f-d9a6-442f-879e-4995c5ca9877",
+                  "created_at": "2026-04-07T01:01:09.865113Z",
+                  "id": "f25e641d-677f-432b-a888-8976e1f49ccc",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-07T00:06:49.330959Z"
+                  "updated_at": "2026-04-07T01:01:09.865113Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11469,7 +11469,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Beszel Agent",
+              "service_definition": "Tasmota",
               "source": {
                 "type": "Manual"
               },
@@ -12744,14 +12744,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-07T00:06:49.317494Z",
-          "id": "cdf4084a-7f6b-429b-9378-7b778cd8a63b",
+          "created_at": "2026-04-07T01:01:09.852981Z",
+          "id": "c43c107c-ddde-484e-9f53-a9efc3c483ee",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-07T00:06:49.317494Z"
+          "updated_at": "2026-04-07T01:01:09.852981Z"
         }
       },
       "BindingBase": {
@@ -13273,7 +13273,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Beszel Agent",
+              "service_definition": "Tasmota",
               "tags": [],
               "virtualization": null
             }
@@ -15016,6 +15016,7 @@
               "default_visibility",
               "stroke",
               "highlight_behavior",
+              "will_target_container",
               "type"
             ],
             "properties": {
@@ -15040,6 +15041,10 @@
                 "enum": [
                   "active"
                 ]
+              },
+              "will_target_container": {
+                "type": "boolean",
+                "description": "Whether this edge should be elevated to target an accepting container\ninstead of the element inside it"
               }
             }
           }
@@ -15903,14 +15908,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-07T00:06:49.316641Z",
-                  "id": "b6f79130-91c4-4bcd-8d69-d07ccdcdd9aa",
+                  "created_at": "2026-04-07T01:01:09.852138Z",
+                  "id": "3f0934b9-29d7-4591-ae97-4b75a2332c5f",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-07T00:06:49.316641Z"
+                  "updated_at": "2026-04-07T01:01:09.852138Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15919,7 +15924,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Beszel Agent",
+              "service_definition": "Tasmota",
               "source": {
                 "type": "Manual"
               },
@@ -17078,10 +17083,6 @@
               "size"
             ],
             "properties": {
-              "absorbs_edges": {
-                "type": "boolean",
-                "description": "When true, edges targeting elements inside this container are elevated to target\nthe container itself. Set by rules that declare `absorbs_edges` (e.g. MergeDockerBridges, ByStack)."
-              },
               "element_rule_id": {
                 "type": [
                   "string",
@@ -17105,6 +17106,10 @@
               },
               "size": {
                 "$ref": "#/components/schemas/Uxy"
+              },
+              "will_accept_edges": {
+                "type": "boolean",
+                "description": "When true, this container accepts edges with `will_target_container`, causing\nthem to visually attach here instead of at elements inside."
               }
             }
           }
@@ -17910,14 +17915,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-07T00:06:49.305983Z",
-                        "id": "ad4034a0-0f70-4fab-ac6c-d70292ac94ae",
+                        "created_at": "2026-04-07T01:01:09.841439Z",
+                        "id": "3812997e-150a-4cec-a9d5-c1d48a7f2ae0",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-07T00:06:49.305983Z"
+                        "updated_at": "2026-04-07T01:01:09.841439Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17926,7 +17931,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Beszel Agent",
+                    "service_definition": "Tasmota",
                     "source": {
                       "type": "Manual"
                     },
@@ -18003,14 +18008,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-07T00:06:49.329589Z",
-                    "id": "0fd5d9ab-068a-412a-be6d-b8ec9b818a02",
+                    "created_at": "2026-04-07T01:01:09.863818Z",
+                    "id": "f3dd29e8-6e60-4d5f-b981-90b44b017dcf",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-07T00:06:49.329589Z"
+                    "updated_at": "2026-04-07T01:01:09.863818Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18019,7 +18024,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Beszel Agent",
+                "service_definition": "Tasmota",
                 "source": {
                   "type": "Manual"
                 },
@@ -19179,14 +19184,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-07T00:06:49.317370Z",
-              "id": "8faa2c52-605c-404e-b65d-89bca6d85356",
+              "created_at": "2026-04-07T01:01:09.852857Z",
+              "id": "efaa77e0-13d6-4dc9-8be1-503af2ea02bb",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-07T00:06:49.317370Z"
+              "updated_at": "2026-04-07T01:01:09.852857Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19195,7 +19200,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Beszel Agent",
+          "service_definition": "Tasmota",
           "source": {
             "type": "Manual"
           },

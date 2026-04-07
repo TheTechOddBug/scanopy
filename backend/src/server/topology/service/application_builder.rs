@@ -122,7 +122,7 @@ impl ViewBuilder for ApplicationBuilder {
                     size: Default::default(),
                     header: Some(tag.base.name.clone()),
                     element_rule_id: None,
-                    absorbs_edges: false,
+                    will_accept_edges: false,
                 });
 
                 for service in services {
@@ -154,7 +154,7 @@ impl ViewBuilder for ApplicationBuilder {
                     size: Default::default(),
                     header: Some("Ungrouped".to_string()),
                     element_rule_id: None,
-                    absorbs_edges: false,
+                    will_accept_edges: false,
                 });
 
                 for service in &ungrouped_services {
@@ -205,7 +205,7 @@ impl ViewBuilder for ApplicationBuilder {
                     size: Default::default(),
                     header: Some(format!("{}", category)),
                     element_rule_id: None,
-                    absorbs_edges: false,
+                    will_accept_edges: false,
                 });
 
                 for service in services {

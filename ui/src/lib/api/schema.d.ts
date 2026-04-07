@@ -2862,14 +2862,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-07T00:06:49.335632Z",
-             *       "id": "0ff2c728-d9b5-4660-a815-b5ba9800fabb",
+             *       "created_at": "2026-04-07T01:01:09.869863Z",
+             *       "id": "1ca14dee-942e-408d-ba55-ca1bcae543ef",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-07T00:06:49.335632Z"
+             *       "updated_at": "2026-04-07T01:01:09.869863Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3156,14 +3156,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-07T00:06:49.317113Z",
-             *               "id": "bb09d833-b560-43d8-a223-751f09096759",
+             *               "created_at": "2026-04-07T01:01:09.852610Z",
+             *               "id": "34598296-3404-4ec8-87c1-5ec2aae644af",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-07T00:06:49.317113Z"
+             *               "updated_at": "2026-04-07T01:01:09.852610Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3172,7 +3172,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Beszel Agent",
+             *           "service_definition": "Tasmota",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3428,14 +3428,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-07T00:06:49.330923Z",
-             *           "id": "4214e152-d07c-4877-ad04-ccdead507386",
+             *           "created_at": "2026-04-07T01:01:09.865078Z",
+             *           "id": "e27c3fc5-6a96-44af-b27d-72d0ed816302",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-07T00:06:49.330923Z"
+             *           "updated_at": "2026-04-07T01:01:09.865078Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3444,7 +3444,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Beszel Agent",
+             *       "service_definition": "Tasmota",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3772,14 +3772,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-07T00:06:49.317470Z",
-         *       "id": "6af9ac18-59c5-4e57-b9b9-fe12e18841dd",
+         *       "created_at": "2026-04-07T01:01:09.852952Z",
+         *       "id": "8f406d4a-3615-4cc8-9c03-b0c3a6a1c819",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-07T00:06:49.317470Z"
+         *       "updated_at": "2026-04-07T01:01:09.852952Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3964,7 +3964,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Beszel Agent",
+         *           "service_definition": "Tasmota",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4582,6 +4582,11 @@ export interface components {
             stroke: components["schemas"]["EdgeStroke"];
             /** @enum {string} */
             type: "active";
+            /**
+             * @description Whether this edge should be elevated to target an accepting container
+             *     instead of the element inside it
+             */
+            will_target_container: boolean;
         };
         ElementEntityType: {
             /** @enum {string} */
@@ -4833,14 +4838,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-07T00:06:49.316634Z",
-         *               "id": "7a3bcc13-d48e-43d1-b228-23cb61feb0ef",
+         *               "created_at": "2026-04-07T01:01:09.852131Z",
+         *               "id": "ab32292d-f108-409d-b85d-ced2339e849c",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-07T00:06:49.316634Z"
+         *               "updated_at": "2026-04-07T01:01:09.852131Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4849,7 +4854,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Beszel Agent",
+         *           "service_definition": "Tasmota",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5288,11 +5293,6 @@ export interface components {
         };
         Node: components["schemas"]["NodeType"] & {
             /**
-             * @description When true, edges targeting elements inside this container are elevated to target
-             *     the container itself. Set by rules that declare `absorbs_edges` (e.g. MergeDockerBridges, ByStack).
-             */
-            absorbs_edges?: boolean;
-            /**
              * Format: uuid
              * @description ID of the element rule that created this container (for NestedTag/NestedServiceCategory)
              */
@@ -5302,6 +5302,11 @@ export interface components {
             id: string;
             position: components["schemas"]["Ixy"];
             size: components["schemas"]["Uxy"];
+            /**
+             * @description When true, this container accepts edges with `will_target_container`, causing
+             *     them to visually attach here instead of at elements inside.
+             */
+            will_accept_edges?: boolean;
         };
         NodeType: {
             /**
@@ -5918,14 +5923,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-07T00:06:49.317348Z",
-         *           "id": "fa47049b-0d12-4f65-b4c4-14dfeda44e6b",
+         *           "created_at": "2026-04-07T01:01:09.852832Z",
+         *           "id": "cb439cb7-3586-4c62-ab3c-de66c5ae6067",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-07T00:06:49.317348Z"
+         *           "updated_at": "2026-04-07T01:01:09.852832Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5934,7 +5939,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Beszel Agent",
+         *       "service_definition": "Tasmota",
          *       "source": {
          *         "type": "Manual"
          *       },

@@ -275,10 +275,29 @@ function buildElkGraph(
 		}
 	}
 
-	// Sort children: elements grouped by target, then elements without edges, then subcontainers.
-	// Within target groups, elements connecting to the same target are adjacent.
-	// Group order is by first target ID (arbitrary but stable) — ELK will reorder
-	// the target containers to match via crossing minimization.
+	// For L2: count Up ports inside each subcontainer for sorting
+	const subcontainerUpCount = new Map<string, number>();
+	if (useLayeredChildren) {
+		for (const [subId] of parentContainerMap) {
+			const sub = containers.get(subId);
+			if (!sub?.children) continue;
+			let upCount = 0;
+			for (const child of sub.children) {
+				if (containerIds.has(child.id)) continue;
+				const ifEntryId = (() => {
+					const node = input.nodes.find((n) => n.id === child.id);
+					return node ? ((node as Record<string, unknown>).if_entry_id as string | undefined) : undefined;
+				})();
+				const ifEntry = ifEntryId ? input.topology?.if_entries.find((e) => e.id === ifEntryId) : undefined;
+				if (ifEntry?.oper_status === 'Up') upCount++;
+			}
+			subcontainerUpCount.set(subId, upCount);
+		}
+	}
+
+	// Sort children: for L2 views, subcontainers (with connected Up ports) come FIRST
+	// so edges don't traverse through disconnected Down ports.
+	// For other views: elements grouped by target, then subcontainers last.
 	for (const [containerId, container] of containers) {
 		if (!container.children || container.children.length < 2) continue;
 		if (parentContainerMap.has(containerId)) continue;
@@ -286,6 +305,21 @@ function buildElkGraph(
 		container.children.sort((a, b) => {
 			const aIsSub = containerIds.has(a.id) ? 1 : 0;
 			const bIsSub = containerIds.has(b.id) ? 1 : 0;
+
+			if (useLayeredChildren) {
+				// L2 sort: subcontainers first (sorted by Up count desc), then Up elements, then Down elements
+				if (aIsSub !== bIsSub) return bIsSub - aIsSub; // subcontainers first
+				if (aIsSub && bIsSub) {
+					// Both subcontainers: sort by Up port count descending
+					const aUp = subcontainerUpCount.get(a.id) ?? 0;
+					const bUp = subcontainerUpCount.get(b.id) ?? 0;
+					return bUp - aUp;
+				}
+				// Both elements: already sorted by status in elementsPerContainer
+				return 0;
+			}
+
+			// Default sort for other views
 			if (aIsSub !== bIsSub) return aIsSub - bIsSub;
 			if (aIsSub && bIsSub) return a.id.localeCompare(b.id);
 

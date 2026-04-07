@@ -299,6 +299,8 @@ fn default_element_rules() -> Vec<GraphRule<ElementRule>> {
         }),
         GraphRule::new(ElementRule::ByVirtualizer),
         GraphRule::new(ElementRule::ByStack),
+        GraphRule::new(ElementRule::ByTrunkPort),
+        GraphRule::new(ElementRule::ByVLAN),
     ]
 }
 

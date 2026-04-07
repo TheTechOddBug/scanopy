@@ -7,10 +7,15 @@
 	import InspectorEdgeHostVirtualization from './edges/InspectorEdgeHostVirtualization.svelte';
 	import InspectorEdgeServiceVirtualization from './edges/InspectorEdgeServiceVirtualization.svelte';
 	import InspectorEdgePhysicalLink from './edges/InspectorEdgePhysicalLink.svelte';
+	import InspectorEdgeAggregated from './edges/InspectorEdgeAggregated.svelte';
 
 	let { edge }: { edge: Edge } = $props();
 
-	let edgeData = $derived(edge.data as TopologyEdge | undefined);
+	let edgeData = $derived(
+		edge.data as
+			| (TopologyEdge & { isAggregated?: boolean; originalEdges?: TopologyEdge[] })
+			| undefined
+	);
 	let view = $derived($activeView);
 </script>
 
@@ -19,6 +24,8 @@
 		<div class="space-y-3">
 			<p class="text-tertiary text-sm">Edge data not available</p>
 		</div>
+	{:else if edgeData.isAggregated && edgeData.originalEdges}
+		<InspectorEdgeAggregated edges={edgeData.originalEdges} />
 	{:else if edgeData.edge_type === 'HubAndSpoke' || edgeData.edge_type === 'RequestPath'}
 		<InspectorEdgeGroup
 			dependencyId={edgeData.dependency_id}

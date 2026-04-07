@@ -8,12 +8,9 @@
 		type ResizeDragEvent,
 		type ResizeParams
 	} from '@xyflow/svelte';
-	import { ChevronDown, ChevronRight } from 'lucide-svelte';
-	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Color, ColorStyle } from '$lib/shared/utils/styling';
 	import { serviceDefinitions, containerTypes, views } from '$lib/shared/stores/metadata';
-	import { topology_elementCount, topology_ungroupedCount } from '$lib/paraglide/messages';
 	import { activeView } from '../../queries';
 	import {
 		useTopologiesQuery,
@@ -39,6 +36,7 @@
 	import type { Node, Edge } from '@xyflow/svelte';
 	import { createIconComponent } from '$lib/shared/utils/styling';
 	import type { IconComponent } from '$lib/shared/utils/types';
+	import ContainerHeader, { type SubgroupRow } from './ContainerHeader.svelte';
 
 	// Subscribe to connectedNodeIds for reactivity
 	let connectedNodes = $state(get(connectedNodeIds));
@@ -227,6 +225,65 @@
 		return `box-shadow: 0 0 0 3px ${ch.rgb};`;
 	});
 
+	// Pre-compute resolved subgroup rows for collapsed-root variant
+	let resolvedSubgroups: SubgroupRow[] = $derived.by(() => {
+		if (!isSubcontainer && isCollapsed && subgroupSummaries.length > 0) {
+			return subgroupSummaries.map((summary) => {
+				const groupNode = topology?.nodes.find((n) => n.id === summary.groupId);
+				const sHeader = groupNode?.header ?? '';
+				const ruleId = (groupNode as Record<string, unknown>)?.element_rule_id as
+					| string
+					| undefined;
+				const rule = ruleId
+					? ($topologyOptions.request.element_rules ?? []).find(
+							(r) => (r as { id: string }).id === ruleId
+						)
+					: null;
+				const groupServiceDef = (groupNode as Record<string, unknown>)
+					?.associated_service_definition as string | undefined;
+				const groupLogoComponent = groupServiceDef
+					? serviceDefinitions.getIconComponent(groupServiceDef)
+					: null;
+
+				const labels: { label: string; color: Color }[] = (() => {
+					if (!rule) return [];
+					const r = (rule as { rule: Record<string, unknown> }).rule;
+					if (typeof r === 'string') return [];
+					if ('ByServiceCategory' in r) {
+						return ((r.ByServiceCategory as { categories?: string[] }).categories ?? []).map(
+							(cat) => {
+								const svc = topology?.services?.find(
+									(s) => serviceDefinitions.getCategory(s.service_definition) === cat
+								);
+								return {
+									label: cat,
+									color: (svc
+										? serviceDefinitions.getColorHelper(svc.service_definition).color
+										: 'Gray') as Color
+								};
+							}
+						);
+					}
+					if ('ByTag' in r) {
+						return ((r.ByTag as { tag_ids?: string[] }).tag_ids ?? []).map((tagId) => {
+							const tag = topology?.entity_tags?.find((t) => t.id === tagId);
+							return { label: tag?.name ?? tagId, color: (tag?.color ?? 'Gray') as Color };
+						});
+					}
+					return [];
+				})();
+
+				return {
+					logoComponent: groupLogoComponent,
+					headerText: sHeader,
+					labels,
+					childCount: summary.childCount
+				};
+			});
+		}
+		return [];
+	});
+
 	const viewport = useViewport();
 	let resizeHandleZoomLevel = $derived(viewport.current.zoom > 0.5);
 
@@ -292,175 +349,74 @@
 >
 	<!-- TITLE: External (card/pill above container) -->
 	{#if titleStyle === 'External' && (headerText || isCollapsible)}
-		<div
-			class="nopan nodrag card text-secondary z-100 absolute -top-10 left-0 flex cursor-pointer items-center gap-1 px-2 py-1 shadow-lg backdrop-blur-sm"
-			role="button"
-			tabindex={-1}
-			onclick={handleChevronClick}
-			onkeydown={(e) => {
-				if (e.key === 'Enter' || e.key === ' ') handleChevronClick(e);
-			}}
-			onmousedown={(e) => e.stopPropagation()}
-			onpointerdown={(e) => e.stopPropagation()}
-		>
-			{#if isCollapsible}
-				{#if isCollapsed}
-					<ChevronRight class="text-secondary h-4 w-4 flex-shrink-0" />
-				{:else}
-					<ChevronDown class="text-secondary h-4 w-4 flex-shrink-0" />
-				{/if}
-			{/if}
-
-			{#if iconComponent}
-				{@const IconComp = iconComponent}
-				<IconComp class={`h-5 w-5 ${colorHelper.icon}`} fill={fillIcon ? 'currentColor' : 'none'} />
-			{/if}
-
-			<span class="text-s text-secondary whitespace-nowrap font-medium">
-				{headerText}
-			</span>
-		</div>
+		<ContainerHeader
+			variant="external"
+			{isCollapsed}
+			{isCollapsible}
+			{headerText}
+			{iconComponent}
+			{logoComponent}
+			{fillIcon}
+			{colorHelper}
+			{groupLabels}
+			{childCount}
+			{elementLabel}
+			onToggleCollapse={handleChevronClick}
+		/>
 	{/if}
 
 	<!-- TITLE: Inline (inside container top padding) -->
 	{#if titleStyle === 'Inline' && !isCollapsed && (headerText || groupLabels.length > 0)}
-		<div
-			class="nopan nodrag text-secondary absolute left-2 top-2 flex items-center gap-1 rounded-t px-2 py-0.5"
-		>
-			{#if isCollapsible}
-				<ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
-			{/if}
-			{#if logoComponent}
-				{@const LogoComp = logoComponent}
-				<LogoComp class="h-4 w-4 flex-shrink-0" />
-			{/if}
-			{#if headerText}
-				<span class="text-tertiary whitespace-nowrap text-xs font-medium">
-					{headerText}{groupLabels.length > 0 ? ':' : ''}
-				</span>
-			{/if}
-			{#each groupLabels as pill (pill.label)}
-				<Tag label={pill.label} color={pill.color} />
-			{/each}
-		</div>
+		<ContainerHeader
+			variant="inline"
+			{isCollapsed}
+			{isCollapsible}
+			{headerText}
+			{iconComponent}
+			{logoComponent}
+			{fillIcon}
+			{colorHelper}
+			{groupLabels}
+			{childCount}
+			{elementLabel}
+			onToggleCollapse={handleChevronClick}
+		/>
 	{/if}
 
 	<!-- COLLAPSED STATE -->
 	{#if isCollapsed}
 		{#if isSubcontainer}
-			<!-- Collapsed subcontainer: compact inline header with dashed border -->
-			<div
-				class="nopan nodrag flex items-center gap-1 overflow-hidden rounded-lg border border-dashed border-gray-300 px-3 py-2 dark:border-gray-600"
-				style="background: var(--color-topology-subgroup-bg);"
-			>
-				<ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
-				{#if iconComponent}
-					{@const IconComp = iconComponent}
-					<IconComp
-						class={`h-3.5 w-3.5 flex-shrink-0 ${colorHelper.icon}`}
-						fill={fillIcon ? 'currentColor' : 'none'}
-					/>
-				{/if}
-				{#if logoComponent}
-					{@const LogoComp = logoComponent}
-					<LogoComp class="h-4 w-4 flex-shrink-0" />
-				{/if}
-				{#if headerText}
-					<span class="text-tertiary whitespace-nowrap text-xs font-medium">
-						{headerText}{groupLabels.length > 0 ? ':' : ''}
-					</span>
-				{/if}
-				{#each groupLabels as pill (pill.label)}
-					<Tag label={pill.label} color={pill.color} />
-				{/each}
-				<span class="text-tertiary whitespace-nowrap text-xs">
-					({topology_elementCount({ count: childCount, label: elementLabel })})
-				</span>
-			</div>
+			<ContainerHeader
+				variant="collapsed-sub"
+				{isCollapsed}
+				{isCollapsible}
+				{headerText}
+				{iconComponent}
+				{logoComponent}
+				{fillIcon}
+				{colorHelper}
+				{groupLabels}
+				{childCount}
+				{elementLabel}
+				onToggleCollapse={handleChevronClick}
+			/>
 		{:else}
-			<!-- Collapsed root container: summary with subcontainer info -->
-			{@const subgroupTotal = subgroupSummaries.reduce((sum, s) => sum + s.childCount, 0)}
-			{@const ungroupedCount = childCount - subgroupTotal}
-			<div
-				class="rounded-xl border border-dashed border-gray-400 text-center text-sm font-semibold shadow-lg dark:border-gray-500"
-				style="background: var(--color-topology-node-bg); position: relative; overflow: visible; transition: box-shadow 0.15s ease-in-out; {tagHoverRingStyle}"
-			>
-				<div class="flex min-w-fit flex-col items-center gap-2 whitespace-nowrap px-6 py-4">
-					<span class="text-secondary text-base font-medium underline">
-						{topology_elementCount({ count: childCount, label: elementLabel })}
-					</span>
-					{#if ungroupedCount > 0 && subgroupSummaries.length > 0}
-						<span class="text-tertiary text-xs">
-							{topology_ungroupedCount({ count: ungroupedCount, label: elementLabel })}
-						</span>
-					{/if}
-					{#each subgroupSummaries as summary (summary.groupId)}
-						{@const groupNode = topology?.nodes.find((n) => n.id === summary.groupId)}
-						{@const sHeader = groupNode?.header ?? ''}
-						{@const ruleId = (groupNode as Record<string, unknown>)?.element_rule_id as
-							| string
-							| undefined}
-						{@const rule = ruleId
-							? ($topologyOptions.request.element_rules ?? []).find(
-									(r) => (r as { id: string }).id === ruleId
-								)
-							: null}
-						{@const groupServiceDef = (groupNode as Record<string, unknown>)
-							?.associated_service_definition as string | undefined}
-						{@const groupLogoComponent = groupServiceDef
-							? serviceDefinitions.getIconComponent(groupServiceDef)
-							: null}
-						{@const labels = (() => {
-							if (!rule) return [];
-							const r = (rule as { rule: Record<string, unknown> }).rule;
-							if (typeof r === 'string') return [];
-							if ('ByServiceCategory' in r) {
-								return ((r.ByServiceCategory as { categories?: string[] }).categories ?? []).map(
-									(cat) => {
-										const svc = topology?.services?.find(
-											(s) => serviceDefinitions.getCategory(s.service_definition) === cat
-										);
-										return {
-											label: cat,
-											color: (svc
-												? serviceDefinitions.getColorHelper(svc.service_definition).color
-												: 'Gray') as Color
-										};
-									}
-								);
-							}
-							if ('ByTag' in r) {
-								return ((r.ByTag as { tag_ids?: string[] }).tag_ids ?? []).map((tagId) => {
-									const tag = topology?.entity_tags?.find((t) => t.id === tagId);
-									return { label: tag?.name ?? tagId, color: (tag?.color ?? 'Gray') as Color };
-								});
-							}
-							return [];
-						})()}
-						<div
-							class="flex items-center gap-1 whitespace-nowrap rounded-md border border-dashed border-gray-300 px-2 py-1 dark:border-gray-600"
-							style="background: var(--color-topology-subgroup-bg);"
-						>
-							{#if groupLogoComponent}
-								{@const GroupLogo = groupLogoComponent}
-								<GroupLogo class="h-4 w-4 flex-shrink-0" />
-							{/if}
-							{#if sHeader}
-								<span class="text-tertiary text-xs">{sHeader}{labels.length > 0 ? ':' : ''}</span>
-							{/if}
-							{#each labels as pill (pill.label)}
-								<Tag label={pill.label} color={pill.color} />
-							{/each}
-							<span class="text-tertiary text-xs"
-								>({topology_elementCount({
-									count: summary.childCount,
-									label: elementLabel
-								})})</span
-							>
-						</div>
-					{/each}
-				</div>
-			</div>
+			<ContainerHeader
+				variant="collapsed-root"
+				{isCollapsed}
+				{isCollapsible}
+				{headerText}
+				{iconComponent}
+				{logoComponent}
+				{fillIcon}
+				{colorHelper}
+				{groupLabels}
+				{childCount}
+				{elementLabel}
+				onToggleCollapse={handleChevronClick}
+				subgroupSummaries={resolvedSubgroups}
+				{tagHoverRingStyle}
+			/>
 		{/if}
 	{:else}
 		<!-- EXPANDED STATE -->

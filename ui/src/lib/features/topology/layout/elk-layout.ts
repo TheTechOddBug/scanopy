@@ -133,15 +133,18 @@ function buildElkGraph(
 		}
 	}
 
-	// Nest sub-group containers inside their parent containers
+	// Nest sub-group containers inside their parent containers.
+	// For L2: determine edge direction per subcontainer for horizontal priority.
+	const subEdgeDirection = new Map<string, 'left' | 'right'>();
+
 	for (const [childId, parentId] of parentContainerMap) {
 		const parent = containers.get(parentId);
 		const child = containers.get(childId);
 		if (parent && child && parent.children) {
 			if (useLayeredChildren && child.layoutOptions) {
-				// High priority so parent's GROUP_DEC packs subcontainers first (top)
-				child.layoutOptions['elk.priority'] = '100';
-				// Subcontainers use SIMPLE packing to preserve port insertion order
+				// Left-connecting subs get higher priority = packed first = leftmost
+				const dir = subEdgeDirection.get(childId);
+				child.layoutOptions['elk.priority'] = dir === 'left' ? '200' : dir === 'right' ? '50' : '100';
 				child.layoutOptions['elk.box.packingMode'] = 'SIMPLE';
 			}
 			parent.children.push(child);
@@ -246,6 +249,28 @@ function buildElkGraph(
 		}
 		return rootId;
 	};
+
+	// L2: determine edge direction per subcontainer for horizontal priority
+	if (useLayeredChildren) {
+		for (const edge of input.edges) {
+			if (!affectsLayout(edge)) continue;
+			const srcRoot = resolveRoot(edge.source);
+			const tgtRoot = resolveRoot(edge.target);
+			if (!srcRoot || !tgtRoot || srcRoot === tgtRoot) continue;
+			const srcImm = elementToImmediateContainer.get(edge.source);
+			if (srcImm && parentContainerMap.has(srcImm)) subEdgeDirection.set(srcImm, 'right');
+			const tgtImm = elementToImmediateContainer.get(edge.target);
+			if (tgtImm && parentContainerMap.has(tgtImm)) subEdgeDirection.set(tgtImm, 'left');
+		}
+		// Update subcontainer priorities based on edge direction
+		for (const [childId] of parentContainerMap) {
+			const child = containers.get(childId);
+			if (child?.layoutOptions) {
+				const dir = subEdgeDirection.get(childId);
+				if (dir) child.layoutOptions['elk.priority'] = dir === 'left' ? '200' : '50';
+			}
+		}
+	}
 
 	// Build element → target root container(s) mapping for edge-aware sorting.
 	// Elements connecting to the same target should be adjacent in the grid so
@@ -667,9 +692,9 @@ function buildElkGraph(
 				'elk.algorithm': 'layered',
 				'elk.direction': 'RIGHT',
 				'elk.edgeRouting': 'POLYLINE',
-				'elk.spacing.nodeNode': '25',
-				'elk.layered.spacing.nodeNodeBetweenLayers': '60',
-				'elk.layered.spacing.edgeNodeBetweenLayers': '30',
+				'elk.spacing.nodeNode': '50',
+				'elk.layered.spacing.nodeNodeBetweenLayers': '75',
+				'elk.layered.spacing.edgeNodeBetweenLayers': '25',
 				'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
 				'elk.layered.crossingMinimization.forceNodeModelOrder': 'true',
 				'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
@@ -686,11 +711,6 @@ function buildElkGraph(
 		edges
 	};
 
-	if (useLayeredChildren) {
-			'containers:', rootContainers.length,
-			'edges:', edges.length,
-			'rootsWithCrossChild:', Array.from(rootsWithCrossChildEdges));
-	}
 
 	return { graph, containerIds };
 }
@@ -1149,7 +1169,31 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 	if (input.topology?.options?.request?.view === 'L2Physical' && elementPositions.size > 0) {
 	}
 	const result2 = await elk.layout(graph2);
-	if (input.topology?.options?.request?.view === 'L2Physical' && elementPositions.size > 0) {
+
+	// L2: top-align layers by shifting each layer's top node to the same Y.
+	// ELK centers layers independently, causing vertical misalignment.
+	if (input.topology?.options?.request?.view === 'L2Physical' && result2.children) {
+		// Group children by X-band (layer) — allow some tolerance for rounding
+		const layers = new Map<number, ElkNode[]>();
+		for (const child of result2.children) {
+			const layerX = Math.round((child.x ?? 0) / 50) * 50;
+			if (!layers.has(layerX)) layers.set(layerX, []);
+			layers.get(layerX)!.push(child);
+		}
+		// Top-align each layer and re-stack with consistent 50px gaps
+		const SNAP = 25;
+		const GAP = 50;
+		const TOP = 25;
+		for (const [, layerNodes] of layers) {
+			layerNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
+			let y = TOP;
+			for (const node of layerNodes) {
+				// Snap Y to grid, then compute next from snapped position
+				node.y = Math.ceil(y / SNAP) * SNAP;
+				y = node.y + (node.height ?? 0) + GAP;
+			}
+		}
 	}
+
 	return mapElkResults(result2, cids2, input);
 }

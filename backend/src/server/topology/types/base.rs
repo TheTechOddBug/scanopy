@@ -289,6 +289,8 @@ fn default_container_rules() -> HashMap<TopologyView, Vec<GraphRule<ContainerRul
 
 fn default_element_rules() -> Vec<GraphRule<ElementRule>> {
     vec![
+        GraphRule::new(ElementRule::ByTrunkPort),
+        GraphRule::new(ElementRule::ByVLAN),
         GraphRule::new(ElementRule::ByServiceCategory {
             categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
             title: Some("Network Services".into()),
@@ -299,8 +301,6 @@ fn default_element_rules() -> Vec<GraphRule<ElementRule>> {
         }),
         GraphRule::new(ElementRule::ByVirtualizer),
         GraphRule::new(ElementRule::ByStack),
-        GraphRule::new(ElementRule::ByTrunkPort),
-        GraphRule::new(ElementRule::ByVLAN),
     ]
 }
 

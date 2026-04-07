@@ -135,7 +135,7 @@
 				}, [])
 			: elementRules.map((_, i) => i)
 	);
-	let hiddenCount = $derived(elementRules.length - visibleElementRules.length);
+	let disabledCount = $derived(elementRules.filter((r) => !isElementRuleApplicable(r)).length);
 
 	// Service categories available in topology
 	let serviceCategoriesWithColors = $derived.by(() => {
@@ -516,13 +516,13 @@
 		<button
 			type="button"
 			class="btn-icon flex items-center gap-1 text-xs"
-			class:opacity-50={hiddenCount === 0}
-			disabled={hiddenCount === 0}
-			title={hiddenCount === 0
+			class:opacity-50={disabledCount === 0}
+			disabled={disabledCount === 0}
+			title={disabledCount === 0
 				? topology_noHiddenRules()
 				: hideDisabledElementRules
 					? topology_showDisabledRules()
-					: topology_hideDisabledRules({ count: String(hiddenCount) })}
+					: topology_hideDisabledRules({ count: String(disabledCount) })}
 			onclick={() => (hideDisabledElementRules = !hideDisabledElementRules)}
 		>
 			{#if hideDisabledElementRules}
@@ -530,8 +530,8 @@
 			{:else}
 				<Eye size={14} />
 			{/if}
-			{#if hiddenCount > 0}
-				<span class="text-tertiary">({hiddenCount})</span>
+			{#if disabledCount > 0}
+				<span class="text-tertiary">({disabledCount})</span>
 			{/if}
 		</button>
 	{/snippet}

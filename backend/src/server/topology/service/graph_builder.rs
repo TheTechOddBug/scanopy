@@ -454,7 +454,7 @@ impl GraphBuilder {
                     None
                 };
 
-                let absorbs_edges = self.consolidated_docker_subnets.contains_key(subnet_id);
+                let will_accept_edges = self.consolidated_docker_subnets.contains_key(subnet_id);
                 Node {
                     id: *subnet_id,
                     node_type: NodeType::Container {
@@ -469,7 +469,7 @@ impl GraphBuilder {
                     size: Uxy { x: 0, y: 0 },
                     header,
                     element_rule_id: None,
-                    absorbs_edges,
+                    will_accept_edges,
                 }
             })
             .collect()

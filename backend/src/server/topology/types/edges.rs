@@ -42,6 +42,19 @@ pub enum EdgeStroke {
     Dashed,
 }
 
+/// Controls when an edge contributes to node highlighting on selection
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum EdgeHighlightBehavior {
+    /// Highlights connected nodes when the edge is visible (not hidden by toggle)
+    #[default]
+    WhenVisible,
+    /// Always highlights connected nodes regardless of visibility
+    Always,
+    /// Never highlights connected nodes
+    Never,
+}
+
 /// Per-view configuration for an edge: disabled (not in this view) or active with properties
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -57,6 +70,11 @@ pub enum EdgeViewConfig {
         default_visibility: EdgeDefaultVisibility,
         /// Visual stroke style
         stroke: EdgeStroke,
+        /// When this edge contributes to node highlighting on selection
+        highlight_behavior: EdgeHighlightBehavior,
+        /// Whether this edge should be elevated to target an accepting container
+        /// instead of the element inside it
+        will_target_container: bool,
     },
 }
 
@@ -285,12 +303,16 @@ mod tests {
             affects_layout: true,
             default_visibility: EdgeDefaultVisibility::Hidden,
             stroke: EdgeStroke::Dashed,
+            highlight_behavior: EdgeHighlightBehavior::Always,
+            will_target_container: true,
         };
         let json = serde_json::to_value(active).unwrap();
         assert_eq!(json["type"], "active");
         assert_eq!(json["affects_layout"], true);
         assert_eq!(json["default_visibility"], "hidden");
         assert_eq!(json["stroke"], "dashed");
+        assert_eq!(json["highlight_behavior"], "always");
+        assert_eq!(json["will_target_container"], true);
         let deserialized: EdgeViewConfig = serde_json::from_value(json).unwrap();
         assert_eq!(deserialized, active);
     }

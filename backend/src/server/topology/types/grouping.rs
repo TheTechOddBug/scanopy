@@ -52,7 +52,7 @@ impl ContainerRule {
 
     /// Whether edges targeting elements inside containers created by this rule
     /// should be elevated to target the container itself.
-    pub fn absorbs_edges(&self) -> bool {
+    pub fn will_accept_edges(&self) -> bool {
         matches!(self, ContainerRule::MergeDockerBridges)
     }
 }
@@ -102,7 +102,7 @@ impl TypeMetadataProvider for ContainerRule {
         serde_json::json!({
             "is_user_editable": matches!(self, ContainerRule::MergeDockerBridges),
             "views": self.applicable_views(),
-            "absorbs_edges": self.absorbs_edges(),
+            "will_accept_edges": self.will_accept_edges(),
         })
     }
 }
@@ -127,7 +127,7 @@ pub enum ElementRule {
 impl ElementRule {
     /// Whether edges targeting elements inside subcontainers created by this rule
     /// should be elevated to target the subcontainer itself.
-    pub fn absorbs_edges(&self) -> bool {
+    pub fn will_accept_edges(&self) -> bool {
         matches!(self, ElementRule::ByStack | ElementRule::ByVirtualizer)
     }
 
@@ -199,7 +199,7 @@ impl TypeMetadataProvider for ElementRule {
         serde_json::json!({
             "is_user_editable": true,
             "views": self.applicable_views(),
-            "absorbs_edges": self.absorbs_edges(),
+            "will_accept_edges": self.will_accept_edges(),
         })
     }
 }
@@ -255,26 +255,26 @@ mod tests {
     use crate::server::topology::types::base::TopologyRequestOptions;
 
     #[test]
-    fn test_absorbs_edges_in_metadata() {
+    fn test_will_accept_edges_in_metadata() {
         let merge = ContainerRule::MergeDockerBridges;
-        assert!(merge.absorbs_edges());
+        assert!(merge.will_accept_edges());
         let meta = merge.metadata();
-        assert_eq!(meta["absorbs_edges"], true);
+        assert_eq!(meta["will_accept_edges"], true);
 
         let by_subnet = ContainerRule::BySubnet;
-        assert!(!by_subnet.absorbs_edges());
-        assert_eq!(by_subnet.metadata()["absorbs_edges"], false);
+        assert!(!by_subnet.will_accept_edges());
+        assert_eq!(by_subnet.metadata()["will_accept_edges"], false);
 
         let by_stack = ElementRule::ByStack;
-        assert!(by_stack.absorbs_edges());
-        assert_eq!(by_stack.metadata()["absorbs_edges"], true);
+        assert!(by_stack.will_accept_edges());
+        assert_eq!(by_stack.metadata()["will_accept_edges"], true);
 
         let by_tag = ElementRule::ByTag {
             tag_ids: vec![],
             title: None,
         };
-        assert!(!by_tag.absorbs_edges());
-        assert_eq!(by_tag.metadata()["absorbs_edges"], false);
+        assert!(!by_tag.will_accept_edges());
+        assert_eq!(by_tag.metadata()["will_accept_edges"], false);
     }
 
     #[test]

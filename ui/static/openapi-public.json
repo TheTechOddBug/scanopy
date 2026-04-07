@@ -9828,14 +9828,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-06T21:15:47.937507Z",
-              "id": "6bc659a4-0634-43f7-9686-c5edd45e9ebf",
+              "created_at": "2026-04-07T01:01:09.869865Z",
+              "id": "c905f1b4-ba83-4f50-b35c-5f6a3c2f4ef2",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-06T21:15:47.937507Z"
+              "updated_at": "2026-04-07T01:01:09.869865Z"
             }
           },
           "error": {
@@ -10734,14 +10734,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-06T21:15:47.918507Z",
-                      "id": "59fd4363-7824-4908-9205-03efac122e66",
+                      "created_at": "2026-04-07T01:01:09.852635Z",
+                      "id": "70adcf43-1e57-4a48-967d-86c89177a725",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-06T21:15:47.918507Z"
+                      "updated_at": "2026-04-07T01:01:09.852635Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10750,7 +10750,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "MariaDB",
+                  "service_definition": "Tasmota",
                   "source": {
                     "type": "Manual"
                   },
@@ -11453,14 +11453,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-06T21:15:47.932329Z",
-                  "id": "bec3c293-ab49-4235-82e4-e250af248083",
+                  "created_at": "2026-04-07T01:01:09.865113Z",
+                  "id": "f25e641d-677f-432b-a888-8976e1f49ccc",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-06T21:15:47.932329Z"
+                  "updated_at": "2026-04-07T01:01:09.865113Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -11469,7 +11469,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "MariaDB",
+              "service_definition": "Tasmota",
               "source": {
                 "type": "Manual"
               },
@@ -12744,14 +12744,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-06T21:15:47.918913Z",
-          "id": "31fc1d8e-f4a2-40e9-8616-2f8ee1bd1754",
+          "created_at": "2026-04-07T01:01:09.852981Z",
+          "id": "c43c107c-ddde-484e-9f53-a9efc3c483ee",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-06T21:15:47.918913Z"
+          "updated_at": "2026-04-07T01:01:09.852981Z"
         }
       },
       "BindingBase": {
@@ -13273,7 +13273,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "MariaDB",
+              "service_definition": "Tasmota",
               "tags": [],
               "virtualization": null
             }
@@ -14749,9 +14749,6 @@
               "is_multi_hop"
             ],
             "properties": {
-              "classification": {
-                "$ref": "#/components/schemas/EdgeClassification"
-              },
               "id": {
                 "type": "string",
                 "format": "uuid"
@@ -14778,19 +14775,20 @@
               },
               "target_handle": {
                 "$ref": "#/components/schemas/EdgeHandle"
+              },
+              "view_config": {
+                "$ref": "#/components/schemas/EdgeViewConfig"
               }
             }
           }
         ]
       },
-      "EdgeClassification": {
+      "EdgeDefaultVisibility": {
         "type": "string",
-        "description": "Whether an edge affects layout (primary) or is drawn after layout (overlay)",
+        "description": "Whether an edge is visible by default or hidden behind a toggle",
         "enum": [
-          "primary",
-          "overlay",
-          "overlay_hidden",
-          "disabled"
+          "visible",
+          "hidden"
         ]
       },
       "EdgeHandle": {
@@ -14800,6 +14798,23 @@
           "Bottom",
           "Left",
           "Right"
+        ]
+      },
+      "EdgeHighlightBehavior": {
+        "type": "string",
+        "description": "Controls when an edge contributes to node highlighting on selection",
+        "enum": [
+          "when_visible",
+          "always",
+          "never"
+        ]
+      },
+      "EdgeStroke": {
+        "type": "string",
+        "description": "Visual stroke style for an edge",
+        "enum": [
+          "solid",
+          "dashed"
         ]
       },
       "EdgeStyle": {
@@ -14975,6 +14990,66 @@
           "HubAndSpoke",
           "PhysicalLink"
         ]
+      },
+      "EdgeViewConfig": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Edge is not available in this view",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "disabled"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Edge is active in this view with specific properties",
+            "required": [
+              "affects_layout",
+              "default_visibility",
+              "stroke",
+              "highlight_behavior",
+              "will_target_container",
+              "type"
+            ],
+            "properties": {
+              "affects_layout": {
+                "type": "boolean",
+                "description": "Whether ELK should use this edge for layout positioning"
+              },
+              "default_visibility": {
+                "$ref": "#/components/schemas/EdgeDefaultVisibility",
+                "description": "Whether the edge is shown by default or hidden behind a toggle"
+              },
+              "highlight_behavior": {
+                "$ref": "#/components/schemas/EdgeHighlightBehavior",
+                "description": "When this edge contributes to node highlighting on selection"
+              },
+              "stroke": {
+                "$ref": "#/components/schemas/EdgeStroke",
+                "description": "Visual stroke style"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "active"
+                ]
+              },
+              "will_target_container": {
+                "type": "boolean",
+                "description": "Whether this edge should be elevated to target an accepting container\ninstead of the element inside it"
+              }
+            }
+          }
+        ],
+        "description": "Per-view configuration for an edge: disabled (not in this view) or active with properties"
       },
       "ElementEntityType": {
         "oneOf": [
@@ -15833,14 +15908,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-06T21:15:47.917959Z",
-                  "id": "ca79e602-b0ef-4471-9fc6-8b2d41286841",
+                  "created_at": "2026-04-07T01:01:09.852138Z",
+                  "id": "3f0934b9-29d7-4591-ae97-4b75a2332c5f",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-06T21:15:47.917959Z"
+                  "updated_at": "2026-04-07T01:01:09.852138Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -15849,7 +15924,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "MariaDB",
+              "service_definition": "Tasmota",
               "source": {
                 "type": "Manual"
               },
@@ -17008,10 +17083,6 @@
               "size"
             ],
             "properties": {
-              "absorbs_edges": {
-                "type": "boolean",
-                "description": "When true, edges targeting elements inside this container are elevated to target\nthe container itself. Set by rules that declare `absorbs_edges` (e.g. MergeDockerBridges, ByStack)."
-              },
               "element_rule_id": {
                 "type": [
                   "string",
@@ -17035,6 +17106,10 @@
               },
               "size": {
                 "$ref": "#/components/schemas/Uxy"
+              },
+              "will_accept_edges": {
+                "type": "boolean",
+                "description": "When true, this container accepts edges with `will_target_container`, causing\nthem to visually attach here instead of at elements inside."
               }
             }
           }
@@ -17840,14 +17915,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-06T21:15:47.906535Z",
-                        "id": "796d0d67-c1be-4e3d-93c4-1494e31cd4c2",
+                        "created_at": "2026-04-07T01:01:09.841439Z",
+                        "id": "3812997e-150a-4cec-a9d5-c1d48a7f2ae0",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-06T21:15:47.906535Z"
+                        "updated_at": "2026-04-07T01:01:09.841439Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -17856,7 +17931,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "MariaDB",
+                    "service_definition": "Tasmota",
                     "source": {
                       "type": "Manual"
                     },
@@ -17933,14 +18008,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-06T21:15:47.930884Z",
-                    "id": "41ffc0d6-50b4-43b4-baa2-2a254f5c2bda",
+                    "created_at": "2026-04-07T01:01:09.863818Z",
+                    "id": "f3dd29e8-6e60-4d5f-b981-90b44b017dcf",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-06T21:15:47.930884Z"
+                    "updated_at": "2026-04-07T01:01:09.863818Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -17949,7 +18024,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "MariaDB",
+                "service_definition": "Tasmota",
                 "source": {
                   "type": "Manual"
                 },
@@ -19109,14 +19184,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-06T21:15:47.918780Z",
-              "id": "d0519cae-ffd2-40ac-8f9e-101b2c4d3163",
+              "created_at": "2026-04-07T01:01:09.852857Z",
+              "id": "efaa77e0-13d6-4dc9-8be1-503af2ea02bb",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-06T21:15:47.918780Z"
+              "updated_at": "2026-04-07T01:01:09.852857Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19125,7 +19200,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "MariaDB",
+          "service_definition": "Tasmota",
           "source": {
             "type": "Manual"
           },

@@ -11,7 +11,9 @@ use strum::IntoEnumIterator;
 use strum_macros::{EnumIter, IntoStaticStr};
 use utoipa::ToSchema;
 
-use super::edges::{EdgeDefaultVisibility, EdgeStroke, EdgeTypeDiscriminants, EdgeViewConfig};
+use super::edges::{
+    EdgeDefaultVisibility, EdgeHighlightBehavior, EdgeStroke, EdgeTypeDiscriminants, EdgeViewConfig,
+};
 
 // ---------------------------------------------------------------------------
 // TopologyView enum
@@ -245,41 +247,46 @@ impl TopologyView {
     /// will cause a compile error here, forcing a configuration decision.
     pub fn edge_view_config(&self, edge_type: EdgeTypeDiscriminants) -> EdgeViewConfig {
         use EdgeDefaultVisibility::*;
+        use EdgeHighlightBehavior::*;
         use EdgeStroke::*;
         use EdgeTypeDiscriminants::*;
 
-        let active = |affects_layout, visibility, stroke| EdgeViewConfig::Active {
-            affects_layout,
-            default_visibility: visibility,
-            stroke,
+        let active = |affects_layout, visibility, stroke, highlight, will_target_container| {
+            EdgeViewConfig::Active {
+                affects_layout,
+                default_visibility: visibility,
+                stroke,
+                highlight_behavior: highlight,
+                will_target_container,
+            }
         };
 
         match self {
             Self::L3Logical => match edge_type {
-                Interface => active(true, Visible, Solid),
-                ServiceVirtualization => active(true, Visible, Solid),
-                RequestPath => active(false, Visible, Dashed),
-                HubAndSpoke => active(false, Visible, Dashed),
-                HostVirtualization => active(false, Hidden, Dashed),
-                PhysicalLink => active(false, Hidden, Dashed),
+                Interface => active(true, Visible, Solid, WhenVisible, false),
+                ServiceVirtualization => active(true, Visible, Solid, WhenVisible, true),
+                RequestPath => active(false, Visible, Dashed, WhenVisible, false),
+                HubAndSpoke => active(false, Visible, Dashed, WhenVisible, false),
+                HostVirtualization => active(false, Hidden, Dashed, WhenVisible, true),
+                PhysicalLink => active(false, Hidden, Dashed, WhenVisible, false),
             },
             Self::L2Physical => match edge_type {
-                PhysicalLink => active(true, Visible, Solid),
-                Interface => active(false, Hidden, Dashed),
+                PhysicalLink => active(true, Visible, Solid, WhenVisible, false),
+                Interface => active(false, Hidden, Dashed, WhenVisible, false),
                 HostVirtualization | ServiceVirtualization | RequestPath | HubAndSpoke => {
                     EdgeViewConfig::Disabled
                 }
             },
             Self::Infrastructure => match edge_type {
-                HostVirtualization => active(true, Hidden, Dashed),
-                ServiceVirtualization => active(true, Hidden, Dashed),
-                Interface => active(false, Hidden, Dashed),
+                HostVirtualization => active(true, Hidden, Dashed, Always, true),
+                ServiceVirtualization => active(true, Hidden, Dashed, Always, true),
+                Interface => active(false, Hidden, Dashed, WhenVisible, false),
                 PhysicalLink | RequestPath | HubAndSpoke => EdgeViewConfig::Disabled,
             },
             Self::Application => match edge_type {
-                RequestPath => active(true, Visible, Solid),
-                HubAndSpoke => active(true, Visible, Solid),
-                ServiceVirtualization => active(true, Hidden, Dashed),
+                RequestPath => active(true, Visible, Solid, WhenVisible, false),
+                HubAndSpoke => active(true, Visible, Solid, WhenVisible, false),
+                ServiceVirtualization => active(true, Hidden, Dashed, Always, true),
                 Interface | HostVirtualization | PhysicalLink => EdgeViewConfig::Disabled,
             },
         }

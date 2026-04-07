@@ -1,11 +1,14 @@
 import type { TopologyEdge, TopologyNode } from '../types/base';
+import { willTargetContainer } from './edge-classification';
 
 /**
- * Elevate edge endpoints from elements to the outermost absorbing container.
+ * Elevate edge endpoints from elements to the outermost accepting container.
  *
- * When a container or subcontainer has `absorbs_edges: true`, edges targeting
- * elements inside it should visually attach to the container boundary instead.
- * If multiple nested containers absorb, the outermost absorber wins.
+ * Two conditions must both be true for elevation to happen:
+ * 1. The edge has `will_target_container: true` in its view config
+ * 2. A container in the element's ancestry has `will_accept_edges: true`
+ *
+ * When multiple nested containers accept, the outermost acceptor wins.
  *
  * All edges are preserved (no deduplication) so that downstream bundling
  * can show correct edge counts.
@@ -14,19 +17,22 @@ export function elevateEdgesToContainers(
 	edges: TopologyEdge[],
 	nodes: TopologyNode[]
 ): TopologyEdge[] {
-	// Build container lookup: id → { parentId, absorbsEdges }
-	const containerInfo = new Map<string, { parentId: string | undefined; absorbsEdges: boolean }>();
+	// Build container lookup: id → { parentId, willAcceptEdges }
+	const containerInfo = new Map<
+		string,
+		{ parentId: string | undefined; willAcceptEdges: boolean }
+	>();
 	for (const node of nodes) {
 		if (node.node_type === 'Container') {
 			const n = node as Record<string, unknown>;
 			containerInfo.set(node.id, {
 				parentId: n.parent_container_id as string | undefined,
-				absorbsEdges: (n.absorbs_edges as boolean) ?? false
+				willAcceptEdges: (n.will_accept_edges as boolean) ?? false
 			});
 		}
 	}
 
-	// Build element → outermost absorbing container map
+	// Build element → outermost accepting container map
 	const elevationMap = new Map<string, string>();
 	for (const node of nodes) {
 		if (node.node_type !== 'Element') continue;
@@ -35,29 +41,34 @@ export function elevateEdgesToContainers(
 		if (typeof containerId !== 'string') continue;
 
 		// Walk up from the element's direct container through parents,
-		// tracking the outermost container that absorbs edges
-		let outermostAbsorber: string | undefined;
+		// tracking the outermost container that accepts edges
+		let outermostAcceptor: string | undefined;
 		let current: string | undefined = containerId;
 		while (current) {
 			const info = containerInfo.get(current);
 			if (!info) break;
-			if (info.absorbsEdges) {
-				outermostAbsorber = current;
+			if (info.willAcceptEdges) {
+				outermostAcceptor = current;
 			}
 			current = info.parentId;
 		}
 
-		if (outermostAbsorber) {
-			elevationMap.set(node.id, outermostAbsorber);
+		if (outermostAcceptor) {
+			elevationMap.set(node.id, outermostAcceptor);
 		}
 	}
 
 	if (elevationMap.size === 0) return edges;
 
-	// Elevate edge endpoints — keep all edges so bundling can show correct counts
+	// Elevate edge endpoints — only for edges with will_target_container
 	const result: TopologyEdge[] = [];
 
 	for (const edge of edges) {
+		if (!willTargetContainer(edge)) {
+			result.push(edge);
+			continue;
+		}
+
 		const source = elevationMap.get(edge.source) ?? edge.source;
 		const target = elevationMap.get(edge.target) ?? edge.target;
 

@@ -155,8 +155,10 @@
 	// Title text: from node header (set by backend graph builder)
 	let headerText = $derived((data as TopologyNode).header ?? '');
 
-	// Icon and color: from NodeType::Container fields (set by backend graph builder)
-	let nodeIcon = $derived((data as Record<string, unknown>)?.icon as string | undefined);
+	// Icon and color: from node fields, falling back to ContainerType metadata
+	let nodeIcon = $derived(
+		((data as Record<string, unknown>)?.icon as string | undefined) ?? containerMeta.icon
+	);
 	let nodeColor = $derived((data as Record<string, unknown>)?.color as string | undefined);
 	let iconComponent: IconComponent | null = $derived(
 		nodeIcon ? createIconComponent(nodeIcon) : null

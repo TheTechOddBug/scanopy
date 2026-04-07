@@ -178,6 +178,7 @@
 	// Track ELK layout — only skip within same session when structure unchanged
 	let layoutGraph: LayoutGraph | null = null;
 	let sessionStructureKey = '';
+	let seenAutoCollapseIds = new Set<string>();
 	let isMeasuring = false;
 	let prevExpandedPortIds = new Set<string>();
 	let prevView = get(activeView);
@@ -279,16 +280,19 @@
 				let collapsed = get(collapsedContainers);
 				const hiddenServices = get(tagHiddenServiceIds);
 
-				// Auto-collapse containers whose type has collapsed_by_default metadata
+				// Auto-collapse containers whose type has collapsed_by_default metadata.
+				// Only collapse containers we haven't seen before (so user can expand them).
 				{
 					const autoCollapseIds = topology.nodes
 						.filter((n) => {
-							if (n.node_type !== 'Container' || collapsed.has(n.id)) return false;
+							if (n.node_type !== 'Container') return false;
+							if (collapsed.has(n.id) || seenAutoCollapseIds.has(n.id)) return false;
 							const ct = (n as Record<string, unknown>).container_type as string | undefined;
 							return ct ? containerTypes.getMetadata(ct).collapsed_by_default === true : false;
 						})
 						.map((n) => n.id);
 					if (autoCollapseIds.length > 0) {
+						for (const id of autoCollapseIds) seenAutoCollapseIds.add(id);
 						const next = new Set(collapsed);
 						for (const id of autoCollapseIds) next.add(id);
 						collapsedContainers.set(next);

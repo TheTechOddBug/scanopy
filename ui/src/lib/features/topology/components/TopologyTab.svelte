@@ -48,6 +48,7 @@
 	import { useActiveSessionsQuery } from '$lib/features/discovery/queries';
 	import { useDependenciesQuery } from '$lib/features/dependencies/queries';
 	import ApplicationSetupWizard from './application-wizard/ApplicationSetupWizard.svelte';
+	import L2EmptyStateOverlay from './L2EmptyStateOverlay.svelte';
 	import { useUsersQuery } from '$lib/features/users/queries';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
@@ -131,6 +132,15 @@
 	// Selected topology (derived from ID + query data)
 	let currentTopology = $derived(
 		$selectedTopologyId ? topologiesData.find((t) => t.id === $selectedTopologyId) : null
+	);
+
+	// L2 Physical: show empty state overlay when no nodes (no neighbor data discovered)
+	let showL2EmptyState = $derived(
+		isActive &&
+			$activeView === 'L2Physical' &&
+			currentTopology != null &&
+			!currentTopology.is_stale &&
+			currentTopology.nodes.length === 0
 	);
 
 	// Update tag filter stores when topology or options change (always-mounted, unlike OptionsContent)
@@ -709,6 +719,9 @@
 							networkId={currentTopology.network_id}
 							onComplete={handleWizardComplete}
 						/>
+					{/if}
+					{#if showL2EmptyState}
+						<L2EmptyStateOverlay />
 					{/if}
 				</div>
 			{:else}

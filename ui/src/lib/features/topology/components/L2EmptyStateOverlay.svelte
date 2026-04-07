@@ -1,0 +1,35 @@
+<script lang="ts">
+	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
+	import { Cable } from 'lucide-svelte';
+	import { topology_l2EmptyTitle, topology_l2EmptyDescription } from '$lib/paraglide/messages';
+</script>
+
+<!-- Shroud over the topology viewer -->
+<div class="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm"></div>
+
+<div class="l2-empty-anchor">
+	<GenericModal
+		title={topology_l2EmptyTitle()}
+		isOpen={true}
+		showCloseButton={false}
+		preventCloseOnClickOutside={true}
+		showBackdrop={false}
+		size="sm"
+	>
+		<div class="flex flex-col items-center gap-4 p-6 text-center">
+			<div class="rounded-full bg-emerald-500/10 p-3">
+				<Cable class="h-8 w-8 text-emerald-500" />
+			</div>
+			<p class="text-secondary text-sm">
+				{topology_l2EmptyDescription()}
+			</p>
+		</div>
+	</GenericModal>
+</div>
+
+<style>
+	.l2-empty-anchor :global(.modal-page) {
+		position: absolute;
+		z-index: 30;
+	}
+</style>

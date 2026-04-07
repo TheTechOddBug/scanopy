@@ -1172,6 +1172,8 @@
 	"topology_namePlaceholder": "Enter topology name",
 	"topology_noHiddenRules": "No hidden rules",
 	"topology_noNodesToExport": "No nodes to export",
+	"topology_l2EmptyTitle": "No Physical Connections",
+	"topology_l2EmptyDescription": "This view shows the physical network topology based on neighbor discovery between hosts. It will populate once hosts with discovered neighbors appear in this network.",
 	"topology_noTopologySelected": "No topology selected. Create one to get started.",
 	"topology_openPortsSummary": "+{count} open ports",
 	"topology_optionDisabledRebuildRequired": "Rebuild topology to change this option",

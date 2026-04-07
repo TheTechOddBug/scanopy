@@ -420,7 +420,7 @@
 				const aggregatedEdges = computeCollapsedEdges(
 					elevatedEdges,
 					collapsed,
-					elementToContainer,
+					layoutNodes,
 					hiddenEdgeTypes
 				);
 

@@ -164,21 +164,79 @@ export function buildContainerChildCounts(nodes: TopologyNode[]): Map<string, nu
 }
 
 /**
+ * Resolve a node ID to its nearest collapsed ancestor.
+ * Walks up the parent chain (element → container → parent_container → …)
+ * and returns the outermost collapsed container, or null if none.
+ */
+function resolveCollapsedAncestor(
+	nodeId: string,
+	collapsed: Set<string>,
+	parentMap: Map<string, string>
+): string | null {
+	let current = nodeId;
+	let result: string | null = null;
+	const visited = new Set<string>();
+
+	while (current && !visited.has(current)) {
+		visited.add(current);
+		if (collapsed.has(current)) {
+			result = current;
+		}
+		const parent = parentMap.get(current);
+		if (!parent || parent === current) break;
+		current = parent;
+	}
+
+	return result;
+}
+
+/**
  * Compute aggregated edges for collapsed containers.
  *
- * - Remaps edges whose source/target is a hidden element inside a collapsed container
+ * - Resolves each edge endpoint to its nearest collapsed ancestor
+ *   (works for elements, subcontainers, and containers at any nesting depth)
  * - Groups edges between the same pair of (resolved) nodes
  * - Returns aggregated edges with count
  */
 export function computeCollapsedEdges(
 	edges: TopologyEdge[],
 	collapsed: Set<string>,
-	elementToContainer: Map<string, string>,
+	nodes: TopologyNode[],
 	hiddenEdgeTypes: string[]
 ): AggregatedEdge[] {
 	if (collapsed.size === 0) return [];
 
+	// Build a parent map: nodeId → immediate parent container ID
+	// Elements map to their container_id/subnet_id, containers map to parent_container_id
+	const parentMap = new Map<string, string>();
+	for (const node of nodes) {
+		if (node.node_type === 'Element') {
+			const parentId =
+				(node as Record<string, unknown>).container_id ??
+				(node as Record<string, unknown>).subnet_id;
+			if (typeof parentId === 'string') {
+				parentMap.set(node.id, parentId);
+			}
+		} else if (node.node_type === 'Container') {
+			const parentId = (node as Record<string, unknown>).parent_container_id as
+				| string
+				| undefined;
+			if (parentId) {
+				parentMap.set(node.id, parentId);
+			}
+		}
+	}
+
 	const hiddenSet = new Set(hiddenEdgeTypes);
+
+	// Cache resolved ancestors
+	const ancestorCache = new Map<string, string | null>();
+	function getCollapsedAncestor(nodeId: string): string | null {
+		if (ancestorCache.has(nodeId)) return ancestorCache.get(nodeId)!;
+		const result = resolveCollapsedAncestor(nodeId, collapsed, parentMap);
+		ancestorCache.set(nodeId, result);
+		return result;
+	}
 
 	// Group by resolved (source, target) pair
 	const groups = new Map<string, TopologyEdge[]>();
@@ -187,15 +245,14 @@ export function computeCollapsedEdges(
 		let src = edge.source as string;
 		let tgt = edge.target as string;
 
-		// Remap if the element's container is collapsed
-		const srcContainer = elementToContainer.get(src);
-		if (srcContainer && collapsed.has(srcContainer)) {
-			src = srcContainer;
-		}
-		const tgtContainer = elementToContainer.get(tgt);
-		if (tgtContainer && collapsed.has(tgtContainer)) {
-			tgt = tgtContainer;
-		}
+		// Remap to nearest collapsed ancestor
+		const srcAncestor = getCollapsedAncestor(src);
+		if (srcAncestor) src = srcAncestor;
+		const tgtAncestor = getCollapsedAncestor(tgt);
+		if (tgtAncestor) tgt = tgtAncestor;
+
+		// Skip if neither endpoint was remapped (edge is fully outside collapsed containers)
+		if (!srcAncestor && !tgtAncestor) continue;
 
 		// Skip self-loops (both endpoints inside same collapsed container)
 		if (src === tgt) continue;

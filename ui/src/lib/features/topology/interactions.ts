@@ -325,6 +325,14 @@ export function updateConnectedNodes(
 				}
 			}
 		}
+		// Expand connected containers to include their element contents
+		for (const node of allNodes) {
+			const nd = node.data as TopologyNode;
+			if (nd.node_type !== 'Container' || !connected.has(nd.id)) continue;
+			const contents = getContainerContents(nd.id, allNodes);
+			for (const id of contents.elementNodeIds) connected.add(id);
+			for (const id of contents.subcontainerIds) connected.add(id);
+		}
 		connectedNodeIds.set(connected);
 		return;
 	}
@@ -373,20 +381,30 @@ export function updateConnectedNodes(
 			}
 		}
 
-		// Add subcontainers that contain at least one connected element node
+		// Expand connected containers: when a container is in the connected set
+		// (e.g. from edge elevation), also add its element contents so they highlight.
+		// Also add subcontainers that contain at least one connected element node.
 		for (const node of allNodes) {
 			const nd = node.data as TopologyNode;
 			if (nd.node_type !== 'Container') continue;
-			const parentContainerId = (nd as Record<string, unknown>).parent_container_id as
-				| string
-				| undefined;
-			if (!parentContainerId) continue; // not a subcontainer
 
 			const contents = getContainerContents(nd.id, allNodes);
-			for (const elementId of contents.elementNodeIds) {
-				if (connected.has(elementId)) {
-					connected.add(nd.id);
-					break;
+
+			if (connected.has(nd.id)) {
+				// Container is connected — expand to include its elements and subcontainers
+				for (const id of contents.elementNodeIds) connected.add(id);
+				for (const id of contents.subcontainerIds) connected.add(id);
+			} else {
+				// Check if this subcontainer has any connected elements
+				const parentContainerId = (nd as Record<string, unknown>).parent_container_id as
+					| string
+					| undefined;
+				if (!parentContainerId) continue;
+				for (const elementId of contents.elementNodeIds) {
+					if (connected.has(elementId)) {
+						connected.add(nd.id);
+						break;
+					}
 				}
 			}
 		}

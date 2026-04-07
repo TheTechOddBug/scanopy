@@ -105,10 +105,12 @@ function buildElkGraph(
 			const childLayoutOptions: Record<string, string> = useLayeredChildren
 				? {
 						// With INCLUDE_CHILDREN, the root layered algorithm handles child
-						// placement and crossing minimization — container just sets padding
+						// placement and crossing minimization. Partitioning splits ports
+						// into multiple columns within the container.
 						'elk.padding': padding,
 						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
-						'elk.spacing.nodeNode': '10'
+						'elk.spacing.nodeNode': '10',
+						'elk.partitioning.activate': 'true'
 					}
 				: {
 						'elk.algorithm': 'box',
@@ -207,10 +209,12 @@ function buildElkGraph(
 			};
 			elements.sort((a, b) => statusOrder(a.node) - statusOrder(b.node));
 
-			// Assign layer IDs to create multiple columns
-			const numLayers = Math.max(1, Math.ceil(elements.length / MAX_PORTS_PER_LAYER));
+			// Assign partition IDs to spread ports across multiple columns.
+			// Ports are already sorted by status (Up first), so partitions
+			// will naturally group Up ports to the left, Down ports to the right.
+			const numPartitions = Math.max(1, Math.ceil(elements.length / MAX_PORTS_PER_LAYER));
 			elements.forEach(({ node, size }, i) => {
-				const layerIdx = i % numLayers;
+				const partition = i % numPartitions;
 				parent.children!.push({
 					id: node.id,
 					width: size.x,
@@ -218,7 +222,7 @@ function buildElkGraph(
 					layoutOptions: {
 						'elk.nodeSize.constraints': 'MINIMUM_SIZE',
 						'elk.nodeSize.minimum': `(${size.x},${size.y})`,
-						'elk.layered.layering.layerID': `${layerIdx}`
+						'elk.partitioning.partition': `${partition}`
 					}
 				});
 			});

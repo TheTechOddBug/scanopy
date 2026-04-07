@@ -517,6 +517,12 @@ function buildElkGraph(
 			container.layoutOptions['elk.layered.spacing.nodeNodeBetweenLayers'] = '10';
 			container.layoutOptions['elk.layered.spacing.edgeNodeBetweenLayers'] = '5';
 			container.layoutOptions['elk.layered.compaction.postCompaction.strategy'] = 'EDGE_LENGTH';
+			if (useLayeredChildren) {
+				// Force model order so our status-based sort (subcontainers first,
+				// Up ports next, Down ports last) is preserved
+				container.layoutOptions['elk.layered.crossingMinimization.forceNodeModelOrder'] = 'true';
+				container.layoutOptions['elk.layered.considerModelOrder.strategy'] = 'NODES_AND_EDGES';
+			}
 			delete container.layoutOptions['elk.box.packingMode'];
 		}
 	}

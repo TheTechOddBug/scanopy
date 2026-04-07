@@ -11,6 +11,7 @@
 		label: string;
 		helpText?: string;
 		helpSnippet?: Snippet;
+		headerSnippet?: Snippet;
 		placeholder?: string;
 		required?: boolean;
 		allowReorder?: boolean;
@@ -50,6 +51,7 @@
 		allowItemRemove?: (item: T) => boolean;
 		allowItemReorder?: (item: T) => boolean;
 		stickyHeader?: boolean;
+		reorderDisabledTooltip?: string;
 		isItemEditing?: (item: T, index: number) => boolean;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		editIcon?: (item: T, index: number) => any;
@@ -76,6 +78,7 @@
 		label,
 		helpText = '',
 		helpSnippet,
+		headerSnippet,
 		placeholder = 'Select an item to add',
 		required = false,
 		allowReorder = true,
@@ -116,6 +119,7 @@
 		allowItemRemove = () => true,
 		allowItemReorder = () => true,
 		stickyHeader = false,
+		reorderDisabledTooltip = undefined,
 		isItemEditing = () => false,
 		editIcon = undefined,
 		editButtonClass = undefined,
@@ -258,6 +262,10 @@
 				</p>
 			{/if}
 		</div>
+
+		{#if headerSnippet}
+			{@render headerSnippet()}
+		{/if}
 
 		{#if allowSelection && items.length > 0}
 			{@const anySelected = selectedItems.length > 0}
@@ -423,9 +431,11 @@
 									e.stopPropagation();
 									moveItemUp(index);
 								}}
-								disabled={index === 0 || !allowItemReorder(items[index - 1])}
+								disabled={index === 0 ||
+									!allowItemReorder(items[index - 1]) ||
+									!!reorderDisabledTooltip}
 								class="btn-icon"
-								title="Move up"
+								title={reorderDisabledTooltip ?? 'Move up'}
 							>
 								<ArrowUp size={16} />
 							</button>
@@ -436,9 +446,11 @@
 									e.stopPropagation();
 									moveItemDown(index);
 								}}
-								disabled={index === items.length - 1 || !allowItemReorder(items[index + 1])}
+								disabled={index === items.length - 1 ||
+									!allowItemReorder(items[index + 1]) ||
+									!!reorderDisabledTooltip}
 								class="btn-icon"
-								title="Move down"
+								title={reorderDisabledTooltip ?? 'Move down'}
 							>
 								<ArrowDown size={16} />
 							</button>

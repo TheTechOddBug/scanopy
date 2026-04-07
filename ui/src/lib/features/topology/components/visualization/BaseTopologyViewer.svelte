@@ -23,7 +23,13 @@
 	import '@xyflow/svelte/dist/style.css';
 	import { edgeTypes, containerTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
-	import { previewEdges, selectedNodes, topologyOptions, activeView } from '../../queries';
+	import {
+		previewEdges,
+		selectedNodes,
+		topologyOptions,
+		activeView,
+		optionsPanelExpanded
+	} from '../../queries';
 	import { isExporting, expandedPortNodeIds } from '../../interactions';
 	import { LayoutGraph } from '../../layout/layout-graph';
 
@@ -101,7 +107,8 @@
 	let containerElement: HTMLDivElement;
 
 	export function triggerFitView() {
-		requestAnimationFrame(() => fitView({ padding: 0.2 }));
+		const padding = get(optionsPanelExpanded) ? 0.35 : 0.2;
+		requestAnimationFrame(() => fitView({ padding }));
 	}
 
 	export function fitViewToNodes(nodeIds: string[]) {
@@ -580,11 +587,7 @@
 						sessionStructureKey = structureKey;
 						layoutGraph = LayoutGraph.fromTopology(layoutNodes);
 						layoutGraph.syncCollapseState(collapsed);
-						layoutGraph.applyForceResult(
-							forceResult.nodePositions,
-							new Map(),
-							elementNodeSizes
-						);
+						layoutGraph.applyForceResult(forceResult.nodePositions, new Map(), elementNodeSizes);
 					} else {
 						// Standard ELK layout for expanded or partially collapsed views
 						const expandedContainerSizes = layoutGraph?.getExpandedContainerSizes();
@@ -720,6 +723,7 @@
 								...agg.originalEdges[0],
 								isAggregated: true,
 								aggregatedCount: agg.count,
+								originalEdges: agg.originalEdges,
 								edgeIndex: 1000 + index
 							},
 							animated: false,
@@ -822,6 +826,12 @@
 
 				lastRenderedTopoKey = topoKey;
 				lastRenderedView = currentView;
+
+				// Auto-fit viewport after perspective switch completes
+				if (viewChanged && topologyChanged) {
+					const padding = get(optionsPanelExpanded) ? 0.35 : 0.2;
+					requestAnimationFrame(() => fitView({ padding }));
+				}
 			}
 		} catch (err) {
 			isMeasuring = false;
@@ -973,12 +983,14 @@
 	function handleCollapseAll() {
 		const containerIds = topology.nodes.filter((n) => n.node_type === 'Container').map((n) => n.id);
 		collapseAll(containerIds);
-		setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 100);
+		const padding = get(optionsPanelExpanded) ? 0.35 : 0.2;
+		setTimeout(() => fitView({ padding, duration: 300 }), 100);
 	}
 
 	function handleExpandAll() {
 		expandAll();
-		setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 100);
+		const padding = get(optionsPanelExpanded) ? 0.35 : 0.2;
+		setTimeout(() => fitView({ padding, duration: 300 }), 100);
 	}
 
 	// Merge preview edges into the edge store when they change

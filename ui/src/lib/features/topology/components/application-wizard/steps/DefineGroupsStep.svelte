@@ -18,9 +18,10 @@
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import {
 		appWizard_convertExisting,
-		appWizard_convertExistingDescription,
 		appWizard_createYourOwn,
-		appWizard_defineGroupsDescription,
+		appWizard_defineGroupsDescription_convert,
+		appWizard_defineGroupsDescription_create,
+		appWizard_membershipFootnote,
 		appWizard_noGroupsYet,
 		appWizard_suggestedGroups,
 		appWizard_mspCallout
@@ -103,7 +104,9 @@
 
 <div class="space-y-6">
 	<p class="text-secondary text-sm">
-		{appWizard_defineGroupsDescription()}
+		{nonAppGroupTags.length > 0
+			? appWizard_defineGroupsDescription_convert()
+			: appWizard_defineGroupsDescription_create()}
 	</p>
 
 	<!-- MSP callout -->
@@ -145,9 +148,6 @@
 			<h3 class="text-secondary mb-2 text-xs font-medium uppercase tracking-wide">
 				{appWizard_convertExisting()}
 			</h3>
-			<p class="text-tertiary mb-2 text-xs">
-				{appWizard_convertExistingDescription()}
-			</p>
 			<div class="flex flex-wrap gap-2">
 				{#each nonAppGroupTags as tag (tag.id)}
 					<button
@@ -182,4 +182,9 @@
 			{appWizard_noGroupsYet()}
 		</p>
 	{/if}
+
+	<!-- Footnote -->
+	<p class="text-tertiary text-xs">
+		{appWizard_membershipFootnote()}
+	</p>
 </div>

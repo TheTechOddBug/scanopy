@@ -4,7 +4,12 @@
 	import { AVAILABLE_COLORS, type Color } from '$lib/shared/utils/styling';
 	import { createDefaultTag } from '$lib/features/tags/types/base';
 	import type { Tag as TagType } from '$lib/features/tags/types/base';
-	import { useCreateTagMutation, useDeleteTagMutation } from '$lib/features/tags/queries';
+	import {
+		useCreateTagMutation,
+		useDeleteTagMutation,
+		useTagsQuery,
+		useUpdateTagMutation
+	} from '$lib/features/tags/queries';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { queryKeys } from '$lib/api/query-client';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
@@ -12,6 +17,8 @@
 	import { concepts } from '$lib/shared/stores/metadata';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import {
+		appWizard_convertExisting,
+		appWizard_convertExistingDescription,
 		appWizard_createYourOwn,
 		appWizard_defineGroupsDescription,
 		appWizard_noGroupsYet,
@@ -28,6 +35,8 @@
 	const organizationQuery = useOrganizationQuery();
 	const createTagMutation = useCreateTagMutation();
 	const deleteTagMutation = useDeleteTagMutation();
+	const updateTagMutation = useUpdateTagMutation();
+	const tagsQuery = useTagsQuery();
 
 	let organization = $derived(organizationQuery.data);
 	let useCase = $derived(organization?.use_case ?? null);
@@ -45,7 +54,21 @@
 		return AVAILABLE_COLORS[(idx >= 0 ? idx : 0) % AVAILABLE_COLORS.length];
 	}
 
+	let allTags = $derived(tagsQuery.data ?? []);
+	let nonAppGroupTags = $derived(allTags.filter((t) => !t.is_application_group));
+
 	let isCreating = $state(false);
+	let isConverting = $state(false);
+
+	async function convertToAppGroup(tag: TagType) {
+		if (isConverting) return;
+		isConverting = true;
+		try {
+			await updateTagMutation.mutateAsync({ ...tag, is_application_group: true });
+		} finally {
+			isConverting = false;
+		}
+	}
 
 	function getRandomColor(): Color {
 		return AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)];
@@ -110,6 +133,30 @@
 							isShiny={true}
 							pill={true}
 						/>
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Convert existing tags -->
+	{#if nonAppGroupTags.length > 0}
+		<div>
+			<h3 class="text-secondary mb-2 text-xs font-medium uppercase tracking-wide">
+				{appWizard_convertExisting()}
+			</h3>
+			<p class="text-tertiary mb-2 text-xs">
+				{appWizard_convertExistingDescription()}
+			</p>
+			<div class="flex flex-wrap gap-2">
+				{#each nonAppGroupTags as tag (tag.id)}
+					<button
+						type="button"
+						class="cursor-pointer"
+						onclick={() => convertToAppGroup(tag)}
+						disabled={isConverting}
+					>
+						<Tag label={tag.name} color={tag.color} pill={true} />
 					</button>
 				{/each}
 			</div>

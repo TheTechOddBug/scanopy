@@ -508,7 +508,7 @@ function buildElkGraph(
 		const container = containers.get(rootId);
 		if (container?.layoutOptions) {
 			container.layoutOptions['elk.algorithm'] = 'layered';
-			container.layoutOptions['elk.direction'] = 'DOWN';
+			container.layoutOptions['elk.direction'] = useLayeredChildren ? 'UP' : 'DOWN';
 			container.layoutOptions['elk.hierarchyHandling'] = 'SEPARATE_CHILDREN';
 			container.layoutOptions['elk.layered.nodePlacement.strategy'] = 'NETWORK_SIMPLEX';
 			container.layoutOptions['elk.layered.crossingMinimization.strategy'] = 'LAYER_SWEEP';

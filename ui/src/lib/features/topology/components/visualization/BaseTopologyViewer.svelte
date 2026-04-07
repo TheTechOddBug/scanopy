@@ -156,6 +156,15 @@
 		custom: CustomEdge
 	};
 
+	// Refit viewport when panel expands/collapses (after 300ms CSS transition)
+	let panelInitialized = false;
+	$: if ($optionsPanelExpanded !== undefined) {
+		if (panelInitialized) {
+			setTimeout(() => fitView({ padding: getFitViewPadding() }), 300);
+		}
+		panelInitialized = true;
+	}
+
 	// Stores for SvelteFlow
 	let nodes = writable<Node[]>([]);
 	let edges = writable<Edge[]>([]);

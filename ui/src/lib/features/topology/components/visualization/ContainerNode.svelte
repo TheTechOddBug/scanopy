@@ -355,6 +355,13 @@
 				style="background: var(--color-topology-subgroup-bg);"
 			>
 				<ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
+				{#if iconComponent}
+					{@const IconComp = iconComponent}
+					<IconComp
+						class={`h-3.5 w-3.5 flex-shrink-0 ${colorHelper.icon}`}
+						fill={fillIcon ? 'currentColor' : 'none'}
+					/>
+				{/if}
 				{#if logoComponent}
 					{@const LogoComp = logoComponent}
 					<LogoComp class="h-4 w-4 flex-shrink-0" />

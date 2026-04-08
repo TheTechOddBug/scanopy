@@ -6,7 +6,7 @@ import {
 	selectedEdge as globalSelectedEdge,
 	selectedNodes as globalSelectedNodes
 } from './queries';
-import { collapseAllBundles, clearSearch } from './interactions';
+import { clearSearch } from './interactions';
 
 /**
  * Store references for selection state.
@@ -29,14 +29,12 @@ export function selectNode(node: Node, stores: SelectionStores = defaultStores) 
 	stores.selectedNode.set(node);
 	stores.selectedEdge.set(null);
 	stores.selectedNodes.set([]);
-	collapseAllBundles();
 }
 
 export function selectEdge(edge: Edge, stores: SelectionStores = defaultStores) {
 	clearSearch();
 	stores.selectedEdge.set(edge);
 	stores.selectedNode.set(null);
-	collapseAllBundles();
 }
 
 export function clearSelection(stores: SelectionStores = defaultStores) {

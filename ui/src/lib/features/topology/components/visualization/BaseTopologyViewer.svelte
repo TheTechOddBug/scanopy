@@ -967,11 +967,13 @@
 			handleModifierNodeClick(node, selectionStores);
 			ignoreNextSelectionChange = true;
 		} else {
+			collapseAllBundles();
 			selectNode(node, selectionStores);
 		}
 	}
 
 	function handleEdgeClick({ edge }: { edge: Edge; event: MouseEvent }) {
+		collapseAllBundles();
 		selectEdge(edge, selectionStores);
 	}
 
@@ -990,9 +992,23 @@
 		}, 50);
 	}
 
+	/** Imperatively sync edge animated state with current selection stores. */
+	function syncEdgeAnimation() {
+		const currentEdges = get(edges);
+		const curNode = get(selectionStores.selectedNode);
+		const curEdge = get(selectionStores.selectedEdge);
+		const updatedEdges = currentEdges.map((e) => {
+			const { shouldAnimate } = getEdgeDisplayState(e, curNode, curEdge);
+			return { ...e, id: e.id, animated: shouldAnimate };
+		});
+		edges.set(updatedEdges);
+	}
+
 	function handlePaneClick() {
+		collapseAllBundles();
 		if (!viewportMoved) {
 			clearSelection(selectionStores);
+			syncEdgeAnimation();
 		}
 		// Reset immediately after handling
 		viewportMoved = false;
@@ -1003,23 +1019,8 @@
 	}
 
 	function handleEdgeHover({ edge }: { edge: Edge }) {
-		const currentEdges = get(edges);
-		toggleEdgeHover(edge, currentEdges);
-
-		// Update animated state for all edges after hover toggle
-		const curNode = get(selectionStores.selectedNode);
-		const curEdge = get(selectionStores.selectedEdge);
-		const updatedEdges = currentEdges.map((e) => {
-			const { shouldAnimate } = getEdgeDisplayState(e, curNode, curEdge);
-
-			return {
-				...e,
-				id: e.id,
-				animated: shouldAnimate
-			};
-		});
-
-		edges.set(updatedEdges);
+		toggleEdgeHover(edge, get(edges));
+		syncEdgeAnimation();
 	}
 
 	function handleSelectionChange({ nodes: selNodes }: { nodes: Node[]; edges: Edge[] }) {
@@ -1032,6 +1033,7 @@
 		// Clear selection if we're not panning.
 		if (selNodes.length === 0 && !viewportMoved) {
 			clearSelection(selectionStores);
+			syncEdgeAnimation();
 			return;
 		}
 		handleBoxSelect(selNodes, selectionStores);

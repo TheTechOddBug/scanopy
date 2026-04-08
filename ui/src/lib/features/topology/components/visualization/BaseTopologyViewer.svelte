@@ -236,12 +236,6 @@
 		const curSelectedNode = $selNodeStore;
 		const curSelectedEdge = $selEdgeStore;
 		const multiSelected = $selNodesStore;
-		console.log(
-			'[DESELECT DEBUG] $: block fired, curSelectedEdge=',
-			curSelectedEdge,
-			'curSelectedNode=',
-			curSelectedNode?.id ?? null
-		);
 
 		if (topology && (topology.edges || topology.nodes)) {
 			const currentEdges = get(edges);
@@ -1062,19 +1056,9 @@
 	}
 
 	function handlePaneClick() {
-		console.log('[DESELECT DEBUG] handlePaneClick fired, viewportMoved=', viewportMoved);
 		if (!viewportMoved) {
 			clearSelection(selectionStores);
-			console.log(
-				'[DESELECT DEBUG] after clearSelection, edgeStore=',
-				get(selectionStores.selectedEdge)
-			);
 			syncEdgeDisplayState();
-			console.log(
-				'[DESELECT DEBUG] after syncEdgeDisplayState, first edge data=',
-				get(edges)[0]?.data?.shouldShowFull,
-				get(edges)[0]?.data?.shouldAnimate
-			);
 		}
 		// Reset immediately after handling
 		viewportMoved = false;
@@ -1095,33 +1079,17 @@
 	}
 
 	function handleSelectionChange({ nodes: selNodes }: { nodes: Node[]; edges: Edge[] }) {
-		console.log(
-			'[DESELECT DEBUG] handleSelectionChange fired, nodes=',
-			selNodes.length,
-			'viewportMoved=',
-			viewportMoved,
-			'ignoreNext=',
-			ignoreNextSelectionChange
-		);
 		if (ignoreNextSelectionChange) {
 			ignoreNextSelectionChange = false;
 			return;
 		}
+		// When SvelteFlow deselects everything (e.g. pane click while edge selected),
+		// it fires onselectionchange with empty arrays instead of onpaneclick.
+		// Deferred with tick() to escape SvelteFlow's $effect batch.
 		if (selNodes.length === 0 && !viewportMoved) {
-			console.log('[DESELECT DEBUG] empty selection, deferring clear via tick()');
 			tick().then(() => {
-				console.log(
-					'[DESELECT DEBUG] tick resolved, clearing now. edgeStore before=',
-					get(selectionStores.selectedEdge)
-				);
 				clearSelection(selectionStores);
-				console.log('[DESELECT DEBUG] edgeStore after clear=', get(selectionStores.selectedEdge));
 				syncEdgeDisplayState();
-				console.log(
-					'[DESELECT DEBUG] after sync, first edge data=',
-					get(edges)[0]?.data?.shouldShowFull,
-					get(edges)[0]?.data?.shouldAnimate
-				);
 			});
 			return;
 		}

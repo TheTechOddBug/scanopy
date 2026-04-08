@@ -292,6 +292,38 @@ function getVirtualizedContainerNodes(
 }
 
 /**
+ * Add container highlights: when a container is in the connected set,
+ * also include its element contents and subcontainers so they highlight.
+ * When a subcontainer has connected elements, add the subcontainer itself.
+ */
+function addContainerHighlights(connected: Set<string>, allNodes: Node[]) {
+	for (const node of allNodes) {
+		const nd = node.data as TopologyNode;
+		if (nd.node_type !== 'Container') continue;
+
+		const contents = getContainerContents(nd.id, allNodes);
+
+		if (connected.has(nd.id)) {
+			// Container is connected — include its elements and subcontainers
+			for (const id of contents.elementNodeIds) connected.add(id);
+			for (const id of contents.subcontainerIds) connected.add(id);
+		} else {
+			// Check if this subcontainer has any connected elements
+			const parentContainerId = (nd as Record<string, unknown>).parent_container_id as
+				| string
+				| undefined;
+			if (!parentContainerId) continue;
+			for (const elementId of contents.elementNodeIds) {
+				if (connected.has(elementId)) {
+					connected.add(nd.id);
+					break;
+				}
+			}
+		}
+	}
+}
+
+/**
  * Update connected nodes when a node or edge is selected
  * @param topology - Optional topology data for direct lookups (used in share views where cache is empty)
  * @param multiSelectedNodes - Optional array of multi-selected nodes
@@ -385,33 +417,7 @@ export function updateConnectedNodes(
 			}
 		}
 
-		// Expand connected containers: when a container is in the connected set
-		// (e.g. from edge elevation), also add its element contents so they highlight.
-		// Also add subcontainers that contain at least one connected element node.
-		for (const node of allNodes) {
-			const nd = node.data as TopologyNode;
-			if (nd.node_type !== 'Container') continue;
-
-			const contents = getContainerContents(nd.id, allNodes);
-
-			if (connected.has(nd.id)) {
-				// Container is connected — expand to include its elements and subcontainers
-				for (const id of contents.elementNodeIds) connected.add(id);
-				for (const id of contents.subcontainerIds) connected.add(id);
-			} else {
-				// Check if this subcontainer has any connected elements
-				const parentContainerId = (nd as Record<string, unknown>).parent_container_id as
-					| string
-					| undefined;
-				if (!parentContainerId) continue;
-				for (const elementId of contents.elementNodeIds) {
-					if (connected.has(elementId)) {
-						connected.add(nd.id);
-						break;
-					}
-				}
-			}
-		}
+		addContainerHighlights(connected, allNodes);
 
 		connectedNodeIds.set(connected);
 		return;
@@ -432,6 +438,7 @@ export function updateConnectedNodes(
 				connected.add(bundledEdge.source as string);
 				connected.add(bundledEdge.target as string);
 			}
+			addContainerHighlights(connected, allNodes);
 			connectedNodeIds.set(connected);
 			return;
 		}
@@ -479,6 +486,7 @@ export function updateConnectedNodes(
 			connected.add(edgeData.target as string);
 		}
 
+		addContainerHighlights(connected, allNodes);
 		connectedNodeIds.set(connected);
 		return;
 	}

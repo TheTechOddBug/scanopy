@@ -308,11 +308,7 @@ function addContainerHighlights(connected: Set<string>, allNodes: Node[]) {
 			for (const id of contents.elementNodeIds) connected.add(id);
 			for (const id of contents.subcontainerIds) connected.add(id);
 		} else {
-			// Check if this subcontainer has any connected elements
-			const parentContainerId = (nd as Record<string, unknown>).parent_container_id as
-				| string
-				| undefined;
-			if (!parentContainerId) continue;
+			// Check if this container has any connected elements inside it
 			for (const elementId of contents.elementNodeIds) {
 				if (connected.has(elementId)) {
 					connected.add(nd.id);

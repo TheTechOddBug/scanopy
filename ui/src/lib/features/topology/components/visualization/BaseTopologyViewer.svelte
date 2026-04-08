@@ -193,6 +193,7 @@
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- internal cache, not rendered
 	let seenAutoCollapseIds = new Set<string>();
 	let isMeasuring = false;
+	let layoutGeneration = 0;
 	let prevExpandedPortIds = new Set<string>();
 	let prevView = get(activeView);
 	let lastRenderedTopoKey = '';
@@ -276,6 +277,8 @@
 	}
 
 	async function loadTopologyData() {
+		const thisGeneration = ++layoutGeneration;
+		const isStale = () => thisGeneration !== layoutGeneration;
 		try {
 			if (topology && (topology.edges || topology.nodes)) {
 				const currentView = get(activeView);
@@ -554,6 +557,10 @@
 
 						await tick();
 						await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+						if (isStale()) {
+							isMeasuring = false;
+							return;
+						}
 
 						// Read actual DOM sizes
 						if (containerElement) {
@@ -627,6 +634,10 @@
 							elementNodeSizes,
 							hiddenEdgeTypes: hiddenEdgeTypes
 						});
+						if (isStale()) {
+							isMeasuring = false;
+							return;
+						}
 						sessionStructureKey = structureKey;
 
 						// Rebuild graph and apply ELK result
@@ -685,6 +696,10 @@
 					nodes.set(measureNodes);
 					await tick();
 					await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+					if (isStale()) {
+						isMeasuring = false;
+						return;
+					}
 
 					// Phase 2: Re-measure affected nodes and update graph
 					if (containerElement) {
@@ -860,6 +875,10 @@
 
 					// Wait for nodes to render, then set edges
 					await tick();
+					if (isStale()) {
+						isMeasuring = false;
+						return;
+					}
 					if (pendingEdges.length > 0) {
 						edges.set(pendingEdges);
 						pendingEdges = [];
@@ -869,6 +888,10 @@
 					// Double rAF ensures the compositing pass completes before revealing
 					await tick();
 					await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+					if (isStale()) {
+						isMeasuring = false;
+						return;
+					}
 					isMeasuring = false;
 				}
 

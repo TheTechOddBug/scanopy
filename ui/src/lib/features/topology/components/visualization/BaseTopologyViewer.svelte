@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { writable, get } from 'svelte/store';
+	import { writable, get, type Writable } from 'svelte/store';
 	import {
 		SvelteFlow,
 		Controls,
@@ -59,12 +59,20 @@
 		collapseAllBundles,
 		tagHiddenServiceIds
 	} from '../../interactions';
+	import {
+		selectNode,
+		selectEdge,
+		clearSelection,
+		handleModifierNodeClick,
+		handleBoxSelect,
+		type SelectionStores
+	} from '../../selection';
 	import { bundleEdges } from '../../layout/edge-bundling';
 	import { elevateEdgesToContainers } from '../../layout/edge-elevation';
 	import { computeForceLayout, type ForceNode, type ForceLink } from '../../layout/force-layout';
 	import { computeOptimalHandles } from '../../layout/elk-layout';
 	import { isDisabledEdge, isDashedEdge } from '../../layout/edge-classification';
-	import { onMount, tick, setContext } from 'svelte';
+	import { onMount, tick, setContext, getContext } from 'svelte';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
 	import { themeStore } from '$lib/shared/stores/theme.svelte';
@@ -86,21 +94,23 @@
 	// Keep context in sync with prop
 	$: topologyContext.set(topology);
 
-	// Selection state - can be bound by parent
-	export let selectedNode: Node | null = null;
-	export let selectedEdge: Edge | null = null;
-
 	// Optional callbacks for editing
 	export let onNodeDragStop: ((node: Node) => void) | null = null;
 	export let onReconnect: ((edge: Edge, newConnection: Connection) => void) | null = null;
 
-	// Optional callbacks for selection changes
-	export let onNodeSelect: ((node: Node | null, event?: MouseEvent | TouchEvent) => void) | null =
-		null;
-	export let onEdgeSelect: ((edge: Edge | null) => void) | null = null;
-	export let onPaneSelect: ((event?: MouseEvent, wasPanning?: boolean) => void) | null = null;
-	export let onSelectionChange: ((nodes: Node[], edges: Edge[]) => void) | null = null;
+	// Optional callback for shortcuts overlay
 	export let onOpenShortcuts: (() => void) | null = null;
+
+	// Resolve selection stores from context (share/embed) or fall back to global stores.
+	// These are the SINGLE source of truth for selection state.
+	const selNodeStore = getContext<Writable<Node | null>>('selectedNode') ?? selectedNodeStore;
+	const selEdgeStore = getContext<Writable<Edge | null>>('selectedEdge') ?? selectedEdgeStore;
+	const selNodesStore = getContext<Writable<Node[]>>('selectedNodes') ?? selectedNodes;
+	const selectionStores: SelectionStores = {
+		selectedNode: selNodeStore,
+		selectedEdge: selEdgeStore,
+		selectedNodes: selNodesStore
+	};
 
 	// Track viewport panning state
 	let viewportMoved = false;
@@ -220,33 +230,23 @@
 		void loadTopologyData();
 	}
 
-	// Update edges when selection changes
+	// Update edges when selection changes — stores are the single source of truth
 	$: {
-		void selectedNode;
-		void selectedEdge;
-		void $selectedNodes;
-		// Also react to store changes (store preserves selection through panning
-		// even when props clear, so connected-node highlights persist)
-		void $selectedEdgeStore;
-		void $selectedNodeStore;
+		const curSelectedNode = $selNodeStore;
+		const curSelectedEdge = $selEdgeStore;
+		const multiSelected = $selNodesStore;
 
 		if (topology && (topology.edges || topology.nodes)) {
 			const currentEdges = get(edges);
 			const currentNodes = get(nodes);
-			const multiSelected = get(selectedNodes);
 			// Read hide_edge_types imperatively to avoid making this $: block
 			// depend on $topologyOptions (which would cause a race with the
 			// loadTopologyData block that also depends on it).
 			const opts = get(topologyOptions);
 
-			// Use store values for connected-node highlights: the store preserves
-			// selection during panning (props clear unconditionally in handlePaneClick),
-			// so highlights persist through pan operations.
-			const storeSelectedNode = get(selectedNodeStore);
-			const storeSelectedEdge = get(selectedEdgeStore);
 			updateConnectedNodes(
-				storeSelectedNode ?? selectedNode,
-				storeSelectedEdge ?? selectedEdge,
+				curSelectedNode,
+				curSelectedEdge,
 				currentEdges,
 				currentNodes,
 				queryClient,
@@ -255,14 +255,12 @@
 				opts.local.hide_edge_types ?? []
 			);
 
-			// Update edge animated state based on selection (use props — they
-			// clear unconditionally so animation stops immediately on any pane interaction)
 			const updatedEdges = currentEdges.map((edge) => {
-				const { shouldAnimate } = getEdgeDisplayState(edge, selectedNode, selectedEdge);
+				const { shouldAnimate } = getEdgeDisplayState(edge, curSelectedNode, curSelectedEdge);
 
 				return {
 					...edge,
-					id: edge.id, // Force new reference
+					id: edge.id,
 					animated: shouldAnimate
 				};
 			});
@@ -930,8 +928,12 @@
 			interactionWidth: 50
 		};
 
-		// Compute animation from current selection state (not stale cache)
-		const { shouldAnimate } = getEdgeDisplayState(flowEdge, selectedNode, selectedEdge);
+		// Compute animation from current selection state
+		const { shouldAnimate } = getEdgeDisplayState(
+			flowEdge,
+			get(selectionStores.selectedNode),
+			get(selectionStores.selectedEdge)
+		);
 		flowEdge.animated = shouldAnimate;
 
 		return flowEdge;
@@ -958,23 +960,15 @@
 	function handleNodeClick({ node, event }: { node: Node; event: MouseEvent | TouchEvent }) {
 		const isModifierClick = event instanceof MouseEvent && (event.ctrlKey || event.metaKey);
 
-		if (!isModifierClick) {
-			selectedNode = node;
-			selectedEdge = null;
-			collapseAllBundles();
-		}
-		if (onNodeSelect) {
-			onNodeSelect(node, event);
+		if (isModifierClick) {
+			handleModifierNodeClick(node, selectionStores);
+		} else {
+			selectNode(node, selectionStores);
 		}
 	}
 
 	function handleEdgeClick({ edge }: { edge: Edge; event: MouseEvent }) {
-		selectedEdge = edge;
-		selectedNode = null;
-		collapseAllBundles();
-		if (onEdgeSelect) {
-			onEdgeSelect(edge);
-		}
+		selectEdge(edge, selectionStores);
 	}
 
 	function handleMove() {
@@ -992,27 +986,9 @@
 		}, 50);
 	}
 
-	function handlePaneClick({ event }: { event: MouseEvent }) {
-		collapseAllBundles();
-		// Clear props (always — animation uses props so it stops immediately)
-		selectedEdge = null;
+	function handlePaneClick() {
 		if (!viewportMoved) {
-			selectedNode = null;
-			// Clear stores directly so highlights clear without relying on
-			// the parent callback chain or reactive $: block timing
-			selectedEdgeStore.set(null);
-			selectedNodeStore.set(null);
-			selectedNodes.set([]);
-		}
-
-		// Explicitly clear edge animation
-		const currentEdges = get(edges);
-		if (currentEdges.some((e) => e.animated)) {
-			edges.set(currentEdges.map((e) => (e.animated ? { ...e, animated: false } : e)));
-		}
-
-		if (onPaneSelect) {
-			onPaneSelect(event, viewportMoved);
+			clearSelection(selectionStores);
 		}
 		// Reset immediately after handling
 		viewportMoved = false;
@@ -1027,8 +1003,10 @@
 		toggleEdgeHover(edge, currentEdges);
 
 		// Update animated state for all edges after hover toggle
+		const curNode = get(selectionStores.selectedNode);
+		const curEdge = get(selectionStores.selectedEdge);
 		const updatedEdges = currentEdges.map((e) => {
-			const { shouldAnimate } = getEdgeDisplayState(e, selectedNode, selectedEdge);
+			const { shouldAnimate } = getEdgeDisplayState(e, curNode, curEdge);
 
 			return {
 				...e,
@@ -1041,9 +1019,7 @@
 	}
 
 	function handleSelectionChange({ nodes: selNodes }: { nodes: Node[]; edges: Edge[] }) {
-		if (onSelectionChange) {
-			onSelectionChange(selNodes, []);
-		}
+		handleBoxSelect(selNodes, selectionStores);
 	}
 
 	function handleCollapseAll() {
@@ -1103,7 +1079,7 @@
 		snapGrid={[25, 25]}
 		nodesDraggable={!readonly}
 		nodesConnectable={!readonly}
-		elementsSelectable={true}
+		elementsSelectable={false}
 		selectionOnDrag={true}
 		selectionKey="Shift"
 		panOnDrag={true}

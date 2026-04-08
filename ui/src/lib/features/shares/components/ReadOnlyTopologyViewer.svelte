@@ -25,34 +25,17 @@
 	const topologyContext = writable<Topology>(topology);
 	setContext('topology', topologyContext);
 
-	// Create local stores for selected node/edge (instead of using global store)
+	// Create local stores for selected node/edge (instead of using global store).
+	// BaseTopologyViewer resolves these via getContext and uses them as its selection source.
 	const selectedNodeStore = writable<Node | null>(null);
 	const selectedEdgeStore = writable<Edge | null>(null);
+	const selectedNodesStore = writable<Node[]>([]);
 	setContext('selectedNode', selectedNodeStore);
 	setContext('selectedEdge', selectedEdgeStore);
+	setContext('selectedNodes', selectedNodesStore);
 
 	// Keep context in sync with prop
 	$: topologyContext.set(topology);
-
-	// Selection state for binding
-	let localSelectedNode: Node | null = null;
-	let localSelectedEdge: Edge | null = null;
-
-	// Update local stores when selection changes (needed for node/edge highlighting)
-	function handleNodeSelect(node: Node | null) {
-		selectedNodeStore.set(node);
-		selectedEdgeStore.set(null);
-	}
-
-	function handleEdgeSelect(edge: Edge | null) {
-		selectedEdgeStore.set(edge);
-		selectedNodeStore.set(null);
-	}
-
-	function handlePaneSelect() {
-		selectedNodeStore.set(null);
-		selectedEdgeStore.set(null);
-	}
 </script>
 
 <SvelteFlowProvider>
@@ -84,11 +67,6 @@
 				{isEmbed}
 				showBranding={true}
 				{showMinimap}
-				bind:selectedNode={localSelectedNode}
-				bind:selectedEdge={localSelectedEdge}
-				onNodeSelect={handleNodeSelect}
-				onEdgeSelect={handleEdgeSelect}
-				onPaneSelect={handlePaneSelect}
 			/>
 		</div>
 	</div>

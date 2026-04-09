@@ -58,6 +58,7 @@ use crate::server::{
     },
     user_api_keys::r#impl::base::{UserApiKey, UserApiKeyBase},
     users::r#impl::permissions::UserOrgPermissions,
+    vlans::r#impl::base::{Vlan, VlanBase},
 };
 use chrono::{DateTime, Duration, Utc};
 use cidr::{IpCidr, Ipv4Cidr};
@@ -132,6 +133,7 @@ pub struct DemoData {
     pub networks: Vec<Network>,
     pub subnets: Vec<Subnet>,
     pub hosts_with_services: Vec<HostWithServices>,
+    pub vlans: Vec<Vlan>,
     pub if_entries: Vec<IfEntry>,
     pub neighbor_updates: Vec<NeighborUpdate>,
     pub daemons: Vec<Daemon>,
@@ -192,8 +194,9 @@ impl DemoData {
             .flat_map(|h| h.interfaces.iter())
             .collect();
 
+        let vlans = generate_vlans(&networks, organization_id, now);
         let (if_entries, neighbor_updates) =
-            generate_if_entries(&networks, &hosts, &interfaces, now);
+            generate_if_entries(&networks, &hosts, &interfaces, &vlans, now);
         let daemons = generate_daemons(&networks, &hosts, &subnets, now, user_id);
         let api_keys = generate_api_keys(&networks, now);
         let topologies = generate_topologies(&networks, &tags, now);
@@ -210,6 +213,7 @@ impl DemoData {
             network_credential_assignments,
             networks,
             subnets,
+            vlans,
             hosts_with_services,
             if_entries,
             neighbor_updates,
@@ -2885,10 +2889,47 @@ fn generate_hosts_and_services(
 // IfEntries (SNMP Interface Data)
 // ============================================================================
 
+// ============================================================================
+// VLANs
+// ============================================================================
+
+fn generate_vlans(networks: &[Network], organization_id: Uuid, now: DateTime<Utc>) -> Vec<Vlan> {
+    let mut vlans = Vec::new();
+
+    let vlan_defs: Vec<(u16, &str)> = vec![
+        (1, "Default"),
+        (10, "Management"),
+        (20, "Servers"),
+        (30, "Users"),
+        (100, "Guest"),
+    ];
+
+    for network in networks {
+        for &(vlan_number, name) in &vlan_defs {
+            vlans.push(Vlan {
+                id: Uuid::new_v4(),
+                created_at: now,
+                updated_at: now,
+                base: VlanBase {
+                    vlan_number,
+                    name: name.to_string(),
+                    description: None,
+                    network_id: network.id,
+                    organization_id,
+                    source: EntitySource::Discovery { metadata: vec![] },
+                },
+            });
+        }
+    }
+
+    vlans
+}
+
 fn generate_if_entries(
     networks: &[Network],
     hosts: &[&Host],
     interfaces: &[&Interface],
+    vlans: &[Vlan],
     now: DateTime<Utc>,
 ) -> (Vec<IfEntry>, Vec<NeighborUpdate>) {
     let mut if_entries = Vec::new();
@@ -2900,6 +2941,21 @@ fn generate_if_entries(
             .iter()
             .find(|i| i.base.host_id == host_id)
             .copied()
+    };
+
+    // VLAN lookup: (network_id, vlan_number) → VLAN entity UUID
+    let find_vlan = |network_id: Uuid, vlan_number: u16| -> Option<Uuid> {
+        vlans
+            .iter()
+            .find(|v| v.base.network_id == network_id && v.base.vlan_number == vlan_number)
+            .map(|v| v.id)
+    };
+    let find_vlans = |network_id: Uuid, vlan_numbers: &[u16]| -> Option<Vec<Uuid>> {
+        let ids: Vec<Uuid> = vlan_numbers
+            .iter()
+            .filter_map(|&n| find_vlan(network_id, n))
+            .collect();
+        if ids.is_empty() { None } else { Some(ids) }
     };
 
     // HQ switch MAC (used as chassis ID)
@@ -2982,8 +3038,8 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
-                vlan_ids: None,
+                native_vlan_id: find_vlan(network.id, 1),
+                vlan_ids: find_vlans(network.id, &[10, 20, 30, 100]),
             },
         });
         neighbor_updates.push(NeighborUpdate {
@@ -3068,7 +3124,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3119,7 +3175,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3205,7 +3261,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3256,7 +3312,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3316,8 +3372,8 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
-                vlan_ids: None,
+                native_vlan_id: find_vlan(network.id, 1),
+                vlan_ids: find_vlans(network.id, &[10, 20, 30, 100]),
             },
         });
         neighbor_updates.push(NeighborUpdate {
@@ -3358,7 +3414,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3400,7 +3456,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3442,7 +3498,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3484,7 +3540,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3526,8 +3582,8 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
-                vlan_ids: None,
+                native_vlan_id: find_vlan(network.id, 1),
+                vlan_ids: find_vlans(network.id, &[10, 20, 30, 100]),
             },
         });
         neighbor_updates.push(NeighborUpdate {
@@ -3614,8 +3670,8 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
-                vlan_ids: None,
+                native_vlan_id: find_vlan(network.id, 1),
+                vlan_ids: find_vlans(network.id, &[10, 20, 30, 100]),
             },
         });
         neighbor_updates.push(NeighborUpdate {
@@ -3665,8 +3721,8 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
-                vlan_ids: None,
+                native_vlan_id: find_vlan(network.id, 1),
+                vlan_ids: find_vlans(network.id, &[10, 20, 30, 100]),
             },
         });
         neighbor_updates.push(NeighborUpdate {
@@ -3716,7 +3772,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3767,7 +3823,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3818,7 +3874,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3876,8 +3932,8 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
-                vlan_ids: None,
+                native_vlan_id: find_vlan(network.id, 1),
+                vlan_ids: find_vlans(network.id, &[10, 20, 30, 100]),
             },
         });
         neighbor_updates.push(NeighborUpdate {
@@ -3918,7 +3974,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -3960,7 +4016,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });
@@ -4002,7 +4058,7 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
                 fdb_macs: None,
-                native_vlan_id: None,
+                native_vlan_id: find_vlan(network.id, 20),
                 vlan_ids: None,
             },
         });

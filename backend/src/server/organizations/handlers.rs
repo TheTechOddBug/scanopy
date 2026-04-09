@@ -471,6 +471,14 @@ pub async fn populate_demo_data(
         .await?;
     collect_entity_tags(&created_subnets, &mut all_entity_tags);
 
+    // 4.5. VLANs (depends on networks)
+    state
+        .services
+        .vlan_service
+        .storage()
+        .create_many(&demo_data.vlans)
+        .await?;
+
     // 5. Hosts + children — bypass discover_host (no collisions in fresh org)
     // Flatten hosts, interfaces, ports, services from HostWithServices bundles
     let mut all_hosts = Vec::new();

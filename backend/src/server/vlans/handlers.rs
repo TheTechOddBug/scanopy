@@ -270,9 +270,22 @@ pub async fn discovery_upsert_vlans(
     auth: Authorized<IsDaemon>,
     Json(request): Json<VlanDiscoveryRequest>,
 ) -> ApiResult<Json<ApiResponse<VlanDiscoveryResponse>>> {
-    let organization_id = auth
-        .organization_id()
-        .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
+    // Daemons don't carry org_id directly — resolve from the network
+    let network = state
+        .services
+        .network_service
+        .get_by_id(&request.network_id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("Network not found".to_string()))?;
+    let organization_id = network.base.organization_id;
+
+    // Verify daemon has access to this network
+    let daemon_network_ids = auth.network_ids();
+    if !daemon_network_ids.contains(&request.network_id) {
+        return Err(ApiError::forbidden(
+            "Daemon cannot create VLANs on networks it's not assigned to",
+        ));
+    }
 
     let mut response_items = Vec::with_capacity(request.vlans.len());
 

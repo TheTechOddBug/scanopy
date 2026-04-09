@@ -88,25 +88,23 @@
 
 	let saving = $state(false);
 
-	// Build form default values from current shares
+	// Build form default values from current shares (nested structure for TanStack Form)
 	function getFormDefaults() {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const defaults: Record<string, any> = {};
-		for (let i = 0; i < sharesData.length; i++) {
-			const s = sharesData[i];
-			defaults[`shares[${i}].name`] = s.name || '';
-			defaults[`shares[${i}].password`] = '';
-			defaults[`shares[${i}].allowed_domains`] = s.allowed_domains?.join(', ') || '';
-			defaults[`shares[${i}].expires_at`] = s.expires_at || '';
-			defaults[`shares[${i}].is_enabled`] = s.is_enabled ?? true;
-			defaults[`shares[${i}].show_zoom_controls`] = s.options?.show_zoom_controls ?? true;
-			defaults[`shares[${i}].show_inspect_panel`] = s.options?.show_inspect_panel ?? true;
-			defaults[`shares[${i}].show_export_button`] = s.options?.show_export_button ?? true;
-			defaults[`shares[${i}].show_minimap`] = s.options?.show_minimap ?? true;
-			defaults[`shares[${i}].embed_width`] = '800';
-			defaults[`shares[${i}].embed_height`] = '600';
-		}
-		return defaults;
+		return {
+			shares: sharesData.map((s) => ({
+				name: s.name || '',
+				password: '',
+				allowed_domains: s.allowed_domains?.join(', ') || '',
+				expires_at: s.expires_at || '',
+				is_enabled: s.is_enabled ?? true,
+				show_zoom_controls: s.options?.show_zoom_controls ?? true,
+				show_inspect_panel: s.options?.show_inspect_panel ?? true,
+				show_export_button: s.options?.show_export_button ?? true,
+				show_minimap: s.options?.show_minimap ?? true,
+				embed_width: '800',
+				embed_height: '600'
+			}))
+		};
 	}
 
 	// Parent-owned form
@@ -166,37 +164,42 @@
 
 		saving = true;
 		try {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const formShares = (form.state.values as any).shares;
 			for (let i = 0; i < sharesData.length; i++) {
 				const share = sharesData[i];
-				const values = form.state.values;
-				const formData = {
+				const v = formShares[i];
+				if (!v) continue;
+
+				const shareData = {
 					id: share.id,
-					name: (values[`shares[${i}].name`] as string)?.trim() || '',
+					name: (v.name as string)?.trim() || '',
 					topology_id: share.topology_id,
 					network_id: share.network_id,
 					created_by: currentUser?.id || share.created_by,
-					allowed_domains: (values[`shares[${i}].allowed_domains`] as string)?.trim()
-						? (values[`shares[${i}].allowed_domains`] as string)
+					allowed_domains: (v.allowed_domains as string)?.trim()
+						? (v.allowed_domains as string)
 								.split(',')
 								.map((d: string) => d.trim())
 								.filter(Boolean)
 						: null,
-					expires_at: (values[`shares[${i}].expires_at`] as string) || null,
-					is_enabled: values[`shares[${i}].is_enabled`] as boolean,
+					expires_at: (v.expires_at as string) || null,
+					is_enabled: v.is_enabled as boolean,
 					options: {
-						show_zoom_controls: values[`shares[${i}].show_zoom_controls`] as boolean,
-						show_inspect_panel: values[`shares[${i}].show_inspect_panel`] as boolean,
-						show_export_button: values[`shares[${i}].show_export_button`] as boolean,
-						show_minimap: values[`shares[${i}].show_minimap`] as boolean
+						show_zoom_controls: v.show_zoom_controls as boolean,
+						show_inspect_panel: v.show_inspect_panel as boolean,
+						show_export_button: v.show_export_button as boolean,
+						show_minimap: v.show_minimap as boolean
 					}
 				} as Share;
 
-				const password = (values[`shares[${i}].password`] as string) || undefined;
+				const password = (v.password as string) || undefined;
 				await updateShareMutation.mutateAsync({
 					id: share.id,
-					request: { share: formData, password }
+					request: { share: shareData, password }
 				});
 			}
+			onClose();
 		} catch (error) {
 			pushError(error instanceof Error ? error.message : common_failedToSave());
 		} finally {

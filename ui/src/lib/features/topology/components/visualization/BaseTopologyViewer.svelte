@@ -919,11 +919,14 @@
 					isMeasuring = false;
 				}
 
+				const isFirstRender = lastRenderedTopoKey === '';
 				lastRenderedTopoKey = topoKey;
 				lastRenderedView = currentView;
 
-				// Auto-fit viewport after perspective switch completes
-				if (viewChanged && topologyChanged) {
+				// Auto-fit viewport after layout completes:
+				// - on perspective switch (viewChanged && topologyChanged)
+				// - on first render / URL navigation (no previous layout)
+				if ((viewChanged && topologyChanged) || isFirstRender) {
 					requestAnimationFrame(() => fitView({ padding: getFitViewPadding() }));
 				}
 			}

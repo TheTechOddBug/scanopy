@@ -110,8 +110,8 @@
 	// Per-card toggle for expanding hidden open ports (lifted to topology-level store for re-layout)
 	let expandedOpenPorts = $derived($expandedPortNodeIds.has(id));
 
-	// Filter out services hidden by tag filter
-	let visibleServicesForHost = $derived(servicesForHost.filter((s) => !hiddenServices.has(s.id)));
+	// All services for this host (tag-hidden services stay in list to preserve card height)
+	let visibleServicesForHost = $derived(servicesForHost);
 
 	// Reactively subscribe to the container subnet store
 	let isContainerSubnetValue = $derived(
@@ -143,12 +143,12 @@
 							);
 						return {
 							elementType,
-							footerText: null,
+							footerText: isApplicationView ? null : (host?.name ?? null),
 							services: service && !isCategoryHidden ? [service] : [],
 							hiddenOpenPorts: [],
 							headerText: host?.name ?? null,
 							bodyText: service ? null : 'Unknown Service',
-							showServices: !!service && !isCategoryHidden,
+							showServices: !!service,
 							isVirtualized: false,
 							isCategoryHidden: !!isCategoryHidden,
 							interface_id: id
@@ -165,17 +165,21 @@
 							)[$activeView] ?? [];
 
 						type CategoryType = (typeof hiddenCategories)[number];
-						const servicesOnHost = visibleServicesForHost.filter(
-							(s) =>
-								!hiddenCategories.includes(
-									serviceDefinitions.getCategory(s.service_definition) as CategoryType
-								)
-						);
+						// Services visible in card: exclude category-hidden and tag-hidden OpenPorts
+						// (tag-hidden non-OpenPorts stay and render faded)
+						const servicesOnHost = visibleServicesForHost.filter((s) => {
+							const category = serviceDefinitions.getCategory(s.service_definition);
+							if (hiddenCategories.includes(category as CategoryType)) return false;
+							if (hiddenServices.has(s.id) && category === 'OpenPorts') return false;
+							return true;
+						});
 
+						// OpenPorts hidden by category OR tag → collapsed indicator
 						const hiddenOpenPorts = visibleServicesForHost.filter((s) => {
 							const category = serviceDefinitions.getCategory(s.service_definition);
+							if (category !== 'OpenPorts') return false;
 							return (
-								hiddenCategories.includes(category as CategoryType) && category === 'OpenPorts'
+								hiddenCategories.includes(category as CategoryType) || hiddenServices.has(s.id)
 							);
 						});
 
@@ -253,17 +257,20 @@
 						: [];
 
 					// Split into visible services and hidden open ports
+					// Tag-hidden non-OpenPorts stay in list (render faded)
+					// Tag-hidden OpenPorts go to collapsed indicator
 					type CategoryType = (typeof hiddenCategories)[number];
-					const servicesOnInterface = allServicesOnInterface.filter(
-						(s) =>
-							!hiddenCategories.includes(
-								serviceDefinitions.getCategory(s.service_definition) as CategoryType
-							)
-					);
+					const servicesOnInterface = allServicesOnInterface.filter((s) => {
+						const category = serviceDefinitions.getCategory(s.service_definition);
+						if (hiddenCategories.includes(category as CategoryType)) return false;
+						if (hiddenServices.has(s.id) && category === 'OpenPorts') return false;
+						return true;
+					});
 
 					const hiddenOpenPorts = allServicesOnInterface.filter((s) => {
 						const category = serviceDefinitions.getCategory(s.service_definition);
-						return hiddenCategories.includes(category as CategoryType) && category === 'OpenPorts';
+						if (category !== 'OpenPorts') return false;
+						return hiddenCategories.includes(category as CategoryType) || hiddenServices.has(s.id);
 					});
 
 					let bodyText: string | null = null;
@@ -437,6 +444,7 @@
 				<!-- Show services list -->
 				<div class="flex w-full flex-col items-center" style="min-width: 0; max-width: 100%;">
 					{#each nodeRenderData.services as service (service.id)}
+						{@const isServiceTagHidden = hiddenServices.has(service.id)}
 						{@const ServiceIcon = serviceDefinitions.getIconComponent(service.service_definition)}
 						{@const serviceTagHighlight = (() => {
 							if (!currentHoveredTag || currentHoveredTag.entityType !== 'service') return '';
@@ -461,7 +469,9 @@
 						})()}
 						<div
 							class="flex flex-col items-center justify-center py-2"
-							style="min-width: 0; max-width: 100%; width: 100%;"
+							style="min-width: 0; max-width: 100%; width: 100%;{isServiceTagHidden
+								? ' opacity: 0.3;'
+								: ''}"
 						>
 							<div
 								class="flex items-center justify-center gap-1"

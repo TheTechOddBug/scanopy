@@ -775,8 +775,41 @@
 						let handles = edgeHandles.get(edgeKey);
 
 						// Derive handles from original element-level edges' cached handles
-						// so collapsed containers use the same handle directions as their children
+						// so collapsed containers use the same handle directions as their children.
+						// Must account for direction: computeCollapsedEdges normalizes keys
+						// (src < tgt), so original edges may be flipped relative to the
+						// aggregated edge. Resolve each original edge's source to its collapsed
+						// ancestor to determine alignment.
 						if (!handles && agg.originalEdges.length > 0) {
+							// Build parent map for ancestor resolution
+							const parentMap = new Map<string, string>();
+							for (const node of topology.nodes) {
+								if (node.node_type === 'Element') {
+									const pid =
+										(node as Record<string, unknown>).container_id ??
+										(node as Record<string, unknown>).subnet_id;
+									if (typeof pid === 'string') parentMap.set(node.id, pid);
+								} else if (node.node_type === 'Container') {
+									const pid = (node as Record<string, unknown>).parent_container_id as
+										| string
+										| undefined;
+									if (pid) parentMap.set(node.id, pid);
+								}
+							}
+							function resolveAncestor(nodeId: string): string | null {
+								let cur = nodeId;
+								let result: string | null = null;
+								const visited = new Set<string>();
+								while (cur && !visited.has(cur)) {
+									visited.add(cur);
+									if (collapsed.has(cur)) result = cur;
+									const p = parentMap.get(cur);
+									if (!p || p === cur) break;
+									cur = p;
+								}
+								return result;
+							}
+
 							const handleCounts = new Map<string, number>();
 							for (const origEdge of agg.originalEdges) {
 								const origKey = `${origEdge.source}->${origEdge.target}`;
@@ -784,7 +817,12 @@
 									edgeHandles.get(origKey) ??
 									edgeHandles.get(`${origEdge.target}->${origEdge.source}`);
 								if (origHandles) {
-									const combo = `${origHandles.sourceHandle}|${origHandles.targetHandle}`;
+									// Determine if original edge's source aligns with agg.source
+									const resolvedSrc = resolveAncestor(origEdge.source as string);
+									const aligned = resolvedSrc === agg.source;
+									const srcH = aligned ? origHandles.sourceHandle : origHandles.targetHandle;
+									const tgtH = aligned ? origHandles.targetHandle : origHandles.sourceHandle;
+									const combo = `${srcH}|${tgtH}`;
 									handleCounts.set(combo, (handleCounts.get(combo) ?? 0) + 1);
 								}
 							}

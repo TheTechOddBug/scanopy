@@ -199,13 +199,28 @@ export function updateTagFilter(
 		}
 	}
 
-	// Subnet filtering: hide container nodes
+	// Subnet filtering: hide container nodes and their child elements
 	if (hiddenSubnetTagIds.length > 0) {
+		const hiddenContainerIds = new Set<string>();
 		for (const subnet of topology.subnets) {
 			const isUntagged = subnet.tags.length === 0;
 			const subnetHasHiddenTag = subnet.tags.some((t) => hiddenSubnetTagIds.includes(t));
 			if (subnetHasHiddenTag || (isUntagged && hideUntaggedSubnets)) {
 				hiddenNodeIds.add(subnet.id);
+				hiddenContainerIds.add(subnet.id);
+			}
+		}
+		// Also hide child elements inside hidden containers
+		if (hiddenContainerIds.size > 0) {
+			for (const node of topology.nodes) {
+				if (node.node_type === 'Element') {
+					const parentId =
+						(node as Record<string, unknown>).container_id ??
+						(node as Record<string, unknown>).subnet_id;
+					if (typeof parentId === 'string' && hiddenContainerIds.has(parentId)) {
+						hiddenNodeIds.add(node.id);
+					}
+				}
 			}
 		}
 	}

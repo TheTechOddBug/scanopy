@@ -238,6 +238,8 @@
 				urlViewConsumed = true;
 				activeView.set(urlParams.view);
 			}
+			// Fit viewport after topology loads (needs a tick for nodes to render)
+			requestAnimationFrame(() => topologyViewer?.triggerFitView());
 		}
 	});
 

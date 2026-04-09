@@ -246,11 +246,14 @@
 		void loadTopologyData();
 	}
 
-	// Update edges when selection changes — stores are the single source of truth
+	// Update edges when selection or search/tag filter changes — stores are the single source of truth
 	$: {
 		const curSelectedNode = $selNodeStore;
 		const curSelectedEdge = $selEdgeStore;
 		const multiSelected = $selNodesStore;
+		// Reactive subscriptions — block re-runs when search or tag filter changes
+		const searchHidden = $searchHiddenNodeIds;
+		const tagHidden = $tagHiddenNodeIds;
 
 		if (topology && (topology.edges || topology.nodes)) {
 			const currentEdges = get(edges);
@@ -272,8 +275,6 @@
 			);
 
 			const hasActiveSelection = !!(curSelectedNode || curSelectedEdge);
-			const searchHidden = get(searchHiddenNodeIds);
-			const tagHidden = get(tagHiddenNodeIds);
 			const updatedEdges = currentEdges.map((edge) => {
 				const { shouldAnimate, shouldShowFull, isEndpointSearchHidden, isEndpointTagHidden } =
 					getEdgeDisplayState(edge, curSelectedNode, curSelectedEdge, searchHidden, tagHidden);

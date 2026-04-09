@@ -264,6 +264,7 @@ async fn create_topology(
         bindings,
         if_entries,
         entity_tags,
+        vlans,
     });
 
     topology.set_graph(nodes, edges);
@@ -340,6 +341,10 @@ async fn refresh(
     let services = service.get_service_data(request.network_id).await?;
 
     let entity_tags = service.get_entity_tags(&hosts, &services, &subnets).await?;
+    let vlans = service
+        .get_vlans(request.network_id)
+        .await
+        .unwrap_or_default();
 
     topology.set_entities(SetEntitiesParams {
         hosts,
@@ -351,6 +356,7 @@ async fn refresh(
         bindings,
         if_entries,
         entity_tags,
+        vlans,
     });
 
     service.update(&mut topology, auth.into_entity()).await?;
@@ -441,6 +447,7 @@ async fn rebuild(
         bindings,
         if_entries,
         entity_tags,
+        vlans,
     });
 
     topology.set_graph(nodes, edges);

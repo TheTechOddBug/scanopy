@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-08T21:15:56.472194Z",
-              "id": "6e890997-1952-4b75-bfe9-8426c88c9894",
+              "created_at": "2026-04-09T18:31:36.526561Z",
+              "id": "0ac42c62-30e9-4631-ae71-0c2d5e434b84",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-08T21:15:56.472194Z"
+              "updated_at": "2026-04-09T18:31:36.526561Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-08T21:15:56.449823Z",
-                      "id": "85d90f8e-5cd9-469c-9803-3e6b86e63714",
+                      "created_at": "2026-04-09T18:31:36.514190Z",
+                      "id": "d1635935-fd20-4386-b1a5-c7509023d4fd",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-08T21:15:56.449823Z"
+                      "updated_at": "2026-04-09T18:31:36.514190Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "DHCP Server",
+                  "service_definition": "TP-Link EAP",
                   "source": {
                     "type": "Manual"
                   },
@@ -11991,14 +11991,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-08T21:15:56.466569Z",
-                  "id": "413c3ec8-a1a3-4322-a041-dbd0a9d6248e",
+                  "created_at": "2026-04-09T18:31:36.523001Z",
+                  "id": "6516d3eb-b3cc-4539-944a-b28eb9511c06",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-08T21:15:56.466569Z"
+                  "updated_at": "2026-04-09T18:31:36.523001Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12007,7 +12007,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "DHCP Server",
+              "service_definition": "TP-Link EAP",
               "source": {
                 "type": "Manual"
               },
@@ -13372,14 +13372,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-08T21:15:56.450324Z",
-          "id": "655f4ae1-5bac-4a38-b261-2f385e9a198f",
+          "created_at": "2026-04-09T18:31:36.514414Z",
+          "id": "f1ae597c-3ca6-4ba5-be9f-2ed11fc77a4d",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-08T21:15:56.450324Z"
+          "updated_at": "2026-04-09T18:31:36.514414Z"
         }
       },
       "BindingBase": {
@@ -13905,7 +13905,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "DHCP Server",
+              "service_definition": "TP-Link EAP",
               "tags": [],
               "virtualization": null
             }
@@ -16426,14 +16426,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-08T21:15:56.449183Z",
-                  "id": "7ead159b-032c-4a1f-933f-0e089f2616d5",
+                  "created_at": "2026-04-09T18:31:36.513890Z",
+                  "id": "01bb9efa-cca7-40b2-bc4a-d00b783a0f26",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-08T21:15:56.449183Z"
+                  "updated_at": "2026-04-09T18:31:36.513890Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16442,7 +16442,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "DHCP Server",
+              "service_definition": "TP-Link EAP",
               "source": {
                 "type": "Manual"
               },
@@ -18618,14 +18618,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-08T21:15:56.439234Z",
-                        "id": "8aa9ee7d-31f5-45a1-9b76-f63db9f14f0f",
+                        "created_at": "2026-04-09T18:31:36.507666Z",
+                        "id": "deacac4c-a638-4248-b9a7-d8755cabe472",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-08T21:15:56.439234Z"
+                        "updated_at": "2026-04-09T18:31:36.507666Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18634,7 +18634,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "DHCP Server",
+                    "service_definition": "TP-Link EAP",
                     "source": {
                       "type": "Manual"
                     },
@@ -18711,14 +18711,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-08T21:15:56.464699Z",
-                    "id": "39313c87-fe15-4384-be1a-d117b1cbb9f1",
+                    "created_at": "2026-04-09T18:31:36.522069Z",
+                    "id": "8665e229-236c-45b5-9345-310cf2bdb549",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-08T21:15:56.464699Z"
+                    "updated_at": "2026-04-09T18:31:36.522069Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18727,7 +18727,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "DHCP Server",
+                "service_definition": "TP-Link EAP",
                 "source": {
                   "type": "Manual"
                 },
@@ -19945,14 +19945,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-08T21:15:56.450169Z",
-              "id": "1aef5b03-0c7b-4491-baf6-314858b46cfb",
+              "created_at": "2026-04-09T18:31:36.514338Z",
+              "id": "728ea185-a623-4352-8a39-6aa1202efd75",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-08T21:15:56.450169Z"
+              "updated_at": "2026-04-09T18:31:36.514338Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19961,7 +19961,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "DHCP Server",
+          "service_definition": "TP-Link EAP",
           "source": {
             "type": "Manual"
           },
@@ -20858,6 +20858,12 @@
             "items": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          "vlans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Vlan"
             }
           }
         }

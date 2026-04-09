@@ -133,6 +133,7 @@ impl CrudService<Topology> for TopologyService {
             dependencies,
             if_entries,
             entity_tags,
+            vlans,
             ports,
             bindings,
         });
@@ -382,6 +383,7 @@ impl TopologyService {
             bindings,
             if_entries,
             entity_tags,
+            vlans,
         });
 
         topology.set_graph(nodes, edges);

@@ -242,6 +242,7 @@ pub enum SqlValue {
     OptionalMacAddress(Option<MacAddress>),
     IfEntries(Vec<IfEntry>),
     Tags(Vec<Tag>),
+    Vlans(Vec<crate::server::vlans::r#impl::base::Vlan>),
     PlanLimitNotifications(PlanLimitNotifications),
     OptionalIpAddrArray(Option<Vec<IpAddr>>),
     OptionalUuidVec(Option<Vec<Uuid>>),

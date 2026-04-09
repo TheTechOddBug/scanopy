@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-08T21:15:56.472692Z",
-             *       "id": "bad86396-3b47-4799-9feb-b7ae7dd21a3a",
+             *       "created_at": "2026-04-09T18:31:36.526624Z",
+             *       "id": "740b2f13-3fd8-4337-ad4a-01a47122dced",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-08T21:15:56.472692Z"
+             *       "updated_at": "2026-04-09T18:31:36.526624Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-08T21:15:56.449826Z",
-             *               "id": "b2b3e3f8-6420-4ef8-bdb0-e63e398d34c3",
+             *               "created_at": "2026-04-09T18:31:36.514194Z",
+             *               "id": "04ad01f3-336a-4085-a9b7-18107d6601aa",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-08T21:15:56.449826Z"
+             *               "updated_at": "2026-04-09T18:31:36.514194Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "DHCP Server",
+             *           "service_definition": "TP-Link EAP",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3529,14 +3529,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-08T21:15:56.466886Z",
-             *           "id": "b2b11c9d-f5a4-4837-aea4-bd170fde1de7",
+             *           "created_at": "2026-04-09T18:31:36.522967Z",
+             *           "id": "a63eec85-7185-4f07-81aa-cfc24cd8db60",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-08T21:15:56.466886Z"
+             *           "updated_at": "2026-04-09T18:31:36.522967Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3545,7 +3545,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "DHCP Server",
+             *       "service_definition": "TP-Link EAP",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3896,14 +3896,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-08T21:15:56.450312Z",
-         *       "id": "e84ae415-bffc-4e55-b996-b91e4d1ae056",
+         *       "created_at": "2026-04-09T18:31:36.514420Z",
+         *       "id": "da090018-8a84-42e6-babe-92e40a2dcba5",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-08T21:15:56.450312Z"
+         *       "updated_at": "2026-04-09T18:31:36.514420Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4088,7 +4088,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "DHCP Server",
+         *           "service_definition": "TP-Link EAP",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4938,14 +4938,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-08T21:15:56.449195Z",
-         *               "id": "ca23da63-1033-4b70-99a7-1af74b1ee97d",
+         *               "created_at": "2026-04-09T18:31:36.513896Z",
+         *               "id": "67da256c-a0b3-4955-8689-7afb450f79bf",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-08T21:15:56.449195Z"
+         *               "updated_at": "2026-04-09T18:31:36.513896Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4954,7 +4954,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "DHCP Server",
+         *           "service_definition": "TP-Link EAP",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6075,14 +6075,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-08T21:15:56.450155Z",
-         *           "id": "ef2c5162-6b75-40fe-9c4f-0d74ce9e7841",
+         *           "created_at": "2026-04-09T18:31:36.514344Z",
+         *           "id": "73a7cb2f-e592-4105-a5b9-eded68c25fd1",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-08T21:15:56.450155Z"
+         *           "updated_at": "2026-04-09T18:31:36.514344Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6091,7 +6091,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "DHCP Server",
+         *       "service_definition": "TP-Link EAP",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6366,6 +6366,7 @@ export interface components {
             services: components["schemas"]["Service"][];
             subnets: components["schemas"]["Subnet"][];
             tags: string[];
+            vlans?: components["schemas"]["Vlan"][];
         };
         /**
          * @description Lightweight request type for updating an edge's handles.

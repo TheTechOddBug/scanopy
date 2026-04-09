@@ -22,11 +22,11 @@
 </script>
 
 <button
-	class="flex items-center gap-1.5 rounded py-1.5 text-xs font-medium !shadow-lg transition-all duration-300 ease-in-out
-		{showLabel ? 'px-2' : 'px-1.5'}
+	class="flex items-center overflow-hidden rounded text-xs font-medium !shadow-lg transition-all duration-300 ease-in-out
 		{active
 		? '!border !border-blue-400 !bg-blue-50 !text-blue-700 hover:!bg-blue-100 dark:!border-blue-500 dark:!bg-blue-900/40 dark:!text-blue-300 dark:hover:!bg-blue-800/50'
 		: '!border !border-gray-300 !bg-gray-50 !text-gray-700 hover:!bg-gray-100 dark:!border-gray-600 dark:!bg-gray-700 dark:!text-gray-100 dark:hover:!bg-gray-600'}"
+	style="padding: 6px {showLabel ? '8px' : '6px'} 6px 6px; gap: {showLabel ? '6px' : '0px'};"
 	{onclick}
 	{title}
 	onpointerenter={() => (hovered = true)}

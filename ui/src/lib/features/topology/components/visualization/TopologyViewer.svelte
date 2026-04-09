@@ -52,6 +52,14 @@
 		editModeEnabled.set(editMode);
 	}
 
+	// Reset edit mode when leaving this tab (tabs stay mounted, just hidden)
+	$effect(() => {
+		if (!isActive && editMode) {
+			editMode = false;
+			editModeEnabled.set(false);
+		}
+	});
+
 	onDestroy(() => {
 		editModeEnabled.set(false);
 	});

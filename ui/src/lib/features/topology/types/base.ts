@@ -34,7 +34,6 @@ export interface ElementRenderData {
 	hiddenOpenPorts: Service[];
 	interface_id: string;
 	isCategoryHidden?: boolean;
-	platformBadge?: string | null;
 	portStatus?: PortStatus;
 }
 

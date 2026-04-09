@@ -175,7 +175,24 @@ impl ViewBuilder for InfrastructureBuilder {
         for host in ctx.hosts {
             let mut node =
                 Node::element(host.id, FLAT_ROOT_ID, host.id, ElementEntityType::Host {});
-            node.header = Some(host.base.name.clone());
+
+            // VM hosts: show "VM: {service_name} on {virtualizer_host}" like L3 view
+            if let Some(service) = ctx.get_host_is_virtualized_by(&host.id) {
+                let virtualizer_host_name = virtualizer_map
+                    .get(&host.id)
+                    .and_then(|vid| vid.as_ref())
+                    .and_then(|vid| ctx.get_host_by_id(*vid))
+                    .map(|h| h.base.name.as_str());
+                node.header = Some(match virtualizer_host_name {
+                    Some(name) if name != service.base.name => {
+                        format!("VM: {} on {}", service.base.name, name)
+                    }
+                    _ => format!("VM: {}", service.base.name),
+                });
+            } else {
+                node.header = Some(host.base.name.clone());
+            }
+
             nodes.push(node);
         }
 

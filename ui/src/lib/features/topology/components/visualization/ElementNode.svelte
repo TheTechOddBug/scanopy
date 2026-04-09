@@ -31,12 +31,7 @@
 	import { getContext } from 'svelte';
 	import type { Port } from '$lib/features/hosts/types/base';
 	import type { Node, Edge } from '@xyflow/svelte';
-	import {
-		topology_hideOpenPorts,
-		topology_openPortsSummary,
-		common_vm,
-		common_container
-	} from '$lib/paraglide/messages';
+	import { topology_hideOpenPorts, topology_openPortsSummary } from '$lib/paraglide/messages';
 
 	let { id, data, width }: NodeProps = $props();
 
@@ -146,13 +141,12 @@
 							hiddenCategories.includes(
 								serviceDefinitions.getCategory(service.service_definition) as CategoryType
 							);
-						const isApplicationView = $activeView === 'Application';
 						return {
 							elementType,
-							footerText: isApplicationView ? null : (host?.name ?? null),
+							footerText: null,
 							services: service && !isCategoryHidden ? [service] : [],
 							hiddenOpenPorts: [],
-							headerText: null,
+							headerText: host?.name ?? null,
 							bodyText: service ? null : 'Unknown Service',
 							showServices: !!service && !isCategoryHidden,
 							isVirtualized: false,
@@ -187,22 +181,6 @@
 
 						const showServices = servicesOnHost.length !== 0 || hiddenOpenPorts.length !== 0;
 
-						let platformBadge: string | null = null;
-						if ($activeView === 'Infrastructure') {
-							if (host.virtualization) {
-								platformBadge = common_vm();
-							} else if (
-								topology?.edges.some(
-									(e) =>
-										e.edge_type === 'ServiceVirtualization' &&
-										'host_id' in e &&
-										e.host_id === resolved.hostId
-								)
-							) {
-								platformBadge = common_container();
-							}
-						}
-
 						return {
 							elementType,
 							footerText: null,
@@ -212,7 +190,6 @@
 							bodyText: showServices ? null : host.name || host.hostname,
 							showServices,
 							isVirtualized: host.virtualization !== null,
-							platformBadge,
 							interface_id: id
 						} as ElementRenderData;
 					}
@@ -293,8 +270,7 @@
 					let showServices = servicesOnInterface.length != 0 || hiddenOpenPorts.length != 0;
 
 					if (iface && !isContainerSubnetValue) {
-						subtitleText = iface.ip_address;
-						footerText = iface.name || null;
+						subtitleText = (iface.name ? iface.name + ': ' : '') + iface.ip_address;
 					}
 
 					if (!showServices) {
@@ -442,14 +418,9 @@
 		{#if nodeRenderData.headerText}
 			<div class="relative flex-shrink-0 px-2 pt-2 text-center">
 				<div
-					class={`flex items-center justify-center gap-1 truncate text-xs font-medium leading-none ${nodeRenderData.isVirtualized ? virtualizationColorHelper.text : 'text-tertiary'}`}
+					class={`truncate text-xs font-medium leading-none ${nodeRenderData.isVirtualized ? virtualizationColorHelper.text : 'text-tertiary'}`}
 				>
 					{nodeRenderData.headerText}
-					{#if nodeRenderData.platformBadge}
-						<span class="text-tertiary bg-surface-secondary rounded px-1 text-[10px]">
-							{nodeRenderData.platformBadge}
-						</span>
-					{/if}
 				</div>
 			</div>
 		{/if}

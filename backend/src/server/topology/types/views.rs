@@ -339,8 +339,8 @@ impl TopologyView {
             Self::Infrastructure => ViewInspectorConfig {
                 element_sections: vec![
                     InspectorSection::Identity,
-                    InspectorSection::Virtualization,
                     InspectorSection::HostDetail,
+                    InspectorSection::Virtualization,
                     InspectorSection::Services,
                     InspectorSection::OtherInterfaces,
                 ],

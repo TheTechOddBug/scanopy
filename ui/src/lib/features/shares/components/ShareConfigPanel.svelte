@@ -145,14 +145,6 @@
 		}
 	}));
 
-	// Reset form when share changes
-	$effect(() => {
-		if (share?.id) {
-			form.reset(getDefaultValues());
-			shareTheme = 'default';
-		}
-	});
-
 	async function handleSubmit() {
 		await submitForm(form);
 	}

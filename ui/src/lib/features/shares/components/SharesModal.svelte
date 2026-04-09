@@ -145,7 +145,9 @@
 
 				<svelte:fragment slot="config" let:selectedItem>
 					{#if selectedItem}
-						<ShareConfigPanel share={selectedItem} onDeleted={() => {}} />
+						{#key selectedItem.id}
+							<ShareConfigPanel share={selectedItem} onDeleted={() => {}} />
+						{/key}
 					{:else}
 						<EntityConfigEmpty title={shares_noShareSelected()} subtitle={shares_selectToEdit()} />
 					{/if}

@@ -165,12 +165,15 @@
 							)[$activeView] ?? [];
 
 						type CategoryType = (typeof hiddenCategories)[number];
-						// Services visible in card: exclude category-hidden and tag-hidden OpenPorts
-						// (tag-hidden non-OpenPorts stay and render faded)
+						// Services visible in card: exclude OpenPorts hidden by category or tag
+						// (non-OpenPorts stay and render faded when hidden)
 						const servicesOnHost = visibleServicesForHost.filter((s) => {
 							const category = serviceDefinitions.getCategory(s.service_definition);
-							if (hiddenCategories.includes(category as CategoryType)) return false;
-							if (hiddenServices.has(s.id) && category === 'OpenPorts') return false;
+							if (
+								category === 'OpenPorts' &&
+								(hiddenCategories.includes(category as CategoryType) || hiddenServices.has(s.id))
+							)
+								return false;
 							return true;
 						});
 
@@ -257,13 +260,16 @@
 						: [];
 
 					// Split into visible services and hidden open ports
-					// Tag-hidden non-OpenPorts stay in list (render faded)
-					// Tag-hidden OpenPorts go to collapsed indicator
+					// OpenPorts hidden by category or tag go to collapsed indicator
+					// Non-OpenPorts stay and render faded when hidden
 					type CategoryType = (typeof hiddenCategories)[number];
 					const servicesOnInterface = allServicesOnInterface.filter((s) => {
 						const category = serviceDefinitions.getCategory(s.service_definition);
-						if (hiddenCategories.includes(category as CategoryType)) return false;
-						if (hiddenServices.has(s.id) && category === 'OpenPorts') return false;
+						if (
+							category === 'OpenPorts' &&
+							(hiddenCategories.includes(category as CategoryType) || hiddenServices.has(s.id))
+						)
+							return false;
 						return true;
 					});
 

@@ -455,7 +455,12 @@
 		{/if}
 
 		{#if nodeRenderData.subtitleText}
-			<div class="text-secondary truncate px-2 text-center text-xs font-medium">
+			<div
+				class="text-secondary truncate px-2 text-center font-mono text-xs {!nodeRenderData.headerText &&
+				!nodeRenderData.showServices
+					? 'py-2'
+					: 'pt-0.5'}"
+			>
 				{nodeRenderData.subtitleText}
 			</div>
 		{/if}

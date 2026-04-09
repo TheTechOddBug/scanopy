@@ -52,30 +52,31 @@
 		editModeEnabled.set(editMode);
 	}
 
-	// Sidebar buttons show labels briefly then collapse to icon-only
-	let sidebarCollapsed = $state(false);
-	let collapseTimer: ReturnType<typeof setTimeout> | null = null;
+	// Sidebar buttons show labels briefly on first visit per session, then stay collapsed
+	const SIDEBAR_SEEN_KEY = 'topology_sidebar_labels_shown';
+	const alreadySeen = typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SIDEBAR_SEEN_KEY) === '1';
+	let sidebarCollapsed = $state(alreadySeen);
 
 	$effect(() => {
-		if (isActive) {
-			// Show labels on tab activate, then collapse after 2s
-			sidebarCollapsed = false;
-			collapseTimer = setTimeout(() => {
+		if (isActive && !alreadySeen && !sidebarCollapsed) {
+			const timer = setTimeout(() => {
 				sidebarCollapsed = true;
+				sessionStorage.setItem(SIDEBAR_SEEN_KEY, '1');
 			}, 2000);
-		} else {
-			// Reset edit mode when leaving this tab (tabs stay mounted, just hidden)
-			if (editMode) {
-				editMode = false;
-				editModeEnabled.set(false);
-			}
-			if (collapseTimer) clearTimeout(collapseTimer);
+			return () => clearTimeout(timer);
+		}
+	});
+
+	// Reset edit mode when leaving this tab (tabs stay mounted, just hidden)
+	$effect(() => {
+		if (!isActive && editMode) {
+			editMode = false;
+			editModeEnabled.set(false);
 		}
 	});
 
 	onDestroy(() => {
 		editModeEnabled.set(false);
-		if (collapseTimer) clearTimeout(collapseTimer);
 	});
 
 	export function triggerFitView() {

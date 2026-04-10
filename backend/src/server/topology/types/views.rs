@@ -233,7 +233,7 @@ impl TopologyView {
         }
     }
 
-    /// Human-friendly singular label for element nodes (e.g. "host interface")
+    /// Human-friendly singular label for element nodes (e.g. "host IP address")
     pub fn element_label_singular(&self) -> &'static str {
         match self {
             Self::L2Physical => "port",

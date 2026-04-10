@@ -134,10 +134,9 @@
 					// category toggles don't trigger nodeRenderData recomputation.
 					if (elementType === 'Service') {
 						const service = resolved.services[0];
-						const isApplicationView = $activeView === 'Application';
 						return {
 							elementType,
-							footerText: isApplicationView ? null : (host?.name ?? null),
+							footerText: null,
 							services: service ? [service] : [],
 							hiddenOpenPorts: [],
 							headerText: host?.name ?? null,
@@ -512,7 +511,7 @@
 							{/if}
 						</div>
 					{/each}
-					{#if nodeRenderData.hiddenOpenPorts.length > 0}
+					{#if nodeRenderData.hiddenOpenPorts.length > 0 && nodeRenderData.elementType !== 'Host'}
 						{#if expandedOpenPorts}
 							{#each nodeRenderData.hiddenOpenPorts as service (service.id)}
 								{@const ServiceIcon = serviceDefinitions.getIconComponent(

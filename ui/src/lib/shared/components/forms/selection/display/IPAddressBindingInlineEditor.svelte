@@ -15,6 +15,7 @@
 	let isContainerSubnetFn = $derived((subnetId: string) => {
 		const subnet = subnetsData.find((s) => s.id === subnetId);
 		return subnet ? isContainerSubnet(subnet) : false;
+	});
 
 	interface Props {
 		binding: IPAddressBinding;

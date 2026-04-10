@@ -162,11 +162,7 @@ export function getNodeSelectionIds(
 			(s) =>
 				s.host_id &&
 				hostIds.includes(s.host_id) &&
-<<<<<<< HEAD
-				s.bindings.some((b) => b.interface_id === resolved.interfaceId || b.interface_id === null)
-=======
 				s.bindings.some((b) => b.ip_address_id === resolved.ipAddressId || b.ip_address_id === null)
->>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 		)
 		.map((s) => s.id);
 	return { hostIds, serviceIds };
@@ -314,7 +310,20 @@ export function resolveElementNode(
 	topology: Topology
 ): ElementRenderContext {
 	if (node.node_type !== 'Element') throw new Error(`Expected Element, got ${node.node_type}`);
-	const elementType = node.element_type ?? 'IPAddress'; // Default for backward compat
+	const elementType = node.element_type;
+	if (!elementType || !(elementType in elementResolvers)) {
+		console.warn(`[resolveElementNode] Unknown element_type: ${elementType} for node ${nodeId}`);
+		return {
+			elementType: elementType ?? ('Unknown' as any),
+			host: undefined,
+			iface: undefined,
+			services: [],
+			hostId: undefined,
+			interfaceId: undefined,
+			subnetId: '',
+			isInfra: false
+		};
+	}
 	return elementResolvers[elementType](nodeId, node, topology);
 }
 

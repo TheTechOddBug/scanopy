@@ -41,11 +41,7 @@
 	// Contextual hint conditions for options card
 	let servicesOnThisInterface = $derived(
 		(resolved?.services ?? []).filter((s) =>
-<<<<<<< HEAD
-			s.bindings.some((b) => b.interface_id === resolved?.interfaceId || b.interface_id === null)
-=======
 			s.bindings.some((b) => b.ip_address_id === resolved?.ipAddressId || b.ip_address_id === null)
->>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 		)
 	);
 	let hasPortBindings = $derived(

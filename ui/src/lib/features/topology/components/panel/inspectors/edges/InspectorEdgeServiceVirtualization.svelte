@@ -86,11 +86,7 @@
 				if (binding.type === 'IPAddress') {
 					ipAddressId = binding.ip_address_id;
 				} else if (binding.type === 'Port') {
-<<<<<<< HEAD
-					ifaceId = binding.interface_id ?? null;
-=======
 					ipAddressId = binding.ip_address_id ?? null;
->>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 				}
 
 				if (!ipAddressId) continue;

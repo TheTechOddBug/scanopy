@@ -369,11 +369,7 @@
 			for (const service of hostServices) {
 				for (const binding of service.bindings) {
 					// Only include bindings for this interface (or null = all interfaces)
-<<<<<<< HEAD
-					if (binding.interface_id === resolved.interfaceId || binding.interface_id === null) {
-=======
 					if (binding.ip_address_id === resolved.ipAddressId || binding.ip_address_id === null) {
->>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 						const portInfo =
 							binding.type === 'Port' && binding.port_id
 								? (() => {

@@ -59,8 +59,10 @@ function readNodes(): NodeRect[] {
 			id: n.id,
 			x: n.position.x,
 			y: n.position.y,
-			width: n.computed?.width ?? n.width ?? 0,
-			height: n.computed?.height ?? n.height ?? 0,
+			// Use layout pipeline defaults (250x100) for uncomputed nodes to avoid
+			// false positives — SvelteFlow elements have undefined height until rendered
+			width: n.computed?.width ?? n.width ?? 250,
+			height: n.computed?.height ?? n.height ?? 100,
 			parentId: n.parentId,
 			type: n.type ?? 'Element'
 		}));

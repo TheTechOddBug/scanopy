@@ -357,29 +357,45 @@
 				}
 
 				let collapsed = get(collapsedContainers);
-				// Perspective switch fix: when switching views while all containers were
-				// collapsed, the old perspective's container IDs become stale. Detect this
-				// and auto-collapse the new perspective's root containers to preserve the
-				// user's "overview mode" intent.
-				if (viewChanged && topologyChanged && collapsed.size > 0 && layoutGraph) {
-					const oldRootIds = [...layoutGraph.containers.values()]
-						.filter((c) => !c.parent)
-						.map((c) => c.id);
-					const wasFullyCollapsed =
-						oldRootIds.length > 0 && oldRootIds.every((id) => collapsed.has(id));
-					if (wasFullyCollapsed) {
-						const newRootIds = topology.nodes
-							.filter((n) => n.node_type === 'Container' && !n.parent_container_id)
-							.map((n) => n.id);
-						if (newRootIds.length > 0) {
-							// Also collapse all subcontainers
+				// Perspective switch: strip stale container IDs from previous
+				// perspective that don't exist in the new topology. Without this,
+				// stale IDs pollute deferCollapse, structureKey, and edge aggregation.
+				if (viewChanged && topologyChanged && collapsed.size > 0) {
+					const originalSize = collapsed.size;
+					const newContainerIds = new Set(
+						topology.nodes.filter((n) => n.node_type === 'Container').map((n) => n.id)
+					);
+					const validCollapsed = new Set([...collapsed].filter((id) => newContainerIds.has(id)));
+					const staleCount = originalSize - validCollapsed.size;
+
+					// If ALL old root containers were collapsed, preserve "overview mode"
+					// by auto-collapsing all new containers
+					if (layoutGraph) {
+						const oldRootIds = [...layoutGraph.containers.values()]
+							.filter((c) => !c.parent)
+							.map((c) => c.id);
+						const wasFullyCollapsed =
+							oldRootIds.length > 0 && oldRootIds.every((id) => collapsed.has(id));
+						if (wasFullyCollapsed) {
 							const allContainerIds = topology.nodes
 								.filter((n) => n.node_type === 'Container')
 								.map((n) => n.id);
 							collapseAll(allContainerIds);
 							collapsed = new Set(allContainerIds);
 							fitViewPending = true;
+						} else if (staleCount > 0) {
+							collapsedContainers.set(validCollapsed);
+							collapsed = validCollapsed;
 						}
+					} else if (staleCount > 0) {
+						collapsedContainers.set(validCollapsed);
+						collapsed = validCollapsed;
+					}
+
+					if (staleCount > 0) {
+						console.log(
+							`[LAYOUT-DEBUG] Stripped ${staleCount} stale collapsed IDs (${originalSize} → ${validCollapsed.size})`
+						);
 					}
 				}
 

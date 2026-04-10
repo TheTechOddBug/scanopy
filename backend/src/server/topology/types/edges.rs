@@ -179,8 +179,8 @@ pub enum EdgeType {
     },
     /// Physical link discovered via LLDP/CDP neighbor discovery
     PhysicalLink {
-        source_if_entry_id: Uuid,
-        target_if_entry_id: Uuid,
+        source_interface_id: Uuid,
+        target_interface_id: Uuid,
         protocol: DiscoveryProtocol,
     },
 }

@@ -1699,30 +1699,6 @@
 						{/snippet}
 					</TopologySidebarButton>
 				{/if}
-				<div
-					class="flex flex-col items-center overflow-hidden rounded !border !border-gray-300 !bg-gray-50 !shadow-lg dark:!border-gray-600 dark:!bg-gray-700"
-					title={getCollapseLevelName($collapseLevel)}
-				>
-					<button
-						class="flex items-center justify-center p-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-600"
-						onclick={handleStepExpand}
-						title={collapseLevelTooltipExpand}
-					>
-						<Expand class="h-3.5 w-3.5" />
-					</button>
-					<span
-						class="flex min-h-[1.25rem] items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-100"
-					>
-						{$collapseLevel}
-					</span>
-					<button
-						class="flex items-center justify-center p-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-600"
-						onclick={handleStepCollapse}
-						title={collapseLevelTooltipCollapse}
-					>
-						<Shrink class="h-3.5 w-3.5" />
-					</button>
-				</div>
 				<TopologySidebarButton
 					onclick={handleStepExpand}
 					title={collapseLevelTooltipExpand}

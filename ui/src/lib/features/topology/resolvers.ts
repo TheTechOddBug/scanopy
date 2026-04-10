@@ -308,7 +308,7 @@ export function resolveElementNode(
 	if (!elementType || !(elementType in elementResolvers)) {
 		console.warn(`[resolveElementNode] Unknown element_type: ${elementType} for node ${nodeId}`);
 		return {
-			elementType: elementType ?? ('Unknown' as any),
+			elementType: elementType ?? ('Unknown' as ElementEntityType),
 			host: undefined,
 			iface: undefined,
 			services: [],

@@ -45,22 +45,22 @@ impl ViewBuilder for L2Builder {
         let mut processed_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
 
         for source_entry in ctx.get_if_entries_with_neighbor() {
-            let target_if_entry_id = match &source_entry.base.neighbor {
+            let target_interface_id = match &source_entry.base.neighbor {
                 Some(Neighbor::Interface(id)) => *id,
                 _ => continue,
             };
 
             // Dedup bidirectional pairs
-            let pair_key = if source_entry.id < target_if_entry_id {
-                (source_entry.id, target_if_entry_id)
+            let pair_key = if source_entry.id < target_interface_id {
+                (source_entry.id, target_interface_id)
             } else {
-                (target_if_entry_id, source_entry.id)
+                (target_interface_id, source_entry.id)
             };
             if !processed_pairs.insert(pair_key) {
                 continue;
             }
 
-            let target_entry = match ctx.get_if_entry_by_id(target_if_entry_id) {
+            let target_entry = match ctx.get_if_entry_by_id(target_interface_id) {
                 Some(e) => e,
                 None => continue,
             };
@@ -81,8 +81,8 @@ impl ViewBuilder for L2Builder {
                 source: source_entry.id, // interface_id, not ip_address_id
                 target: target_entry.id, // interface_id, not ip_address_id
                 edge_type: EdgeType::PhysicalLink {
-                    source_if_entry_id: source_entry.id,
-                    target_if_entry_id: target_entry.id,
+                    source_interface_id: source_entry.id,
+                    target_interface_id: target_entry.id,
                     protocol: DiscoveryProtocol::default(),
                 },
                 label,
@@ -106,9 +106,10 @@ impl ViewBuilder for L2Builder {
         // Hosts that are targets (look up target interface → host_id)
         for edge in &edges {
             if let EdgeType::PhysicalLink {
-                target_if_entry_id, ..
+                target_interface_id,
+                ..
             } = &edge.edge_type
-                && let Some(entry) = ctx.get_if_entry_by_id(*target_if_entry_id)
+                && let Some(entry) = ctx.get_if_entry_by_id(*target_interface_id)
             {
                 qualifying_host_ids.insert(entry.base.host_id);
             }

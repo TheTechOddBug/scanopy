@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
+    edge_builder::EdgeBuilder,
     element_rules::{ElementMatchData, apply_element_rules_with_titles},
     view::ViewBuilder,
 };
@@ -258,8 +259,10 @@ impl ViewBuilder for WorkloadsBuilder {
             Some(&virtualizer_titles),
         );
 
-        // No edges — containment IS the information
-        (nodes, vec![])
+        // Physical link edges between hosts (LLDP/CDP discovered connections)
+        let edges = EdgeBuilder::create_physical_link_edges(ctx);
+
+        (nodes, edges)
     }
 }
 

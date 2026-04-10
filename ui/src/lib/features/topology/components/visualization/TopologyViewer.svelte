@@ -10,7 +10,7 @@
 		useUpdateNodePositionMutation,
 		useUpdateEdgeHandlesMutation
 	} from '../../queries';
-	import { type EdgeHandle, type TopologyEdge, type TopologyNode } from '../../types/base';
+	import { type EdgeHandle, type TopologyEdge } from '../../types/base';
 	import { searchOpen, clearSearch } from '../../interactions';
 	import { clearSelection } from '../../selection';
 	import { editModeEnabled } from '../../state';

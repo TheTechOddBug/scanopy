@@ -1,7 +1,7 @@
 <script lang="ts">
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
-	import { IPAddressDisplay } from '$lib/shared/components/forms/selection/display/IPAddressDisplay.svelte';
+	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
 	import { useTopologiesQuery, selectedTopologyId } from '$lib/features/topology/queries';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import { getContext } from 'svelte';
@@ -62,7 +62,7 @@
 				<EntityDisplayWrapper
 					context={undefined}
 					item={sourceInterface}
-					displayComponent={IPAddressDisplay}
+					displayComponent={InterfaceDisplay}
 				/>
 			</div>
 		{/if}
@@ -86,7 +86,7 @@
 				<EntityDisplayWrapper
 					context={undefined}
 					item={targetInterface}
-					displayComponent={IPAddressDisplay}
+					displayComponent={InterfaceDisplay}
 				/>
 			</div>
 		{/if}

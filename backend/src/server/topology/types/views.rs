@@ -109,7 +109,6 @@ pub enum InspectorSection {
     HostDetail,
     Virtualization,
     OtherInterfaces,
-    Tags,
     PortBindings,
     SubnetDetail,
     ElementSummary,
@@ -285,10 +284,10 @@ impl TopologyView {
                 }
             },
             Self::Workloads => match edge_type {
+                PhysicalLink => active(true, Hidden, Dashed, WhenVisible, false, false),
                 HostVirtualization
                 | ServiceVirtualization
                 | SameHost
-                | PhysicalLink
                 | RequestPath
                 | HubAndSpoke => EdgeViewConfig::Disabled,
             },
@@ -346,7 +345,6 @@ impl TopologyView {
                     InspectorSection::Virtualization,
                     InspectorSection::Services,
                     InspectorSection::OtherInterfaces,
-                    InspectorSection::Tags,
                 ],
                 container_sections: vec![
                     InspectorSection::Identity,

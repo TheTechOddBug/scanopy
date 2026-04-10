@@ -21,8 +21,6 @@
 
 	let hovered = $state(false);
 	let showLabel = $derived(!collapsed || hovered);
-	let buttonOpacity = $derived(disabled ? 0.4 : 1);
-	let buttonCursor = $derived(disabled ? 'not-allowed' : 'pointer');
 </script>
 
 <button

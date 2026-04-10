@@ -312,6 +312,9 @@ impl ServiceCategory {
             // Network appliances: infra for most, but MSPs manage these
             NetworkAppliance => vec![UseCase::Msp],
 
+            // IoT: infra for non-homelab
+            IoT => vec![UseCase::Homelab],
+
             // Everything else: relevant for all use cases
             _ => UseCase::iter().collect(),
         }

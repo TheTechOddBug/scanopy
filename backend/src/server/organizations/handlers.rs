@@ -561,7 +561,7 @@ pub async fn populate_demo_data(
             }
         }
 
-        // Build a map of source_if_entry_id -> target_if_entry_id
+        // Build a map of source_interface_id -> target_interface_id
         let mut neighbor_map: HashMap<Uuid, Uuid> = HashMap::new();
         for neighbor_update in &demo_data.neighbor_updates {
             let source_key = (

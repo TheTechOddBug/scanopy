@@ -11,7 +11,7 @@
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Color, ColorStyle } from '$lib/shared/utils/styling';
 	import { serviceDefinitions, containerTypes, views } from '$lib/shared/stores/metadata';
-	import { activeView } from '../../queries';
+	import { activeView, getInfrastructureRuleId } from '../../queries';
 	import {
 		useTopologiesQuery,
 		useUpdateNodeResizeMutation,
@@ -190,6 +190,7 @@
 	let elementRuleId = $derived(
 		(data as Record<string, unknown>)?.element_rule_id as string | undefined
 	);
+	let isInfraRule = $derived(elementRuleId != null && elementRuleId === getInfrastructureRuleId());
 	let elementRule = $derived.by(() => {
 		if (!elementRuleId) return null;
 		const rules = $topologyOptions.request.element_rules ?? [];
@@ -284,11 +285,13 @@
 					return [];
 				})();
 
+				const infraId = getInfrastructureRuleId();
 				return {
 					logoComponent: groupLogoComponent,
 					headerText: sHeader,
 					labels,
-					childCount: summary.childCount
+					childCount: summary.childCount,
+					hideCount: !!(infraId && ruleId === infraId)
 				};
 			});
 		}
@@ -409,6 +412,7 @@
 				{groupLabels}
 				{childCount}
 				{elementLabel}
+				hideCount={isInfraRule}
 				onToggleCollapse={handleChevronClick}
 			/>
 		{:else}

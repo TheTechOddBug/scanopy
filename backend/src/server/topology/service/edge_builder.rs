@@ -337,16 +337,16 @@ impl EdgeBuilder {
             .into_iter()
             .filter_map(|source_entry| {
                 // Get the target Interface ID from resolved neighbor
-                let target_if_entry_id = match &source_entry.base.neighbor {
+                let target_interface_id = match &source_entry.base.neighbor {
                     Some(Neighbor::Interface(id)) => *id,
                     _ => return None, // Already filtered by get_if_entries_with_neighbor
                 };
 
                 // Skip if we've already processed this pair (in either direction)
-                let pair_key = if source_entry.id < target_if_entry_id {
-                    (source_entry.id, target_if_entry_id)
+                let pair_key = if source_entry.id < target_interface_id {
+                    (source_entry.id, target_interface_id)
                 } else {
-                    (target_if_entry_id, source_entry.id)
+                    (target_interface_id, source_entry.id)
                 };
 
                 if processed_pairs.contains(&pair_key) {
@@ -356,7 +356,7 @@ impl EdgeBuilder {
 
                 // Resolve interface IDs with single-interface host fallback
                 let source_ip_address_id = ctx.resolve_ip_address_for_if_entry(source_entry)?;
-                let target_entry = ctx.get_if_entry_by_id(target_if_entry_id)?;
+                let target_entry = ctx.get_if_entry_by_id(target_interface_id)?;
                 let target_ip_address_id = ctx.resolve_ip_address_for_if_entry(target_entry)?;
 
                 let is_multi_hop =
@@ -374,8 +374,8 @@ impl EdgeBuilder {
                     source: source_ip_address_id,
                     target: target_ip_address_id,
                     edge_type: EdgeType::PhysicalLink {
-                        source_if_entry_id: source_entry.id,
-                        target_if_entry_id: target_entry.id,
+                        source_interface_id: source_entry.id,
+                        target_interface_id: target_entry.id,
                         protocol: DiscoveryProtocol::LLDP, // TODO: Support CDP when implemented
                     },
                     label,

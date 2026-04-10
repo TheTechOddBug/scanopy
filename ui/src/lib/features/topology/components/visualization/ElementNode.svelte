@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
-	import { concepts, entities, serviceDefinitions, views } from '$lib/shared/stores/metadata';
+	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import {
 		selectedEdge as globalSelectedEdge,
 		selectedNode as globalSelectedNode,

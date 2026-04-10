@@ -11,6 +11,7 @@
 		headerText: string;
 		labels: Array<{ label: string; color: Color }>;
 		childCount: number;
+		hideCount?: boolean;
 	};
 
 	let {
@@ -27,7 +28,8 @@
 		onToggleCollapse,
 		variant,
 		subgroupSummaries = [],
-		tagHoverRingStyle = ''
+		tagHoverRingStyle = '',
+		hideCount = false
 	}: {
 		isCollapsed: boolean;
 		isCollapsible: boolean;
@@ -43,6 +45,7 @@
 		variant: 'external' | 'inline' | 'collapsed-sub' | 'collapsed-root';
 		subgroupSummaries?: SubgroupRow[];
 		tagHoverRingStyle?: string;
+		hideCount?: boolean;
 	} = $props();
 
 	let subgroupTotal = $derived(subgroupSummaries.reduce((sum, s) => sum + s.childCount, 0));
@@ -190,7 +193,7 @@
 			<Tag label={pill.label} color={pill.color} />
 		{/each}
 		{#if hiddenLabelCount > 0}
-			<span class="text-tertiary whitespace-nowrap text-xs">+{hiddenLabelCount} more</span>
+			<Tag label="+{hiddenLabelCount} tags" color="Gray" />
 		{/if}
 	</div>
 {:else if variant === 'collapsed-sub'}
@@ -229,13 +232,15 @@
 			<Tag label={pill.label} color={pill.color} />
 		{/each}
 		{#if visibleLabels.length > 2}
-			<span class="text-tertiary whitespace-nowrap text-xs">+{visibleLabels.length - 2}</span>
+			<Tag label="+{visibleLabels.length - 2} tags" color="Gray" />
 		{:else if hiddenLabelCount > 0}
-			<span class="text-tertiary whitespace-nowrap text-xs">+{hiddenLabelCount} more</span>
+			<Tag label="+{hiddenLabelCount} tags" color="Gray" />
 		{/if}
-		<span data-fixed class="text-tertiary ml-auto whitespace-nowrap text-xs">
-			({topology_elementCount({ count: childCount, label: elementLabel })})
-		</span>
+		{#if !hideCount}
+			<span data-fixed class="text-tertiary ml-auto whitespace-nowrap text-xs">
+				({topology_elementCount({ count: childCount, label: elementLabel })})
+			</span>
+		{/if}
 	</div>
 {:else if variant === 'collapsed-root'}
 	<!-- Collapsed root container: summary with subcontainer info -->
@@ -270,14 +275,16 @@
 						<Tag label={pill.label} color={pill.color} />
 					{/each}
 					{#if summary.labels.length > 2}
-						<span class="text-tertiary text-xs">+{summary.labels.length - 2}</span>
+						<Tag label="+{summary.labels.length - 2} tags" color="Gray" />
 					{/if}
-					<span class="text-tertiary text-xs"
-						>({topology_elementCount({
-							count: summary.childCount,
-							label: elementLabel
-						})})</span
-					>
+					{#if !summary.hideCount}
+						<span class="text-tertiary text-xs"
+							>({topology_elementCount({
+								count: summary.childCount,
+								label: elementLabel
+							})})</span
+						>
+					{/if}
 				</div>
 			{/each}
 		</div>

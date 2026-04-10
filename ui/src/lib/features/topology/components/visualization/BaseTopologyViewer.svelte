@@ -442,13 +442,21 @@
 				const prevExpandedSizes = layoutGraph?.getExpandedContainerSizes();
 				const prevChildPositions = layoutGraph?.getContainerChildPositions();
 
+				{
+					const subSizes = prevExpandedSizes ? [...prevExpandedSizes].filter(([id]) => layoutGraph?.containers.get(id)?.isSubcontainer) : [];
+					if (subSizes.length > 0) console.log(`[SC] prevExpandedSizes captured: ${subSizes.map(([id, s]) => `${id.substring(0,8)}=${s.width}x${s.height}`).join(', ')}`);
+					console.log(`[SC] loadTopologyData: isNewStructure=${isNewStructure} collapsed.size=${collapsed.size} prevExpandedSizes.size=${prevExpandedSizes?.size ?? 0}`);
+				}
+
 				// Build/rebuild the layout graph when topology or hidden services change
 				if (!layoutGraph || isNewStructure) {
+					console.log(`[SC] rebuilding layoutGraph`);
 					layoutGraph = LayoutGraph.fromTopology(layoutNodes);
 				}
 
 				// Sync collapse state from store → graph (handles cascade internally)
 				const collapseChanged = layoutGraph.syncCollapseState(collapsed);
+				console.log(`[SC] syncCollapseState: collapseChanged=${collapseChanged}`);
 
 				// Force ELK re-layout when a container was expanded but has no
 				// cached layout (e.g., was collapsed-by-default from initial load
@@ -456,16 +464,17 @@
 				let needsElkForExpand = false;
 				if (collapseChanged) {
 					for (const c of layoutGraph.containers.values()) {
+						if (!c.collapsed && c.isSubcontainer) {
+							console.log(`[SC] just-expanded sub ${c.id.substring(0,8)} type=${c.containerType} expandedSize.w=${c.expandedSize.width} children=${c.allChildren.length}`);
+						}
 						if (!c.collapsed && c.expandedSize.width === 0 && c.allChildren.length > 0) {
 							needsElkForExpand = true;
-							// Mark as seen so the auto-collapse block (below) doesn't
-							// immediately re-collapse what the user just expanded.
-							// This happens when collapse state was persisted via
-							// localStorage rather than auto-collapsed in this session.
 							seenAutoCollapseIds.add(c.id);
+							console.log(`[SC] needsElkForExpand=true for ${c.id.substring(0,8)}`);
 						}
 					}
 				}
+				console.log(`[SC] needsElk=${isNewStructure || needsElkForExpand} (isNewStructure=${isNewStructure} needsElkForExpand=${needsElkForExpand})`);
 
 				// Compute aggregated edges for collapsed containers
 				const aggregatedEdges = computeCollapsedEdges(
@@ -510,6 +519,9 @@
 							const graphPos = layoutGraph.getPosition(node.id);
 							const expandedSize = !isElement ? layoutGraph.getExpandedSize(node.id) : undefined;
 							position = graphPos ?? { x: node.position.x, y: node.position.y };
+							if (isNodeCollapsed && isSubContainer && !isElement) {
+								console.log(`[SC] buildFlowNodes collapsed sub ${node.id.substring(0,8)} expandedSize=${JSON.stringify(expandedSize)} containerSize=${JSON.stringify(containerSize)}`);
+							}
 							// Sub-containers keep expanded width when collapsed to prevent overlap on expand
 							// Root containers use collapsed size from metadata
 							const isSubContainer =
@@ -768,6 +780,12 @@
 							})
 							.map((n) => n.id);
 						if (autoCollapseIds.length > 0) {
+							console.log(`[SC] auto-collapse: ${autoCollapseIds.map(id => id.substring(0,8)).join(', ')}`);
+							// Log expanded sizes that will be preserved
+							for (const id of autoCollapseIds) {
+								const c = layoutGraph?.containers.get(id);
+								if (c?.isSubcontainer) console.log(`[SC] auto-collapsing sub ${id.substring(0,8)} expandedSize=${JSON.stringify(c.expandedSize)}`);
+							}
 							for (const id of autoCollapseIds) seenAutoCollapseIds.add(id);
 							// eslint-disable-next-line svelte/prefer-svelte-reactivity -- temporary value for store update
 							const next = new Set(collapsed);

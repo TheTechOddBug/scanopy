@@ -638,10 +638,42 @@
 						}
 					} else {
 						// First visit to view or non-view structural change:
-						// full DOM measurement pass
+						// full DOM measurement pass.
+						// When running ELK expanded (!hasRestorable), measure ALL nodes
+						// including children of collapsed containers — use layoutNodes
+						// directly with no collapse filtering so ELK gets real sizes.
 						isMeasuring = true;
 						edges.set([]);
-						const measureNodes = sortFlowNodes(buildFlowNodes(false));
+						let measureNodes: Node[];
+						if (!hasRestorable) {
+							// Build measurement nodes from ALL layoutNodes, treating
+							// everything as expanded so children get measured
+							measureNodes = sortFlowNodes(
+								layoutNodes.map((node) => ({
+									id: node.id,
+									type: node.node_type,
+									position: { x: 0, y: 0 },
+									...(node.node_type === 'Element' && { width: 250 }),
+									expandParent: true,
+									deletable: false,
+									selectable: false,
+									parentId:
+										node.node_type === 'Element'
+											? (node.container_id ??
+												resolveElementNode(node.id, node, topology).subnetId)
+											: node.node_type === 'Container' && node.parent_container_id
+												? (node.parent_container_id as string)
+												: undefined,
+									extent:
+										node.node_type === 'Element' || node.parent_container_id
+											? ('parent' as const)
+											: undefined,
+									data: node
+								}))
+							);
+						} else {
+							measureNodes = sortFlowNodes(buildFlowNodes(false));
+						}
 						nodes.set(measureNodes);
 
 						await tick();
@@ -748,21 +780,6 @@
 						// nodes — visibleNodes excludes children of collapsed containers
 						// but ELK needs them to compute expanded layouts.
 						const elkNodes = hasRestorable ? visibleNodes : layoutNodes;
-
-						if (!hasRestorable) {
-							// The measurement pass rendered collapsed containers, so
-							// elementNodeSizes has their DOM-measured collapsed widths
-							// (e.g., 183px for short text, 986px for many tags).
-							// Remove these so ELK auto-sizes containers from children.
-							// Also add default sizes for unmeasured child elements.
-							for (const node of layoutNodes) {
-								if (node.node_type === 'Container') {
-									elementNodeSizes.delete(node.id);
-								} else if (node.node_type === 'Element' && !elementNodeSizes.has(node.id)) {
-									elementNodeSizes.set(node.id, { x: 250, y: 100 });
-								}
-							}
-						}
 
 						const elkResult = await layoutEngine.compute({
 							nodes: elkNodes,
@@ -1024,7 +1041,34 @@
 
 				// Filter visible edges (disabled edges excluded entirely, hidden types excluded before bundling)
 				const nonDisabledEdges = baseEdges.filter((e) => !isDisabledEdge(e));
-				const visibleEdges = nonDisabledEdges.filter((e) => !hiddenEdgeTypes.includes(e.edge_type));
+				const visibleEdgesRaw = nonDisabledEdges.filter((e) => !hiddenEdgeTypes.includes(e.edge_type));
+
+				// Build root container lookup (walk parent_container_id chain to root)
+				const containerParent = new Map<string, string>();
+				for (const node of layoutNodes) {
+					if (node.node_type === 'Container' && node.parent_container_id) {
+						containerParent.set(node.id, node.parent_container_id as string);
+					}
+				}
+				function getRootContainer(id: string): string {
+					let current = elementToContainer.get(id) ?? id;
+					while (containerParent.has(current)) {
+						current = containerParent.get(current)!;
+					}
+					return current;
+				}
+
+				// Remove self-edges and strip labels for intra-container edges
+				const visibleEdges = visibleEdgesRaw
+					.filter((e) => e.source !== e.target)
+					.map((e) => {
+						const srcRoot = getRootContainer(e.source as string);
+						const tgtRoot = getRootContainer(e.target as string);
+						if (srcRoot === tgtRoot && e.label) {
+							return { ...e, label: undefined };
+						}
+						return e;
+					});
 
 				let flowEdges: Edge[];
 				const currentExpandedBundles = get(expandedBundles);

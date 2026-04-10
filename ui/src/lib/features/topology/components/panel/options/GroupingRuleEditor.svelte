@@ -22,7 +22,8 @@
 		updateTopologyOptions,
 		activeView,
 		sharedElementRules,
-		updateSharedElementRules
+		updateSharedElementRules,
+		getInfrastructureRuleId
 	} from '../../../queries';
 	import { getTopologyEditState } from '../../../state';
 	import {
@@ -258,7 +259,11 @@
 	function isElementRuleEditable(item: ElementGraphRule): boolean {
 		const ruleId = getElementRuleType(item.rule);
 		const meta = elementRuleMeta[ruleId];
-		return meta?.metadata?.is_user_editable ?? true;
+		if (!(meta?.metadata?.is_user_editable ?? true)) return false;
+		// Infrastructure services rule is non-deletable
+		const infraId = getInfrastructureRuleId();
+		if (infraId && item.id === infraId) return false;
+		return true;
 	}
 
 	// --- Element Rules ---

@@ -227,7 +227,7 @@
 			{/each}
 		{/if}
 
-		{#if !isReadonly && editState.isEditable}
+		{#if !isReadonly}
 			<div class="pt-2">
 				<button
 					type="button"

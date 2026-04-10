@@ -2,7 +2,7 @@
 	import type { Edge } from '@xyflow/svelte';
 	import type { TopologyEdge } from '$lib/features/topology/types/base';
 	import { activeView, aggregatedEdgeOriginals } from '$lib/features/topology/queries';
-	import InspectorEdgeGroup from './edges/InspectorEdgeGroup.svelte';
+	import InspectorEdgeDependency from './edges/InspectorEdgeDependency.svelte';
 	import InspectorEdgeIPAddress from './edges/InspectorEdgeIPAddress.svelte';
 	import InspectorEdgeHostVirtualization from './edges/InspectorEdgeHostVirtualization.svelte';
 	import InspectorEdgeServiceVirtualization from './edges/InspectorEdgeServiceVirtualization.svelte';
@@ -26,7 +26,7 @@
 	{:else if edgeData.isAggregated && originalEdges}
 		<InspectorEdgeAggregated edges={originalEdges} />
 	{:else if edgeData.edge_type === 'HubAndSpoke' || edgeData.edge_type === 'RequestPath'}
-		<InspectorEdgeGroup
+		<InspectorEdgeDependency
 			dependencyId={edgeData.dependency_id}
 			sourceBindingId={edgeData.source_binding_id}
 			targetBindingId={edgeData.target_binding_id}

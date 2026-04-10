@@ -871,6 +871,22 @@ function mapElkResults(
 		}
 	}
 
+	// Log ELK result: positions and sizes
+	{
+		const containerEntries: Record<
+			string,
+			{ pos: { x: number; y: number }; size: { width: number; height: number } }
+		> = {};
+		for (const [id, size] of containerSizes) {
+			const pos = nodePositions.get(id);
+			containerEntries[id.substring(0, 8)] = { pos: pos ?? { x: 0, y: 0 }, size };
+		}
+		console.log(
+			`[LAYOUT-DEBUG] ELK result: ${nodePositions.size} positioned nodes, ${containerSizes.size} container sizes`
+		);
+		console.log(`[LAYOUT-DEBUG] ELK container positions/sizes:`, containerEntries);
+	}
+
 	// Snap container positions to the 25px grid so they align with SvelteFlow's snapGrid.
 	// Only snap containers — element positions are relative to their parent and snapping
 	// them independently would break the inter-node spacing ELK computed.
@@ -1140,11 +1156,42 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 		};
 	}
 
+	const containers = input.nodes.filter((n) => n.node_type === 'Container');
+	const elements = input.nodes.filter((n) => n.node_type === 'Element');
+	const collapsed = input.collapsedContainers ?? new Set<string>();
+	const sizeHits = input.elementNodeSizes ? [...input.elementNodeSizes.keys()].length : 0;
+	console.log(
+		`[LAYOUT-DEBUG] ELK input: ${input.nodes.length} nodes (${containers.length} containers, ${elements.length} elements), ${input.edges.length} edges, ${collapsed.size} collapsed, ${sizeHits} measured sizes, ${input.expandedContainerSizes?.size ?? 0} cached expanded sizes`
+	);
+
 	const elk = await getElk();
 
 	// Pass 1: compute layout with FIXED_SIDE ports (no position info).
 	// This gives us actual element positions within box-packed containers.
 	const { graph: graph1, containerIds } = buildElkGraph(input);
+	{
+		// Log ELK graph structure
+		let totalChildren = 0;
+		let totalEdges = graph1.edges?.length ?? 0;
+		const childrenPerContainer: Record<string, number> = {};
+		function countChildren(node: ElkNode) {
+			if (node.children) {
+				for (const child of node.children) {
+					if (containerIds.has(child.id)) {
+						childrenPerContainer[child.id.substring(0, 8)] = child.children?.length ?? 0;
+						totalEdges += child.edges?.length ?? 0;
+					}
+					totalChildren++;
+					countChildren(child);
+				}
+			}
+		}
+		countChildren(graph1);
+		console.log(
+			`[LAYOUT-DEBUG] ELK graph: ${graph1.children?.length ?? 0} root containers, ${totalChildren} total nodes, ${totalEdges} total edges`
+		);
+		console.log(`[LAYOUT-DEBUG] ELK children per container:`, childrenPerContainer);
+	}
 	const result1 = await elk.layout(graph1);
 
 	// Extract actual element AND subcontainer positions from pass 1

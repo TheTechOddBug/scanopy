@@ -277,11 +277,15 @@ export class LayoutGraph {
 					// Store the ELK-assigned collapsed size (from DOM measurement)
 					const size = containerSizes.get(id);
 					if (size) container.measuredCollapsedSize = { ...size };
-					if (container.isSubcontainer) console.log(`[SC] applyElkResult collapsed sub ${id.substring(0,8)} measuredCollapsed=${JSON.stringify(size)} expandedSize=${JSON.stringify(container.expandedSize)}`);
+					console.log(
+						`[LAYOUT-DEBUG] applyElkResult collapsed ${id.substring(0, 8)} measuredCollapsed=${JSON.stringify(size)} expandedSize=${JSON.stringify(container.expandedSize)}`
+					);
 				} else {
 					const size = containerSizes.get(id);
 					if (size) container.expandedSize = { ...size };
-					if (container.isSubcontainer) console.log(`[SC] applyElkResult expanded sub ${id.substring(0,8)} expandedSize=${JSON.stringify(size)}`);
+					console.log(
+						`[LAYOUT-DEBUG] applyElkResult expanded ${id.substring(0, 8)} expandedSize=${JSON.stringify(size)}`
+					);
 				}
 			}
 			const element = this.elements.get(id);
@@ -327,7 +331,9 @@ export class LayoutGraph {
 			const container = this.containers.get(id);
 			if (container && container.collapsed) {
 				container.expandedSize = { ...size };
-				if (container.isSubcontainer) console.log(`[SC] restoreExpandedSizes ${id.substring(0,8)} restored=${JSON.stringify(size)}`);
+				console.log(
+					`[LAYOUT-DEBUG] restoreExpandedSizes ${id.substring(0, 8)} restored=${JSON.stringify(size)}`
+				);
 			}
 		}
 	}

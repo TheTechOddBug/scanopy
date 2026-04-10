@@ -81,6 +81,7 @@
 	import { computeOptimalHandles } from '../../layout/elk-layout';
 	import { isDisabledEdge, isDashedEdge } from '../../layout/edge-classification';
 	import { onMount, tick, setContext, getContext } from 'svelte';
+	import { installLayoutDiagnostic } from '../../layout/layout-diagnostic';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
 	import { themeStore } from '$lib/shared/stores/theme.svelte';
@@ -154,6 +155,12 @@
 	}
 
 	onMount(() => {
+		installLayoutDiagnostic();
+		// Expose layout state for the diagnostic to access
+		(window as Record<string, unknown>).__scanopyLayoutState = {
+			getNodes,
+			getLayoutGraph: () => layoutGraph
+		};
 		const { fitView } = useSvelteFlow();
 
 		const observer = new IntersectionObserver(
@@ -316,13 +323,23 @@
 
 	async function loadTopologyData() {
 		const thisGeneration = ++layoutGeneration;
-		const isStale = () => thisGeneration !== layoutGeneration;
+		const isStale = () => {
+			const stale = thisGeneration !== layoutGeneration;
+			if (stale)
+				console.log(
+					`[LAYOUT-DEBUG] Generation ${thisGeneration} stale (current: ${layoutGeneration}), bailing out`
+				);
+			return stale;
+		};
 		try {
 			if (topology && (topology.edges || topology.nodes)) {
 				const currentView = get(activeView);
 				const topoKey = getStructureKey(topology);
 				const viewChanged = lastRenderedView !== '' && currentView !== lastRenderedView;
 				const topologyChanged = topoKey !== lastRenderedTopoKey;
+				console.log(
+					`[LAYOUT-DEBUG] loadTopologyData gen=${thisGeneration} view=${currentView} viewChanged=${viewChanged} topologyChanged=${topologyChanged} nodes=${topology.nodes.length} edges=${topology.edges.length}`
+				);
 
 				// When view changed but topology data hasn't been rebuilt yet,
 				// skip processing to avoid rendering old nodes with the new view (flicker)
@@ -442,11 +459,9 @@
 				const prevExpandedSizes = layoutGraph?.getExpandedContainerSizes();
 				const prevChildPositions = layoutGraph?.getContainerChildPositions();
 
-				{
-					const subSizes = prevExpandedSizes ? [...prevExpandedSizes].filter(([id]) => layoutGraph?.containers.get(id)?.isSubcontainer) : [];
-					if (subSizes.length > 0) console.log(`[SC] prevExpandedSizes captured: ${subSizes.map(([id, s]) => `${id.substring(0,8)}=${s.width}x${s.height}`).join(', ')}`);
-					console.log(`[SC] loadTopologyData: isNewStructure=${isNewStructure} collapsed.size=${collapsed.size} prevExpandedSizes.size=${prevExpandedSizes?.size ?? 0}`);
-				}
+				console.log(
+					`[LAYOUT-DEBUG] Structure: isNew=${isNewStructure} collapsed=${collapsed.size} prevExpandedSizes=${prevExpandedSizes?.size ?? 0} prevChildPositions=${prevChildPositions?.size ?? 0}`
+				);
 
 				// Build/rebuild the layout graph when topology or hidden services change
 				if (!layoutGraph || isNewStructure) {
@@ -528,8 +543,10 @@
 							// Root containers use collapsed size from metadata
 							const isSubContainer =
 								!isElement && node.node_type === 'Container' && !!node.parent_container_id;
-							if (isNodeCollapsed && isSubContainer) {
-								console.log(`[SC] buildFlowNodes collapsed sub ${node.id.substring(0,8)} expandedSize=${JSON.stringify(expandedSize)} containerSize=${JSON.stringify(containerSize)}`);
+							if (isNodeCollapsed) {
+								console.log(
+									`[LAYOUT-DEBUG] buildFlowNodes collapsed ${node.id.substring(0, 8)} isSub=${isSubContainer} expandedSize=${JSON.stringify(expandedSize)} containerSize=${JSON.stringify(containerSize)} w=${width} h=${height}`
+								);
 							}
 							width = isNodeCollapsed
 								? isSubContainer
@@ -591,7 +608,10 @@
 										if (infraId) {
 											for (const s of summaries) {
 												const groupNode = topology.nodes.find((n) => n.id === s.groupId);
-												if (groupNode && (groupNode as Record<string, unknown>).element_rule_id === infraId) {
+												if (
+													groupNode &&
+													(groupNode as Record<string, unknown>).element_rule_id === infraId
+												) {
 													excludedCount += s.childCount;
 												}
 											}
@@ -619,6 +639,9 @@
 
 				const isViewTransition = isNewStructure && viewChanged && topologyChanged;
 				const needsElk = isNewStructure || needsElkForExpand;
+				console.log(
+					`[LAYOUT-DEBUG] Layout decision: needsElk=${needsElk} isNewStructure=${isNewStructure} needsElkForExpand=${needsElkForExpand} deferCollapse=${deferCollapse} collapseChanged=${collapseChanged} collapsed=${collapsed.size}`
+				);
 
 				if (needsElk) {
 					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
@@ -644,6 +667,7 @@
 					} else {
 						// First visit to view or non-view structural change:
 						// full DOM measurement pass
+						console.log(`[LAYOUT-DEBUG] Starting DOM measurement pass`);
 						isMeasuring = true;
 						edges.set([]);
 						const measureNodes = sortFlowNodes(buildFlowNodes(false));
@@ -659,16 +683,20 @@
 						// Read actual DOM sizes
 						if (containerElement) {
 							const nodeEls = containerElement.querySelectorAll('.svelte-flow__node');
+							let zeroSizeCount = 0;
 							for (const el of nodeEls) {
 								const id = (el as HTMLElement).dataset.id;
 								if (id) {
 									const htmlEl = el as HTMLElement;
-									elementNodeSizes.set(id, {
-										x: htmlEl.offsetWidth || 250,
-										y: htmlEl.offsetHeight || 100
-									});
+									const w = htmlEl.offsetWidth || 250;
+									const h = htmlEl.offsetHeight || 100;
+									if (htmlEl.offsetWidth === 0 || htmlEl.offsetHeight === 0) zeroSizeCount++;
+									elementNodeSizes.set(id, { x: w, y: h });
 								}
 							}
+							console.log(
+								`[LAYOUT-DEBUG] DOM measurement complete: ${elementNodeSizes.size} nodes measured, ${zeroSizeCount} with zero size (fallback used)`
+							);
 						}
 					}
 
@@ -741,6 +769,9 @@
 							forceEdgeHandles,
 							elementNodeSizes
 						);
+						console.log(
+							`[LAYOUT-DEBUG] Force layout applied: ${forceResult.nodePositions.size} positioned nodes (all-collapsed overview)`
+						);
 					} else {
 						// When there are no previous expanded sizes (first load with
 						// persisted collapse from localStorage), run ELK with everything
@@ -788,6 +819,31 @@
 						if (deferCollapse) {
 							layoutGraph.syncCollapseState(collapsed);
 						}
+
+						// Log size mismatches between DOM-measured and ELK-computed
+						{
+							const mismatches: string[] = [];
+							for (const [id, elkSize] of elkResult.containerSizes) {
+								const measured = elementNodeSizes.get(id);
+								if (measured) {
+									const dw = Math.abs(measured.x - elkSize.width);
+									const dh = Math.abs(measured.y - elkSize.height);
+									if (dw > 10 || dh > 10) {
+										mismatches.push(
+											`${id.substring(0, 8)}: DOM=${measured.x}x${measured.y} ELK=${elkSize.width}x${elkSize.height}`
+										);
+									}
+								}
+							}
+							if (mismatches.length > 0) {
+								console.log(
+									`[LAYOUT-DEBUG] Size mismatches (DOM vs ELK): ${mismatches.join(', ')}`
+								);
+							}
+							console.log(
+								`[LAYOUT-DEBUG] ELK layout applied: deferCollapse=${deferCollapse} containers=${layoutGraph.containers.size} elements=${layoutGraph.elements.size}`
+							);
+						}
 					}
 
 					// Cache measured sizes for this view so return visits skip measurement
@@ -810,10 +866,14 @@
 							})
 							.map((n) => n.id);
 						if (autoCollapseIds.length > 0) {
-							console.log(`[SC] auto-collapse: ${autoCollapseIds.map(id => {
-								const c = layoutGraph?.containers.get(id);
-								return `${id.substring(0,8)}(${c?.containerType ?? '?'} expanded=${JSON.stringify(c?.expandedSize)})`;
-							}).join(', ')}`);
+							console.log(
+								`[LAYOUT-DEBUG] Auto-collapse: ${autoCollapseIds
+									.map((id) => {
+										const c = layoutGraph?.containers.get(id);
+										return `${id.substring(0, 8)}(${c?.containerType ?? '?'} expanded=${JSON.stringify(c?.expandedSize)})`;
+									})
+									.join(', ')}`
+							);
 							for (const id of autoCollapseIds) seenAutoCollapseIds.add(id);
 							// eslint-disable-next-line svelte/prefer-svelte-reactivity -- temporary value for store update
 							const next = new Set(collapsed);
@@ -1010,7 +1070,9 @@
 
 				// Filter visible edges (disabled edges excluded entirely, hidden types excluded before bundling)
 				const nonDisabledEdges = baseEdges.filter((e) => !isDisabledEdge(e));
-				const visibleEdgesRaw = nonDisabledEdges.filter((e) => !hiddenEdgeTypes.includes(e.edge_type));
+				const visibleEdgesRaw = nonDisabledEdges.filter(
+					(e) => !hiddenEdgeTypes.includes(e.edge_type)
+				);
 
 				// Build root container lookup (walk parent_container_id chain to root)
 				const containerParent = new Map<string, string>();

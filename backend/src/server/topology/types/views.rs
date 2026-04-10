@@ -223,11 +223,11 @@ impl TopologyView {
         }
     }
 
-    /// Human-friendly plural label for element nodes (e.g. "host ip_addresses")
+    /// Human-friendly plural label for element nodes (e.g. "host IP addresses")
     pub fn element_label(&self) -> &'static str {
         match self {
             Self::L2Physical => "ports",
-            Self::L3Logical => "host ip_addresses",
+            Self::L3Logical => "host IP addresses",
             Self::Infrastructure => "hosts",
             Self::Application => "services",
         }
@@ -237,7 +237,7 @@ impl TopologyView {
     pub fn element_label_singular(&self) -> &'static str {
         match self {
             Self::L2Physical => "port",
-            Self::L3Logical => "host ip_address",
+            Self::L3Logical => "host IP address",
             Self::Infrastructure => "host",
             Self::Application => "service",
         }

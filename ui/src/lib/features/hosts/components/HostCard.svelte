@@ -140,7 +140,7 @@
 							id: sv.id,
 							label: sv.name,
 							color: entities.getColorHelper('Service').color,
-							entityRef: entityRef('Service', sv.id, sv, { interfaceId: null })
+							entityRef: entityRef('Service', sv.id, sv, { ipAddressId: null })
 						})),
 					emptyText: hosts_noServicesAssigned()
 				},
@@ -151,7 +151,7 @@
 							id: c.id,
 							label: c.name,
 							color: concepts.getColorHelper('Virtualization').color,
-							entityRef: entityRef('Service', c.id, c, { interfaceId: null })
+							entityRef: entityRef('Service', c.id, c, { ipAddressId: null })
 						}))
 						.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
 					emptyText: hosts_noContainers()

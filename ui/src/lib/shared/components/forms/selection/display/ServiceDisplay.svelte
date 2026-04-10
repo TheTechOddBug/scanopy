@@ -3,7 +3,7 @@
 	import type { Port } from '$lib/features/hosts/types/base';
 
 	export interface ServiceDisplayContext {
-		interfaceId?: string | null;
+		ipAddressId?: string | null;
 		ports?: Port[];
 		showEntityTagPicker?: boolean;
 		tagPickerDisabled?: boolean;
@@ -25,7 +25,11 @@
 
 			// Filter bindings relevant to the interface(s)
 			let bindingsOnInterface = service.bindings.filter((b) =>
+<<<<<<< HEAD
 				b.interface_id ? context.interfaceId == b.interface_id || context.interfaceId == null : true
+=======
+				b.ip_address_id ? context.ipAddressId == b.ip_address_id || context.ipAddressId == null : true
+>>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 			);
 
 			// Show actual port numbers when ports are available in context

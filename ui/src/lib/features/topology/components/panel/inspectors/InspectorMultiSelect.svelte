@@ -346,7 +346,7 @@
 
 	// Binding disambiguation per selected interface
 	interface IPAddressBindingChoice {
-		interfaceId: string;
+		ipAddressId: string;
 		interfaceName: string;
 		hostName: string;
 		bindings: { id: string; label: string }[];
@@ -357,7 +357,7 @@
 		const choices: IPAddressBindingChoice[] = [];
 		for (const node of nodes) {
 			const resolved = resolveElementNode(node.id, node.data as TopologyNode, topology);
-			if (!resolved.interfaceId) continue;
+			if (!resolved.ipAddressId) continue;
 
 			const iface = resolved.iface;
 			const host = resolved.host;
@@ -369,7 +369,11 @@
 			for (const service of hostServices) {
 				for (const binding of service.bindings) {
 					// Only include bindings for this interface (or null = all interfaces)
+<<<<<<< HEAD
 					if (binding.interface_id === resolved.interfaceId || binding.interface_id === null) {
+=======
+					if (binding.ip_address_id === resolved.ipAddressId || binding.ip_address_id === null) {
+>>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 						const portInfo =
 							binding.type === 'Port' && binding.port_id
 								? (() => {
@@ -387,10 +391,10 @@
 
 			const ifaceName = iface
 				? (iface.name ? iface.name + ': ' : '') + iface.ip_address
-				: resolved.interfaceId;
+				: resolved.ipAddressId;
 
 			choices.push({
-				interfaceId: resolved.interfaceId,
+				ipAddressId: resolved.ipAddressId,
 				interfaceName: ifaceName,
 				hostName: host.name,
 				bindings: interfaceBindings
@@ -406,7 +410,7 @@
 		bindingSelections.clear();
 		for (const choice of ipAddressBindingChoices) {
 			bindingSelections.set(
-				choice.interfaceId,
+				choice.ipAddressId,
 				choice.bindings.length === 1 ? choice.bindings[0].id : null
 			);
 		}
@@ -706,7 +710,7 @@
 								body={dependencies_serviceBindingsInfoBody()}
 								dismissableKey="group-bindings-info"
 							/>
-							{#each ipAddressBindingChoices as choice (choice.interfaceId)}
+							{#each ipAddressBindingChoices as choice (choice.ipAddressId)}
 								<div class="card card-static space-y-1 p-2">
 									<div class="text-primary truncate text-xs font-medium">
 										{choice.hostName}
@@ -726,10 +730,10 @@
 										<select
 											class="h-auto min-h-6 w-full rounded px-1 text-xs"
 											style="border: 1px solid var(--color-border-input); background: var(--color-bg-input); color: var(--color-text-primary)"
-											value={bindingSelections.get(choice.interfaceId) ?? ''}
+											value={bindingSelections.get(choice.ipAddressId) ?? ''}
 											onchange={(e) => {
 												const target = e.target as HTMLSelectElement;
-												bindingSelections.set(choice.interfaceId, target.value || null);
+												bindingSelections.set(choice.ipAddressId, target.value || null);
 											}}
 										>
 											<option value="">{topology_multiSelectPickBinding()}</option>

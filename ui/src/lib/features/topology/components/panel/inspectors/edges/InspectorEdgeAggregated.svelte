@@ -184,7 +184,7 @@
 						<div class="card card-static">
 							<EntityDisplayWrapper
 								item={svcVirtData.containerizer}
-								context={{ interfaceId: null, ports: topology?.ports ?? [] }}
+								context={{ ipAddressId: null, ports: topology?.ports ?? [] }}
 								displayComponent={ServiceDisplay}
 							/>
 						</div>
@@ -197,7 +197,7 @@
 							<div class="card card-static">
 								<EntityDisplayWrapper
 									item={service}
-									context={{ interfaceId: null, ports: topology?.ports ?? [] }}
+									context={{ ipAddressId: null, ports: topology?.ports ?? [] }}
 									displayComponent={ServiceDisplay}
 								/>
 							</div>

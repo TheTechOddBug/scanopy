@@ -22,13 +22,13 @@
 	} = $props();
 	/* eslint-enable @typescript-eslint/no-unused-vars */
 
-	let isInterfaceElement = $derived(!!elementContext?.interfaceId);
+	let isIPAddressElement = $derived(!!elementContext?.ipAddressId);
 
 	let otherInterfaces = $derived(
 		topology.ip_addresses.filter(
 			(i) =>
 				i.host_id === elementContext?.hostId &&
-				(!isInterfaceElement || i.id !== elementContext?.interfaceId)
+				(!isIPAddressElement || i.id !== elementContext?.ipAddressId)
 		)
 	);
 
@@ -38,7 +38,7 @@
 {#if otherInterfaces.length > 0}
 	<div>
 		<span class="text-secondary mb-2 block text-sm font-medium">
-			{isInterfaceElement
+			{isIPAddressElement
 				? otherInterfaces.length > 1
 					? inspector_otherIPAddresses()
 					: inspector_otherIPAddress()

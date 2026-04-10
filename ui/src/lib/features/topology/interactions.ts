@@ -11,7 +11,7 @@ import {
 } from './layout/edge-classification';
 import { elevateEdgesToContainers } from './layout/edge-elevation';
 import { getContainerContents, buildEntityNodeIndex } from './resolvers';
-import { getHostFromInterfaceIdFromCache } from '../hosts/queries';
+import { getHostFromIPAddressIdFromCache } from '../hosts/queries';
 import {
 	getIPAddressesForHostFromCache,
 	getIPAddressesForSubnetFromCache
@@ -301,7 +301,7 @@ function getVirtualizedContainerNodes(
 	}
 
 	// Fall back to query cache
-	const dockerHost = getHostFromInterfaceIdFromCache(queryClient, dockerHostInterfaceId);
+	const dockerHost = getHostFromIPAddressIdFromCache(queryClient, dockerHostInterfaceId);
 	if (dockerHost) {
 		// Get all interfaces for this host from the cache
 		const hostInterfaces = getIPAddressesForHostFromCache(queryClient, dockerHost.id);
@@ -720,12 +720,12 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 		}
 	}
 
-	// Search interfaces -> match element nodes via interfaceIdToNodes
+	// Search interfaces -> match element nodes via ipAddressIdToNodes
 	for (const ipAddr of topology.ip_addresses) {
 		const ipMatch = ipAddr.ip_address?.toLowerCase().includes(q) ?? false;
 		const nameMatch = ipAddr.name?.toLowerCase().includes(q) ?? false;
 		if (ipMatch || nameMatch) {
-			addIndexedNodes(index.interfaceIdToNodes, ipAddr.id, matchingSet);
+			addIndexedNodes(index.ipAddressIdToNodes, ipAddr.id, matchingSet);
 		}
 	}
 

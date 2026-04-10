@@ -154,12 +154,9 @@ impl GraphRule for ElementRule {
     }
 
     fn is_user_editable(&self) -> bool {
-        matches!(
+        !matches!(
             self,
-            ElementRule::ByServiceCategory { .. }
-                | ElementRule::ByTrunkPort
-                | ElementRule::ByVLAN
-                | ElementRule::ByPortOpStatus
+            ElementRule::ByTrunkPort | ElementRule::ByVLAN | ElementRule::ByPortOpStatus
         )
     }
 

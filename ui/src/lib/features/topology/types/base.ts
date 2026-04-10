@@ -32,7 +32,7 @@ export interface ElementRenderData {
 	isVirtualized: boolean;
 	services: Service[];
 	hiddenOpenPorts: Service[];
-	interface_id: string;
+	ip_address_id: string;
 	isCategoryHidden?: boolean;
 	portStatus?: PortStatus;
 }

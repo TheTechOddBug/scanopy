@@ -11,7 +11,7 @@ export interface ElementRenderContext {
 	iface: Topology['interfaces'][number] | undefined;
 	services: Topology['services'][number][];
 	hostId: string | undefined;
-	interfaceId: string | undefined;
+	ipAddressId: string | undefined;
 	subnetId: string;
 	isInfra: boolean;
 }
@@ -52,7 +52,7 @@ const elementResolvers: Record<
 			iface,
 			services,
 			hostId,
-			interfaceId: ipAddressId,
+			ipAddressId: ipAddressId,
 			subnetId,
 			isInfra
 		};
@@ -69,7 +69,7 @@ const elementResolvers: Record<
 			iface: undefined,
 			services,
 			hostId,
-			interfaceId: undefined,
+			ipAddressId: undefined,
 			subnetId: '',
 			isInfra: false
 		};
@@ -85,7 +85,7 @@ const elementResolvers: Record<
 			iface: undefined,
 			services,
 			hostId,
-			interfaceId: undefined,
+			ipAddressId: undefined,
 			subnetId: '',
 			isInfra: false
 		};
@@ -103,7 +103,7 @@ const elementResolvers: Record<
 			iface,
 			services: [],
 			hostId,
-			interfaceId,
+			ipAddressId: interfaceId,
 			subnetId: '',
 			isInfra: false
 		};
@@ -162,7 +162,11 @@ export function getNodeSelectionIds(
 			(s) =>
 				s.host_id &&
 				hostIds.includes(s.host_id) &&
+<<<<<<< HEAD
 				s.bindings.some((b) => b.interface_id === resolved.interfaceId || b.interface_id === null)
+=======
+				s.bindings.some((b) => b.ip_address_id === resolved.ipAddressId || b.ip_address_id === null)
+>>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 		)
 		.map((s) => s.id);
 	return { hostIds, serviceIds };
@@ -172,7 +176,7 @@ export function getNodeSelectionIds(
 export interface ContainerContents {
 	hostIds: Set<string>;
 	serviceIds: Set<string>;
-	interfaceIds: Set<string>;
+	ipAddressIds: Set<string>;
 	elementNodeIds: Set<string>;
 	subcontainerIds: Set<string>;
 }
@@ -186,7 +190,7 @@ export interface ContainerContents {
 export function getContainerContents(containerId: string, allNodes: Node[]): ContainerContents {
 	const hostIds = new Set<string>();
 	const serviceIds = new Set<string>();
-	const interfaceIds = new Set<string>();
+	const ipAddressIds = new Set<string>();
 	const elementNodeIds = new Set<string>();
 	const subcontainerIds = new Set<string>();
 
@@ -223,7 +227,7 @@ export function getContainerContents(containerId: string, allNodes: Node[]): Con
 			serviceIds.add(nd.id);
 		} else if (nd.element_type === 'Interface') {
 			const ifaceId = (nd as Record<string, unknown>).interface_id as string | undefined;
-			if (ifaceId) interfaceIds.add(ifaceId);
+			if (ifaceId) ipAddressIds.add(ifaceId);
 		} else if (nd.element_type === 'Host') {
 			// Host elements: no additional IDs needed beyond hostId (already added above)
 		} else if (nd.element_type === 'Port') {
@@ -231,13 +235,13 @@ export function getContainerContents(containerId: string, allNodes: Node[]): Con
 		}
 	}
 
-	return { hostIds, serviceIds, interfaceIds, elementNodeIds, subcontainerIds };
+	return { hostIds, serviceIds, ipAddressIds, elementNodeIds, subcontainerIds };
 }
 
 // Entity→Node index — canonical resolver for mapping entity IDs to topology node IDs
 export interface EntityNodeIndex {
 	hostIdToNodes: Map<string, string[]>;
-	interfaceIdToNodes: Map<string, string[]>;
+	ipAddressIdToNodes: Map<string, string[]>;
 	serviceIdToNodes: Map<string, string[]>;
 	ifEntryIdToNodes: Map<string, string[]>;
 	allElementNodeIds: Set<string>;
@@ -250,7 +254,7 @@ export interface EntityNodeIndex {
  */
 export function buildEntityNodeIndex(nodes: TopologyNode[]): EntityNodeIndex {
 	const hostIdToNodes = new Map<string, string[]>();
-	const interfaceIdToNodes = new Map<string, string[]>();
+	const ipAddressIdToNodes = new Map<string, string[]>();
 	const serviceIdToNodes = new Map<string, string[]>();
 	const ifEntryIdToNodes = new Map<string, string[]>();
 	const allElementNodeIds = new Set<string>();
@@ -275,9 +279,9 @@ export function buildEntityNodeIndex(nodes: TopologyNode[]): EntityNodeIndex {
 		if (nd.element_type === 'Interface') {
 			const ifaceId = 'interface_id' in nd ? (nd.interface_id as string | undefined) : undefined;
 			if (ifaceId) {
-				const existing = interfaceIdToNodes.get(ifaceId);
+				const existing = ipAddressIdToNodes.get(ifaceId);
 				if (existing) existing.push(nd.id);
-				else interfaceIdToNodes.set(ifaceId, [nd.id]);
+				else ipAddressIdToNodes.set(ifaceId, [nd.id]);
 			}
 		} else if (nd.element_type === 'Service') {
 			const existing = serviceIdToNodes.get(nd.id);
@@ -295,7 +299,7 @@ export function buildEntityNodeIndex(nodes: TopologyNode[]): EntityNodeIndex {
 
 	return {
 		hostIdToNodes,
-		interfaceIdToNodes,
+		ipAddressIdToNodes,
 		serviceIdToNodes,
 		ifEntryIdToNodes,
 		allElementNodeIds,

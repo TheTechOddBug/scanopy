@@ -132,7 +132,7 @@
 					id: id + i,
 					label,
 					color: entities.getColorString('Service'),
-					entityRef: entityRef('Service', service.id, service, { interfaceId: null })
+					entityRef: entityRef('Service', service.id, service, { ipAddressId: null })
 				})),
 				emptyText: dependencies_noServicesInDependency()
 			},

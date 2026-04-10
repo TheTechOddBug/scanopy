@@ -62,8 +62,13 @@
 	);
 	let isApplicationView = $derived($activeView === 'Application');
 	let serviceDisplayContext = $derived({
+<<<<<<< HEAD
 		interfaceId: isApplicationView ? null : (elementContext?.interfaceId ?? null),
 		ports: isApplicationView ? [] : topology.ports,
+=======
+		ipAddressId: elementContext?.ipAddressId ?? null,
+		ports: topology.ports,
+>>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 		showEntityTagPicker: !editState.isReadonly,
 		tagPickerDisabled: !editState.isEditable,
 		entityTags: topology.entity_tags

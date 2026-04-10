@@ -37,7 +37,7 @@
 		<div class="card card-static">
 			<EntityDisplayWrapper
 				context={{
-					interfaceId: null,
+					ipAddressId: null,
 					ports: topology?.ports ?? [],
 					showEntityTagPicker: true,
 					tagPickerDisabled: !editState.isEditable,

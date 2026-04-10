@@ -145,7 +145,7 @@
 							showServices: !!service,
 							isVirtualized: false,
 							isCategoryHidden: false,
-							interface_id: id
+							ip_address_id: id
 						} as ElementRenderData;
 					}
 
@@ -194,7 +194,7 @@
 							bodyText: showServices ? null : hostLabel,
 							showServices,
 							isVirtualized: host.virtualization !== null,
-							interface_id: id
+							ip_address_id: id
 						} as ElementRenderData;
 					}
 
@@ -225,7 +225,7 @@
 							isVirtualized: false,
 							services: [],
 							hiddenOpenPorts: [],
-							interface_id: '',
+							ip_address_id: '',
 							portStatus: iface
 								? {
 										operStatus: iface.oper_status,
@@ -245,7 +245,7 @@
 						] ?? [];
 
 					// All services bound to this interface (after tag filtering)
-					const allServicesOnInterface = visibleServicesForHost
+					const allServicesOnIPAddress = visibleServicesForHost
 						? visibleServicesForHost.filter((s) =>
 								s.bindings.some(
 									(b) => b.interface_id == null || (iface && b.interface_id == iface.id)
@@ -257,7 +257,7 @@
 					// OpenPorts hidden by category or tag go to collapsed indicator
 					// Non-OpenPorts stay and render faded when hidden
 					type CategoryType = (typeof hiddenCategories)[number];
-					const servicesOnInterface = allServicesOnInterface.filter((s) => {
+					const servicesOnIPAddress = allServicesOnIPAddress.filter((s) => {
 						const category = serviceDefinitions.getCategory(s.service_definition);
 						if (
 							category === 'OpenPorts' &&
@@ -267,7 +267,7 @@
 						return true;
 					});
 
-					const hiddenOpenPorts = allServicesOnInterface.filter((s) => {
+					const hiddenOpenPorts = allServicesOnIPAddress.filter((s) => {
 						const category = serviceDefinitions.getCategory(s.service_definition);
 						if (category !== 'OpenPorts') return false;
 						return hiddenCategories.includes(category as CategoryType) || hiddenServices.has(s.id);
@@ -277,7 +277,7 @@
 					let footerText: string | null = null;
 					let subtitleText: string | null = null;
 					let headerText: string | null = (data as TopologyNode).header ?? null;
-					let showServices = servicesOnInterface.length != 0 || hiddenOpenPorts.length != 0;
+					let showServices = servicesOnIPAddress.length != 0 || hiddenOpenPorts.length != 0;
 
 					if (iface && !isContainerSubnetValue) {
 						subtitleText = (iface.name ? iface.name + ': ' : '') + iface.ip_address;
@@ -291,7 +291,7 @@
 						elementType,
 						footerText,
 						subtitleText,
-						services: servicesOnInterface,
+						services: servicesOnIPAddress,
 						hiddenOpenPorts,
 						headerText,
 						bodyText,
@@ -300,7 +300,7 @@
 							headerText?.startsWith('Docker @') || isContainerSubnetValue
 								? false
 								: host.virtualization !== null,
-						interface_id: resolved?.interfaceId ?? ''
+						ip_address_id: resolved?.ipAddressId ?? ''
 					} as ElementRenderData;
 				})();
 	});
@@ -308,8 +308,8 @@
 	let isNewNode = $derived(nodeRenderData ? highlightedNewNodes.has(id) : false);
 
 	let isNodeSelected = $derived(
-		selectedNode?.id === nodeRenderData?.interface_id ||
-			multiSelectedNodes.some((n) => n.id === nodeRenderData?.interface_id)
+		selectedNode?.id === nodeRenderData?.ip_address_id ||
+			multiSelectedNodes.some((n) => n.id === nodeRenderData?.ip_address_id)
 	);
 
 	// Calculate if this node should fade out when another node is selected or hidden by tag filter
@@ -317,7 +317,7 @@
 		if (isExportingValue) return false;
 
 		// Tag filter: fade if this node is hidden
-		if (nodeRenderData && hiddenNodes.has(nodeRenderData.interface_id)) {
+		if (nodeRenderData && hiddenNodes.has(nodeRenderData.ip_address_id)) {
 			return true;
 		}
 
@@ -327,7 +327,7 @@
 		}
 
 		// Search filter: fade if this node is hidden by search
-		if (nodeRenderData && searchHiddenNodes.has(nodeRenderData.interface_id)) {
+		if (nodeRenderData && searchHiddenNodes.has(nodeRenderData.ip_address_id)) {
 			return true;
 		}
 
@@ -489,12 +489,12 @@
 									{service.name}
 								</span>
 							</div>
-							{#if !$topologyOptions.request.hide_ports && $activeView !== 'Application' && service.bindings.filter((b) => b.type == 'Port').length > 0}
+							{#if !$topologyOptions.request.hide_ports && nodeRenderData.elementType !== 'Service' && nodeRenderData.elementType !== 'Host' && service.bindings.filter((b) => b.type == 'Port').length > 0}
 								<span class="text-tertiary mt-1 text-center text-xs"
 									>{service.bindings
 										.map((b) => {
 											if (
-												(b.interface_id == nodeRenderData.interface_id || b.interface_id == null) &&
+												(b.ip_address_id == nodeRenderData.ip_address_id || b.ip_address_id == null) &&
 												b.type == 'Port' &&
 												b.port_id
 											) {
@@ -532,13 +532,13 @@
 											{service.name}
 										</span>
 									</div>
-									{#if !$topologyOptions.request.hide_ports && $activeView !== 'Application' && service.bindings.filter((b) => b.type == 'Port').length > 0}
+									{#if !$topologyOptions.request.hide_ports && nodeRenderData.elementType !== 'Service' && nodeRenderData.elementType !== 'Host' && service.bindings.filter((b) => b.type == 'Port').length > 0}
 										<span class="text-tertiary mt-1 text-center text-xs"
 											>{service.bindings
 												.map((b) => {
 													if (
-														(b.interface_id == nodeRenderData.interface_id ||
-															b.interface_id == null) &&
+														(b.ip_address_id == nodeRenderData.ip_address_id ||
+															b.ip_address_id == null) &&
 														b.type == 'Port' &&
 														b.port_id
 													) {
@@ -578,8 +578,8 @@
 												sum +
 												s.bindings.filter(
 													(b) =>
-														(b.interface_id == nodeRenderData.interface_id ||
-															b.interface_id == null) &&
+														(b.ip_address_id == nodeRenderData.ip_address_id ||
+															b.ip_address_id == null) &&
 														b.type == 'Port'
 												).length,
 											0

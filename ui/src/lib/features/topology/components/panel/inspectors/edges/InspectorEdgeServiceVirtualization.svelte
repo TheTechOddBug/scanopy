@@ -64,9 +64,9 @@
 	);
 
 	// Helper to get interface from topology
-	function getInterfaceFromTopology(ifaceId: string) {
+	function getInterfaceFromTopology(ipAddressId: string) {
 		if (!topology) return null;
-		return topology.ip_addresses.find((i) => i.id === ifaceId) ?? null;
+		return topology.ip_addresses.find((i) => i.id === ipAddressId) ?? null;
 	}
 
 	// Helper to get subnet from topology
@@ -82,16 +82,20 @@
 		for (const service of containerizedServices) {
 			for (const binding of service.bindings) {
 				// Get interface_id based on binding type
-				let ifaceId: string | null = null;
+				let ipAddressId: string | null = null;
 				if (binding.type === 'IPAddress') {
-					ifaceId = binding.ip_address_id;
+					ipAddressId = binding.ip_address_id;
 				} else if (binding.type === 'Port') {
+<<<<<<< HEAD
 					ifaceId = binding.interface_id ?? null;
+=======
+					ipAddressId = binding.ip_address_id ?? null;
+>>>>>>> 068a5a3b (Rename interfaceId → ipAddressId across topology and UI)
 				}
 
-				if (!ifaceId) continue;
+				if (!ipAddressId) continue;
 
-				const iface = getInterfaceFromTopology(ifaceId);
+				const iface = getInterfaceFromTopology(ipAddressId);
 				if (!iface?.subnet_id) continue;
 
 				const subnet = getSubnetFromTopology(iface.subnet_id);
@@ -129,7 +133,7 @@
 		<div class="card card-static">
 			<EntityDisplayWrapper
 				context={{
-					interfaceId: null,
+					ipAddressId: null,
 					ports: topology?.ports ?? [],
 					showEntityTagPicker: true,
 					tagPickerDisabled: !editState.isEditable,
@@ -148,7 +152,7 @@
 		<div class="card card-static">
 			<EntityDisplayWrapper
 				context={{
-					interfaceId: null,
+					ipAddressId: null,
 					ports: topology?.ports ?? [],
 					showEntityTagPicker: true,
 					tagPickerDisabled: !editState.isEditable,

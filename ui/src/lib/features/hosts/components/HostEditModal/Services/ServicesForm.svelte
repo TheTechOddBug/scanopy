@@ -160,7 +160,7 @@
 						<div class="min-w-0 flex-1 overflow-hidden">
 							<ListSelectItem
 								{item}
-								context={{ interfaceId: null }}
+								context={{ ipAddressId: null }}
 								displayComponent={ServiceDisplay}
 							/>
 						</div>

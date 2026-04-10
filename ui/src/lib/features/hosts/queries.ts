@@ -703,9 +703,9 @@ export function getHostByIdFromCache(
  * Get a host by interface ID from the cache.
  * Searches through all paginated host query caches.
  */
-export function getHostFromInterfaceIdFromCache(
+export function getHostFromIPAddressIdFromCache(
 	queryClient: ReturnType<typeof useQueryClient>,
-	interfaceId: string
+	ipAddressId: string
 ): Host | null {
 	const interfaces = queryClient.getQueryData<Interface[]>(queryKeys.interfaces.all) ?? [];
 	const iface = interfaces.find((i) => i.id === interfaceId);

@@ -5,7 +5,7 @@
 	import type { Topology } from '$lib/features/topology/types/base';
 	import type { TopologyEditState } from '$lib/features/topology/state';
 	import type { ElementRenderContext } from '$lib/features/topology/resolvers';
-	import { inspector_servicesOnInterface } from '$lib/paraglide/messages';
+	import { inspector_servicesOnIPAddress, common_services } from '$lib/paraglide/messages';
 
 	/* eslint-disable @typescript-eslint/no-unused-vars -- component contract props */
 	let {
@@ -24,16 +24,16 @@
 	let isReadonly = $derived(editState.isReadonly);
 
 	// Filter services bound to this specific interface
-	let servicesOnInterface = $derived(
+	let servicesOnIPAddress = $derived(
 		(elementContext?.services ?? []).filter((s) =>
 			s.bindings.some(
-				(b) => b.interface_id === elementContext?.interfaceId || b.interface_id === null
+				(b) => b.ip_address_id === elementContext?.ipAddressId || b.ip_address_id === null
 			)
 		)
 	);
 
 	let serviceContext = $derived({
-		interfaceId: elementContext?.interfaceId ?? null,
+		ipAddressId: elementContext?.ipAddressId ?? null,
 		ports: topology.ports,
 		showEntityTagPicker: true,
 		tagPickerDisabled: !editState.isEditable,
@@ -41,13 +41,13 @@
 	});
 </script>
 
-{#if servicesOnInterface.length > 0}
+{#if servicesOnIPAddress.length > 0}
 	<div>
 		<span class="text-secondary mb-2 block text-sm font-medium">
-			{inspector_servicesOnInterface()}
+			{elementContext?.elementType === 'Host' ? common_services() : inspector_servicesOnIPAddress()}
 		</span>
 		<div class="space-y-1">
-			{#each servicesOnInterface as service (service.id)}
+			{#each servicesOnIPAddress as service (service.id)}
 				<div class="card card-static">
 					<EntityDisplayWrapper
 						context={serviceContext}

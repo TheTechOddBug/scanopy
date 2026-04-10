@@ -943,6 +943,17 @@
 						// so all containers have their real expandedSize set first.
 						if (deferCollapse) {
 							layoutGraph.syncCollapseState(collapsed);
+							// Set measuredCollapsedSize from DOM measurements for
+							// containers that are now collapsed. applyElkResult stored
+							// these as expandedSize (since the graph was expanded during
+							// ELK), but collapsed containers need measuredCollapsedSize
+							// to render at their actual DOM-measured collapsed size.
+							for (const [id, size] of elementNodeSizes) {
+								const container = layoutGraph.containers.get(id);
+								if (container?.collapsed) {
+									container.measuredCollapsedSize = { width: size.x, height: size.y };
+								}
+							}
 							// Recompute visible nodes now that collapse is applied —
 							// the earlier visibleNodes included all nodes (pre-collapse).
 							visibleNodes = layoutGraph.getVisibleNodes(layoutNodes);

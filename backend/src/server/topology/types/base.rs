@@ -303,8 +303,10 @@ fn default_element_rules() -> Vec<IdentifiedRule<ElementRule>> {
         IdentifiedRule::new(ElementRule::ByVLAN),
         IdentifiedRule::new(ElementRule::ByPortOpStatus),
         IdentifiedRule::new(ElementRule::ByServiceCategory {
-            categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
-            title: Some("Network Services".into()),
+            categories: ServiceCategory::iter()
+                .filter(|c| c.application_relevant_use_cases().is_empty())
+                .collect(),
+            title: Some("Infrastructure Services".into()),
         }),
         IdentifiedRule::new(ElementRule::ByTag {
             tag_ids: vec![],

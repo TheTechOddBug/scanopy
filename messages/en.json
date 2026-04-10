@@ -1154,6 +1154,7 @@
 	"topology_groupBy": "Group by",
 	"topology_groupRuleTitlePlaceholder": "Optional title",
 	"topology_hideDisabledRules": "Hide inactive rules ({count} hidden)",
+	"topology_infrastructureServices": "Infrastructure Services",
 	"topology_hideOpenPorts": "Hide open ports",
 	"topology_hidePorts": "Hide Ports",
 	"topology_hidePortsHelp": "Don't show open ports next to services",

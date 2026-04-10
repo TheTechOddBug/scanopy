@@ -37,7 +37,8 @@
 		activeView,
 		optionsPanelExpanded,
 		OPTIONS_PANEL_FITVIEW_PADDING_PX,
-		aggregatedEdgeOriginals
+		aggregatedEdgeOriginals,
+		getInfrastructureRuleId
 	} from '../../queries';
 	import { isExporting, expandedPortNodeIds } from '../../interactions';
 	import { LayoutGraph } from '../../layout/layout-graph';
@@ -694,12 +695,16 @@
 					// Runs after layout so expanded sizes are cached for correct expand later.
 					// Only collapse containers we haven't seen before (so user can expand them).
 					{
+						const infraRuleId = getInfrastructureRuleId();
 						const autoCollapseIds = topology.nodes
 							.filter((n) => {
 								if (n.node_type !== 'Container') return false;
 								if (collapsed.has(n.id) || seenAutoCollapseIds.has(n.id)) return false;
-								const ct = (n as Record<string, unknown>).container_type as string | undefined;
-								return ct ? containerTypes.getMetadata(ct).collapsed_by_default === true : false;
+								const data = n as Record<string, unknown>;
+								const ct = data.container_type as string | undefined;
+								if (ct && containerTypes.getMetadata(ct).collapsed_by_default === true) return true;
+								if (infraRuleId && data.element_rule_id === infraRuleId) return true;
+								return false;
 							})
 							.map((n) => n.id);
 						if (autoCollapseIds.length > 0) {

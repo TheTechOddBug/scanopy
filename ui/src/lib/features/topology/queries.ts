@@ -24,6 +24,7 @@ import type { components } from '$lib/api/schema';
 import viewsJson from '$lib/data/views.json';
 import serviceCategoriesJson from '$lib/data/service-categories.json';
 import type { ServiceCategoryMetadata } from '$lib/shared/stores/metadata';
+import { topology_infrastructureServices } from '$lib/paraglide/messages';
 
 export type TopologyView = components['schemas']['TopologyView'];
 
@@ -92,6 +93,23 @@ export function applyApplicationHiddenCategories(): void {
 	});
 }
 
+/**
+ * Get categories that are irrelevant for the org's use case (for grouping into
+ * "Infrastructure Services"). Same source as getApplicationHiddenCategories but
+ * excludes OpenPorts (handled separately by hide_service_categories).
+ */
+function getIrrelevantCategories(useCase: string): ServiceCategory[] {
+	return getApplicationHiddenCategories(useCase).filter((c) => c !== 'OpenPorts');
+}
+
+/** Tracks the element rule ID of the "Infrastructure Services" ByServiceCategory rule */
+let infrastructureRuleId: string | null = null;
+
+/** Get the current infrastructure rule ID (for auto-collapse logic) */
+export function getInfrastructureRuleId(): string | null {
+	return infrastructureRuleId;
+}
+
 const ALL_VIEWS: TopologyView[] = viewsJson.map((p) => p.id as TopologyView);
 
 /** Default local options for a given view (UI-only, not sent to backend as rules) */
@@ -144,14 +162,14 @@ function defaultRequestOptions(): components['schemas']['TopologyRequestOptions'
 		if (!seen.has(r.id)) {
 			seen.add(r.id);
 			if (r.id === 'ByServiceCategory') {
-				elementRules.push(
-					makeGraphRule({
-						ByServiceCategory: {
-							categories: ['DNS', 'ReverseProxy'],
-							title: 'Network Services'
-						}
-					})
-				);
+				const rule = makeGraphRule({
+					ByServiceCategory: {
+						categories: getIrrelevantCategories(getOrgUseCase()),
+						title: topology_infrastructureServices()
+					}
+				});
+				infrastructureRuleId = rule.id;
+				elementRules.push(rule);
 			} else if (r.id === 'ByTag') {
 				elementRules.push(makeGraphRule({ ByTag: { tag_ids: [], title: null } }));
 			} else {
@@ -731,6 +749,29 @@ export function hydrateStoresFromTopology(topology: Topology, isInitial = true):
 					Application: getApplicationHiddenCategories(getOrgUseCase())
 				};
 			}
+
+			// Enrich ByServiceCategory with use-case-aware irrelevant categories
+			const useCase = getOrgUseCase();
+			const irrelevant = getIrrelevantCategories(useCase);
+			const elementRules = [...(request.element_rules ?? [])];
+			for (let i = 0; i < elementRules.length; i++) {
+				const rule = elementRules[i].rule;
+				if (typeof rule === 'object' && 'ByServiceCategory' in rule) {
+					elementRules[i] = {
+						...elementRules[i],
+						rule: {
+							ByServiceCategory: {
+								...rule.ByServiceCategory,
+								categories: irrelevant,
+								title: topology_infrastructureServices()
+							}
+						}
+					};
+					infrastructureRuleId = elementRules[i].id;
+					break;
+				}
+			}
+			request.element_rules = elementRules;
 
 			// Full hydration: use backend request options + default local options
 			topologyOptionsStore.set({

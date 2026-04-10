@@ -220,7 +220,7 @@ impl ViewBuilder for WorkloadsBuilder {
         containers.sort_by(|a, b| {
             let count_a = element_counts.get(&a.id).copied().unwrap_or(0);
             let count_b = element_counts.get(&b.id).copied().unwrap_or(0);
-            count_b.cmp(&count_a).then_with(|| a.header.cmp(&b.header))
+            count_a.cmp(&count_b).then_with(|| b.header.cmp(&a.header))
         });
         let mut nodes = containers;
         nodes.append(&mut elements);
@@ -879,10 +879,11 @@ mod tests {
             .collect();
         assert_eq!(containers.len(), 3);
 
-        // Sorted by workload count descending: host-b (3), host-c (2), host-a (1)
-        assert_eq!(containers[0].header.as_deref(), Some("host-b"));
+        // Ascending by count so ELK (which reverses) displays highest first:
+        // host-a (1), host-c (2), host-b (3)
+        assert_eq!(containers[0].header.as_deref(), Some("host-a"));
         assert_eq!(containers[1].header.as_deref(), Some("host-c"));
-        assert_eq!(containers[2].header.as_deref(), Some("host-a"));
+        assert_eq!(containers[2].header.as_deref(), Some("host-b"));
     }
 
     #[test]
@@ -910,8 +911,8 @@ mod tests {
             .collect();
         assert_eq!(containers.len(), 2);
 
-        // Same count → alphabetical
-        assert_eq!(containers[0].header.as_deref(), Some("alpha"));
-        assert_eq!(containers[1].header.as_deref(), Some("zulu"));
+        // Same count → reverse-alphabetical (ELK reverses to display alphabetically)
+        assert_eq!(containers[0].header.as_deref(), Some("zulu"));
+        assert_eq!(containers[1].header.as_deref(), Some("alpha"));
     }
 }

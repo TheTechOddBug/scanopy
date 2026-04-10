@@ -390,6 +390,7 @@
 				const topologyId = topology.id ?? '';
 				if (topologyId !== lastSeenTopologyId && lastSeenTopologyId !== '') {
 					seenAutoCollapseIds = new Set<string>();
+					collapseLevelInferred = false; // re-infer after auto-collapse on new topology
 					console.log(
 						`[LAYOUT-DEBUG] Topology changed: ${lastSeenTopologyId.substring(0, 8)} → ${topologyId.substring(0, 8)}, reset seenAutoCollapseIds`
 					);
@@ -428,9 +429,7 @@
 						}
 
 						if (staleCount > 0) {
-							console.log(
-								`[LAYOUT-DEBUG] Stripped ${staleCount} stale collapsed IDs`
-							);
+							console.log(`[LAYOUT-DEBUG] Stripped ${staleCount} stale collapsed IDs`);
 						}
 					}
 				}
@@ -933,15 +932,17 @@
 								(infraRuleId && data.element_rule_id === infraRuleId)
 							);
 						});
-						// Skip at level 4 (fully expanded) — user explicitly wants everything open
-						const autoCollapseIds =
-							currentLevel === 4
-								? []
-								: allCandidates
-										.filter((n) => !collapsed.has(n.id) && !seenAutoCollapseIds.has(n.id))
-										.map((n) => n.id);
+						// Skip at level 4 only if the user explicitly set it via the stepper —
+						// not if it was inferred from an empty collapsed set (e.g., after topology switch).
+						// collapseLevelInferred=false means level needs re-inference, so don't trust it.
+						const userExplicitlyExpandedAll = currentLevel === 4 && collapseLevelInferred;
+						const autoCollapseIds = userExplicitlyExpandedAll
+							? []
+							: allCandidates
+									.filter((n) => !collapsed.has(n.id) && !seenAutoCollapseIds.has(n.id))
+									.map((n) => n.id);
 						console.log(
-							`[LAYOUT-DEBUG] Auto-collapse: level=${currentLevel}, ${allCandidates.length} candidates, ${allCandidates.filter((n) => collapsed.has(n.id)).length} already collapsed, ${allCandidates.filter((n) => seenAutoCollapseIds.has(n.id)).length} already seen, ${autoCollapseIds.length} will auto-collapse`
+							`[LAYOUT-DEBUG] Auto-collapse: level=${currentLevel} inferred=${collapseLevelInferred} skipL4=${userExplicitlyExpandedAll}, ${allCandidates.length} candidates, ${allCandidates.filter((n) => collapsed.has(n.id)).length} already collapsed, ${allCandidates.filter((n) => seenAutoCollapseIds.has(n.id)).length} already seen, ${autoCollapseIds.length} will auto-collapse`
 						);
 						if (autoCollapseIds.length > 0) {
 							console.log(
@@ -957,6 +958,18 @@
 							const next = new Set(collapsed);
 							for (const id of autoCollapseIds) next.add(id);
 							collapsedContainers.set(next);
+						}
+						// Re-infer level after auto-collapse so it reflects actual state
+						if (!collapseLevelInferred) {
+							collapseLevelInferred = true;
+							const newCollapsed = get(collapsedContainers);
+							const inferred = inferCurrentLevel(
+								newCollapsed,
+								topology.nodes,
+								containerTypes,
+								getInfrastructureRuleId()
+							);
+							collapseLevel.set(inferred);
 						}
 					}
 				}

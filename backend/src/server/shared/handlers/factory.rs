@@ -68,7 +68,7 @@ pub async fn get_version() -> Json<ApiResponse<VersionInfo>> {
 fn create_billed_openapi_routes() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .nest("/api/v1/hosts", host_handlers::create_router())
-        .nest("/api/v1/ip_addresses", interface_handlers::create_router())
+        .nest("/api/v1/ip-addresses", interface_handlers::create_router())
         .nest("/api/v1/subnets", subnet_handlers::create_router())
         .nest("/api/v1/networks", network_handlers::create_router())
         .nest("/api/v1/dependencies", dependency_handlers::create_router())

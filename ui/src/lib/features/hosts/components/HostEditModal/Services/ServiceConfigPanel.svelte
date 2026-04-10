@@ -434,7 +434,7 @@
 						service,
 						host,
 						services: currentServices.length > 0 ? currentServices : servicesData,
-						interfaces: host.ip_addresses,
+						ip_addresses: host.ip_addresses,
 						ports: host.ports,
 						isContainerSubnet: isContainerSubnetFn
 					})}
@@ -487,7 +487,7 @@
 						service,
 						host,
 						services: currentServices.length > 0 ? currentServices : servicesData,
-						interfaces: host.ip_addresses,
+						ip_addresses: host.ip_addresses,
 						isContainerSubnet: isContainerSubnetFn
 					})}
 					onCreateNew={handleCreateInterfaceBinding}

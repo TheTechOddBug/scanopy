@@ -203,7 +203,7 @@
 			name: formData.name,
 			hostname: formData.hostname || '',
 			description: formData.description || '',
-			interfaces: formData.ip_addresses || [],
+			ip_addresses: formData.ip_addresses || [],
 			ports: formData.ports || [],
 			services: formData.services || [],
 			credential_mode: ((formData.credential_assignments?.length ?? 0) > 0
@@ -377,7 +377,7 @@
 			name: formData.name,
 			hostname: formData.hostname || '',
 			description: formData.description || '',
-			interfaces: formData.ip_addresses || [],
+			ip_addresses: formData.ip_addresses || [],
 			ports: formData.ports || [],
 			services: formData.services || [],
 			credential_mode: (formData.credential_assignments?.length ?? 0) > 0 ? 'override' : 'default'

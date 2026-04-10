@@ -16,7 +16,7 @@
 		service: Service;
 		host: HostFormData;
 		services: Service[];
-		interfaces: Interface[];
+		ip_addresses: IPAddress[];
 		ports: Port[];
 		isContainerSubnet: (subnetId: string) => boolean;
 	}
@@ -37,7 +37,7 @@
 			getId: (binding: PortBinding) => binding.id,
 			getLabel: (binding: PortBinding, context: PortBindingDisplayContext) => {
 				const portsData = context?.ports ?? [];
-				const interfacesData = context?.interfaces ?? [];
+				const interfacesData = context?.ip_addresses ?? [];
 				const isContainerSubnetFn = context?.isContainerSubnet ?? (() => false);
 
 				const port = portsData.find((p) => p.id === binding.port_id);

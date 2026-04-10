@@ -10,7 +10,7 @@
 		service: Service;
 		host: HostFormData;
 		services: Service[];
-		interfaces: Interface[];
+		ip_addresses: IPAddress[];
 		isContainerSubnet: (subnetId: string) => boolean;
 	}
 
@@ -28,9 +28,9 @@
 		InterfaceBinding,
 		IPAddressBindingDisplayContext
 	> = {
-		getId: (binding: InterfaceBinding) => binding.id,
-		getLabel: (binding: InterfaceBinding, context: IPAddressBindingDisplayContext) => {
-			const interfacesData = context?.interfaces ?? [];
+		getId: (binding: IPAddressBinding) => binding.id,
+		getLabel: (binding: IPAddressBinding, context: IPAddressBindingDisplayContext) => {
+			const interfacesData = context?.ip_addresses ?? [];
 			const isContainerSubnetFn = context?.isContainerSubnet ?? (() => false);
 			const iface = interfacesData.find((i) => i.id === binding.interface_id);
 			const interfaceFormatted = iface

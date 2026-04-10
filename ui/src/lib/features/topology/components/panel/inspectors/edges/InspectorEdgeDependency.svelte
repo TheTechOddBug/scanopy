@@ -2,7 +2,8 @@
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import {
 		useUpdateDependencyMutation,
-		useUpdateDependencyDescriptionMutation
+		useUpdateDependencyDescriptionMutation,
+		useDeleteDependencyMutation
 	} from '$lib/features/dependencies/queries';
 	import {
 		BindingWithServiceDisplay,
@@ -13,7 +14,12 @@
 		type ServiceDisplayContext
 	} from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
-	import { ArrowDown } from 'lucide-svelte';
+	import { ArrowDown, Trash2 } from 'lucide-svelte';
+	import {
+		common_delete,
+		common_deleting,
+		common_confirmDeleteName
+	} from '$lib/paraglide/messages';
 	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Dependency } from '$lib/features/dependencies/types/base';
@@ -58,10 +64,18 @@
 	let isReadonly = $derived(!!topologyContext);
 	let editState = $derived(getTopologyEditState(topology, $autoRebuild, isReadonly));
 
-	// TanStack Query mutation for updating dependencies
+	// TanStack Query mutations for updating/deleting dependencies
 	const updateDependencyMutation = useUpdateDependencyMutation();
 	const descriptionMutation = useUpdateDependencyDescriptionMutation();
+	const deleteDependencyMutation = useDeleteDependencyMutation();
 	let isMutationPending = $derived(updateDependencyMutation.isPending);
+	let isDeleting = $derived(deleteDependencyMutation.isPending);
+
+	function handleDelete() {
+		if (group && confirm(common_confirmDeleteName({ name: group.name }))) {
+			deleteDependencyMutation.mutate(group.id);
+		}
+	}
 
 	let group = $derived(topology ? topology.dependencies.find((g) => g.id == dependencyId) : null);
 
@@ -211,6 +225,20 @@
 					</div>
 				{/if}
 			{/each}
+		{/if}
+
+		{#if !isReadonly}
+			<div class="pt-2">
+				<button
+					type="button"
+					disabled={isDeleting}
+					onclick={handleDelete}
+					class="btn-danger flex w-full items-center justify-center gap-2"
+				>
+					<Trash2 class="h-4 w-4" />
+					{isDeleting ? common_deleting() : common_delete()}
+				</button>
+			</div>
 		{/if}
 	{/if}
 </div>

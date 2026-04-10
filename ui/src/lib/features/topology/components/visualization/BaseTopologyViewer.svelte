@@ -457,7 +457,11 @@
 							c.allChildren.length > 0
 						) {
 							needsElkForExpand = true;
-							break;
+							// Mark as seen so the auto-collapse block (below) doesn't
+							// immediately re-collapse what the user just expanded.
+							// This happens when collapse state was persisted via
+							// localStorage rather than auto-collapsed in this session.
+							seenAutoCollapseIds.add(c.id);
 						}
 					}
 				}

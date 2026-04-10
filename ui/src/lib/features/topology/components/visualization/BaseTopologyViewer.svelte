@@ -1570,6 +1570,7 @@
 					onclick={handleStepExpand}
 					title={collapseLevelTooltipExpand}
 					label="{$collapseLevel}/4 {getCollapseLevelName($collapseLevel)}"
+					disabled={$collapseLevel === 4}
 					collapsed={sidebarCollapsed}
 				>
 					{#snippet icon()}
@@ -1580,6 +1581,7 @@
 					onclick={handleStepCollapse}
 					title={collapseLevelTooltipCollapse}
 					label="{$collapseLevel}/4 {getCollapseLevelName($collapseLevel)}"
+					disabled={$collapseLevel === 1}
 					collapsed={sidebarCollapsed}
 				>
 					{#snippet icon()}

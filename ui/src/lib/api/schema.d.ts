@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-10T20:13:43.479705Z",
-             *       "id": "0fc018d5-f148-43ca-9412-a2009db91390",
+             *       "created_at": "2026-04-10T23:21:52.525319Z",
+             *       "id": "39b929fa-23ad-4dd7-9295-12872ec9540e",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-10T20:13:43.479705Z"
+             *       "updated_at": "2026-04-10T23:21:52.525319Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-10T20:13:43.464823Z",
-             *               "id": "c4a4ce97-6eda-41ef-8662-23475ac01cce",
+             *               "created_at": "2026-04-10T23:21:52.503012Z",
+             *               "id": "15311a89-5153-4c52-927b-2b5a035f1c29",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-10T20:13:43.464823Z"
+             *               "updated_at": "2026-04-10T23:21:52.503012Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Dockge",
+             *           "service_definition": "Sonos Speaker",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3529,14 +3529,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-10T20:13:43.474500Z",
-             *           "id": "c4fca874-4d4c-4aff-af2a-1adb6cc0c253",
+             *           "created_at": "2026-04-10T23:21:52.519097Z",
+             *           "id": "dc2fe036-7b1e-444c-8d6f-37e6915a67d8",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-10T20:13:43.474500Z"
+             *           "updated_at": "2026-04-10T23:21:52.519097Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3545,7 +3545,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Dockge",
+             *       "service_definition": "Sonos Speaker",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3896,14 +3896,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-10T20:13:43.465036Z",
-         *       "id": "bb04cf0b-80c2-426d-8f3a-50b339243d15",
+         *       "created_at": "2026-04-10T23:21:52.503257Z",
+         *       "id": "c3796734-6502-4a74-81f5-09b8b9c0cc6d",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-10T20:13:43.465036Z"
+         *       "updated_at": "2026-04-10T23:21:52.503257Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4088,7 +4088,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Dockge",
+         *           "service_definition": "Sonos Speaker",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4694,9 +4694,9 @@ export interface components {
             edge_type: "PhysicalLink";
             protocol: components["schemas"]["DiscoveryProtocol"];
             /** Format: uuid */
-            source_if_entry_id: string;
+            source_interface_id: string;
             /** Format: uuid */
-            target_if_entry_id: string;
+            target_interface_id: string;
         };
         /** @enum {string} */
         EdgeTypeDiscriminants: "SameHost" | "HostVirtualization" | "ServiceVirtualization" | "RequestPath" | "HubAndSpoke" | "PhysicalLink";
@@ -4947,14 +4947,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-10T20:13:43.464499Z",
-         *               "id": "785fdeff-e2d6-40f6-9f4e-cc6cb40ef8a0",
+         *               "created_at": "2026-04-10T23:21:52.502682Z",
+         *               "id": "7b230894-8fac-4afa-9e20-5d2d05956309",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-10T20:13:43.464499Z"
+         *               "updated_at": "2026-04-10T23:21:52.502682Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4963,7 +4963,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Dockge",
+         *           "service_definition": "Sonos Speaker",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6090,14 +6090,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-10T20:13:43.464962Z",
-         *           "id": "f5f103fb-de6a-43bb-8234-081b4cd3daf8",
+         *           "created_at": "2026-04-10T23:21:52.503175Z",
+         *           "id": "0ec8a08b-4cbc-4ba6-a46d-749e9314b73d",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-10T20:13:43.464962Z"
+         *           "updated_at": "2026-04-10T23:21:52.503175Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6106,7 +6106,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Dockge",
+         *       "service_definition": "Sonos Speaker",
          *       "source": {
          *         "type": "Manual"
          *       },

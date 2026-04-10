@@ -437,6 +437,11 @@
 					hiddenEdgeTypes.join(',');
 				const isNewStructure = sessionStructureKey !== structureKey;
 
+				// Capture expanded sizes and child positions from the current graph
+				// BEFORE rebuilding — the rebuild resets all sizes to zero.
+				const prevExpandedSizes = layoutGraph?.getExpandedContainerSizes();
+				const prevChildPositions = layoutGraph?.getContainerChildPositions();
+
 				// Build/rebuild the layout graph when topology or hidden services change
 				if (!layoutGraph || isNewStructure) {
 					layoutGraph = LayoutGraph.fromTopology(layoutNodes);
@@ -712,14 +717,14 @@
 						);
 					} else {
 						// Standard ELK layout for expanded or partially collapsed views
-						const expandedContainerSizes = layoutGraph?.getExpandedContainerSizes();
-						const cachedChildPositions = layoutGraph?.getContainerChildPositions();
+						// Use prevExpandedSizes captured before graph rebuild (line ~440)
+						// so collapsed containers retain their expanded width in ELK.
 						const elkResult = await layoutEngine.compute({
 							nodes: visibleNodes,
 							edges: elevatedEdges,
 							topology: topology,
 							collapsedContainers: collapsed,
-							expandedContainerSizes,
+							expandedContainerSizes: prevExpandedSizes,
 							elementNodeSizes,
 							hiddenEdgeTypes: hiddenEdgeTypes
 						});
@@ -735,11 +740,11 @@
 						// Restore expanded sizes and child positions for collapsed containers
 						// before applying ELK results — applyElkResult skips them since ELK
 						// only computes collapsed dims and skips their children entirely.
-						if (expandedContainerSizes) {
-							layoutGraph.restoreExpandedSizes(expandedContainerSizes);
+						if (prevExpandedSizes) {
+							layoutGraph.restoreExpandedSizes(prevExpandedSizes);
 						}
-						if (cachedChildPositions) {
-							layoutGraph.restoreContainerChildPositions(cachedChildPositions);
+						if (prevChildPositions) {
+							layoutGraph.restoreContainerChildPositions(prevChildPositions);
 						}
 						layoutGraph.applyElkResult(
 							elkResult.nodePositions,

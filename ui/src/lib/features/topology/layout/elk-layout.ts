@@ -132,7 +132,9 @@ function buildElkGraph(
 						children: [],
 						layoutOptions: {
 							...childLayoutOptions,
-							'elk.nodeSize.minimum': `(${collapsedWidth},${collapsedHeight})`
+							// Use metadata collapsed size as minimum, not DOM-measured
+							// collapsed size (which includes title/tags and can be too wide)
+							'elk.nodeSize.minimum': `(${meta.collapsed_size.width},${meta.collapsed_size.height})`
 						}
 					};
 			containers.set(node.id, elkNode);

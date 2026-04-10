@@ -36,7 +36,6 @@
 	import DiscoveryHistoryTab from '$lib/features/discovery/components/tabs/DiscoveryHistoryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
 	import SubnetTab from '$lib/features/subnets/components/SubnetTab.svelte';
-	import DependencyTab from '$lib/features/dependencies/components/DependencyTab.svelte';
 	import HostTab from '$lib/features/hosts/components/HostTab.svelte';
 	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
 	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
@@ -179,24 +178,11 @@
 			component: HomeTab
 		},
 		{
-			id: 'visualize',
-			label: 'Visualize',
-			items: [
-				{
-					id: entityUIConfig.Topology!.tabId,
-					label: TAB_LABELS[entityUIConfig.Topology!.tabId],
-					icon: entities.getIconComponent('Topology'),
-					entityType: 'Topology',
-					component: TopologyTab
-				},
-				{
-					id: entityUIConfig.Dependency!.tabId,
-					label: TAB_LABELS[entityUIConfig.Dependency!.tabId],
-					icon: entities.getIconComponent('Dependency'),
-					entityType: 'Dependency',
-					component: DependencyTab
-				}
-			]
+			id: entityUIConfig.Topology!.tabId,
+			label: TAB_LABELS[entityUIConfig.Topology!.tabId],
+			icon: entities.getIconComponent('Topology'),
+			entityType: 'Topology',
+			component: TopologyTab
 		},
 		{
 			id: 'discover',

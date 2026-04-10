@@ -34,7 +34,6 @@ export interface EntityUIConfig {
 export const TAB_LABELS: Record<string, string> = {
 	home: 'Home',
 	topology: 'Topology',
-	dependencies: 'Dependencies',
 	shares: 'Sharing',
 	discovery: 'Scans',
 	'discovery-scans': 'Scans',

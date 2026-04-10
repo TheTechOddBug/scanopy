@@ -77,6 +77,14 @@
 
 	let { id, data, selected, width, height }: NodeProps = $props();
 
+	$effect(() => {
+		const ct = (data as Record<string, unknown>)?.container_type as string | undefined;
+		const isSub = ct && containerTypes.getMetadata(ct).is_subcontainer;
+		if (isSub) {
+			console.log(`[SC] ContainerNode ${id.substring(0, 8)} width=${width} height=${height} collapsed=${collapsedNodes.has(id)}`);
+		}
+	});
+
 	// Try to get topology from context (for share/embed pages), fallback to TanStack query
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
 	const topologiesQuery = useTopologiesQuery(() => !topologyContext);

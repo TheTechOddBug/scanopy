@@ -143,6 +143,7 @@
 					bodyText: service ? null : 'Unknown Service',
 					showServices: !!service,
 					isVirtualized: false,
+					isContainerized: service?.virtualization != null,
 					isCategoryHidden: false,
 					ip_address_id: id
 				} as ElementRenderData;
@@ -190,6 +191,7 @@
 					bodyText: showServices ? null : hostLabel,
 					showServices,
 					isVirtualized: host.virtualization !== null,
+					isContainerized: false,
 					ip_address_id: id
 				} as ElementRenderData;
 			}
@@ -217,6 +219,7 @@
 					bodyText: null,
 					showServices: false,
 					isVirtualized: false,
+					isContainerized: false,
 					services: [],
 					hiddenOpenPorts: [],
 					ip_address_id: '',
@@ -292,6 +295,7 @@
 					headerText?.startsWith('Docker @') || isContainerSubnetValue
 						? false
 						: host.virtualization !== null,
+				isContainerized: false,
 				ip_address_id: resolved?.ipAddressId ?? ''
 			} as ElementRenderData;
 		})();
@@ -335,6 +339,7 @@
 
 	const hostColorHelper = entities.getColorHelper('Host');
 	const virtualizationColorHelper = concepts.getColorHelper('Virtualization');
+	const containerizationColorHelper = concepts.getColorHelper('Containerization');
 	const discoveryColorHelper = entities.getColorHelper('Discovery');
 
 	// Check if this host should be highlighted by tag hover
@@ -377,18 +382,13 @@
 		return '';
 	});
 
-	let cardClass = $derived(
-		`card ${isNodeSelected ? 'card-selected' : ''} ${nodeRenderData?.isVirtualized ? `border-color: ${virtualizationColorHelper.border}` : ''}`
-	);
+	let cardClass = $derived(`card ${isNodeSelected ? 'card-selected' : ''}`);
 
 	let handleStyle = $derived.by(() => {
 		const baseSize = 8;
 		const baseOpacity = selectedEdge?.source == id || selectedEdge?.target == id ? 1 : 0;
 
-		// Use host color or virtualization color
-		const fillColor = nodeRenderData?.isVirtualized
-			? virtualizationColorHelper.rgb
-			: hostColorHelper.rgb;
+		const fillColor = hostColorHelper.rgb;
 
 		return `
 			width: ${baseSize}px;
@@ -411,7 +411,7 @@
 		{#if nodeRenderData.headerText}
 			<div class="relative flex-shrink-0 px-2 pt-2 text-center">
 				<div
-					class={`truncate text-xs font-medium leading-none ${nodeRenderData.isVirtualized ? virtualizationColorHelper.text : 'text-tertiary'}`}
+					class={`truncate text-xs font-medium leading-none ${nodeRenderData.isVirtualized ? virtualizationColorHelper.text : nodeRenderData.isContainerized ? containerizationColorHelper.text : 'text-tertiary'}`}
 				>
 					{nodeRenderData.headerText}
 				</div>

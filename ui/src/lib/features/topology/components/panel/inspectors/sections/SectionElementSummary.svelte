@@ -43,17 +43,19 @@
 			<span class="text-tertiary capitalize">{elementLabel}</span>
 			<span class="text-primary">{summary.elementCount}</span>
 		</div>
-		{#if summary.hostCount > 0}
-			<div class="flex justify-between">
-				<span class="text-tertiary">{common_hosts()}</span>
-				<span class="text-primary">{summary.hostCount}</span>
-			</div>
-		{/if}
-		{#if summary.hasServices}
-			<div class="flex justify-between">
-				<span class="text-tertiary">{common_services()}</span>
-				<span class="text-primary">{summary.serviceCount}</span>
-			</div>
+		{#if $activeView !== 'Workloads'}
+			{#if summary.hostCount > 0}
+				<div class="flex justify-between">
+					<span class="text-tertiary">{common_hosts()}</span>
+					<span class="text-primary">{summary.hostCount}</span>
+				</div>
+			{/if}
+			{#if summary.hasServices}
+				<div class="flex justify-between">
+					<span class="text-tertiary">{common_services()}</span>
+					<span class="text-primary">{summary.serviceCount}</span>
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>

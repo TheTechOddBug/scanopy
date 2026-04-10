@@ -30,6 +30,7 @@ export interface ElementRenderData {
 	bodyText: string | null;
 	showServices: boolean;
 	isVirtualized: boolean;
+	isContainerized: boolean;
 	services: Service[];
 	hiddenOpenPorts: Service[];
 	ip_address_id: string;

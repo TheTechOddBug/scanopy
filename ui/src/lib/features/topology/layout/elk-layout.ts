@@ -128,7 +128,10 @@ function buildElkGraph(
 				: {
 						id: node.id,
 						children: [],
-						layoutOptions: childLayoutOptions
+						layoutOptions: {
+							...childLayoutOptions,
+							'elk.nodeSize.minimum': `(${collapsedWidth},${collapsedHeight})`
+						}
 					};
 			containers.set(node.id, elkNode);
 		}

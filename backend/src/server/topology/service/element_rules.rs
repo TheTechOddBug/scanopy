@@ -125,7 +125,9 @@ pub fn apply_element_rules_with_titles(
                                 layer_hint: None,
                                 icon: None,
                                 color: None,
-                                associated_service_definition: None,
+                                associated_service_definition: virtualizer_titles
+                                    .as_ref()
+                                    .and_then(|t| t.get(&vid).cloned()),
                             },
                             position: Default::default(),
                             size: Default::default(),

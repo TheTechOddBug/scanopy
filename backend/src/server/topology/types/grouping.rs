@@ -162,7 +162,9 @@ impl GraphRule for ElementRule {
 
     fn applicable_views(&self) -> &'static [TopologyView] {
         match self {
-            ElementRule::ByServiceCategory { .. } => &[TopologyView::Application],
+            ElementRule::ByServiceCategory { .. } => {
+                &[TopologyView::Application, TopologyView::Workloads]
+            }
             ElementRule::ByTag { .. } => &[
                 TopologyView::L3Logical,
                 TopologyView::L2Physical,

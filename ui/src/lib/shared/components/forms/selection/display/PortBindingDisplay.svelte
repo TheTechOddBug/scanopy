@@ -5,7 +5,7 @@
 	import {
 		ALL_IP_ADDRESSES,
 		type HostFormData,
-		type Interface,
+		type IPAddress,
 		type Port
 	} from '$lib/features/hosts/types/base';
 	import type { EntityDisplayComponent } from '../types';
@@ -22,14 +22,14 @@
 	}
 
 	// Helper to format interface for display
-	function formatInterfaceForBinding(
-		iface: Interface | typeof ALL_IP_ADDRESSES,
+	function formatIPAddressForBinding(
+		ipAddr: IPAddress | typeof ALL_IP_ADDRESSES,
 		isContainerSubnet: (subnetId: string) => boolean
 	): string {
-		if (iface.id == null) return iface.name;
-		return isContainerSubnet(iface.subnet_id)
-			? (iface.name ?? iface.ip_address)
-			: (iface.name ? iface.name + ': ' : '') + iface.ip_address;
+		if (ipAddr.id == null) return ipAddr.name;
+		return isContainerSubnet(ipAddr.subnet_id)
+			? (ipAddr.name ?? ipAddr.ip_address)
+			: (ipAddr.name ? ipAddr.name + ': ' : '') + ipAddr.ip_address;
 	}
 
 	export const PortBindingDisplay: EntityDisplayComponent<PortBinding, PortBindingDisplayContext> =
@@ -37,25 +37,18 @@
 			getId: (binding: PortBinding) => binding.id,
 			getLabel: (binding: PortBinding, context: PortBindingDisplayContext) => {
 				const portsData = context?.ports ?? [];
-				const interfacesData = context?.ip_addresses ?? [];
+				const ipAddressesData = context?.ip_addresses ?? [];
 				const isContainerSubnetFn = context?.isContainerSubnet ?? (() => false);
 
-				console.log('[PortBindingDisplay.getLabel]', {
-					binding_ip_address_id: binding.ip_address_id,
-					context_keys: context ? Object.keys(context) : 'no context',
-					ip_addresses_count: interfacesData.length,
-					ports_count: portsData.length
-				});
-
 				const port = portsData.find((p) => p.id === binding.port_id);
-				const iface = binding.interface_id
-					? interfacesData.find((i) => i.id === binding.interface_id)
+				const ipAddr = binding.ip_address_id
+					? ipAddressesData.find((i) => i.id === binding.ip_address_id)
 					: ALL_IP_ADDRESSES;
 				const portFormatted = port ? formatPort(port) : 'Unknown Port';
-				const interfaceFormatted = iface
-					? formatInterfaceForBinding(iface, isContainerSubnetFn)
-					: 'Unknown Interface';
-				return interfaceFormatted + ' · ' + portFormatted;
+				const ipAddressFormatted = ipAddr
+					? formatIPAddressForBinding(ipAddr, isContainerSubnetFn)
+					: 'Unknown IP Address';
+				return ipAddressFormatted + ' · ' + portFormatted;
 			},
 			getDescription: () => '',
 			getIcon: () => entities.getIconComponent('Port'),

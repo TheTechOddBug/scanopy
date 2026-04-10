@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
-	import type { InterfaceBinding, Service } from '$lib/features/services/types/base';
-	import type { HostFormData, Interface } from '$lib/features/hosts/types/base';
+	import type { IPAddressBinding, Service } from '$lib/features/services/types/base';
+	import type { HostFormData, IPAddress } from '$lib/features/hosts/types/base';
 	import type { EntityDisplayComponent } from '../types';
 	import IPAddressBindingInlineEditor from './IPAddressBindingInlineEditor.svelte';
 
@@ -15,34 +15,34 @@
 	}
 
 	// Helper to format interface for display
-	function formatInterfaceForBinding(
-		iface: Interface,
+	function formatIPAddressForBinding(
+		ipAddr: IPAddress,
 		isContainerSubnet: (subnetId: string) => boolean
 	): string {
-		return isContainerSubnet(iface.subnet_id)
-			? (iface.name ?? iface.ip_address)
-			: (iface.name ? iface.name + ': ' : '') + iface.ip_address;
+		return isContainerSubnet(ipAddr.subnet_id)
+			? (ipAddr.name ?? ipAddr.ip_address)
+			: (ipAddr.name ? ipAddr.name + ': ' : '') + ipAddr.ip_address;
 	}
 
 	export const IPAddressBindingDisplay: EntityDisplayComponent<
-		InterfaceBinding,
+		IPAddressBinding,
 		IPAddressBindingDisplayContext
 	> = {
 		getId: (binding: IPAddressBinding) => binding.id,
 		getLabel: (binding: IPAddressBinding, context: IPAddressBindingDisplayContext) => {
 			const interfacesData = context?.ip_addresses ?? [];
 			const isContainerSubnetFn = context?.isContainerSubnet ?? (() => false);
-			const iface = interfacesData.find((i) => i.id === binding.interface_id);
-			const interfaceFormatted = iface
-				? formatInterfaceForBinding(iface, isContainerSubnetFn)
-				: 'Unknown Interface';
+			const ipAddr = interfacesData.find((i) => i.id === binding.ip_address_id);
+			const interfaceFormatted = ipAddr
+				? formatIPAddressForBinding(ipAddr, isContainerSubnetFn)
+				: 'Unknown IP Address';
 			return interfaceFormatted;
 		},
 		getDescription: () => '',
 		getIcon: () => entities.getIconComponent('IPAddress'),
 		getIconColor: () => entities.getColorHelper('IPAddress').icon,
 		getTags: () => [],
-		getCategory: (binding: InterfaceBinding, context: IPAddressBindingDisplayContext) => {
+		getCategory: (binding: IPAddressBinding, context: IPAddressBindingDisplayContext) => {
 			const servicesData = context?.services ?? [];
 			const service = servicesData.find((s) => s.bindings.some((b) => b.id === binding.id));
 			if (!service) return null;
@@ -58,7 +58,7 @@
 <script lang="ts">
 	import ListSelectItem from '../ListSelectItem.svelte';
 
-	export let item: InterfaceBinding;
+	export let item: IPAddressBinding;
 	export let context: IPAddressBindingDisplayContext;
 </script>
 

@@ -88,23 +88,23 @@
 	}
 
 	// Create interface options with disabled state
-	let interfaceOptions = $derived(
-		host?.ip_addresses.map((iface) => {
-			// Check for Interface binding conflict - can't add Port binding if THIS service has Interface binding here
+	let ipAddressOptions = $derived(
+		host?.ip_addresses.map((ipAddr) => {
+			// Check for IP Address binding conflict - can't add Port binding if THIS service has IP Address binding here
 			const thisServiceHasIPAddressBinding = service?.bindings.some(
-				(b) => b.type === 'IPAddress' && b.ip_address_id === iface.id && b.id !== binding.id
+				(b) => b.type === 'IPAddress' && b.ip_address_id === ipAddr.id && b.id !== binding.id
 			);
 			if (thisServiceHasIPAddressBinding) {
 				return {
-					iface,
+					ipAddr,
 					disabled: true,
-					reason: 'This service has an Interface binding here',
+					reason: 'This service has an IP Address binding here',
 					boundService: service
 				};
 			}
 
 			return {
-				iface,
+				ipAddr,
 				disabled: false,
 				reason: null,
 				boundService: null
@@ -115,20 +115,20 @@
 	// Check ALL_IP_ADDRESSES option
 	let allIPAddressesOption = $derived(
 		(() => {
-			// Can't select "All Interfaces" if this service has ANY Interface bindings
-			// (since "All Interfaces" would include those interfaces)
+			// Can't select "All IP Addresses" if this service has ANY IP Address bindings
+			// (since "All IP Addresses" would include those interfaces)
 			const hasIPAddressBindings = service?.bindings.some((b) => b.type === 'IPAddress');
 			if (hasIPAddressBindings) {
 				return {
-					iface: ALL_IP_ADDRESSES,
+					ipAddr: ALL_IP_ADDRESSES,
 					disabled: true,
-					reason: 'Service has Interface bindings',
+					reason: 'Service has IP Address bindings',
 					boundService: service
 				};
 			}
 
 			return {
-				iface: ALL_IP_ADDRESSES,
+				ipAddr: ALL_IP_ADDRESSES,
 				disabled: false,
 				reason: null,
 				boundService: null
@@ -223,7 +223,7 @@
 					<div
 						class="rounded border border-yellow-600 bg-yellow-900/20 px-2 py-1 text-xs text-warning"
 					>
-						No interfaces configured on host
+						No IP addresses configured on host
 					</div>
 				</div>
 			{:else if host.ip_addresses.length > 0}
@@ -237,9 +237,9 @@
 						value={selectedInterface}
 						onchange={handleInterfaceChange}
 					>
-						{#each interfaceOptions as { iface, disabled, reason } (iface.id)}
-							<option value={iface.id} {disabled}>
-								{formatIPAddress(iface, isContainerSubnetFn)}{disabled && reason
+						{#each ipAddressOptions as { ipAddr, disabled, reason } (ipAddr.id)}
+							<option value={ipAddr.id} {disabled}>
+								{formatIPAddress(ipAddr, isContainerSubnetFn)}{disabled && reason
 									? ` - ${reason}`
 									: ''}
 							</option>

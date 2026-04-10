@@ -1,114 +1,117 @@
 var TEST_PLANS = [
 {
-  "branch": "fix/category-tooltip-title",
-  "tests": []
-}
-,
-{
-  "branch": "fix/edge-container-routing",
+  "branch": "refactor/entity-naming",
   "tests": [
     {
-      "id": "app-view-bystack-edge-routing",
-      "category": "Edge Routing",
-      "description": "ServiceVirtualization edges in Application view route to ByStack subcontainer",
+      "id": "host-ip-addresses-tab",
+      "category": "IP Address Management",
+      "description": "Verify IP Addresses tab works in host editor",
       "steps": [
-        "Open topology in Application view",
-        "Ensure a host with Docker services grouped by compose project is visible",
-        "Verify ServiceVirtualization edges attach to the ByStack subcontainer boundary, not individual services inside"
+        "Open a host with IP addresses in the edit modal",
+        "Navigate to the 'IP Addresses' tab",
+        "Verify IP addresses are listed with correct data",
+        "Select an IP address to view its config panel"
       ],
-      "setup": "Ensure at least one host has Docker services with compose_project values that trigger ByStack grouping.",
-      "expected": "Edges connect to the Stack subcontainer boundary. Edge bundling shows count if multiple edges target the same container.",
+      "expected": "IP addresses display correctly with subnet, IP, MAC data. Tab is labeled 'IP Addresses'.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "l3-view-merge-docker-bridges-routing",
-      "category": "Edge Routing",
-      "description": "ServiceVirtualization edges in L3 view route to MergeDockerBridges container",
+      "id": "host-interfaces-tab",
+      "category": "Interface Management",
+      "description": "Verify Interfaces tab (SNMP data) works in host editor",
       "steps": [
-        "Open topology in L3 Logical view with MergeDockerBridges enabled (default)",
-        "Find a host with Docker bridge subnets",
-        "Verify ServiceVirtualization edges attach to the merged Docker Bridge container, not individual interfaces inside"
+        "Open a host that has SNMP interface data in the edit modal",
+        "Navigate to the 'Interfaces' tab (only visible for existing hosts)",
+        "Verify SNMP interfaces are listed with if_descr, status, MAC",
+        "Select an interface to view its details card"
       ],
-      "expected": "Edges connect to the consolidated Docker Bridge container boundary. Multiple edges are bundled with a count.",
+      "setup": "Ensure at least one host has SNMP interface data (run an SNMP discovery scan).",
+      "expected": "SNMP interfaces display correctly with operational status, speed, LLDP/CDP neighbor data. Tab is labeled 'Interfaces'.",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "l3-view-bystack-inside-merge-routing",
-      "category": "Edge Routing",
-      "description": "ByStack subcontainer inside MergeDockerBridges — edges route to outer container",
+      "id": "topology-l2-interfaces",
+      "category": "Topology Visualization",
+      "description": "Verify L2 Physical view shows Interface elements (was Port/IfEntry)",
       "steps": [
-        "Open topology in L3 Logical view with both MergeDockerBridges and ByStack rules active",
-        "Find a host with Docker compose services (ByStack groups visible inside merged Docker Bridge)",
-        "Verify edges attach to the MergeDockerBridges container (outermost absorber), not the ByStack subcontainer"
+        "Navigate to topology view",
+        "Switch to L2 Physical perspective",
+        "Click on a physical link between two devices",
+        "Verify the inspector shows interface details"
       ],
-      "expected": "Edges connect to the outer MergeDockerBridges container, not the inner ByStack subcontainer.",
+      "setup": "Ensure SNMP discovery has run and L2 physical links exist.",
+      "expected": "L2 view shows Interface elements with correct SNMP data. Inspector displays interface details card.",
       "flow": "setup",
       "sequence": 3,
       "status": null,
       "feedback": null
     },
     {
-      "id": "l3-no-merge-bystack-routing",
-      "category": "Edge Routing",
-      "description": "ByStack without MergeDockerBridges — edges route to ByStack subcontainer",
+      "id": "topology-l3-ip-addresses",
+      "category": "Topology Visualization",
+      "description": "Verify L3 Logical view shows IPAddress elements (was Interface)",
       "steps": [
-        "Open topology in L3 Logical view",
-        "Disable MergeDockerBridges rule via topology settings",
-        "Find Docker compose services grouped by ByStack inside individual Docker bridge subnets",
-        "Verify edges attach to the ByStack subcontainer, not the subnet"
+        "Navigate to topology view",
+        "Switch to L3 Logical perspective",
+        "Click on a host's IP address element in the topology",
+        "Verify the inspector shows IP address details"
       ],
-      "expected": "Edges connect to the ByStack subcontainer within the regular subnet container.",
+      "expected": "L3 view shows IPAddress elements correctly grouped by subnet. Inspector shows IP address data.",
       "flow": "setup",
       "sequence": 4,
       "status": null,
       "feedback": null
     },
     {
-      "id": "edge-bundling-after-elevation",
-      "category": "Edge Bundling",
-      "description": "Edge bundling still works with elevated edges",
+      "id": "service-bindings-ip-address",
+      "category": "Service Bindings",
+      "description": "Verify service bindings reference IP addresses correctly",
       "steps": [
-        "Open topology in Application view with edge bundling enabled",
-        "Find a ByStack container with multiple ServiceVirtualization edges",
-        "Verify the bundle shows the correct edge count",
-        "Click the bundle to expand and verify individual edges are shown"
+        "Open a service that has IP address bindings",
+        "Verify binding displays show 'IP Address' type correctly",
+        "Edit a binding and verify the IP address selector works",
+        "Verify 'All IP Addresses' option works for port bindings"
       ],
-      "expected": "Bundled edge shows correct count. Expanding bundle reveals individual edges.",
+      "expected": "Bindings display and edit correctly with IPAddress terminology.",
       "flow": "setup",
       "sequence": 5,
       "status": null,
       "feedback": null
     },
     {
-      "id": "infrastructure-view-no-regression",
-      "category": "Regression",
-      "description": "Infrastructure view edges still work correctly",
+      "id": "host-card-display",
+      "category": "Host Display",
+      "description": "Verify host cards show both IP Addresses and Interfaces sections",
       "steps": [
-        "Open topology in Infrastructure view",
-        "Verify all edges render correctly (HostVirtualization, etc.)",
-        "Check that no edges are misrouted or missing"
+        "Navigate to the hosts list",
+        "Find a host with both IP addresses and SNMP interfaces",
+        "Expand the host card",
+        "Verify separate 'IP Addresses' and 'Interfaces' sections exist"
       ],
-      "expected": "Infrastructure view renders edges as before with no visual regressions.",
+      "setup": "Ensure at least one host has both IP addresses and SNMP interface data.",
+      "expected": "Host card shows IP Addresses section with IPs and Interfaces section with SNMP data. Both sections are separate.",
       "flow": "setup",
       "sequence": 6,
       "status": null,
       "feedback": null
     },
     {
-      "id": "non-absorbing-subcontainer-no-elevation",
-      "category": "Edge Routing",
-      "description": "Edges to elements in non-absorbing subcontainers are NOT elevated",
+      "id": "api-paths-correct",
+      "category": "API",
+      "description": "Verify API paths are renamed correctly",
       "steps": [
-        "Open topology in a view with ByTag or ByServiceCategory subcontainers",
-        "Verify edges still target individual elements inside these subcontainers, not the subcontainer boundary"
+        "Open browser dev tools network tab",
+        "Navigate through the app to trigger API calls",
+        "Verify /api/v1/ip-addresses is called for IP address data",
+        "Verify /api/v1/interfaces is called for SNMP interface data"
       ],
-      "expected": "Edges connect directly to elements, not to the ByTag/ByServiceCategory subcontainer boundary.",
+      "expected": "API calls use the new paths. No 404s from old paths.",
       "flow": "setup",
       "sequence": 7,
       "status": null,
@@ -118,191 +121,205 @@ var TEST_PLANS = [
 }
 ,
 {
-  "branch": "refactor/topology-perspective-to-view",
+  "branch": "fix/topology-view-persist",
   "tests": []
 }
 ,
 {
-  "branch": "fix/collapsed-container-vanish",
+  "branch": "feat/app-irrelevant-category-group",
   "tests": [
     {
-      "id": "collapse-all-shows-summaries",
-      "category": "Collapse All",
-      "description": "Collapse All shows all containers as compact summary nodes",
+      "id": "infra-services-grouped",
+      "category": "Infrastructure Grouping",
+      "description": "Irrelevant categories are grouped into Infrastructure Services container",
       "steps": [
-        "Open the topology view with multiple containers visible",
-        "Click the 'Collapse All' button in the toolbar",
-        "Verify all containers are visible as compact summary nodes showing header + element count"
+        "Open a topology in the Application perspective",
+        "Look for a container labeled 'Infrastructure Services' inside host containers"
       ],
-      "expected": "All containers remain visible in their collapsed state with element counts displayed. No containers vanish.",
+      "setup": "Ensure the network has hosts with services in infrastructure categories (DNS, DHCP, NTP, etc.) and application categories (Database, Storage, etc.)",
+      "expected": "Infrastructure categories (NetworkCore, NetworkAccess, RemoteAccess, etc.) appear inside an 'Infrastructure Services' subcontainer. Application-relevant services remain outside it.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "expand-after-collapse-all",
-      "category": "Collapse All",
-      "description": "Expanding a container after Collapse All restores its children",
+      "id": "infra-services-collapsed",
+      "category": "Infrastructure Grouping",
+      "description": "Infrastructure Services container is collapsed by default",
       "steps": [
-        "After 'Collapse All', click on a collapsed container to expand it",
-        "Verify the container's children (host nodes) reappear inside it"
+        "Open a topology in the Application perspective",
+        "Observe the Infrastructure Services containers"
       ],
-      "expected": "The expanded container shows all its child nodes. Other containers remain collapsed.",
+      "expected": "Infrastructure Services containers are collapsed (showing only the header, not expanded with child services visible)",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "expand-all-restores",
-      "category": "Collapse All",
-      "description": "Expand All restores all containers and children",
+      "id": "infra-services-expandable",
+      "category": "Infrastructure Grouping",
+      "description": "Infrastructure Services container can be expanded to show grouped services",
       "steps": [
-        "Click 'Collapse All' to collapse all containers",
-        "Click 'Expand All' to expand all containers",
-        "Verify all containers show their children"
+        "Open a topology in the Application perspective",
+        "Click on a collapsed Infrastructure Services container to expand it"
       ],
-      "expected": "All containers are expanded with all child nodes visible, matching the original state.",
+      "expected": "Container expands to reveal the individual infrastructure services inside",
       "flow": "setup",
       "sequence": 3,
       "status": null,
       "feedback": null
     },
     {
-      "id": "individual-collapse-expand",
-      "category": "Individual Collapse",
-      "description": "Individual container collapse and expand works correctly",
+      "id": "infra-services-user-editable",
+      "category": "Infrastructure Grouping",
+      "description": "ByServiceCategory rule is user-editable (can be removed)",
       "steps": [
-        "Open topology with all containers expanded",
-        "Click to collapse a single container",
-        "Verify it shows as a compact summary node with element count",
-        "Click to expand it again",
-        "Verify its children reappear"
+        "Open the topology options panel",
+        "Navigate to the element rules / grouping section",
+        "Attempt to remove the ByServiceCategory rule"
       ],
-      "expected": "The container toggles between collapsed (compact summary) and expanded (children visible) states. Other containers are unaffected.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "collapse-all-individually",
-      "category": "Individual Collapse",
-      "description": "Collapsing every container one by one keeps all visible",
-      "steps": [
-        "Open topology with multiple containers",
-        "Collapse each container individually, one at a time",
-        "After each collapse, verify the container remains visible as a summary node"
-      ],
-      "expected": "After collapsing all containers individually, all are still visible as compact summary nodes. None vanish.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "collapse-with-hidden-services",
-      "category": "Edge Cases",
-      "description": "Collapsed containers remain visible when services are hidden",
-      "steps": [
-        "Open topology and hide some service categories via the filter panel",
-        "Collapse a container whose children include hidden services",
-        "Verify the container still shows as a collapsed summary node"
-      ],
-      "expected": "Collapsed containers are visible even when hidden service filtering has removed some of their child elements.",
-      "status": null,
-      "feedback": null
-    }
-  ]
-}
-,
-{
-  "branch": "feat/subcontainer-service-icons",
-  "tests": [
-    {
-      "id": "virtualizer-proxmox-logo",
-      "category": "Virtualizer Subcontainer Icons",
-      "description": "Proxmox Virtualizer subcontainer shows Proxmox VE logo next to hypervisor hostname",
-      "steps": [
-        "Navigate to the Infrastructure topology view",
-        "Ensure ByVirtualizer element rule is active",
-        "Locate a Virtualizer subcontainer for a Proxmox hypervisor"
-      ],
-      "setup": "Ensure at least one host is virtualized by a Proxmox VE service (host with Proxmox virtualization pointing to a Proxmox service on a hypervisor host).",
-      "expected": "The Virtualizer subcontainer shows the Proxmox VE logo (brand SVG) next to the hypervisor hostname in the title area",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "virtualizer-docker-logo",
-      "category": "Virtualizer Subcontainer Icons",
-      "description": "Docker Virtualizer subcontainer shows Docker logo next to daemon host name",
-      "steps": [
-        "Navigate to the Infrastructure topology view",
-        "Ensure ByVirtualizer element rule is active",
-        "Locate a Virtualizer subcontainer for a Docker daemon host"
-      ],
-      "setup": "Ensure at least one host is virtualized by Docker (host with Docker daemon service that manages virtualization, virtualizing other hosts).",
-      "expected": "The Virtualizer subcontainer shows the Docker whale logo next to the daemon hostname in the title area",
-      "flow": "setup",
-      "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "stack-docker-logo",
-      "category": "Stack Subcontainer Icons",
-      "description": "Stack subcontainer shows Docker logo next to compose project name",
-      "steps": [
-        "Navigate to a topology view with ByStack element rule active (Infrastructure or L3)",
-        "Locate a Stack subcontainer grouping Docker Compose services"
-      ],
-      "setup": "Ensure at least one host has Docker services with a compose_project set (Docker Compose stack).",
-      "expected": "The Stack subcontainer shows the Docker whale logo next to the compose project name (e.g., Docker logo + 'media-stack')",
-      "flow": "setup",
-      "sequence": 3,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "collapsed-subcontainer-logo",
-      "category": "Collapsed State",
-      "description": "Logo persists when subcontainer is collapsed",
-      "steps": [
-        "Find a Virtualizer or Stack subcontainer with a logo visible",
-        "Click the subcontainer to collapse it"
-      ],
-      "expected": "The collapsed subcontainer still shows the service logo next to the header text and element count",
+      "expected": "The rule can be removed by the user (not locked/greyed out)",
       "flow": "setup",
       "sequence": 4,
       "status": null,
       "feedback": null
     },
     {
-      "id": "tag-subcontainer-unaffected",
-      "category": "No Regression",
-      "description": "ByTag and ByServiceCategory subcontainers are not affected",
+      "id": "infra-services-use-case-aware",
+      "category": "Use Case Awareness",
+      "description": "Different org use cases result in different categories being grouped",
       "steps": [
-        "Navigate to a topology view with ByTag or ByServiceCategory element rules",
-        "Inspect the subcontainer title area"
+        "Open Application perspective for an org with 'homelab' use case",
+        "Note which categories are in the Infrastructure Services container",
+        "Switch to or create an org with 'msp' use case",
+        "Note which categories are in the Infrastructure Services container"
       ],
-      "expected": "ByTag subcontainers show tag pills as before, ByServiceCategory subcontainers show category pills as before — no unexpected logo icons appear",
+      "setup": "Have two organizations with different use cases (e.g., homelab and msp). Both should have services in NetworkAppliance category.",
+      "expected": "For homelab, NetworkAppliance services are grouped into Infrastructure Services. For MSP, NetworkAppliance services are NOT in Infrastructure Services (since they're application-relevant for MSPs).",
       "status": null,
       "feedback": null
     },
     {
-      "id": "stack-logo-application-view",
-      "category": "Stack Subcontainer Icons",
-      "description": "Stack subcontainer shows Docker logo in the Application topology view",
+      "id": "infra-services-first-match-wins",
+      "category": "Rule Composition",
+      "description": "Services claimed by ByTag or ByStack are not re-grouped into Infrastructure Services",
       "steps": [
-        "Navigate to the Application topology view",
-        "Ensure ByStack element rule is active",
-        "Locate a Stack subcontainer"
+        "Open Application perspective",
+        "Verify that services in a tag group or stack group remain in their group even if their category is irrelevant"
       ],
-      "setup": "Ensure services with compose_project exist in an application group.",
-      "expected": "The Stack subcontainer shows the Docker whale logo next to the compose project name in the Application view",
+      "setup": "Create a tag and assign it to a service whose category is infrastructure-irrelevant (e.g., a DNS service). Configure ByTag rule with that tag.",
+      "expected": "The tagged DNS service appears in its tag group, not in Infrastructure Services",
+      "flow": "setup",
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "categories-no-longer-hidden",
+      "category": "Category Hiding Removal",
+      "description": "Infrastructure categories are no longer hidden in Application view — they're grouped instead",
+      "steps": [
+        "Open Application perspective",
+        "Check that services from previously-hidden categories (DNS, DHCP, etc.) are visible inside the collapsed Infrastructure Services container, not completely hidden"
+      ],
+      "expected": "No categories are hidden in Application view except OpenPorts. Infrastructure categories appear inside the collapsed subcontainer.",
+      "flow": "setup",
+      "sequence": 6,
       "status": null,
       "feedback": null
     }
   ]
+}
+,
+{
+  "branch": "refactor/shares-modal",
+  "tests": []
+}
+,
+{
+  "branch": "feat/vlan-entity",
+  "tests": []
+}
+,
+{
+  "branch": "fix/topo-visual-consistency",
+  "tests": [
+    {
+      "id": "collapsed-edge-handles-match-expanded",
+      "category": "Collapsed Edge Handles",
+      "description": "Collapsed subcontainer edges use same handle directions as expanded child elements",
+      "steps": [
+        "Open a topology with multiple containers that have cross-container edges",
+        "Note the handle directions (left/right/top/bottom) on edges between elements in different containers",
+        "Collapse one of the containers",
+        "Observe the aggregated edge handle directions on the collapsed container"
+      ],
+      "setup": "Ensure a topology exists with at least 2 containers and cross-container edges between their child elements.",
+      "expected": "The collapsed container's aggregated edge handles should use the same direction (e.g., left side) as the original element edges.",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "collapsed-edge-handles-multiple-directions",
+      "category": "Collapsed Edge Handles",
+      "description": "When original edges have mixed directions, each aggregated edge keeps its original direction",
+      "steps": [
+        "Open a topology where a container has child elements with edges going in different directions (some left, some bottom)",
+        "Collapse the container",
+        "Check the aggregated edge handle directions"
+      ],
+      "setup": "Ensure a topology with a container whose children have edges in at least 2 different handle directions.",
+      "expected": "Each aggregated edge should keep the handle direction of its original element edge.",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "tag-hide-fade-application-services",
+      "category": "Tag Hide Consistency",
+      "description": "Tag-hidden services in Application perspective fade instead of disappearing",
+      "steps": [
+        "Open topology in Application perspective",
+        "Apply a tag filter that hides some services",
+        "Observe the filtered service elements"
+      ],
+      "setup": "Ensure services have tags. Application perspective should show service elements.",
+      "expected": "Hidden service elements should fade to 30% opacity but remain visible.",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "tag-hide-containers-also-fade",
+      "category": "Tag Hide Consistency",
+      "description": "Containers with hidden tags also fade consistently, including subcontainers and their children",
+      "steps": [
+        "Open topology in L3 perspective",
+        "Apply a tag filter that hides a subnet container that has subcontainers",
+        "Observe the container, subcontainers, and child elements"
+      ],
+      "expected": "Container, subcontainers, and all descendant elements should all fade to 30% opacity.",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    }
+  ]
+}
+,
+{
+  "branch": "feat/topology-url-params",
+  "tests": []
+}
+,
+{
+  "branch": "fix/edge-label-deselect",
+  "tests": []
 }
 ];

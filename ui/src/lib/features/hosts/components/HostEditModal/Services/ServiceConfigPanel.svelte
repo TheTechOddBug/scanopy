@@ -26,7 +26,7 @@
 		hosts_services_bindingsHelp,
 		hosts_services_couldNotFindService,
 		hosts_services_couldNotFindServiceToRemove,
-		hosts_services_interfaceBindingsHelp,
+		hosts_services_ipAddressBindingsHelp,
 		hosts_services_namePlaceholder,
 		hosts_services_newBinding,
 		hosts_services_noAvailableInterfaces,
@@ -464,7 +464,7 @@
 			{#key service.id}
 				<ListManager
 					label={common_ipAddressBindings()}
-					helpText={hosts_services_interfaceBindingsHelp()}
+					helpText={hosts_services_ipAddressBindingsHelp()}
 					placeholder={hosts_services_selectBinding()}
 					createNewLabel={hosts_services_newBinding()}
 					allowDuplicates={false}

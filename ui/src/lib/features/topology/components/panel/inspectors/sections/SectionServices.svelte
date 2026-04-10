@@ -5,7 +5,7 @@
 	import type { Topology } from '$lib/features/topology/types/base';
 	import type { TopologyEditState } from '$lib/features/topology/state';
 	import type { ElementRenderContext } from '$lib/features/topology/resolvers';
-	import { inspector_servicesOnInterface, common_services } from '$lib/paraglide/messages';
+	import { inspector_servicesOnIPAddress, common_services } from '$lib/paraglide/messages';
 
 	/* eslint-disable @typescript-eslint/no-unused-vars -- component contract props */
 	let {
@@ -44,7 +44,7 @@
 {#if servicesOnInterface.length > 0}
 	<div>
 		<span class="text-secondary mb-2 block text-sm font-medium">
-			{elementContext?.elementType === 'Host' ? common_services() : inspector_servicesOnInterface()}
+			{elementContext?.elementType === 'Host' ? common_services() : inspector_servicesOnIPAddress()}
 		</span>
 		<div class="space-y-1">
 			{#each servicesOnInterface as service (service.id)}

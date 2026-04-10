@@ -40,6 +40,13 @@
 				const interfacesData = context?.ip_addresses ?? [];
 				const isContainerSubnetFn = context?.isContainerSubnet ?? (() => false);
 
+				console.log('[PortBindingDisplay.getLabel]', {
+					binding_ip_address_id: binding.ip_address_id,
+					context_keys: context ? Object.keys(context) : 'no context',
+					ip_addresses_count: interfacesData.length,
+					ports_count: portsData.length
+				});
+
 				const port = portsData.find((p) => p.id === binding.port_id);
 				const iface = binding.interface_id
 					? interfacesData.find((i) => i.id === binding.interface_id)

@@ -8,9 +8,9 @@
 		subnets: Subnet[];
 	}
 
-	export const IPAddressDisplay: EntityDisplayComponent<Interface, IPAddressDisplayContext> = {
-		getId: (iface: Interface) => iface.id,
-		getLabel: (iface: Interface, context?: IPAddressDisplayContext) => {
+	export const IPAddressDisplay: EntityDisplayComponent<IPAddress, IPAddressDisplayContext> = {
+		getId: (iface: IPAddress) => iface.id,
+		getLabel: (iface: IPAddress, context?: IPAddressDisplayContext) => {
 			// Align with formatIPAddress(): "name: IP" or just "IP" (or name-only for containers)
 			const subnetsData = context?.subnets ?? [];
 			const subnet = getSubnetById(subnetsData, iface.subnet_id);
@@ -19,12 +19,12 @@
 			}
 			return (iface.name ? iface.name + ': ' : '') + iface.ip_address;
 		},
-		getDescription: (iface: Interface) => {
+		getDescription: (iface: IPAddress) => {
 			return iface.mac_address ?? 'No MAC';
 		},
 		getIcon: () => entities.getIconComponent('IPAddress'),
 		getIconColor: () => entities.getColorHelper('IPAddress').icon,
-		getTags: (iface: Interface, context: IPAddressDisplayContext) => {
+		getTags: (iface: IPAddress, context: IPAddressDisplayContext) => {
 			const subnetsData = context?.subnets ?? [];
 			const subnet = getSubnetById(subnetsData, iface.subnet_id);
 			const tags = [];
@@ -43,12 +43,12 @@
 
 <script lang="ts">
 	import ListSelectItem from '$lib/shared/components/forms/selection/ListSelectItem.svelte';
-	import type { Interface } from '$lib/features/hosts/types/base';
+	import type { IPAddress } from '$lib/features/hosts/types/base';
 	import type { EntityDisplayComponent } from '../types';
 	import { entities } from '$lib/shared/stores/metadata';
 
 	interface Props {
-		item: Interface;
+		item: IPAddress;
 		context?: IPAddressDisplayContext;
 	}
 

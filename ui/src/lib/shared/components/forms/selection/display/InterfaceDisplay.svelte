@@ -41,4 +41,4 @@
 	export let context: void = undefined;
 </script>
 
-<ListSelectItem {item} {context} displayComponent={IPAddressDisplay} />
+<ListSelectItem {item} {context} displayComponent={InterfaceDisplay} />

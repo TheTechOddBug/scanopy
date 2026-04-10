@@ -3,14 +3,13 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
-    edge_builder::EdgeBuilder,
     element_rules::{ElementMatchData, apply_element_rules_with_titles},
     view::ViewBuilder,
 };
 use crate::server::{
     services::r#impl::definitions::ServiceDefinitionExt,
     topology::types::{
-        edges::Edge,
+        edges::{DiscoveryProtocol, Edge, EdgeHandle, EdgeType, EdgeViewConfig},
         grouping::GroupingConfig,
         nodes::{ContainerType, ElementEntityType, Node, NodeType},
     },
@@ -291,8 +290,56 @@ impl ViewBuilder for WorkloadsBuilder {
             Some(&virtualizer_titles),
         );
 
-        // Physical link edges between hosts (LLDP/CDP discovered connections)
-        let edges = EdgeBuilder::create_physical_link_edges(ctx);
+        // Physical link edges between hosts (LLDP/CDP discovered connections).
+        // Unlike L3/L2, Workloads uses host IDs as edge source/target since
+        // elements are hosts, not IP addresses or interfaces.
+        let mut edges = Vec::new();
+        let mut seen_host_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
+        for entry in ctx.interfaces.iter() {
+            let target_entry_id = match &entry.base.neighbor {
+                Some(crate::server::interfaces::r#impl::base::Neighbor::Interface(id)) => *id,
+                _ => continue,
+            };
+            let target_entry = match ctx.get_if_entry_by_id(target_entry_id) {
+                Some(e) => e,
+                None => continue,
+            };
+            // Only create edges between different hosts
+            if entry.base.host_id == target_entry.base.host_id {
+                continue;
+            }
+            let pair = if entry.base.host_id < target_entry.base.host_id {
+                (entry.base.host_id, target_entry.base.host_id)
+            } else {
+                (target_entry.base.host_id, entry.base.host_id)
+            };
+            if seen_host_pairs.contains(&pair) {
+                continue;
+            }
+            seen_host_pairs.insert(pair);
+
+            let label = Some(format!(
+                "{} ↔ {}",
+                entry.display_name(),
+                target_entry.display_name()
+            ));
+
+            edges.push(Edge {
+                id: Uuid::new_v4(),
+                source: entry.base.host_id,
+                target: target_entry.base.host_id,
+                edge_type: EdgeType::PhysicalLink {
+                    source_interface_id: entry.id,
+                    target_interface_id: target_entry.id,
+                    protocol: DiscoveryProtocol::default(),
+                },
+                label,
+                source_handle: EdgeHandle::Bottom,
+                target_handle: EdgeHandle::Top,
+                is_multi_hop: false,
+                view_config: EdgeViewConfig::default(),
+            });
+        }
 
         (nodes, edges)
     }

@@ -17,6 +17,10 @@
 		removable = false,
 		isShiny = false,
 		nativeTooltip = false,
+		faded = false,
+		onclick = undefined,
+		onmouseenter = undefined,
+		onmouseleave = undefined,
 		onRemove
 	}: {
 		icon?: IconComponent | null;
@@ -30,8 +34,17 @@
 		removable?: boolean;
 		isShiny?: boolean;
 		nativeTooltip?: boolean;
+		faded?: boolean;
+		onclick?: ((e: MouseEvent) => void) | undefined;
+		onmouseenter?: ((e: MouseEvent) => void) | undefined;
+		onmouseleave?: ((e: MouseEvent) => void) | undefined;
 		onRemove?: () => void;
 	} = $props();
+
+	let interactive = $derived(!!href || !!onclick);
+	let fadedClasses = $derived(
+		faded ? 'opacity-50 grayscale hover:opacity-75 hover:grayscale-[50%] dark:opacity-40' : ''
+	);
 
 	let isUnknown = $derived(!label || !color);
 	let colorHelper = $derived(color ? createColorHelper(color) : null);
@@ -79,17 +92,31 @@
 		use:tooltip
 		data-tooltip={nativeTooltip ? null : title || null}
 		title={nativeTooltip ? title || undefined : undefined}
-		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-90 dark:hover:brightness-125"
+		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-90 dark:hover:brightness-125 {fadedClasses}"
 		onclick={(e) => e.stopPropagation()}
 	>
 		{@render content()}
 	</a>
+{:else if interactive}
+	<button
+		type="button"
+		use:tooltip
+		data-tooltip={nativeTooltip ? null : title || null}
+		title={nativeTooltip ? title || undefined : undefined}
+		class="inline-flex flex-shrink-0 cursor-pointer appearance-none items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-90 dark:hover:brightness-125 {fadedClasses}"
+		{onclick}
+		{onmouseenter}
+		{onmouseleave}
+		{disabled}
+	>
+		{@render content()}
+	</button>
 {:else}
 	<div
 		use:tooltip
 		data-tooltip={nativeTooltip ? null : title || null}
 		title={nativeTooltip ? title || undefined : undefined}
-		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded"
+		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded {fadedClasses}"
 	>
 		{@render content()}
 	</div>

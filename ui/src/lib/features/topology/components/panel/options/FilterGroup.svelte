@@ -37,10 +37,8 @@
 	function isItemFaded(value: string): boolean {
 		const isSelected = selectedValues.includes(value);
 		if (mode === 'exclude') {
-			// In exclude mode, selected values are hidden (faded)
 			return isSelected;
 		}
-		// In include mode, non-selected values are inactive (faded)
 		return !isSelected;
 	}
 </script>
@@ -51,27 +49,19 @@
 	{/if}
 	<div class="flex flex-wrap gap-1.5">
 		{#each items as item (item.value)}
-			{@const faded = isItemFaded(item.value)}
-			<button
+			<Tag
+				label={item.label}
+				color={item.color}
+				icon={item.icon}
+				isShiny={item.isShiny}
+				title={item.tooltip ?? ''}
+				{nativeTooltip}
+				{disabled}
+				faded={isItemFaded(item.value)}
 				onclick={() => !disabled && onToggle(item.value)}
 				onmouseenter={() => onHoverStart?.(item.value, item.color)}
 				onmouseleave={() => onHoverEnd?.()}
-				{disabled}
-				class="appearance-none transition-all {disabled
-					? 'cursor-not-allowed opacity-50'
-					: faded
-						? 'opacity-50 grayscale hover:opacity-75 hover:grayscale-[50%] dark:opacity-40'
-						: 'opacity-100'}"
-			>
-				<Tag
-					label={item.label}
-					color={item.color}
-					icon={item.icon}
-					isShiny={item.isShiny}
-					title={item.tooltip ?? ''}
-					{nativeTooltip}
-				/>
-			</button>
+			/>
 		{/each}
 	</div>
 </div>

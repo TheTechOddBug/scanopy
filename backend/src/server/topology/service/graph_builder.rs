@@ -572,6 +572,7 @@ mod tests {
             IdentifiedRule::new(ElementRule::ByServiceCategory {
                 categories: vec![ServiceCategory::ReverseProxy],
                 title: Some("Infra".to_string()),
+                is_infra_rule: false,
             }),
             IdentifiedRule::new(ElementRule::ByTag {
                 tag_ids: vec![tag.id],
@@ -694,6 +695,7 @@ mod tests {
             IdentifiedRule::new(ElementRule::ByServiceCategory {
                 categories: vec![ServiceCategory::ReverseProxy],
                 title: Some("Infra".to_string()),
+                is_infra_rule: false,
             }),
         ];
 

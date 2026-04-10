@@ -981,6 +981,7 @@ mod tests {
             IdentifiedRule::new(ElementRule::ByServiceCategory {
                 categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
                 title: Some("Infrastructure".to_string()),
+                is_infra_rule: false,
             }),
             IdentifiedRule::new(ElementRule::ByTag {
                 tag_ids: vec![monitoring_tag_id],

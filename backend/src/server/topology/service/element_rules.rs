@@ -199,7 +199,9 @@ pub fn apply_element_rules_with_titles(
                     }
                 }
             }
-            ElementRule::ByServiceCategory { categories, title } => {
+            ElementRule::ByServiceCategory {
+                categories, title, ..
+            } => {
                 for (parent_id, element_ids) in &elements_by_container {
                     let matched_ids: HashSet<Uuid> = element_ids
                         .iter()

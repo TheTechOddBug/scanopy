@@ -272,7 +272,6 @@
 		void $expandedPortNodeIds;
 		void $bundleEdgesStore;
 		void $hideEdgeTypesStore;
-		console.log(`[COLLAPSE-LEVEL] in loadTopo reactive block: $collapseLevel=${$collapseLevel}`);
 		void loadTopologyData();
 	}
 
@@ -1560,6 +1559,9 @@
 		}
 	}
 
+	$: expandDisabled = $collapseLevel === 4;
+	$: collapseDisabled = $collapseLevel === 1;
+	$: collapseLevelLabel = `${$collapseLevel}/4 ${getCollapseLevelName($collapseLevel)}`;
 	$: collapseLevelTooltipCollapse = `${topology_collapseLevelDown()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`;
 	$: collapseLevelTooltipExpand = `${topology_expandLevelUp()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`;
 	$: console.log(
@@ -1567,7 +1569,6 @@
 	);
 
 	function handleStepCollapse() {
-		console.log('[COLLAPSE-LEVEL] handleStepCollapse called');
 		stepCollapse(topology.nodes, containerTypes, getInfrastructureRuleId());
 		console.log(
 			`[COLLAPSE-LEVEL] after stepCollapse: get(collapseLevel)=${get(collapseLevel)}, $collapseLevel=${$collapseLevel}`
@@ -1576,7 +1577,6 @@
 	}
 
 	function handleStepExpand() {
-		console.log('[COLLAPSE-LEVEL] handleStepExpand called');
 		const { autoCollapseIds } = stepExpand(
 			topology.nodes,
 			containerTypes,
@@ -1700,6 +1700,28 @@
 						<Shrink class="h-3.5 w-3.5" />
 					</button>
 				</div>
+				<TopologySidebarButton
+					onclick={handleStepExpand}
+					title={collapseLevelTooltipExpand}
+					label={collapseLevelLabel}
+					disabled={expandDisabled}
+					collapsed={sidebarCollapsed}
+				>
+					{#snippet icon()}
+						<Expand class="h-4 w-4" />
+					{/snippet}
+				</TopologySidebarButton>
+				<TopologySidebarButton
+					onclick={handleStepCollapse}
+					title={collapseLevelTooltipCollapse}
+					label={collapseLevelLabel}
+					disabled={collapseDisabled}
+					collapsed={sidebarCollapsed}
+				>
+					{#snippet icon()}
+						<Shrink class="h-4 w-4" />
+					{/snippet}
+				</TopologySidebarButton>
 				{#if onOpenShortcuts}
 					<TopologySidebarButton
 						onclick={onOpenShortcuts}

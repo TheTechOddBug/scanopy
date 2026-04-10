@@ -11,6 +11,7 @@
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
 	import { usePortsQuery } from '$lib/features/ports/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import {
 		common_back,
 		common_cancel,
@@ -43,7 +44,7 @@
 	// Use limit: 0 to get all hosts for consolidation modal dropdown
 	const hostsQuery = useHostsQuery({ limit: 0 });
 	const servicesQuery = useServicesCacheQuery();
-	const ipAddressesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const portsQuery = usePortsQuery();
 
 	let hostsData = $derived(hostsQuery.data?.items ?? []);

@@ -53,6 +53,7 @@
 	} from '../queries';
 	import { useServicesByIds, useServicesCacheQuery } from '$lib/features/services/queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { modalState, resolveModalDeepLink } from '$lib/shared/stores/modal-registry';
 	import type { components } from '$lib/api/schema';
@@ -94,7 +95,7 @@
 	);
 	const networksQuery = useNetworksQuery();
 	useDaemonsQuery();
-	const ipAddressesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 
 	// Selective service lookup - only fetches services needed for virtualization display
 	// Extract service IDs from visible hosts for "Virtualized By" field

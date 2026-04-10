@@ -8,6 +8,7 @@
 	import { formatIPAddress } from '$lib/features/hosts/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import { usePortsQuery } from '$lib/features/ports/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { SvelteMap } from 'svelte/reactivity';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';
@@ -23,7 +24,7 @@
 
 	// TanStack Query hooks
 	const subnetsQuery = useSubnetsQuery();
-	const ipAddressesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const portsQuery = usePortsQuery();
 
 	// Derived data from queries

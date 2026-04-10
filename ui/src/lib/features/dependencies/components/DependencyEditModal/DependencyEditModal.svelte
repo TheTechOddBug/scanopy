@@ -13,6 +13,7 @@
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { useHostsQuery } from '$lib/features/hosts/queries';
 	import { usePortsQuery } from '$lib/features/ports/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import { BindingWithServiceDisplay } from '$lib/shared/components/forms/selection/display/BindingWithServiceDisplay.svelte';
@@ -82,7 +83,7 @@
 	const servicesQuery = useServicesCacheQuery();
 	const networksQuery = useNetworksQuery();
 	const hostsQuery = useHostsQuery({ limit: 0 });
-	const ipAddressesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const portsQuery = usePortsQuery();
 	const subnetsQuery = useSubnetsQuery();
 

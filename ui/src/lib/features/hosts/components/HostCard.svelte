@@ -5,6 +5,7 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';

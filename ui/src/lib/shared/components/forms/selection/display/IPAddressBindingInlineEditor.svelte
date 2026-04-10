@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { formatIPAddress } from '$lib/features/hosts/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import type { HostFormData } from '$lib/features/hosts/types/base';
 	import type { InterfaceBinding, Service } from '$lib/features/services/types/base';
 
 	// TanStack Query hooks
-	const ipAddressesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const subnetsQuery = useSubnetsQuery();
 	let ipAddressesData = $derived(ipAddressesQuery.data ?? []);
 	let subnetsData = $derived(subnetsQuery.data ?? []);

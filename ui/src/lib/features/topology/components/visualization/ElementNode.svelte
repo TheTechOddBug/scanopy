@@ -128,29 +128,23 @@
 			? (() => {
 					const elementType = resolved.elementType ?? 'Interface';
 
-					// Service elements: simpler rendering — single service with host name
+					// Service elements: simpler rendering — single service with host name.
+					// Intentionally does NOT read $topologyOptions here — category/tag
+					// fading is handled by shouldFadeOut via hiddenServices store, so
+					// category toggles don't trigger nodeRenderData recomputation.
 					if (elementType === 'Service') {
 						const service = resolved.services[0];
-						const hiddenCategories =
-							(
-								($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>
-							)[$activeView] ?? [];
-						type CategoryType = (typeof hiddenCategories)[number];
-						const isCategoryHidden =
-							service &&
-							hiddenCategories.includes(
-								serviceDefinitions.getCategory(service.service_definition) as CategoryType
-							);
+						const isApplicationView = $activeView === 'Application';
 						return {
 							elementType,
 							footerText: isApplicationView ? null : (host?.name ?? null),
-							services: service && !isCategoryHidden ? [service] : [],
+							services: service ? [service] : [],
 							hiddenOpenPorts: [],
 							headerText: host?.name ?? null,
 							bodyText: service ? null : 'Unknown Service',
 							showServices: !!service,
 							isVirtualized: false,
-							isCategoryHidden: !!isCategoryHidden,
+							isCategoryHidden: false,
 							interface_id: id
 						} as ElementRenderData;
 					}

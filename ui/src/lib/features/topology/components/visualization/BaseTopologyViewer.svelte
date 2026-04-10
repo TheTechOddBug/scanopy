@@ -587,9 +587,17 @@
 				let needsElkForExpand = false;
 				if (collapseChanged) {
 					for (const c of layoutGraph.containers.values()) {
-						if (!c.collapsed && c.expandedSize.width === 0 && c.allChildren.length > 0) {
-							needsElkForExpand = true;
-							seenAutoCollapseIds.add(c.id);
+						if (!c.collapsed && c.allChildren.length > 0) {
+							// Container was just expanded — needs ELK if it has no computed
+							// expanded size, OR if its child elements have uninitialized
+							// sizes (height 0 from backend defaults, meaning ELK/DOM
+							// measurement never ran for them in this graph).
+							const hasZeroExpandedSize = c.expandedSize.width === 0;
+							const hasUninitializedChildren = c.childElements.some((el) => el.size.y === 0);
+							if (hasZeroExpandedSize || hasUninitializedChildren) {
+								needsElkForExpand = true;
+								seenAutoCollapseIds.add(c.id);
+							}
 						}
 					}
 				}

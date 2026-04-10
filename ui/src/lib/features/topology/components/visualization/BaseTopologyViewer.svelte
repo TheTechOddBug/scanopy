@@ -888,6 +888,10 @@
 							forceEdgeHandles,
 							elementNodeSizes
 						);
+						// Recompute visible nodes — force layout path rebuilds the graph
+						// with collapse applied, so children of collapsed containers must
+						// be filtered out.
+						visibleNodes = layoutGraph.getVisibleNodes(layoutNodes);
 						console.log(
 							`[LAYOUT-DEBUG] Force layout applied: ${forceResult.nodePositions.size} positioned nodes (all-collapsed overview)`
 						);

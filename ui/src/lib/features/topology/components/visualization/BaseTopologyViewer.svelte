@@ -445,6 +445,23 @@
 				// Sync collapse state from store → graph (handles cascade internally)
 				const collapseChanged = layoutGraph.syncCollapseState(collapsed);
 
+				// Force ELK re-layout when a container was expanded but has no
+				// cached layout (e.g., was collapsed-by-default from initial load
+				// or persisted via localStorage — ELK never ran with it expanded).
+				let needsElkForExpand = false;
+				if (collapseChanged) {
+					for (const c of layoutGraph.containers.values()) {
+						if (
+							!c.collapsed &&
+							c.expandedSize.width === 0 &&
+							c.allChildren.length > 0
+						) {
+							needsElkForExpand = true;
+							break;
+						}
+					}
+				}
+
 				// Compute aggregated edges for collapsed containers
 				const aggregatedEdges = computeCollapsedEdges(
 					elevatedEdges,
@@ -564,17 +581,29 @@
 					flowNodes.sort((a, b) => depthOf(a) - depthOf(b));
 
 				const isViewTransition = isNewStructure && viewChanged && topologyChanged;
+				const needsElk = isNewStructure || needsElkForExpand;
 
-				if (isNewStructure) {
+				if (needsElk) {
 					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
 					const elementNodeSizes = new Map<string, { x: number; y: number }>();
 					const cachedSizes = isViewTransition ? viewSizeCache.get(currentView) : undefined;
+					const expandCachedSizes =
+						needsElkForExpand && !isNewStructure
+							? viewSizeCache.get(currentView)
+							: undefined;
 
 					if (isViewTransition && cachedSizes) {
 						// Return visit to a previously-measured view: use cached sizes
 						// so the old layout stays visible (no measurement pass / container hide)
 						for (const node of visibleNodes) {
 							const cached = cachedSizes.get(node.id);
+							elementNodeSizes.set(node.id, cached ?? { x: 250, y: 100 });
+						}
+					} else if (expandCachedSizes) {
+						// Expanding a collapsed-by-default container: use cached sizes
+						// from the current view to skip DOM measurement
+						for (const node of visibleNodes) {
+							const cached = expandCachedSizes.get(node.id);
 							elementNodeSizes.set(node.id, cached ?? { x: 250, y: 100 });
 						}
 					} else {
@@ -752,7 +781,7 @@
 					[...currentExpandedPorts].some((id) => !prevExpandedPortIds.has(id)) ||
 					[...prevExpandedPortIds].some((id) => !currentExpandedPorts.has(id));
 
-				if (portsChanged && !isNewStructure && layoutGraph) {
+				if (portsChanged && !needsElk && layoutGraph) {
 					// Phase 1: Render with current positions to let DOM update port content
 					const measureNodes = sortFlowNodes(buildFlowNodes(false));
 					nodes.set(measureNodes);
@@ -777,7 +806,7 @@
 						}
 					}
 					prevExpandedPortIds = new Set(currentExpandedPorts);
-				} else if (isNewStructure) {
+				} else if (needsElk) {
 					prevExpandedPortIds = new Set(currentExpandedPorts);
 				}
 
@@ -790,7 +819,7 @@
 				prevView = currentView;
 
 				// Build final nodes with positions from graph
-				const needsLayout = isNewStructure || portsChanged || collapseChanged;
+				const needsLayout = needsElk || portsChanged || collapseChanged;
 				const allNodes = sortFlowNodes(buildFlowNodes(needsLayout));
 
 				// Build edges (pure data — no DOM dependency)

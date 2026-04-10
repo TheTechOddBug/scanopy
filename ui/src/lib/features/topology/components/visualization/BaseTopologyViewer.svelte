@@ -12,7 +12,7 @@
 		type Connection,
 		useSvelteFlow
 	} from '@xyflow/svelte';
-	import { Keyboard, Minimize2, Maximize2, PencilOff, Pencil } from 'lucide-svelte';
+	import { Keyboard, ZoomIn, ZoomOut, PencilOff, Pencil } from 'lucide-svelte';
 	import {
 		topology_shortcutsTitle,
 		topology_collapseLevelDown,
@@ -1595,28 +1595,30 @@
 						{/snippet}
 					</TopologySidebarButton>
 				{/if}
-				<TopologySidebarButton
-					onclick={handleStepCollapse}
-					title={collapseLevelTooltipCollapse}
-					label={topology_collapseLevelDown()}
-					badge={$collapseLevel}
-					collapsed={sidebarCollapsed}
+				<div
+					class="flex items-center overflow-hidden rounded !border !border-gray-300 !bg-gray-50 !shadow-lg dark:!border-gray-600 dark:!bg-gray-700"
+					title={getCollapseLevelName($collapseLevel)}
 				>
-					{#snippet icon()}
-						<Minimize2 class="h-4 w-4" />
-					{/snippet}
-				</TopologySidebarButton>
-				<TopologySidebarButton
-					onclick={handleStepExpand}
-					title={collapseLevelTooltipExpand}
-					label={topology_expandLevelUp()}
-					badge={$collapseLevel}
-					collapsed={sidebarCollapsed}
-				>
-					{#snippet icon()}
-						<Maximize2 class="h-4 w-4" />
-					{/snippet}
-				</TopologySidebarButton>
+					<button
+						class="flex items-center justify-center p-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-600"
+						onclick={handleStepCollapse}
+						title={collapseLevelTooltipCollapse}
+					>
+						<ZoomOut class="h-3.5 w-3.5" />
+					</button>
+					<span
+						class="flex min-w-[1.25rem] items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-100"
+					>
+						{$collapseLevel}
+					</span>
+					<button
+						class="flex items-center justify-center p-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-600"
+						onclick={handleStepExpand}
+						title={collapseLevelTooltipExpand}
+					>
+						<ZoomIn class="h-3.5 w-3.5" />
+					</button>
+				</div>
 				{#if onOpenShortcuts}
 					<TopologySidebarButton
 						onclick={onOpenShortcuts}

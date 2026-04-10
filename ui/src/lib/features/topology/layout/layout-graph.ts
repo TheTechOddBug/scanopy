@@ -174,11 +174,10 @@ export class LayoutContainer {
 			return { w: measured?.x ?? 250, h: measured?.y ?? 100 };
 		});
 
-		// Simple box packing: compute columns from aspect ratio
+		// Simple box packing: compute columns from aspect ratio (width/height)
 		const avgW = childSizes.reduce((s, c) => s + c.w, 0) / childSizes.length;
-		const avgH = childSizes.reduce((s, c) => s + c.h, 0) / childSizes.length;
 		const totalArea = childSizes.reduce((s, c) => s + (c.w + spacing) * (c.h + spacing), 0);
-		const targetW = Math.sqrt(totalArea / Math.max(aspectRatio, 0.1));
+		const targetW = Math.sqrt(totalArea * Math.max(aspectRatio, 0.1));
 		const cols = Math.max(1, Math.round(targetW / (avgW + spacing)));
 
 		// Pack into columns

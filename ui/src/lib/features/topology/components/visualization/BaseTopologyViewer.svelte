@@ -385,10 +385,10 @@
 					collapseLevel.set(inferred);
 				}
 
-				// Perspective switch: strip stale container IDs from previous
-				// perspective that don't exist in the new topology. Without this,
-				// stale IDs pollute deferCollapse, structureKey, and edge aggregation.
-				if (viewChanged && topologyChanged && collapsed.size > 0) {
+				// Strip stale container IDs that don't exist in the new topology.
+				// Runs on any topology change (perspective switch OR topology switch)
+				// to prevent stale IDs from polluting deferCollapse, structureKey, etc.
+				if (topologyChanged && collapsed.size > 0) {
 					const originalSize = collapsed.size;
 					const newContainerIds = new Set(
 						topology.nodes.filter((n) => n.node_type === 'Container').map((n) => n.id)

@@ -329,8 +329,8 @@ impl ViewBuilder for WorkloadsBuilder {
                 source: entry.base.host_id,
                 target: target_entry.base.host_id,
                 edge_type: EdgeType::PhysicalLink {
-                    source_interface_id: entry.id,
-                    target_interface_id: target_entry.id,
+                    source_entity_id: entry.id,
+                    target_entity_id: target_entry.id,
                     protocol: DiscoveryProtocol::default(),
                 },
                 label,

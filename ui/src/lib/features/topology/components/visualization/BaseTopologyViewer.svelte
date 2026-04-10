@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { writable, get, type Writable } from 'svelte/store';
+	import { writable, derived, get, type Writable } from 'svelte/store';
 	import {
 		SvelteFlow,
 		Controls,
@@ -236,12 +236,21 @@
 	}
 
 	// Load topology data when it changes, collapse state changes, bundle state changes, or port expansion changes
+	// Read layout-relevant options imperatively inside loadTopologyData instead
+	// of reactively in the $: block. This prevents category/tag filter changes
+	// (which only affect visual state) from triggering a full loadTopologyData.
+	// We use dedicated stores for the two options that DO affect layout.
+	const bundleEdgesStore = derived(topologyOptions, (o) => o.local.bundle_edges ?? false);
+	const hideEdgeTypesStore = derived(topologyOptions, (o) =>
+		(o.local.hide_edge_types ?? []).join(',')
+	);
+
 	$: if (topology && (topology.edges || topology.nodes)) {
 		void $collapsedContainers;
 		void $expandedBundles;
 		void $expandedPortNodeIds;
-		void $topologyOptions.local.bundle_edges;
-		void $topologyOptions.local.hide_edge_types;
+		void $bundleEdgesStore;
+		void $hideEdgeTypesStore;
 		void loadTopologyData();
 	}
 

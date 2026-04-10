@@ -38,7 +38,13 @@ const elementResolvers: Record<
 		const iface = ipAddressId
 			? topology.ip_addresses.find((i) => i.id === ipAddressId)
 			: undefined;
-		const services = topology.services.filter((s) => s.host_id === hostId);
+		const services = topology.services.filter(
+			(s) =>
+				s.host_id === hostId &&
+				s.bindings.some(
+					(b) => b.ip_address_id === ipAddressId || b.ip_address_id === null
+				)
+		);
 
 		return {
 			elementType: 'IPAddress',

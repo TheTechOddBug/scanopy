@@ -127,7 +127,7 @@
 	let bindingContext: BindingWithServiceContext = $derived({
 		services: topology?.services ?? [],
 		hosts: topology?.hosts ?? [],
-		interfaces: topology?.interfaces ?? [],
+		ip_addresses: topology?.ip_addresses ?? [],
 		ports: topology?.ports ?? [],
 		isContainerSubnet: isContainerSubnetFn
 	});

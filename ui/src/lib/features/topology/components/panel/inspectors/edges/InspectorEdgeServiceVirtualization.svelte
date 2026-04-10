@@ -66,7 +66,7 @@
 	// Helper to get interface from topology
 	function getInterfaceFromTopology(ifaceId: string) {
 		if (!topology) return null;
-		return topology.interfaces.find((i) => i.id === ifaceId) ?? null;
+		return topology.ip_addresses.find((i) => i.id === ifaceId) ?? null;
 	}
 
 	// Helper to get subnet from topology

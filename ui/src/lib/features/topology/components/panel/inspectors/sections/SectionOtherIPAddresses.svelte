@@ -25,7 +25,7 @@
 	let isInterfaceElement = $derived(!!elementContext?.interfaceId);
 
 	let otherInterfaces = $derived(
-		topology.interfaces.filter(
+		topology.ip_addresses.filter(
 			(i) =>
 				i.host_id === elementContext?.hostId &&
 				(!isInterfaceElement || i.id !== elementContext?.interfaceId)

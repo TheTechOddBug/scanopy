@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Binding, Service } from '$lib/features/services/types/base';
-	import type { Host, Interface, Port } from '$lib/features/hosts/types/base';
+	import type { IPAddress } from '$lib/features/hosts/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { ALL_IP_ADDRESSES } from '$lib/features/hosts/types/base';
 
@@ -9,7 +9,7 @@
 	export interface BindingWithServiceContext {
 		services: Service[];
 		hosts: Host[];
-		interfaces: Interface[];
+		ip_addresses: IPAddress[];
 		ports: Port[];
 		isContainerSubnet: (subnetId: string) => boolean;
 	}
@@ -31,14 +31,14 @@
 		context: BindingWithServiceContext
 	): string {
 		if (binding.type === 'IPAddress') {
-			const iface = context.interfaces.find((i) => i.id === binding.ip_address_id);
+			const iface = context.ip_addresses.find((i) => i.id === binding.ip_address_id);
 			return iface
 				? formatInterfaceForBinding(iface, context.isContainerSubnet)
 				: 'Unknown Interface';
 		} else {
 			const port = context.ports.find((p) => p.id === binding.port_id);
-			const iface = binding.interface_id
-				? context.interfaces.find((i) => i.id === binding.interface_id)
+			const iface = binding.ip_address_id
+				? context.ip_addresses.find((i) => i.id === binding.ip_address_id)
 				: ALL_IP_ADDRESSES;
 			const portFormatted = port ? formatPort(port) : 'Unknown Port';
 			const interfaceFormatted = iface
@@ -100,7 +100,7 @@
 	export let context: BindingWithServiceContext = {
 		services: [],
 		hosts: [],
-		interfaces: [],
+		ip_addresses: [],
 		ports: [],
 		isContainerSubnet: () => false
 	};

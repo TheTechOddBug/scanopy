@@ -272,14 +272,14 @@ function getVirtualizedContainerNodes(
 
 	// Try to use topology data directly (for share views where cache is empty)
 	if (topology) {
-		const iface = topology.interfaces.find((i) => i.id === dockerHostInterfaceId);
+		const iface = topology.ip_addresses.find((i) => i.id === dockerHostInterfaceId);
 		if (!iface) return connected;
 
 		const dockerHost = topology.hosts.find((h) => h.id === iface.host_id);
 		if (!dockerHost) return connected;
 
 		// Get all interfaces for this host
-		const hostInterfaces = topology.interfaces.filter((i) => i.host_id === dockerHost.id);
+		const hostInterfaces = topology.ip_addresses.filter((i) => i.host_id === dockerHost.id);
 		const hostInterfaceSubnetIds = hostInterfaces.map((i) => i.subnet_id);
 
 		// Find container subnets
@@ -290,7 +290,7 @@ function getVirtualizedContainerNodes(
 
 		// Get all interfaces on those container subnets
 		const interfacesOnDockerSubnets = dockerBridgeSubnets.flatMap((s) =>
-			topology.interfaces.filter((i) => i.subnet_id === s.id)
+			topology.ip_addresses.filter((i) => i.subnet_id === s.id)
 		);
 
 		for (const iface of interfacesOnDockerSubnets) {
@@ -721,11 +721,11 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 	}
 
 	// Search interfaces -> match element nodes via interfaceIdToNodes
-	for (const iface of topology.interfaces) {
-		const ipMatch = iface.ip_address?.toLowerCase().includes(q) ?? false;
-		const nameMatch = iface.name?.toLowerCase().includes(q) ?? false;
+	for (const ipAddr of topology.ip_addresses) {
+		const ipMatch = ipAddr.ip_address?.toLowerCase().includes(q) ?? false;
+		const nameMatch = ipAddr.name?.toLowerCase().includes(q) ?? false;
 		if (ipMatch || nameMatch) {
-			addIndexedNodes(index.interfaceIdToNodes, iface.id, matchingSet);
+			addIndexedNodes(index.interfaceIdToNodes, ipAddr.id, matchingSet);
 		}
 	}
 

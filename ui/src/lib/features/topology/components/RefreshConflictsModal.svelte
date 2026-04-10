@@ -64,7 +64,7 @@
 	$: unresolvedGroupCount = topology.removed_dependencies.length - removedGroups.length;
 
 	$: removedInterfaces = topology.removed_interfaces
-		.map((id) => topology.interfaces.find((i) => i.id === id))
+		.map((id) => topology.ip_addresses.find((i) => i.id === id))
 		.filter((i) => i != undefined);
 	$: unresolvedInterfaceCount = topology.removed_interfaces.length - removedInterfaces.length;
 

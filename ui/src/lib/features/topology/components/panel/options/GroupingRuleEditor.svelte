@@ -137,26 +137,16 @@
 	);
 	let disabledCount = $derived(elementRules.filter((r) => !isElementRuleApplicable(r)).length);
 
-	// Service categories available in topology
-	let serviceCategoriesWithColors = $derived.by(() => {
-		if (!topology?.services) return [];
-		const seen: Record<string, boolean> = {};
-		const result: { value: string; label: string; color: Color; tooltip?: string }[] = [];
-		for (const service of topology.services) {
-			const category = serviceDefinitions.getCategory(service.service_definition);
-			if (category && !seen[category]) {
-				seen[category] = true;
-				const color = serviceDefinitions.getColorHelper(service.service_definition).color;
-				result.push({
-					value: category,
-					label: serviceCategories.getName(category),
-					color,
-					tooltip: serviceCategories.getDescription(category) || undefined
-				});
-			}
-		}
-		return result.sort((a, b) => a.label.localeCompare(b.label));
-	});
+	// Service categories from fixture data (all categories, not just those in current topology)
+	import serviceCategoriesJson from '$lib/data/service-categories.json';
+	let serviceCategoriesWithColors = serviceCategoriesJson
+		.map((cat) => ({
+			value: cat.id,
+			label: cat.name,
+			color: (cat.color ?? 'Gray') as Color,
+			tooltip: cat.description || undefined
+		}))
+		.sort((a, b) => a.label.localeCompare(b.label));
 
 	// All tags as toggleable pills
 	let allTagsWithColors = $derived(

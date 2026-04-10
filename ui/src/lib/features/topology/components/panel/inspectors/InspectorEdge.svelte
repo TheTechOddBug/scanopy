@@ -32,7 +32,7 @@
 			targetBindingId={edgeData.target_binding_id}
 			{view}
 		/>
-	{:else if edgeData.edge_type === 'Interface'}
+	{:else if edgeData.edge_type === 'SameHost'}
 		<InspectorEdgeIPAddress {edge} hostId={edgeData.host_id} {view} />
 	{:else if edgeData.edge_type === 'HostVirtualization'}
 		<InspectorEdgeHostVirtualization {edge} vmServiceId={edgeData.vm_service_id} />

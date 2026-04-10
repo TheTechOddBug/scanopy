@@ -69,9 +69,9 @@
 		entityTags: topology.entity_tags
 	});
 
-	// For Port elements: show the Interface
+	// For Interface (SNMP) elements: show the Interface
 	let thisInterface = $derived.by(() => {
-		if (elementContext?.elementType !== 'Port') return null;
+		if (elementContext?.elementType !== 'Interface') return null;
 		const nodeData = node.data as TopologyNode;
 		const ifEntryId = 'interface_id' in nodeData ? (nodeData.interface_id as string) : undefined;
 		return ifEntryId ? (topology.interfaces.find((e) => e.id === ifEntryId) ?? null) : null;

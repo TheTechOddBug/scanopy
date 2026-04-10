@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import type { ColorStyle, Color } from '$lib/shared/utils/styling';
@@ -46,7 +47,91 @@
 
 	let subgroupTotal = $derived(subgroupSummaries.reduce((sum, s) => sum + s.childCount, 0));
 	let ungroupedCount = $derived(childCount - subgroupTotal);
+
+	// Tag truncation for inline variant: measure available space, show "+X more" for overflow
+	const TAG_GAP = 4;
+	const MORE_WIDTH = 50;
+	let inlineContainerEl: HTMLDivElement | undefined = $state(undefined);
+	let inlineMeasureEl: HTMLDivElement | undefined = $state(undefined);
+	let visibleLabelCount = $state(groupLabels.length);
+
+	function calculateVisibleLabels() {
+		if (!inlineContainerEl || !inlineMeasureEl || groupLabels.length === 0) {
+			visibleLabelCount = groupLabels.length;
+			return;
+		}
+
+		const containerWidth = inlineContainerEl.offsetWidth;
+		const tagEls = inlineMeasureEl.querySelectorAll('[data-tag]');
+		const tagWidths: number[] = [];
+		tagEls.forEach((el) => tagWidths.push((el as HTMLElement).offsetWidth));
+
+		if (tagWidths.length === 0) {
+			visibleLabelCount = groupLabels.length;
+			return;
+		}
+
+		// Space used by non-tag elements (chevron, icon, header text)
+		const fixedEls = inlineContainerEl.querySelectorAll('[data-fixed]');
+		let fixedWidth = 0;
+		fixedEls.forEach((el) => fixedWidth += (el as HTMLElement).offsetWidth + TAG_GAP);
+
+		let availableForTags = containerWidth - fixedWidth;
+		let count = 0;
+		let usedWidth = 0;
+
+		for (let i = 0; i < tagWidths.length; i++) {
+			const needsMore = i < tagWidths.length - 1;
+			const extraWidth = (count > 0 ? TAG_GAP : 0) + tagWidths[i] + (needsMore ? TAG_GAP + MORE_WIDTH : 0);
+
+			if (usedWidth + extraWidth <= availableForTags) {
+				count++;
+				usedWidth += (count > 1 ? TAG_GAP : 0) + tagWidths[i];
+			} else {
+				break;
+			}
+		}
+
+		if (count < tagWidths.length && count > 1) {
+			const totalWithMore = usedWidth + TAG_GAP + MORE_WIDTH;
+			if (totalWithMore > availableForTags) {
+				count--;
+			}
+		}
+
+		visibleLabelCount = Math.max(count, 0);
+	}
+
+	let needsTruncation = $derived(
+		(variant === 'inline' || variant === 'collapsed-sub') && groupLabels.length > 0
+	);
+
+	$effect(() => {
+		if (needsTruncation && inlineContainerEl) {
+			requestAnimationFrame(() => calculateVisibleLabels());
+		}
+	});
+
+	onMount(() => {
+		if (needsTruncation && inlineContainerEl) {
+			const observer = new ResizeObserver(() => calculateVisibleLabels());
+			observer.observe(inlineContainerEl);
+			return () => observer.disconnect();
+		}
+	});
+
+	let visibleLabels = $derived(groupLabels.slice(0, visibleLabelCount));
+	let hiddenLabelCount = $derived(groupLabels.length - visibleLabelCount);
 </script>
+
+<!-- Hidden measurement container for tag widths (shared by inline + collapsed-sub) -->
+{#if needsTruncation}
+	<div bind:this={inlineMeasureEl} class="pointer-events-none invisible absolute flex items-center gap-1" aria-hidden="true">
+		{#each groupLabels as pill (pill.label)}
+			<span data-tag><Tag label={pill.label} color={pill.color} /></span>
+		{/each}
+	</div>
+{/if}
 
 {#if variant === 'external'}
 	<!-- External title pill: card above container -->
@@ -81,27 +166,32 @@
 {:else if variant === 'inline'}
 	<!-- Inline header: inside container top padding -->
 	<div
-		class="nopan nodrag text-secondary absolute left-2 top-2 flex items-center gap-1 rounded-t px-2 py-0.5"
+		bind:this={inlineContainerEl}
+		class="nopan nodrag text-secondary absolute left-2 right-2 top-2 flex items-center gap-1 overflow-hidden rounded-t px-2 py-0.5"
 	>
 		{#if isCollapsible}
-			<ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
+			<span data-fixed><ChevronDown class="text-secondary h-3.5 w-3.5 flex-shrink-0" /></span>
 		{/if}
 		{#if logoComponent}
 			{@const LogoComp = logoComponent}
-			<LogoComp class="h-4 w-4 flex-shrink-0" />
+			<span data-fixed><LogoComp class="h-4 w-4 flex-shrink-0" /></span>
 		{/if}
 		{#if headerText}
-			<span class="text-tertiary whitespace-nowrap text-xs font-medium">
+			<span data-fixed class="text-tertiary whitespace-nowrap text-xs font-medium flex-shrink-0">
 				{headerText}{groupLabels.length > 0 ? ':' : ''}
 			</span>
 		{/if}
-		{#each groupLabels as pill (pill.label)}
+		{#each visibleLabels as pill (pill.label)}
 			<Tag label={pill.label} color={pill.color} />
 		{/each}
+		{#if hiddenLabelCount > 0}
+			<span class="text-tertiary whitespace-nowrap text-xs">+{hiddenLabelCount} more</span>
+		{/if}
 	</div>
 {:else if variant === 'collapsed-sub'}
 	<!-- Collapsed subcontainer: compact inline with dashed border -->
 	<div
+		bind:this={inlineContainerEl}
 		class="nopan nodrag flex cursor-pointer items-center gap-1 overflow-hidden rounded-lg border border-dashed border-gray-300 px-3 py-2 dark:border-gray-600"
 		style="background: var(--color-topology-subgroup-bg);"
 		role="button"
@@ -111,27 +201,30 @@
 			if (e.key === 'Enter' || e.key === ' ') onToggleCollapse(e);
 		}}
 	>
-		<ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" />
+		<span data-fixed><ChevronRight class="text-secondary h-3.5 w-3.5 flex-shrink-0" /></span>
 		{#if iconComponent}
 			{@const IconComp = iconComponent}
-			<IconComp
+			<span data-fixed><IconComp
 				class={`h-3.5 w-3.5 flex-shrink-0 ${colorHelper.icon}`}
 				fill={fillIcon ? 'currentColor' : 'none'}
-			/>
+			/></span>
 		{/if}
 		{#if logoComponent}
 			{@const LogoComp = logoComponent}
-			<LogoComp class="h-4 w-4 flex-shrink-0" />
+			<span data-fixed><LogoComp class="h-4 w-4 flex-shrink-0" /></span>
 		{/if}
 		{#if headerText}
-			<span class="text-tertiary whitespace-nowrap text-xs font-medium">
+			<span data-fixed class="text-tertiary whitespace-nowrap text-xs font-medium">
 				{headerText}{groupLabels.length > 0 ? ':' : ''}
 			</span>
 		{/if}
-		{#each groupLabels as pill (pill.label)}
+		{#each visibleLabels as pill (pill.label)}
 			<Tag label={pill.label} color={pill.color} />
 		{/each}
-		<span class="text-tertiary whitespace-nowrap text-xs">
+		{#if hiddenLabelCount > 0}
+			<span class="text-tertiary whitespace-nowrap text-xs">+{hiddenLabelCount} more</span>
+		{/if}
+		<span data-fixed class="text-tertiary ml-auto whitespace-nowrap text-xs">
 			({topology_elementCount({ count: childCount, label: elementLabel })})
 		</span>
 	</div>

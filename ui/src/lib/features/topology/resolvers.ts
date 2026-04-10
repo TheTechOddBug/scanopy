@@ -27,24 +27,26 @@ const elementResolvers: Record<
 	ElementEntityType,
 	(nodeId: string, node: TopologyNode, topology: Topology) => ElementRenderContext
 > = {
-	Interface: (_nodeId, node, topology) => {
+	IPAddress: (_nodeId, node, topology) => {
 		const hostId = 'host_id' in node ? (node.host_id as string) : undefined;
-		const interfaceId =
-			'interface_id' in node ? (node.interface_id as string | undefined) : undefined;
+		const ipAddressId =
+			'ip_address_id' in node ? (node.ip_address_id as string | undefined) : undefined;
 		const subnetId = 'subnet_id' in node ? (node.subnet_id as string) : '';
 		const isInfra = 'is_infra' in node ? (node.is_infra as boolean) : false;
 
 		const host = topology.hosts.find((h) => h.id === hostId);
-		const iface = interfaceId ? topology.interfaces.find((i) => i.id === interfaceId) : undefined;
+		const iface = ipAddressId
+			? topology.ip_addresses.find((i) => i.id === ipAddressId)
+			: undefined;
 		const services = topology.services.filter((s) => s.host_id === hostId);
 
 		return {
-			elementType: 'Interface',
+			elementType: 'IPAddress',
 			host,
 			iface,
 			services,
 			hostId,
-			interfaceId,
+			interfaceId: ipAddressId,
 			subnetId,
 			isInfra
 		};
@@ -82,13 +84,15 @@ const elementResolvers: Record<
 			isInfra: false
 		};
 	},
-	Port: (nodeId, node, topology) => {
+	Interface: (_nodeId, node, topology) => {
 		const hostId = 'host_id' in node ? (node.host_id as string) : undefined;
-		const ifEntryId = 'interface_id' in node ? (node.interface_id as string) : undefined;
+		const interfaceId = 'interface_id' in node ? (node.interface_id as string) : undefined;
 		const host = topology.hosts.find((h) => h.id === hostId);
-		const iface = ifEntryId ? topology.interfaces.find((e) => e.id === ifEntryId) : undefined;
+		const iface = interfaceId
+			? topology.interfaces.find((e) => e.id === interfaceId)
+			: undefined;
 		return {
-			elementType: 'Port' as ElementEntityType,
+			elementType: 'Interface' as ElementEntityType,
 			host,
 			iface,
 			services: [],

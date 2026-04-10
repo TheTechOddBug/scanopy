@@ -7,8 +7,7 @@
 		icon,
 		label,
 		active = false,
-		collapsed = false,
-		badge = undefined
+		collapsed = false
 	}: {
 		onclick: () => void;
 		title: string;
@@ -16,7 +15,6 @@
 		label: string;
 		active?: boolean;
 		collapsed?: boolean;
-		badge?: number | string | null;
 	} = $props();
 
 	let hovered = $state(false);
@@ -34,15 +32,8 @@
 	onpointerenter={() => (hovered = true)}
 	onpointerleave={() => (hovered = false)}
 >
-	<span class="relative flex h-4 w-4 shrink-0 items-center justify-center">
+	<span class="flex h-4 w-4 shrink-0 items-center justify-center">
 		{@render icon()}
-		{#if badge != null}
-			<span
-				class="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold leading-none text-white"
-			>
-				{badge}
-			</span>
-		{/if}
 	</span>
 	<span
 		class="overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"

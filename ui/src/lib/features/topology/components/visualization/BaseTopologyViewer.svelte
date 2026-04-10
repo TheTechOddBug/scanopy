@@ -780,12 +780,10 @@
 							})
 							.map((n) => n.id);
 						if (autoCollapseIds.length > 0) {
-							console.log(`[SC] auto-collapse: ${autoCollapseIds.map(id => id.substring(0,8)).join(', ')}`);
-							// Log expanded sizes that will be preserved
-							for (const id of autoCollapseIds) {
+							console.log(`[SC] auto-collapse: ${autoCollapseIds.map(id => {
 								const c = layoutGraph?.containers.get(id);
-								if (c?.isSubcontainer) console.log(`[SC] auto-collapsing sub ${id.substring(0,8)} expandedSize=${JSON.stringify(c.expandedSize)}`);
-							}
+								return `${id.substring(0,8)}(${c?.containerType ?? '?'} expanded=${JSON.stringify(c?.expandedSize)})`;
+							}).join(', ')}`);
 							for (const id of autoCollapseIds) seenAutoCollapseIds.add(id);
 							// eslint-disable-next-line svelte/prefer-svelte-reactivity -- temporary value for store update
 							const next = new Set(collapsed);

@@ -12,7 +12,7 @@
 		type Connection,
 		useSvelteFlow
 	} from '@xyflow/svelte';
-	import { Keyboard, ZoomIn, ZoomOut, PencilOff, Pencil } from 'lucide-svelte';
+	import { Keyboard, Expand, Shrink, PencilOff, Pencil } from 'lucide-svelte';
 	import {
 		topology_shortcutsTitle,
 		topology_collapseLevelDown,
@@ -1620,7 +1620,7 @@
 						onclick={handleStepExpand}
 						title={collapseLevelTooltipExpand}
 					>
-						<ZoomIn class="h-3.5 w-3.5" />
+						<Expand class="h-3.5 w-3.5" />
 					</button>
 					<span
 						class="flex min-h-[1.25rem] items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-100"

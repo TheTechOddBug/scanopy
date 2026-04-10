@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-10T05:51:18.469153Z",
-             *       "id": "e9402978-18a1-45a6-a99b-637603a7520d",
+             *       "created_at": "2026-04-10T20:13:43.479705Z",
+             *       "id": "0fc018d5-f148-43ca-9412-a2009db91390",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-10T05:51:18.469153Z"
+             *       "updated_at": "2026-04-10T20:13:43.479705Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-10T05:51:18.449903Z",
-             *               "id": "691b327f-b75d-488a-bca4-3523d3c97f77",
+             *               "created_at": "2026-04-10T20:13:43.464823Z",
+             *               "id": "c4a4ce97-6eda-41ef-8662-23475ac01cce",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-10T05:51:18.449903Z"
+             *               "updated_at": "2026-04-10T20:13:43.464823Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Tautulli",
+             *           "service_definition": "Dockge",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3529,14 +3529,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-10T05:51:18.463826Z",
-             *           "id": "8e32c6c4-e28e-437f-8683-939a03e1ad2a",
+             *           "created_at": "2026-04-10T20:13:43.474500Z",
+             *           "id": "c4fca874-4d4c-4aff-af2a-1adb6cc0c253",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-10T05:51:18.463826Z"
+             *           "updated_at": "2026-04-10T20:13:43.474500Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3545,7 +3545,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Tautulli",
+             *       "service_definition": "Dockge",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3896,14 +3896,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-10T05:51:18.450317Z",
-         *       "id": "a5f5aea3-acfe-42ec-9890-81f0aca44ebf",
+         *       "created_at": "2026-04-10T20:13:43.465036Z",
+         *       "id": "bb04cf0b-80c2-426d-8f3a-50b339243d15",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-10T05:51:18.450317Z"
+         *       "updated_at": "2026-04-10T20:13:43.465036Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4088,7 +4088,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Tautulli",
+         *           "service_definition": "Dockge",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4507,15 +4507,20 @@ export interface components {
          * @description Request type for daemon discovery - accepts full entities with IDs.
          *     Used internally by daemons for host creation/upsert, NOT the external API.
          *     This supports the discovery workflow where daemons manage entity IDs.
+         *
+         *     ## Backwards compatibility (daemons < v0.16.0)
+         *
+         *     Pre-v0.16.0 daemons send the old field layout:
+         *       - `interfaces` → IPAddress data (now `ip_addresses`)
+         *       - `if_entries` → SNMP Interface data (now `interfaces`)
+         *
+         *     The custom deserializer detects the old layout (missing `ip_addresses` field)
+         *     and remaps fields automatically. This can be removed once all daemons are ≥ v0.16.0.
          */
         DiscoveryHostRequest: {
             host: components["schemas"]["Host"];
-            /**
-             * @description SNMP interface entries (ifTable data) - optional, populated when SNMP is enabled.
-             *     Old daemons send this as "if_entries".
-             */
+            /** @description SNMP interface entries (ifTable data) - optional, populated when SNMP is enabled. */
             interfaces?: components["schemas"]["Interface"][];
-            /** @description IP addresses for the host. Old daemons send this as "interfaces". */
             ip_addresses: components["schemas"]["IPAddress"][];
             ports: components["schemas"]["Port"][];
             services: components["schemas"]["Service"][];
@@ -4942,14 +4947,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-10T05:51:18.449344Z",
-         *               "id": "c390b2ea-05ae-4785-a4ad-05e2117fcb6e",
+         *               "created_at": "2026-04-10T20:13:43.464499Z",
+         *               "id": "785fdeff-e2d6-40f6-9f4e-cc6cb40ef8a0",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-10T05:51:18.449344Z"
+         *               "updated_at": "2026-04-10T20:13:43.464499Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4958,7 +4963,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Tautulli",
+         *           "service_definition": "Dockge",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5096,6 +5101,11 @@ export interface components {
             rule: {
                 ByServiceCategory: {
                     categories: components["schemas"]["ServiceCategory"][];
+                    /**
+                     * @description Set by the backend on the default infrastructure rule.
+                     *     Frontend uses this to identify the infra container for auto-collapse.
+                     */
+                    readonly is_infra_rule?: boolean;
                     title?: string | null;
                 };
             } | {
@@ -6080,14 +6090,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-10T05:51:18.450176Z",
-         *           "id": "62ba82ba-7792-4303-93ef-0e8bb824c2fb",
+         *           "created_at": "2026-04-10T20:13:43.464962Z",
+         *           "id": "f5f103fb-de6a-43bb-8234-081b4cd3daf8",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-10T05:51:18.450176Z"
+         *           "updated_at": "2026-04-10T20:13:43.464962Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6096,7 +6106,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Tautulli",
+         *       "service_definition": "Dockge",
          *       "source": {
          *         "type": "Manual"
          *       },

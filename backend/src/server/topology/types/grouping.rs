@@ -132,6 +132,11 @@ pub enum ElementRule {
     ByServiceCategory {
         categories: Vec<ServiceCategory>,
         title: Option<String>,
+        /// Set by the backend on the default infrastructure rule.
+        /// Frontend uses this to identify the infra container for auto-collapse.
+        #[serde(default)]
+        #[schema(read_only)]
+        is_infra_rule: bool,
     },
     ByTag {
         tag_ids: Vec<Uuid>,
@@ -349,6 +354,7 @@ mod tests {
             IdentifiedRule::new(ElementRule::ByServiceCategory {
                 categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
                 title: Some("Infrastructure".into()),
+                is_infra_rule: false,
             }),
             IdentifiedRule::new(ElementRule::ByTag {
                 tag_ids: vec![Uuid::new_v4(), Uuid::new_v4()],

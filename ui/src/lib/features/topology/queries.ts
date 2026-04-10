@@ -69,12 +69,23 @@ function getIrrelevantCategories(useCase: string): ServiceCategory[] {
 	return categories;
 }
 
-/** Tracks the element rule ID of the "Infrastructure Services" ByServiceCategory rule */
-let infrastructureRuleId: string | null = null;
-
-/** Get the current infrastructure rule ID (for auto-collapse logic) */
+/**
+ * Find the infrastructure rule ID from the current topology options
+ * by looking for the ByServiceCategory rule with is_infra_rule: true.
+ * Derives the ID on each call — no stale state possible.
+ */
 export function getInfrastructureRuleId(): string | null {
-	return infrastructureRuleId;
+	const opts = get(topologyOptionsStore);
+	for (const rule of opts.request.element_rules ?? []) {
+		if (
+			typeof rule.rule === 'object' &&
+			'ByServiceCategory' in rule.rule &&
+			rule.rule.ByServiceCategory.is_infra_rule
+		) {
+			return rule.id;
+		}
+	}
+	return null;
 }
 
 const ALL_VIEWS: TopologyView[] = viewsJson.map((p) => p.id as TopologyView);
@@ -135,7 +146,6 @@ function defaultRequestOptions(): components['schemas']['TopologyRequestOptions'
 						title: topology_infrastructureServices()
 					}
 				});
-				infrastructureRuleId = rule.id;
 				elementRules.push(rule);
 			} else if (r.id === 'ByTag') {
 				elementRules.push(makeGraphRule({ ByTag: { tag_ids: [], title: null } }));
@@ -719,7 +729,6 @@ export function hydrateStoresFromTopology(topology: Topology, isInitial = true):
 							}
 						}
 					};
-					infrastructureRuleId = elementRules[i].id;
 					break;
 				}
 			}
@@ -742,15 +751,6 @@ export function hydrateStoresFromTopology(topology: Topology, isInitial = true):
 				request: opts.request,
 				perViewLocal: current.perViewLocal
 			}));
-
-			// Keep infrastructureRuleId in sync with the current topology's rules
-			// so isAutoCollapseContainer matches the correct containers.
-			for (const rule of opts.request.element_rules ?? []) {
-				if (typeof rule.rule === 'object' && 'ByServiceCategory' in rule.rule) {
-					infrastructureRuleId = rule.id;
-					break;
-				}
-			}
 		}
 	} finally {
 		hydrating = false;

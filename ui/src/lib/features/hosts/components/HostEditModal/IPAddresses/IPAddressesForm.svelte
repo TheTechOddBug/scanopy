@@ -77,7 +77,7 @@
 	}
 
 	// Computed values
-	let interfaces = $derived(formData.interfaces || []);
+	let interfaces = $derived(formData.ip_addresses || []);
 
 	let availableSubnets = $derived(subnetsData.filter((s) => s.network_id == formData.network_id));
 
@@ -104,8 +104,8 @@
 				updated_at: new Date().toISOString()
 			};
 
-			formData.interfaces = [...interfaces, newInterface];
-			form.setFieldValue('interfaces', formData.interfaces);
+			formData.ip_addresses = [...interfaces, newInterface];
+			form.setFieldValue('ip_addresses', formData.ip_addresses);
 		} else {
 			const newInterface: Interface = {
 				id: uuidv4(), // Temp ID for form - store will detect as new since it's not in interfaces store
@@ -119,8 +119,8 @@
 				updated_at: new Date().toISOString()
 			};
 
-			formData.interfaces = [...interfaces, newInterface];
-			form.setFieldValue('interfaces', formData.interfaces);
+			formData.ip_addresses = [...interfaces, newInterface];
+			form.setFieldValue('ip_addresses', formData.ip_addresses);
 		}
 	}
 
@@ -135,8 +135,8 @@
 			showDeleteConfirmation = true;
 		} else {
 			// No bindings, delete immediately
-			formData.interfaces = interfaces.filter((_, i) => i !== index);
-			form.setFieldValue('interfaces', formData.interfaces);
+			formData.ip_addresses = interfaces.filter((_, i) => i !== index);
+			form.setFieldValue('ip_addresses', formData.ip_addresses);
 		}
 	}
 
@@ -146,8 +146,8 @@
 			// Remove bindings from services first
 			removeBindingsToInterface(iface.id);
 			// Then remove the interface
-			formData.interfaces = interfaces.filter((_, i) => i !== pendingDeleteIndex);
-			form.setFieldValue('interfaces', formData.interfaces);
+			formData.ip_addresses = interfaces.filter((_, i) => i !== pendingDeleteIndex);
+			form.setFieldValue('ip_addresses', formData.ip_addresses);
 		}
 		// Reset dialog state
 		showDeleteConfirmation = false;
@@ -162,28 +162,28 @@
 	}
 
 	function handleInterfaceChange(updatedInterface: Interface, index: number) {
-		// Update formData.interfaces for real-time sync with list display and bindings
+		// Update formData.ip_addresses for real-time sync with list display and bindings
 		// Note: Don't call form.setFieldValue here - the form field already updated
 		// form state via field.handleChange. We only need to sync formData for display.
-		const updatedInterfaces = [...formData.interfaces];
+		const updatedInterfaces = [...formData.ip_addresses];
 		updatedInterfaces[index] = updatedInterface;
-		formData.interfaces = updatedInterfaces;
+		formData.ip_addresses = updatedInterfaces;
 	}
 
 	function handleReorder(fromIndex: number, toIndex: number) {
 		if (fromIndex === toIndex) return;
 
-		const updatedInterfaces = [...formData.interfaces];
+		const updatedInterfaces = [...formData.ip_addresses];
 		const [movedInterface] = updatedInterfaces.splice(fromIndex, 1);
 		updatedInterfaces.splice(toIndex, 0, movedInterface);
 
-		formData.interfaces = updatedInterfaces;
-		form.setFieldValue('interfaces', formData.interfaces);
+		formData.ip_addresses = updatedInterfaces;
+		form.setFieldValue('ip_addresses', formData.ip_addresses);
 	}
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
-	<ListConfigEditor items={formData.interfaces} onReorder={handleReorder} bind:targetEntityId>
+	<ListConfigEditor items={formData.ip_addresses} onReorder={handleReorder} bind:targetEntityId>
 		<svelte:fragment
 			slot="list"
 			let:items
@@ -250,7 +250,7 @@
 		</svelte:fragment>
 	</ListConfigEditor>
 
-	<EntityMetadataSection entities={formData.interfaces} />
+	<EntityMetadataSection entities={formData.ip_addresses} />
 </div>
 
 <ConfirmationDialog

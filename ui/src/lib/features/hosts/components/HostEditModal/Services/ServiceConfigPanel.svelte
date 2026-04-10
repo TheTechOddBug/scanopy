@@ -131,7 +131,7 @@
 	// Available port+interface combinations for new Port bindings
 	// Only includes saved interfaces and ports (those not yet in global stores)
 	let availablePortCombinations = $derived(
-		host.interfaces.flatMap((iface) => {
+		host.ip_addresses.flatMap((iface) => {
 			// Can't add Port binding if THIS service has an Interface binding on this interface
 			if (interfacesWithInterfaceBindingsThisService.has(iface.id)) {
 				return [];
@@ -176,7 +176,7 @@
 	// Available interfaces for new Interface bindings
 	// Only includes saved interfaces (those already in global store)
 	let availableInterfacesForInterfaceBinding = $derived(
-		host.interfaces.filter((iface) => {
+		host.ip_addresses.filter((iface) => {
 			// Can't add Interface binding if service has Port binding on "All Interfaces"
 			if (hasPortBindingOnAllIPAddresses) return false;
 
@@ -203,7 +203,7 @@
 			return;
 		}
 
-		if (host.interfaces.length === 0) {
+		if (host.ip_addresses.length === 0) {
 			pushWarning(hosts_services_noInterfaces());
 			return;
 		}
@@ -277,7 +277,7 @@
 			return;
 		}
 
-		if (host.interfaces.length === 0) {
+		if (host.ip_addresses.length === 0) {
 			pushWarning(hosts_services_noInterfaces());
 			return;
 		}
@@ -428,7 +428,7 @@
 						service,
 						host,
 						services: currentServices.length > 0 ? currentServices : servicesData,
-						interfaces: host.interfaces,
+						interfaces: host.ip_addresses,
 						ports: host.ports,
 						isContainerSubnet: isContainerSubnetFn
 					})}
@@ -481,7 +481,7 @@
 						service,
 						host,
 						services: currentServices.length > 0 ? currentServices : servicesData,
-						interfaces: host.interfaces,
+						interfaces: host.ip_addresses,
 						isContainerSubnet: isContainerSubnetFn
 					})}
 					onCreateNew={handleCreateInterfaceBinding}

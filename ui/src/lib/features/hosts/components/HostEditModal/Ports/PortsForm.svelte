@@ -173,7 +173,7 @@
 				{items}
 				optionDisplayComponent={PortTypeDisplay}
 				itemDisplayComponent={PortDisplay}
-				getItemContext={() => ({ currentServices, interfaces: formData.interfaces })}
+				getItemContext={() => ({ currentServices, interfaces: formData.ip_addresses })}
 				onCreateNew={handleCreateNewPort}
 				onAdd={handleAddPort}
 				onRemove={handleRemovePort}

@@ -121,11 +121,11 @@
 		formData.hostname = values.hostname;
 		formData.description = values.description;
 
-		// Sync interface field values (ip, mac, name) to formData.interfaces
-		if (values.interfaces && formData.interfaces) {
-			for (let i = 0; i < formData.interfaces.length && i < values.interfaces.length; i++) {
-				const formIface = values.interfaces[i];
-				const dataIface = formData.interfaces[i];
+		// Sync interface field values (ip, mac, name) to formData.ip_addresses
+		if (values.ip_addresses && formData.ip_addresses) {
+			for (let i = 0; i < formData.ip_addresses.length && i < values.ip_addresses.length; i++) {
+				const formIface = values.ip_addresses[i];
+				const dataIface = formData.ip_addresses[i];
 				if (formIface && dataIface) {
 					dataIface.ip_address = formIface.ip_address ?? '';
 					dataIface.mac_address = formIface.mac_address ?? null;
@@ -161,7 +161,7 @@
 				const promises = [
 					onUpdate({
 						host: hostPrimitive,
-						interfaces: formData.interfaces,
+						interfaces: formData.ip_addresses,
 						ports: formData.ports,
 						services: formData.services
 					})
@@ -203,7 +203,7 @@
 			name: formData.name,
 			hostname: formData.hostname || '',
 			description: formData.description || '',
-			interfaces: formData.interfaces || [],
+			interfaces: formData.ip_addresses || [],
 			ports: formData.ports || [],
 			services: formData.services || [],
 			credential_mode: ((formData.credential_assignments?.length ?? 0) > 0
@@ -377,7 +377,7 @@
 			name: formData.name,
 			hostname: formData.hostname || '',
 			description: formData.description || '',
-			interfaces: formData.interfaces || [],
+			interfaces: formData.ip_addresses || [],
 			ports: formData.ports || [],
 			services: formData.services || [],
 			credential_mode: (formData.credential_assignments?.length ?? 0) > 0 ? 'override' : 'default'
@@ -413,7 +413,7 @@
 		if (ifaceMatch) {
 			const index = parseInt(ifaceMatch[1]);
 			const field = ifaceMatch[2].replace(/_/g, ' ');
-			const iface = formData.interfaces[index];
+			const iface = formData.ip_addresses[index];
 			const name =
 				iface?.name || iface?.ip_address || hosts_validation_interfaceIndex({ index: index + 1 });
 			return common_validation_entityField({ name, field });

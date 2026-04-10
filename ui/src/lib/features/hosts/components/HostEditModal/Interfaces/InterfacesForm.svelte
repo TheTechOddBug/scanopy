@@ -3,7 +3,7 @@
 	import ListConfigEditor from '$lib/shared/components/forms/selection/ListConfigEditor.svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
-	import { IPAddressDisplay } from '$lib/shared/components/forms/selection/display/IPAddressDisplay.svelte';
+	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
 	import InterfaceConfigPanel from './InterfaceConfigPanel.svelte';
 	import {
 		hosts_interfaces_emptySubtitle,
@@ -39,8 +39,8 @@
 				allowAddFromOptions={false}
 				allowItemRemove={() => false}
 				options={[] as Interface[]}
-				itemDisplayComponent={IPAddressDisplay}
-				optionDisplayComponent={IPAddressDisplay}
+				itemDisplayComponent={InterfaceDisplay}
+				optionDisplayComponent={InterfaceDisplay}
 				{onEdit}
 				{highlightedIndex}
 			/>

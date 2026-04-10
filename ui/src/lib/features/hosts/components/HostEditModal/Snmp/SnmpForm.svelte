@@ -97,7 +97,7 @@
 		const assignment = getAssignmentForIndex(index);
 		if (!assignment || assignment.interface_ids === null) return [];
 		return assignment.interface_ids
-			.map((id) => formData.interfaces.find((i) => i.id === id))
+			.map((id) => formData.ip_addresses.find((i) => i.id === id))
 			.filter((i): i is Interface => i != null);
 	}
 
@@ -196,7 +196,7 @@
 		</svelte:fragment>
 
 		<svelte:fragment slot="config" let:selectedItem let:selectedIndex>
-			{#if selectedItem && formData.interfaces.length > 0}
+			{#if selectedItem && formData.ip_addresses.length > 0}
 				<div class="space-y-4">
 					<ConfigHeader title={selectedItem.name} subtitle={hosts_credentialScopeSubtitle()} />
 					<ListManager
@@ -204,7 +204,7 @@
 						emptyMessage="All interfaces (default)"
 						placeholder="Select an interface to restrict scope"
 						allowReorder={false}
-						options={formData.interfaces}
+						options={formData.ip_addresses}
 						items={getScopedInterfaces(selectedIndex)}
 						optionDisplayComponent={IPAddressDisplay}
 						itemDisplayComponent={IPAddressDisplay}

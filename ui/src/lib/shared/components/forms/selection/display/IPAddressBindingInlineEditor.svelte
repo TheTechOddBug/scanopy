@@ -102,13 +102,13 @@
 	{:else}
 		<div class="flex gap-3">
 			<div class="flex-1">
-				{#if host.interfaces && host.interfaces.length === 0}
+				{#if host.ip_addresses && host.ip_addresses.length === 0}
 					<div
 						class="rounded border border-yellow-600 bg-yellow-900/20 px-2 py-1 text-xs text-warning"
 					>
 						No interfaces configured on host
 					</div>
-				{:else if host.interfaces && host.interfaces.length === 1}
+				{:else if host.ip_addresses && host.ip_addresses.length === 1}
 					<!-- Single interface - show as read-only -->
 					<div
 						class="text-secondary rounded px-2 py-1 text-sm"
@@ -116,7 +116,7 @@
 					>
 						{iface ? formatIPAddress(iface, isContainerSubnetFn) : 'Unknown Interface'}
 					</div>
-				{:else if host.interfaces.length > 0}
+				{:else if host.ip_addresses.length > 0}
 					<!-- Multiple interfaces - show as dropdown -->
 					<select class="input-field w-full" value={selectedValue} onchange={handleChange}>
 						{#each interfaceOptions as { iface, disabled, reason } (iface.id)}

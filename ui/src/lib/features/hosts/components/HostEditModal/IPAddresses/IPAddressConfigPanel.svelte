@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Interface } from '$lib/features/hosts/types/base';
+	import type { IPAddress } from '$lib/features/hosts/types/base';
 	import {
 		required,
 		ipAddressFormat,
@@ -25,21 +25,21 @@
 	} from '$lib/paraglide/messages';
 
 	interface Props {
-		iface: Interface;
+		iface: IPAddress;
 		subnet: Subnet;
 		index: number;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		form: { Field: any };
-		onChange?: (iface: Interface) => void;
+		onChange?: (iface: IPAddress) => void;
 		isEditing?: boolean;
 	}
 
 	let { iface, subnet, index, form, onChange = () => {}, isEditing = false }: Props = $props();
 
 	// Field names for this interface in the form array
-	let ipFieldName = $derived(`interfaces[${index}].ip_address`);
-	let macFieldName = $derived(`interfaces[${index}].mac_address`);
-	let nameFieldName = $derived(`interfaces[${index}].name`);
+	let ipFieldName = $derived(`ip_addresses[${index}].ip_address`);
+	let macFieldName = $derived(`ip_addresses[${index}].mac_address`);
+	let nameFieldName = $derived(`ip_addresses[${index}].name`);
 
 	// Notify parent of changes for real-time sync
 	function handleNameChange(value: string) {

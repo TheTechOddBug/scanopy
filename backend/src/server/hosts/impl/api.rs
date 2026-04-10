@@ -48,22 +48,112 @@ pub enum ConflictBehavior {
 /// Request type for daemon discovery - accepts full entities with IDs.
 /// Used internally by daemons for host creation/upsert, NOT the external API.
 /// This supports the discovery workflow where daemons manage entity IDs.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+///
+/// ## Backwards compatibility (daemons < v0.16.0)
+///
+/// Pre-v0.16.0 daemons send the old field layout:
+///   - `interfaces` → IPAddress data (now `ip_addresses`)
+///   - `if_entries` → SNMP Interface data (now `interfaces`)
+///
+/// The custom deserializer detects the old layout (missing `ip_addresses` field)
+/// and remaps fields automatically. This can be removed once all daemons are ≥ v0.16.0.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(into = "DiscoveryHostRequestWire")]
 pub struct DiscoveryHostRequest {
     pub host: Host,
-    /// IP addresses for the host. Old daemons send this as "interfaces".
-    #[serde(alias = "interfaces")]
     pub ip_addresses: Vec<IPAddress>,
     pub ports: Vec<Port>,
     pub services: Vec<Service>,
     /// SNMP interface entries (ifTable data) - optional, populated when SNMP is enabled.
-    /// Old daemons send this as "if_entries".
-    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "if_entries")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub interfaces: Vec<crate::server::interfaces::r#impl::base::Interface>,
     /// Integration-derived subnets (e.g., Docker bridge networks) — created during
     /// create_with_children after service dedup so virtualization.service_id is correct.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub subnets: Vec<crate::server::subnets::r#impl::base::Subnet>,
+}
+
+/// Wire format for DiscoveryHostRequest — handles both old and new field layouts.
+/// Backwards compat for daemons < v0.16.0 that send `interfaces` for IPAddress data
+/// and `if_entries` for SNMP Interface data.
+#[derive(Deserialize, Serialize)]
+struct DiscoveryHostRequestWire {
+    host: Host,
+    /// New field name (v0.16.0+). Missing in old payloads.
+    #[serde(default)]
+    ip_addresses: Option<Vec<IPAddress>>,
+    ports: Vec<Port>,
+    services: Vec<Service>,
+    /// In new payloads: SNMP Interface data.
+    /// In old payloads (< v0.16.0): IPAddress data (remapped by From impl).
+    #[serde(default)]
+    interfaces: Vec<serde_json::Value>,
+    /// Old field name for SNMP Interface data (< v0.16.0). Absent in new payloads.
+    #[serde(default)]
+    if_entries: Vec<crate::server::interfaces::r#impl::base::Interface>,
+    #[serde(default)]
+    subnets: Vec<crate::server::subnets::r#impl::base::Subnet>,
+}
+
+impl From<DiscoveryHostRequest> for DiscoveryHostRequestWire {
+    fn from(req: DiscoveryHostRequest) -> Self {
+        Self {
+            host: req.host,
+            ip_addresses: Some(req.ip_addresses),
+            ports: req.ports,
+            services: req.services,
+            interfaces: req
+                .interfaces
+                .into_iter()
+                .map(|i| serde_json::to_value(i).unwrap())
+                .collect(),
+            if_entries: vec![],
+            subnets: req.subnets,
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for DiscoveryHostRequest {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let wire = DiscoveryHostRequestWire::deserialize(deserializer)?;
+
+        if let Some(ip_addresses) = wire.ip_addresses {
+            // New format (v0.16.0+): ip_addresses present, interfaces = SNMP data
+            let interfaces: Vec<crate::server::interfaces::r#impl::base::Interface> = wire
+                .interfaces
+                .into_iter()
+                .map(|v| serde_json::from_value(v).map_err(serde::de::Error::custom))
+                .collect::<Result<_, _>>()?;
+
+            Ok(DiscoveryHostRequest {
+                host: wire.host,
+                ip_addresses,
+                ports: wire.ports,
+                services: wire.services,
+                interfaces,
+                subnets: wire.subnets,
+            })
+        } else {
+            // Old format (< v0.16.0): interfaces = IPAddress data, if_entries = SNMP data
+            let ip_addresses: Vec<IPAddress> = wire
+                .interfaces
+                .into_iter()
+                .map(|v| serde_json::from_value(v).map_err(serde::de::Error::custom))
+                .collect::<Result<_, _>>()?;
+
+            Ok(DiscoveryHostRequest {
+                host: wire.host,
+                ip_addresses,
+                ports: wire.ports,
+                services: wire.services,
+                interfaces: wire.if_entries,
+                subnets: wire.subnets,
+            })
+        }
+    }
 }
 
 // =============================================================================

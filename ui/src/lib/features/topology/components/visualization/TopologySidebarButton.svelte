@@ -23,10 +23,6 @@
 	let showLabel = $derived(!collapsed || hovered);
 	let buttonOpacity = $derived(disabled ? 0.4 : 1);
 	let buttonCursor = $derived(disabled ? 'not-allowed' : 'pointer');
-
-	$effect(() => {
-		if (disabled) console.log(`[SIDEBAR-BTN] disabled=${disabled}, label=${label}, opacity=${buttonOpacity}`);
-	});
 </script>
 
 <button

@@ -270,7 +270,6 @@
 		void $expandedPortNodeIds;
 		void $bundleEdgesStore;
 		void $hideEdgeTypesStore;
-		console.log(`[COLLAPSE-LEVEL] in loadTopo reactive block: $collapseLevel=${$collapseLevel}`);
 		void loadTopologyData();
 	}
 
@@ -1462,25 +1461,23 @@
 		}
 	}
 
+	$: expandDisabled = $collapseLevel === 4;
+	$: collapseDisabled = $collapseLevel === 1;
+	$: collapseLevelLabel = `${$collapseLevel}/4 ${getCollapseLevelName($collapseLevel)}`;
 	$: collapseLevelTooltipCollapse = `${topology_collapseLevelDown()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`;
 	$: collapseLevelTooltipExpand = `${topology_expandLevelUp()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`;
-	$: console.log(`[COLLAPSE-LEVEL] $collapseLevel=${$collapseLevel}, expandDisabled=${$collapseLevel === 4}, collapseDisabled=${$collapseLevel === 1}`);
 
 	function handleStepCollapse() {
-		console.log('[COLLAPSE-LEVEL] handleStepCollapse called');
 		stepCollapse(topology.nodes, containerTypes, getInfrastructureRuleId());
-		console.log(`[COLLAPSE-LEVEL] after stepCollapse: get(collapseLevel)=${get(collapseLevel)}, $collapseLevel=${$collapseLevel}`);
 		setTimeout(() => fitView({ padding: getFitViewPadding(), duration: 300 }), 100);
 	}
 
 	function handleStepExpand() {
-		console.log('[COLLAPSE-LEVEL] handleStepExpand called');
 		const { autoCollapseIds } = stepExpand(
 			topology.nodes,
 			containerTypes,
 			getInfrastructureRuleId()
 		);
-		console.log(`[COLLAPSE-LEVEL] after stepExpand: get(collapseLevel)=${get(collapseLevel)}, $collapseLevel=${$collapseLevel}`);
 		// Mark auto-collapse containers as "seen" so they don't re-collapse
 		for (const id of autoCollapseIds) seenAutoCollapseIds.add(id);
 		setTimeout(() => fitView({ padding: getFitViewPadding(), duration: 300 }), 100);
@@ -1575,8 +1572,8 @@
 				<TopologySidebarButton
 					onclick={handleStepExpand}
 					title={collapseLevelTooltipExpand}
-					label="{$collapseLevel}/4 {getCollapseLevelName($collapseLevel)}"
-					disabled={$collapseLevel === 4}
+					label={collapseLevelLabel}
+					disabled={expandDisabled}
 					collapsed={sidebarCollapsed}
 				>
 					{#snippet icon()}
@@ -1586,8 +1583,8 @@
 				<TopologySidebarButton
 					onclick={handleStepCollapse}
 					title={collapseLevelTooltipCollapse}
-					label="{$collapseLevel}/4 {getCollapseLevelName($collapseLevel)}"
-					disabled={$collapseLevel === 1}
+					label={collapseLevelLabel}
+					disabled={collapseDisabled}
 					collapsed={sidebarCollapsed}
 				>
 					{#snippet icon()}

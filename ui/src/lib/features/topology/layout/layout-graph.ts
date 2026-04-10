@@ -296,6 +296,19 @@ export class LayoutGraph {
 			}
 		}
 		this.edgeHandles = new Map(edgeHandles);
+
+		// Summary: count containers by state
+		let expandedCount = 0;
+		let collapsedCount = 0;
+		let zeroExpandedCount = 0;
+		for (const c of this.containers.values()) {
+			if (c.collapsed) collapsedCount++;
+			else expandedCount++;
+			if (c.expandedSize.width === 0) zeroExpandedCount++;
+		}
+		console.log(
+			`[LAYOUT-DEBUG] applyElkResult summary: ${expandedCount} expanded, ${collapsedCount} collapsed, ${zeroExpandedCount} with expandedSize=0`
+		);
 	}
 
 	/** Get node position (works for both containers and elements) */

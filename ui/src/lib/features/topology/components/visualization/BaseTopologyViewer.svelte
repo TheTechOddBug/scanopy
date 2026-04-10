@@ -401,11 +401,12 @@
 					if (staleCount > 0) {
 						// Remove stale IDs from seenAutoCollapseIds so containers
 						// can be re-auto-collapsed when the user returns to that perspective.
+						const seenBefore = seenAutoCollapseIds.size;
 						for (const id of seenAutoCollapseIds) {
 							if (!newContainerIds.has(id)) seenAutoCollapseIds.delete(id);
 						}
 						console.log(
-							`[LAYOUT-DEBUG] Stripped ${staleCount} stale collapsed IDs (${originalSize} → ${validCollapsed.size})`
+							`[LAYOUT-DEBUG] Stripped ${staleCount} stale collapsed IDs (${originalSize} → ${validCollapsed.size}), seenAutoCollapseIds: ${seenBefore} → ${seenAutoCollapseIds.size}`
 						);
 					}
 				}
@@ -570,9 +571,9 @@
 							// Root containers use collapsed size from metadata
 							const isSubContainer =
 								!isElement && node.node_type === 'Container' && !!node.parent_container_id;
-							if (isNodeCollapsed) {
+							if (isSubContainer) {
 								console.log(
-									`[LAYOUT-DEBUG] buildFlowNodes collapsed ${node.id.substring(0, 8)} isSub=${isSubContainer} expandedSize=${JSON.stringify(expandedSize)} containerSize=${JSON.stringify(containerSize)} w=${width} h=${height}`
+									`[LAYOUT-DEBUG] buildFlowNodes sub ${node.id.substring(0, 8)} collapsed=${isNodeCollapsed} expandedSize=${JSON.stringify(expandedSize)} containerSize=${JSON.stringify(containerSize)} w=${width} h=${height}`
 								);
 							}
 							width = isNodeCollapsed
@@ -724,6 +725,20 @@
 							console.log(
 								`[LAYOUT-DEBUG] DOM measurement complete: ${elementNodeSizes.size} nodes measured, ${zeroSizeCount} with zero size (fallback used)`
 							);
+							// Log container measurements separately for debugging subcontainer sizing
+							if (layoutGraph) {
+								const containerMeasurements = [...elementNodeSizes.entries()]
+									.filter(([id]) => layoutGraph!.containers.has(id))
+									.map(
+										([id, s]) =>
+											`${id.substring(0, 8)}=${s.x}x${s.y}${layoutGraph!.containers.get(id)?.isSubcontainer ? '(sub)' : ''}`
+									);
+								if (containerMeasurements.length > 0) {
+									console.log(
+										`[LAYOUT-DEBUG] Measured container sizes: ${containerMeasurements.join(', ')}`
+									);
+								}
+							}
 						}
 					}
 
@@ -884,17 +899,22 @@
 					// Only collapse containers we haven't seen before (so user can expand them).
 					{
 						const infraRuleId = getInfrastructureRuleId();
-						const autoCollapseIds = topology.nodes
-							.filter((n) => {
-								if (n.node_type !== 'Container') return false;
-								if (collapsed.has(n.id) || seenAutoCollapseIds.has(n.id)) return false;
-								const data = n as Record<string, unknown>;
-								const ct = data.container_type as string | undefined;
-								if (ct && containerTypes.getMetadata(ct).collapsed_by_default === true) return true;
-								if (infraRuleId && data.element_rule_id === infraRuleId) return true;
-								return false;
-							})
+						// Log all auto-collapse candidates and why they were included/excluded
+						const allCandidates = topology.nodes.filter((n) => {
+							if (n.node_type !== 'Container') return false;
+							const data = n as Record<string, unknown>;
+							const ct = data.container_type as string | undefined;
+							return (
+								(ct && containerTypes.getMetadata(ct).collapsed_by_default === true) ||
+								(infraRuleId && data.element_rule_id === infraRuleId)
+							);
+						});
+						const autoCollapseIds = allCandidates
+							.filter((n) => !collapsed.has(n.id) && !seenAutoCollapseIds.has(n.id))
 							.map((n) => n.id);
+						console.log(
+							`[LAYOUT-DEBUG] Auto-collapse: ${allCandidates.length} candidates, ${allCandidates.filter((n) => collapsed.has(n.id)).length} already collapsed, ${allCandidates.filter((n) => seenAutoCollapseIds.has(n.id)).length} already seen, ${autoCollapseIds.length} will auto-collapse`
+						);
 						if (autoCollapseIds.length > 0) {
 							console.log(
 								`[LAYOUT-DEBUG] Auto-collapse: ${autoCollapseIds

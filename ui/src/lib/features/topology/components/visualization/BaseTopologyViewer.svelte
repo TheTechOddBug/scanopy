@@ -222,7 +222,9 @@
 	let lastRenderedView = '';
 	let fitViewPending = false;
 	let edgeHandles: Map<string, import('../../layout/elk-layout').EdgeHandles> = new Map();
-	// Cache measured node sizes per view so return visits skip the measurement pass
+	// Cache measured node sizes per (view, topology) so return visits skip the measurement pass.
+	// Keyed by `${view}:${topologyId}` so switching topologies uses separate cache entries.
+	// Cleared on topology rebuild since node sizes/content may have changed.
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- internal cache, not rendered
 	const viewSizeCache = new Map<string, Map<string, { x: number; y: number }>>();
 
@@ -337,6 +339,9 @@
 				const topoKey = getStructureKey(topology);
 				const viewChanged = lastRenderedView !== '' && currentView !== lastRenderedView;
 				const topologyChanged = topoKey !== lastRenderedTopoKey;
+				if (topologyChanged) {
+					viewSizeCache.clear();
+				}
 				console.log(
 					`[LAYOUT-DEBUG] loadTopologyData gen=${thisGeneration} view=${currentView} viewChanged=${viewChanged} topologyChanged=${topologyChanged} nodes=${topology.nodes.length} edges=${topology.edges.length}`
 				);
@@ -662,10 +667,10 @@
 				if (needsElk) {
 					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
 					const elementNodeSizes = new Map<string, { x: number; y: number }>();
-					const cachedSizes = isViewTransition ? viewSizeCache.get(currentView) : undefined;
+					const viewCacheKey = `${currentView}:${topology.id}`;
+					const cachedSizes = isViewTransition ? viewSizeCache.get(viewCacheKey) : undefined;
 					const expandCachedSizes =
-						needsElkForExpand && !isNewStructure ? viewSizeCache.get(currentView) : undefined;
-
+						needsElkForExpand && !isNewStructure ? viewSizeCache.get(viewCacheKey) : undefined;
 					if (isViewTransition && cachedSizes) {
 						// Return visit to a previously-measured view: use cached sizes
 						// so the old layout stays visible (no measurement pass / container hide)
@@ -863,7 +868,7 @@
 					}
 
 					// Cache measured sizes for this view so return visits skip measurement
-					viewSizeCache.set(currentView, new Map(elementNodeSizes));
+					viewSizeCache.set(viewCacheKey, new Map(elementNodeSizes));
 
 					// Auto-collapse containers whose type has collapsed_by_default metadata.
 					// Runs after layout so expanded sizes are cached for correct expand later.

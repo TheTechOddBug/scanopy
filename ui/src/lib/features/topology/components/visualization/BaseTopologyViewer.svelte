@@ -399,6 +399,11 @@
 					}
 
 					if (staleCount > 0) {
+						// Remove stale IDs from seenAutoCollapseIds so containers
+						// can be re-auto-collapsed when the user returns to that perspective.
+						for (const id of seenAutoCollapseIds) {
+							if (!newContainerIds.has(id)) seenAutoCollapseIds.delete(id);
+						}
 						console.log(
 							`[LAYOUT-DEBUG] Stripped ${staleCount} stale collapsed IDs (${originalSize} → ${validCollapsed.size})`
 						);

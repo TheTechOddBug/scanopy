@@ -680,6 +680,7 @@
 					} else {
 						// Standard ELK layout for expanded or partially collapsed views
 						const expandedContainerSizes = layoutGraph?.getExpandedContainerSizes();
+						const cachedChildPositions = layoutGraph?.getContainerChildPositions();
 						const elkResult = await layoutEngine.compute({
 							nodes: visibleNodes,
 							edges: elevatedEdges,
@@ -698,12 +699,14 @@
 						// Rebuild graph and apply ELK result
 						layoutGraph = LayoutGraph.fromTopology(layoutNodes);
 						layoutGraph.syncCollapseState(collapsed);
-						// Restore expanded sizes for collapsed containers before applying ELK
-						// results — applyElkResult skips them since ELK only has collapsed dims.
-						// Only restore on non-structural changes (collapse/expand); on structural
-						// rebuilds the old sizes may be stale (different child sets).
-						if (expandedContainerSizes && !isNewStructure) {
+						// Restore expanded sizes and child positions for collapsed containers
+						// before applying ELK results — applyElkResult skips them since ELK
+						// only computes collapsed dims and skips their children entirely.
+						if (expandedContainerSizes) {
 							layoutGraph.restoreExpandedSizes(expandedContainerSizes);
+						}
+						if (cachedChildPositions) {
+							layoutGraph.restoreContainerChildPositions(cachedChildPositions);
 						}
 						layoutGraph.applyElkResult(
 							elkResult.nodePositions,

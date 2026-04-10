@@ -266,6 +266,47 @@ export class LayoutGraph {
 		}
 	}
 
+	/** Get child positions for all containers with valid expanded sizes (for preserving across rebuilds) */
+	getContainerChildPositions(): Map<string, Map<string, { x: number; y: number }>> {
+		const positions = new Map<string, Map<string, { x: number; y: number }>>();
+		for (const [id, container] of this.containers) {
+			if (container.expandedSize.width > 0) {
+				const childPos = new Map<string, { x: number; y: number }>();
+				for (const child of container.childElements) {
+					childPos.set(child.id, { ...child.position });
+				}
+				for (const child of container.childContainers) {
+					childPos.set(child.id, { ...child.position });
+				}
+				if (childPos.size > 0) {
+					positions.set(id, childPos);
+				}
+			}
+		}
+		return positions;
+	}
+
+	/** Restore child positions for collapsed containers (after graph rebuild where ELK skipped them) */
+	restoreContainerChildPositions(
+		positions: Map<string, Map<string, { x: number; y: number }>>
+	): void {
+		for (const [containerId, childPositions] of positions) {
+			const container = this.containers.get(containerId);
+			if (container && container.collapsed) {
+				for (const [childId, pos] of childPositions) {
+					const element = this.elements.get(childId);
+					if (element) {
+						element.position = { ...pos };
+					}
+					const childContainer = this.containers.get(childId);
+					if (childContainer) {
+						childContainer.position = { ...pos };
+					}
+				}
+			}
+		}
+	}
+
 	/** Get element size */
 	getElementSize(elementId: string): { x: number; y: number } | undefined {
 		return this.elements.get(elementId)?.size;

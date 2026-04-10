@@ -1,6 +1,5 @@
 pub mod anchor_planner;
 pub mod application_builder;
-pub mod compute_builder;
 pub mod context;
 pub mod edge_builder;
 pub mod element_rules;
@@ -10,3 +9,4 @@ pub mod l3_builder;
 pub mod main;
 pub mod subscriber;
 pub mod view;
+pub mod workloads_builder;

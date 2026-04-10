@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-10T04:28:27.789815Z",
-              "id": "9950392a-30ba-4761-a40b-c72e8d131ab9",
+              "created_at": "2026-04-10T05:51:18.469149Z",
+              "id": "8e9ec34d-7052-40cb-afd8-022854d2ba74",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-10T04:28:27.789815Z"
+              "updated_at": "2026-04-10T05:51:18.469149Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-10T04:28:27.769875Z",
-                      "id": "d889f012-e720-45ea-a16f-8c999dd426c0",
+                      "created_at": "2026-04-10T05:51:18.449892Z",
+                      "id": "39c44ad3-52c8-409c-bc59-bad1bf3fbbb8",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-10T04:28:27.769875Z"
+                      "updated_at": "2026-04-10T05:51:18.449892Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Jaeger",
+                  "service_definition": "Tautulli",
                   "source": {
                     "type": "Manual"
                   },
@@ -11991,14 +11991,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-10T04:28:27.784615Z",
-                  "id": "691de987-1f06-41db-8083-7de2569cfd5b",
+                  "created_at": "2026-04-10T05:51:18.463841Z",
+                  "id": "1dc0724d-7e01-4a1f-a027-616928ef832d",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-10T04:28:27.784615Z"
+                  "updated_at": "2026-04-10T05:51:18.463841Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12007,7 +12007,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Jaeger",
+              "service_definition": "Tautulli",
               "source": {
                 "type": "Manual"
               },
@@ -13372,14 +13372,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-10T04:28:27.770279Z",
-          "id": "728e883b-1876-44c0-92b0-d891686e3450",
+          "created_at": "2026-04-10T05:51:18.450299Z",
+          "id": "87156662-af33-4f4f-af7f-fd59e366ee8f",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-10T04:28:27.770279Z"
+          "updated_at": "2026-04-10T05:51:18.450299Z"
         }
       },
       "BindingBase": {
@@ -13909,7 +13909,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Jaeger",
+              "service_definition": "Tautulli",
               "tags": [],
               "virtualization": null
             }
@@ -16431,14 +16431,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-10T04:28:27.769330Z",
-                  "id": "3f5511a9-1ac6-414f-8a7d-a2153463c74d",
+                  "created_at": "2026-04-10T05:51:18.449335Z",
+                  "id": "991327fb-dd4e-441e-8131-92960450fe92",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-10T04:28:27.769330Z"
+                  "updated_at": "2026-04-10T05:51:18.449335Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16447,7 +16447,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Jaeger",
+              "service_definition": "Tautulli",
               "source": {
                 "type": "Manual"
               },
@@ -18623,14 +18623,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-10T04:28:27.756925Z",
-                        "id": "626e4d89-667b-4513-8d37-3304ce32cb0d",
+                        "created_at": "2026-04-10T05:51:18.437421Z",
+                        "id": "8d7e9e69-b3e1-45ad-bef6-f3e217a02841",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-10T04:28:27.756925Z"
+                        "updated_at": "2026-04-10T05:51:18.437421Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18639,7 +18639,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Jaeger",
+                    "service_definition": "Tautulli",
                     "source": {
                       "type": "Manual"
                     },
@@ -18716,14 +18716,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-10T04:28:27.783172Z",
-                    "id": "fc3bbaf6-62a6-42da-ae1b-d285f53ae9fe",
+                    "created_at": "2026-04-10T05:51:18.462438Z",
+                    "id": "1aa23d79-a658-48be-873a-12957adc6c8c",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-10T04:28:27.783172Z"
+                    "updated_at": "2026-04-10T05:51:18.462438Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18732,7 +18732,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Jaeger",
+                "service_definition": "Tautulli",
                 "source": {
                   "type": "Manual"
                 },
@@ -19950,14 +19950,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-10T04:28:27.770146Z",
-              "id": "e33b085b-138c-4310-b3d3-7e4fa8d4ec88",
+              "created_at": "2026-04-10T05:51:18.450162Z",
+              "id": "c4f96a76-727b-4a36-95c6-11032b5f48ff",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-10T04:28:27.770146Z"
+              "updated_at": "2026-04-10T05:51:18.450162Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19966,7 +19966,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Jaeger",
+          "service_definition": "Tautulli",
           "source": {
             "type": "Manual"
           },
@@ -21084,7 +21084,7 @@
               "enum": [
                 "L2Physical",
                 "L3Logical",
-                "Compute",
+                "Workloads",
                 "Application"
               ]
             }
@@ -21112,7 +21112,7 @@
               "enum": [
                 "L2Physical",
                 "L3Logical",
-                "Compute",
+                "Workloads",
                 "Application"
               ]
             }
@@ -21158,7 +21158,7 @@
         "enum": [
           "L2Physical",
           "L3Logical",
-          "Compute",
+          "Workloads",
           "Application"
         ]
       },

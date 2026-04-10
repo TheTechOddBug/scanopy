@@ -179,7 +179,7 @@ impl ViewBuilder for L2Builder {
                 Some(ElementMatchData {
                     categories: HashSet::new(),
                     tag_ids,
-                    virtualizer_host_id: None,
+                    virtualizer_service_id: None,
                     compose_project: None,
                     native_vlan_id,
                     vlan_number: resolved_vlan.map(|v| v.base.vlan_number),

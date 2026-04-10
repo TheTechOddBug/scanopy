@@ -38,7 +38,7 @@ pub enum TopologyView {
     L2Physical,
     #[default]
     L3Logical,
-    Compute,
+    Workloads,
     Application,
 }
 
@@ -137,7 +137,7 @@ impl EntityMetadataProvider for TopologyView {
         match self {
             Self::L2Physical => Concept::L2.color(),
             Self::L3Logical => Concept::L3.color(),
-            Self::Compute => Concept::Compute.color(),
+            Self::Workloads => Concept::Workloads.color(),
             Self::Application => Concept::Application.color(),
         }
     }
@@ -146,7 +146,7 @@ impl EntityMetadataProvider for TopologyView {
         match self {
             Self::L2Physical => Concept::L2.icon(),
             Self::L3Logical => Concept::L3.icon(),
-            Self::Compute => Concept::Compute.icon(),
+            Self::Workloads => Concept::Workloads.icon(),
             Self::Application => Concept::Application.icon(),
         }
     }
@@ -157,7 +157,7 @@ impl TypeMetadataProvider for TopologyView {
         match self {
             Self::L2Physical => "L2 Physical",
             Self::L3Logical => "L3 Logical",
-            Self::Compute => "Compute",
+            Self::Workloads => "Workloads",
             Self::Application => "Application",
         }
     }
@@ -166,7 +166,7 @@ impl TypeMetadataProvider for TopologyView {
         match self {
             Self::L2Physical => "Switches, VLANs, and physical links",
             Self::L3Logical => "Subnets, hosts, and IP connectivity",
-            Self::Compute => "Servers, VMs, and containers",
+            Self::Workloads => "Servers, VMs, and containers",
             Self::Application => "Services and their dependencies",
         }
     }
@@ -210,7 +210,7 @@ impl TopologyView {
                 element_entity: EntityDiscriminants::Interface,
                 inline_entities: vec![],
             },
-            Self::Compute => ViewElementConfig {
+            Self::Workloads => ViewElementConfig {
                 parent_entity: None,
                 element_entity: EntityDiscriminants::Host,
                 inline_entities: vec![EntityDiscriminants::Service],
@@ -228,7 +228,7 @@ impl TopologyView {
         match self {
             Self::L2Physical => "interfaces",
             Self::L3Logical => "host IP addresses",
-            Self::Compute => "hosts",
+            Self::Workloads => "workloads",
             Self::Application => "services",
         }
     }
@@ -238,7 +238,7 @@ impl TopologyView {
         match self {
             Self::L2Physical => "interface",
             Self::L3Logical => "host IP address",
-            Self::Compute => "host",
+            Self::Workloads => "workload",
             Self::Application => "service",
         }
     }
@@ -284,10 +284,13 @@ impl TopologyView {
                     EdgeViewConfig::Disabled
                 }
             },
-            Self::Compute => match edge_type {
-                HostVirtualization => active(true, Hidden, Dashed, Always, true, false),
-                ServiceVirtualization => active(true, Hidden, Dashed, Always, true, false),
-                SameHost | PhysicalLink | RequestPath | HubAndSpoke => EdgeViewConfig::Disabled,
+            Self::Workloads => match edge_type {
+                HostVirtualization
+                | ServiceVirtualization
+                | SameHost
+                | PhysicalLink
+                | RequestPath
+                | HubAndSpoke => EdgeViewConfig::Disabled,
             },
             Self::Application => match edge_type {
                 RequestPath => active(true, Visible, Solid, WhenVisible, false, true),
@@ -336,13 +339,14 @@ impl TopologyView {
                 dependency_creation: Some(DependencyMemberType::Services),
                 show_application_group_picker: true,
             },
-            Self::Compute => ViewInspectorConfig {
+            Self::Workloads => ViewInspectorConfig {
                 element_sections: vec![
                     InspectorSection::Identity,
                     InspectorSection::HostDetail,
                     InspectorSection::Virtualization,
                     InspectorSection::Services,
                     InspectorSection::OtherInterfaces,
+                    InspectorSection::Tags,
                 ],
                 container_sections: vec![
                     InspectorSection::Identity,

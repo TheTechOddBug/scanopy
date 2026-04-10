@@ -15,8 +15,8 @@ use crate::server::{
 pub struct ElementMatchData {
     pub categories: HashSet<ServiceCategory>,
     pub tag_ids: HashSet<Uuid>,
-    /// The host ID of the virtualizer managing this element (for ByVirtualizer grouping).
-    pub virtualizer_host_id: Option<Uuid>,
+    /// The service ID of the virtualizer managing this element (for ByVirtualizer grouping).
+    pub virtualizer_service_id: Option<Uuid>,
     /// The Docker Compose project name (for ByStack grouping).
     pub compose_project: Option<String>,
     /// Native VLAN entity UUID on this port (for ByVLAN grouping).
@@ -87,9 +87,9 @@ pub fn apply_element_rules_with_titles(
     for IdentifiedRule { id: rule_id, rule } in element_rules {
         match rule {
             ElementRule::ByVirtualizer => {
-                // ByVirtualizer groups elements by their virtualizer_host_id.
-                // Each unique virtualizer gets a Virtualizer subcontainer.
-                // Unclaimed elements with no virtualizer get a BareMetal subcontainer.
+                // ByVirtualizer groups elements by their managing virtualizer service.
+                // Each unique virtualizer service gets a Virtualizer subcontainer.
+                // Elements with no virtualizer stay ungrouped in their parent container.
                 for (parent_id, element_ids) in &elements_by_container {
                     let unclaimed: Vec<Uuid> = element_ids
                         .iter()
@@ -100,10 +100,10 @@ pub fn apply_element_rules_with_titles(
                         continue;
                     }
 
-                    // Group by virtualizer_host_id
+                    // Group by virtualizer_service_id
                     let mut by_virtualizer: HashMap<Option<Uuid>, Vec<Uuid>> = HashMap::new();
                     for id in &unclaimed {
-                        let virt_id = match_data.get(id).and_then(|d| d.virtualizer_host_id);
+                        let virt_id = match_data.get(id).and_then(|d| d.virtualizer_service_id);
                         by_virtualizer.entry(virt_id).or_default().push(*id);
                     }
 
@@ -481,7 +481,7 @@ mod tests {
         ElementMatchData {
             categories: HashSet::new(),
             tag_ids: HashSet::new(),
-            virtualizer_host_id: None,
+            virtualizer_service_id: None,
             compose_project: compose_project.map(String::from),
             native_vlan_id: None,
             vlan_number: None,

@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-10T04:28:27.789818Z",
-             *       "id": "c423a19b-c4f6-4ef4-870a-a1c97a6d663b",
+             *       "created_at": "2026-04-10T05:51:18.469153Z",
+             *       "id": "e9402978-18a1-45a6-a99b-637603a7520d",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-10T04:28:27.789818Z"
+             *       "updated_at": "2026-04-10T05:51:18.469153Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-10T04:28:27.769861Z",
-             *               "id": "64c624b6-8dad-44af-b469-9d4432761f47",
+             *               "created_at": "2026-04-10T05:51:18.449903Z",
+             *               "id": "691b327f-b75d-488a-bca4-3523d3c97f77",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-10T04:28:27.769861Z"
+             *               "updated_at": "2026-04-10T05:51:18.449903Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Jaeger",
+             *           "service_definition": "Tautulli",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3529,14 +3529,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-10T04:28:27.784599Z",
-             *           "id": "4a106ac3-233f-411f-9d88-e03e286ee5bc",
+             *           "created_at": "2026-04-10T05:51:18.463826Z",
+             *           "id": "8e32c6c4-e28e-437f-8683-939a03e1ad2a",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-10T04:28:27.784599Z"
+             *           "updated_at": "2026-04-10T05:51:18.463826Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3545,7 +3545,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Jaeger",
+             *       "service_definition": "Tautulli",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3896,14 +3896,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-10T04:28:27.770269Z",
-         *       "id": "8836969d-64ac-44a7-8473-e90c1ee70638",
+         *       "created_at": "2026-04-10T05:51:18.450317Z",
+         *       "id": "a5f5aea3-acfe-42ec-9890-81f0aca44ebf",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-10T04:28:27.770269Z"
+         *       "updated_at": "2026-04-10T05:51:18.450317Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4088,7 +4088,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Jaeger",
+         *           "service_definition": "Tautulli",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4942,14 +4942,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-10T04:28:27.769325Z",
-         *               "id": "1e882d7e-6a38-4533-b5d0-68afbeca75c4",
+         *               "created_at": "2026-04-10T05:51:18.449344Z",
+         *               "id": "c390b2ea-05ae-4785-a4ad-05e2117fcb6e",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-10T04:28:27.769325Z"
+         *               "updated_at": "2026-04-10T05:51:18.449344Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4958,7 +4958,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Jaeger",
+         *           "service_definition": "Tautulli",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6080,14 +6080,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-10T04:28:27.770130Z",
-         *           "id": "d0825cdc-51f7-4b16-b7a7-2a1ab6c9c301",
+         *           "created_at": "2026-04-10T05:51:18.450176Z",
+         *           "id": "62ba82ba-7792-4303-93ef-0e8bb824c2fb",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-10T04:28:27.770130Z"
+         *           "updated_at": "2026-04-10T05:51:18.450176Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6096,7 +6096,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Jaeger",
+         *       "service_definition": "Tautulli",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6518,7 +6518,7 @@ export interface components {
          * @description Which topology view is being rendered
          * @enum {string}
          */
-        TopologyView: "L2Physical" | "L3Logical" | "Compute" | "Application";
+        TopologyView: "L2Physical" | "L3Logical" | "Workloads" | "Application";
         /** @enum {string} */
         TransportProtocol: "Udp" | "Tcp";
         /**

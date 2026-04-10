@@ -239,7 +239,7 @@ impl ViewBuilder for ApplicationBuilder {
             Some(ElementMatchData {
                 categories,
                 tag_ids,
-                virtualizer_host_id: None,
+                virtualizer_service_id: None,
                 compose_project,
                 native_vlan_id: None,
                 vlan_number: None,

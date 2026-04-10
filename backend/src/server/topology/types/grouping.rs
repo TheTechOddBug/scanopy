@@ -57,7 +57,7 @@ impl GraphRule for ContainerRule {
             ContainerRule::BySubnet => &[TopologyView::L3Logical],
             ContainerRule::MergeDockerBridges => &[TopologyView::L3Logical],
             ContainerRule::ByApplicationGroup { .. } => &[TopologyView::Application],
-            ContainerRule::ByHost => &[TopologyView::L2Physical],
+            ContainerRule::ByHost => &[TopologyView::L2Physical, TopologyView::Workloads],
         }
     }
 
@@ -166,10 +166,10 @@ impl GraphRule for ElementRule {
             ElementRule::ByTag { .. } => &[
                 TopologyView::L3Logical,
                 TopologyView::L2Physical,
-                TopologyView::Compute,
+                TopologyView::Workloads,
                 TopologyView::Application,
             ],
-            ElementRule::ByVirtualizer => &[TopologyView::Compute],
+            ElementRule::ByVirtualizer => &[TopologyView::Workloads],
             ElementRule::ByStack => &[TopologyView::L3Logical, TopologyView::Application],
             ElementRule::ByTrunkPort => &[TopologyView::L2Physical],
             ElementRule::ByVLAN => &[TopologyView::L2Physical],
@@ -189,7 +189,7 @@ impl EntityMetadataProvider for ElementRule {
         match self {
             ElementRule::ByServiceCategory { .. } => Color::Purple,
             ElementRule::ByTag { .. } => Color::Orange,
-            ElementRule::ByVirtualizer => Concept::Compute.color(),
+            ElementRule::ByVirtualizer => Concept::Workloads.color(),
             ElementRule::ByStack => Concept::Containerization.color(),
             ElementRule::ByTrunkPort => Color::Amber,
             ElementRule::ByVLAN => Color::Teal,
@@ -201,7 +201,7 @@ impl EntityMetadataProvider for ElementRule {
         match self {
             ElementRule::ByServiceCategory { .. } => Icon::Layers,
             ElementRule::ByTag { .. } => Icon::Tag,
-            ElementRule::ByVirtualizer => Concept::Compute.icon(),
+            ElementRule::ByVirtualizer => Concept::Workloads.icon(),
             ElementRule::ByStack => Concept::Containerization.icon(),
             ElementRule::ByTrunkPort => Icon::Network,
             ElementRule::ByVLAN => Icon::Network,

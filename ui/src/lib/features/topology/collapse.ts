@@ -200,8 +200,10 @@ export function inferCurrentLevel(
 	// If all containers are collapsed, that's level 1
 	const allContainers = allNodes.filter((n) => n.node_type === 'Container');
 	if (allContainers.every((n) => collapsed.has(n.id))) return 1;
-	// Default: return 1 (conservative)
-	return 1;
+	// Default: level 3 (collapsed-by-default subcontainers only).
+	// This is the natural state — persisted set may not exactly match
+	// any level due to stale IDs or manual user collapses.
+	return 3;
 }
 
 function setsEqual(a: Set<string>, b: Set<string>): boolean {

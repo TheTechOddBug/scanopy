@@ -341,6 +341,7 @@
 				const topologyChanged = topoKey !== lastRenderedTopoKey;
 				if (topologyChanged) {
 					viewSizeCache.clear();
+					seenAutoCollapseIds = new Set<string>();
 				}
 				console.log(
 					`[LAYOUT-DEBUG] loadTopologyData gen=${thisGeneration} view=${currentView} viewChanged=${viewChanged} topologyChanged=${topologyChanged} nodes=${topology.nodes.length} edges=${topology.edges.length}`
@@ -526,7 +527,7 @@
 				);
 
 				// Use the graph to determine visible nodes
-				const visibleNodes = layoutGraph.getVisibleNodes(layoutNodes);
+				let visibleNodes = layoutGraph.getVisibleNodes(layoutNodes);
 
 				// Helper: build SvelteFlow node array from topology nodes
 				const buildFlowNodes = (useGraph: boolean): Node[] => {
@@ -839,6 +840,9 @@
 						// so all containers have their real expandedSize set first.
 						if (deferCollapse) {
 							layoutGraph.syncCollapseState(collapsed);
+							// Recompute visible nodes now that collapse is applied —
+							// the earlier visibleNodes included all nodes (pre-collapse).
+							visibleNodes = layoutGraph.getVisibleNodes(layoutNodes);
 						}
 
 						// Log size mismatches between DOM-measured and ELK-computed

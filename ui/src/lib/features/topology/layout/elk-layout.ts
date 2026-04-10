@@ -712,6 +712,7 @@ function buildElkGraph(
 	if (useLayeredChildren) {
 		// Root options set via ternary below
 	}
+	const isWorkloads = view === 'Workloads';
 	const rootOptions = useLayeredChildren
 		? {
 				'elk.algorithm': 'layered',
@@ -727,7 +728,13 @@ function buildElkGraph(
 				'elk.hierarchyHandling': 'SEPARATE_CHILDREN',
 				'elk.padding': '[top=25,left=25,bottom=25,right=25]'
 			}
-		: ROOT_LAYOUT_OPTIONS;
+		: isWorkloads
+			? {
+					...ROOT_LAYOUT_OPTIONS,
+					'elk.layered.crossingMinimization.forceNodeModelOrder': 'true',
+					'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES'
+				}
+			: ROOT_LAYOUT_OPTIONS;
 
 	const graph: ElkNode = {
 		id: 'root',

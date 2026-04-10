@@ -103,10 +103,10 @@
 		{#if linkedInterface}
 			<div class="flex flex-wrap items-center gap-1">
 				<EntityTag
-					entityRef={entityRef('Interface', linkedInterface.id, linkedInterface)}
+					entityRef={entityRef('IPAddress', linkedInterface.id, linkedInterface)}
 					label={linkedInterface.ip_address}
-					icon={entities.getIconComponent('Interface')}
-					color={entities.getColorHelper('Interface').color}
+					icon={entities.getIconComponent('IPAddress')}
+					color={entities.getColorHelper('IPAddress').color}
 				/>
 				{#if linkedSubnet}
 					<span class="text-tertiary text-xs">on</span>

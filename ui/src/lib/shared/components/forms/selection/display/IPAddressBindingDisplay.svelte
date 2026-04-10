@@ -39,8 +39,8 @@
 			return interfaceFormatted;
 		},
 		getDescription: () => '',
-		getIcon: () => entities.getIconComponent('Interface'),
-		getIconColor: () => entities.getColorHelper('Interface').icon,
+		getIcon: () => entities.getIconComponent('IPAddress'),
+		getIconColor: () => entities.getColorHelper('IPAddress').icon,
 		getTags: () => [],
 		getCategory: (binding: InterfaceBinding, context: IPAddressBindingDisplayContext) => {
 			const servicesData = context?.services ?? [];

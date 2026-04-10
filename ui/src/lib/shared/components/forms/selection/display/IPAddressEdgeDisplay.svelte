@@ -18,8 +18,8 @@
 			if (targetIf?.ip_address) parts.push(targetIf.ip_address);
 			return parts.join(' ↔ ') || '';
 		},
-		getIcon: () => edgeTypes.getIconComponent('Interface'),
-		getIconColor: () => edgeTypes.getColorHelper('Interface').icon
+		getIcon: () => edgeTypes.getIconComponent('IPAddress'),
+		getIconColor: () => edgeTypes.getColorHelper('IPAddress').icon
 	};
 
 	export interface EdgeDisplayContext {

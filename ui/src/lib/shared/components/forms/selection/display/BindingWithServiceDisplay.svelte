@@ -76,7 +76,7 @@
 		getTags: (binding: Binding, context: BindingWithServiceContext) => [
 			{
 				label: getBindingDisplayNameFromContext(binding, context),
-				color: entities.getColorHelper('Interface').color
+				color: entities.getColorHelper('IPAddress').color
 			}
 		],
 		getCategory: (binding: Binding, context: BindingWithServiceContext) => {

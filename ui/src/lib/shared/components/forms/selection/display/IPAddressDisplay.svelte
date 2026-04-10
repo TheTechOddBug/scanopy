@@ -22,8 +22,8 @@
 		getDescription: (iface: Interface) => {
 			return iface.mac_address ?? 'No MAC';
 		},
-		getIcon: () => entities.getIconComponent('Interface'),
-		getIconColor: () => entities.getColorHelper('Interface').icon,
+		getIcon: () => entities.getIconComponent('IPAddress'),
+		getIconColor: () => entities.getColorHelper('IPAddress').icon,
 		getTags: (iface: Interface, context: IPAddressDisplayContext) => {
 			const subnetsData = context?.subnets ?? [];
 			const subnet = getSubnetById(subnetsData, iface.subnet_id);

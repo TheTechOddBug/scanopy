@@ -131,8 +131,8 @@
 				value: ifaces.map((iface: Interface) => ({
 					id: iface.id,
 					label: formatIPAddress(iface, isContainerSubnetFn),
-					color: entities.getColorHelper('Interface').color,
-					entityRef: entityRef('Interface', iface.id, iface, { subnets: subnetsData })
+					color: entities.getColorHelper('IPAddress').color,
+					entityRef: entityRef('IPAddress', iface.id, iface, { subnets: subnetsData })
 				})),
 				emptyText: common_notAssigned()
 			},

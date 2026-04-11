@@ -3,6 +3,27 @@ import type { TopologyNode } from '../types/base';
 import { isDisabledEdge, affectsLayout } from './edge-classification';
 import { containerTypes } from '$lib/shared/stores/metadata';
 import type { LayoutInput, LayoutResult } from './engine';
+import serviceDefinitionsJson from '$lib/data/service-definitions.json';
+import serviceCategoriesJson from '$lib/data/service-categories.json';
+
+/** Map service definition name → category */
+const svcDefToCategory = new Map<string, string>(
+	serviceDefinitionsJson.map((d) => [d.id, d.category])
+);
+
+interface ServiceCategoryMetadata {
+	application_relevant_use_cases: string[];
+}
+
+/** Set of categories that are app-relevant for at least one use case */
+const appRelevantCategories = new Set<string>(
+	serviceCategoriesJson
+		.filter((c) => {
+			const meta = c.metadata as ServiceCategoryMetadata | null;
+			return meta && meta.application_relevant_use_cases.length > 0;
+		})
+		.map((c) => c.id)
+);
 
 /** @deprecated Use LayoutInput from engine.ts */
 export type ElkLayoutInput = LayoutInput;
@@ -714,16 +735,41 @@ function buildElkGraph(
 	}
 	const isWorkloads = view === 'Workloads';
 
-	// Workloads: assign descending priority so box packing places
-	// highest-workload containers first (top-left).
-	// Backend sends containers sorted by descending workload count,
-	// so first container gets highest priority.
-	if (isWorkloads) {
-		for (let i = 0; i < rootContainers.length; i++) {
-			const container = rootContainers[i];
-			if (!container.layoutOptions) container.layoutOptions = {};
-			container.layoutOptions['elk.priority'] = String(rootContainers.length - i);
+	// Workloads: sort containers by application-relevant workload count (descending).
+	// Infra services (NetworkCore, RemoteAccess, OpenPorts, etc.) don't count.
+	if (isWorkloads && input.topology) {
+		// Build host_id → app-relevant service count from topology services
+		const appRelevantCountByHost = new Map<string, number>();
+		for (const svc of input.topology.services ?? []) {
+			const cat = svcDefToCategory.get(svc.service_definition);
+			if (cat && appRelevantCategories.has(cat)) {
+				appRelevantCountByHost.set(
+					svc.host_id,
+					(appRelevantCountByHost.get(svc.host_id) ?? 0) + 1
+				);
+			}
 		}
+
+		// Map container ID → host_id via element nodes
+		const containerToHost = new Map<string, string>();
+		for (const node of input.nodes) {
+			if (node.node_type === 'Element') {
+				const elemNode = node as Record<string, unknown>;
+				const containerId = elemNode.container_id as string | undefined;
+				const hostId = elemNode.host_id as string | undefined;
+				if (containerId && hostId && !containerToHost.has(containerId)) {
+					containerToHost.set(containerId, hostId);
+				}
+			}
+		}
+
+		rootContainers.sort((a, b) => {
+			const hostA = containerToHost.get(a.id);
+			const hostB = containerToHost.get(b.id);
+			const countA = hostA ? (appRelevantCountByHost.get(hostA) ?? 0) : 0;
+			const countB = hostB ? (appRelevantCountByHost.get(hostB) ?? 0) : 0;
+			return countB - countA;
+		});
 	}
 
 	const rootOptions = useLayeredChildren
@@ -741,16 +787,7 @@ function buildElkGraph(
 				'elk.hierarchyHandling': 'SEPARATE_CHILDREN',
 				'elk.padding': '[top=25,left=25,bottom=25,right=25]'
 			}
-		: isWorkloads
-			? {
-					'elk.algorithm': 'box',
-					'elk.box.packingMode': 'SIMPLE',
-					'elk.aspectRatio': '1.6',
-					'elk.spacing.nodeNode': '75',
-					'elk.spacing.componentComponent': '75',
-					'elk.padding': '[top=25,left=25,bottom=25,right=25]'
-				}
-			: ROOT_LAYOUT_OPTIONS;
+		: ROOT_LAYOUT_OPTIONS;
 
 	const graph: ElkNode = {
 		id: 'root',

@@ -285,7 +285,7 @@ import { useQueryClient } from '@tanstack/svelte-query';
 	function triggerLoad() {
 		if (!topology || loadInProgress) return;
 		loadInProgress = true;
-		void loadTopologyData().finally(() => { loadInProgress = false; });
+		void loadTopologyData().catch((err) => { isMeasuring = false; pushError(`Failed to parse topology data ${err}`); }).finally(() => { loadInProgress = false; });
 	}
 
 	let storesInitialized = false;
@@ -359,12 +359,7 @@ import { useQueryClient } from '@tanstack/svelte-query';
 
 	async function loadTopologyData() {
 		const thisGeneration = ++layoutGeneration;
-		const isStale = () => {
-			const stale = thisGeneration !== layoutGeneration;
-			if (stale)
-			return stale;
-		};
-		try {
+		const isStale = (): boolean => thisGeneration !== layoutGeneration;
 			if (topology && (topology.edges || topology.nodes)) {
 				const currentView = get(activeView);
 				const topoKey = getStructureKey(topology);
@@ -1460,11 +1455,6 @@ import { useQueryClient } from '@tanstack/svelte-query';
 					requestAnimationFrame(() => fitView({ padding: getFitViewPadding() }));
 				}
 			}
-		} catch (err) {
-			isMeasuring = false;
-			pushError(`Failed to parse topology data ${err}`);
-		}
-	}
 
 	function createFlowEdge(
 		edge: TopologyEdge,

@@ -762,10 +762,19 @@ import { useQueryClient } from '@tanstack/svelte-query';
 							elementNodeSizes.set(node.id, cached ?? { x: 250, y: 100 });
 						}
 					} else {
-						// Render nodes with new collapse state at current positions,
-						// wait for DOM to update, then measure unconstrained sizes.
-						// No isMeasuring/hide — container stays visible throughout.
-						const preElkNodes = sortFlowNodes(buildFlowNodes(true));
+						// Render nodes with new collapse state at current screen
+						// positions, wait for DOM to update, then measure sizes.
+						// Use live SvelteFlow positions (not graph positions which
+						// are near origin on a fresh graph after rebuild).
+						const livePositions = new Map(
+							getNodes().map((n) => [n.id, n.position])
+						);
+						const preElkNodes = sortFlowNodes(
+							buildFlowNodes(true).map((n) => {
+								const livePos = livePositions.get(n.id);
+								return livePos ? { ...n, position: livePos } : n;
+							})
+						);
 						nodes.set(preElkNodes);
 						edges.set([]);
 						await tick();

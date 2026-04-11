@@ -804,7 +804,8 @@ function buildElkGraph(
 			? {
 					...ROOT_LAYOUT_OPTIONS,
 					'elk.layered.crossingMinimization.forceNodeModelOrder': 'true',
-					'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES'
+					'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+					'elk.layered.considerModelOrder.components': 'MODEL_ORDER'
 				}
 			: ROOT_LAYOUT_OPTIONS;
 

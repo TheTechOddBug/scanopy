@@ -228,10 +228,6 @@ import { useQueryClient } from '@tanstack/svelte-query';
 	let collapseLevelInferred = false;
 	let lastSeenTopologyId = '';
 	let isMeasuring = $state(false);
-	let animateLayout = $state(false);
-	let prevCollapsedForAnim = new Set<string>();
-	let animatingExpandIds = new Set<string>();
-	let useInPlaceMeasurement = false;
 	let layoutGeneration = 0;
 	let prevExpandedPortIds = new Set<string>();
 	let prevView = get(activeView);
@@ -524,18 +520,16 @@ import { useQueryClient } from '@tanstack/svelte-query';
 
 				// Run ELK on structure/collapse changes, skip for edge-only re-renders.
 				// All collapsed IDs (not just root) trigger ELK re-layout with full
-				// DOM measurement so containers reposition for tight gap compaction.
+				// All collapsed IDs in structureKey so any collapse change triggers
+				// ELK re-layout with proper DOM measurement and gap compaction.
 				const opts = get(topologyOptions);
 				const sizeKey = `${opts.request.hide_ports}`;
-				const rootCollapsedPreview = new Set(
-					[...collapsed].filter((id) => !layoutGraph || !layoutGraph.isSubcontainer(id))
-				);
 				const structureKey =
 					currentView +
 					':' +
 					topoKey +
 					':' +
-					Array.from(rootCollapsedPreview).sort().join(',') +
+					Array.from(collapsed).sort().join(',') +
 					':' +
 					sizeKey +
 					':' +
@@ -650,10 +644,6 @@ import { useQueryClient } from '@tanstack/svelte-query';
 						if (useGraph && layoutGraph) {
 							const graphPos = layoutGraph.getPosition(node.id);
 							position = graphPos ?? { x: node.position.x, y: node.position.y };
-							if (!isElement && containerSize) {
-								const c = layoutGraph.containers.get(node.id);
-								console.log(`[SIZE] ${node.id.substring(0, 8)} collapsed=${isNodeCollapsed} w=${containerSize.width} h=${containerSize.height} measured=${!!c?.measuredCollapsedSize} expanded=${JSON.stringify(c?.expandedSize)}`);
-							}
 							width = isNodeCollapsed
 								? (containerSize?.width ?? undefined)
 								: isElement
@@ -781,9 +771,27 @@ import { useQueryClient } from '@tanstack/svelte-query';
 							);
 
 						if (canMeasureInPlace) {
-							// In-place measurement: read sizes from current DOM elements
-							useInPlaceMeasurement = false;
+							// Unconstrained in-place measurement: temporarily remove
+							// width/height from containers so offsetWidth reflects
+							// natural content width, not the layout-constrained width.
+							// All synchronous — no paint between write-read-restore.
+							const saved = new Map<HTMLElement, { w: string; h: string }>();
 							const nodeEls = containerElement.querySelectorAll('.svelte-flow__node');
+							for (const el of nodeEls) {
+								const htmlEl = el as HTMLElement;
+								const id = htmlEl.dataset.id;
+								if (id && layoutGraph?.containers.has(id)) {
+									saved.set(htmlEl, { w: htmlEl.style.width, h: htmlEl.style.height });
+									htmlEl.style.width = 'auto';
+									htmlEl.style.height = 'auto';
+									const inner = htmlEl.querySelector(':scope > .relative') as HTMLElement;
+									if (inner) {
+										saved.set(inner, { w: inner.style.width, h: inner.style.height });
+										inner.style.width = 'auto';
+										inner.style.height = 'auto';
+									}
+								}
+							}
 							for (const el of nodeEls) {
 								const id = (el as HTMLElement).dataset.id;
 								if (id) {
@@ -793,6 +801,10 @@ import { useQueryClient } from '@tanstack/svelte-query';
 										y: htmlEl.offsetHeight || 100
 									});
 								}
+							}
+							for (const [el, { w, h }] of saved) {
+								el.style.width = w;
+								el.style.height = h;
 							}
 						} else {
 							// Full measurement pass: hide container, place nodes at origin,
@@ -1309,65 +1321,9 @@ import { useQueryClient } from '@tanstack/svelte-query';
 				// Add aggregated collapse edges
 				flowEdges.push(...extraFlowEdges);
 
-				// Two-phase animation for collapse/expand:
-				// Phase 1: animate container sizes + sibling positions (children of
-				//          expanding containers hidden to avoid extent:'parent' clamping)
-				// Phase 2: after animation completes, show children at correct positions
-				let animPhaseNodes = allNodes;
-				{
-					const collapsedSetChanged =
-						prevCollapsedForAnim.size !== collapsed.size ||
-						[...collapsed].some((id) => !prevCollapsedForAnim.has(id)) ||
-						[...prevCollapsedForAnim].some((id) => !collapsed.has(id));
-					if (collapsedSetChanged && !deferCollapse && !isMeasuring) {
-						animateLayout = true;
-
-						// Identify containers that are expanding (were collapsed, now aren't)
-						animatingExpandIds = new Set(
-							[...prevCollapsedForAnim].filter((id) => !collapsed.has(id))
-						);
-
-						// Phase 1: filter out children of expanding containers
-						if (animatingExpandIds.size > 0) {
-							const expandDescendants = new Set(animatingExpandIds);
-							for (const n of allNodes) {
-								if (n.parentId && expandDescendants.has(n.parentId)) {
-									expandDescendants.add(n.id);
-								}
-							}
-							animPhaseNodes = allNodes.filter((n) => {
-								if (animatingExpandIds.has(n.id)) return true;
-								return !expandDescendants.has(n.id);
-							});
-						}
-
-						// Phase 2: after animation, show full node set then compact
-						const fullNodes = [...allNodes];
-						const fullEdges = [...flowEdges];
-						setTimeout(async () => {
-							animateLayout = false;
-							animatingExpandIds = new Set();
-							nodes.set(fullNodes);
-							edges.set(fullEdges);
-							// Wait for DOM to render new nodes before compaction
-							await tick();
-							// Phase 3: trigger ELK re-run for gap compaction.
-							// In-place measurement (no flash) since all nodes
-							// are now rendered in the DOM.
-							useInPlaceMeasurement = true;
-							sessionStructureKey = '';
-							void loadTopologyData();
-						}, 350);
-					}
-					if (!isMeasuring) {
-						prevCollapsedForAnim = new Set(collapsed);
-					}
-				}
-
 				if (!isMeasuring) {
-					// Cached-size path (no measurement pass): set nodes and edges atomically
-					// in one synchronous batch — old layout swaps to new in a single frame
-					nodes.set(animPhaseNodes);
+					// Non-ELK path (port changes, edge-only re-renders): set atomically
+					nodes.set(allNodes);
 					edges.set(flowEdges);
 				} else {
 					// Measurement path: container is hidden, set positioned nodes + edges,
@@ -1392,7 +1348,6 @@ import { useQueryClient } from '@tanstack/svelte-query';
 						isMeasuring = false;
 						return;
 					}
-					prevCollapsedForAnim = new Set(collapsed);
 					isMeasuring = false;
 				}
 
@@ -1665,8 +1620,7 @@ import { useQueryClient } from '@tanstack/svelte-query';
 	class="h-full w-full overflow-hidden !p-0"
 	class:card={!isEmbed}
 	class:card-static={!isEmbed}
-	class:animate-layout={animateLayout}
-	style:visibility={isMeasuring ? 'hidden' : 'visible'}
+style:visibility={isMeasuring ? 'hidden' : 'visible'}
 	bind:this={containerElement}
 >
 	<SvelteFlow
@@ -1880,20 +1834,5 @@ import { useQueryClient } from '@tanstack/svelte-query';
 		transition: opacity 0.2s ease-in-out;
 	}
 
-	/* Animate node position and size during collapse/expand.
-	   extent:'parent' is temporarily removed during animation to prevent
-	   SvelteFlow from clamping children to mid-transition container size. */
-	:global(.animate-layout .svelte-flow__node) {
-		transition:
-			transform 0.3s ease-in-out,
-			width 0.3s ease-in-out,
-			height 0.3s ease-in-out;
-	}
 
-	:global(.animate-layout .svelte-flow__node > .relative) {
-		transition:
-			width 0.3s ease-in-out,
-			height 0.3s ease-in-out,
-			opacity 0.2s ease-in-out;
-	}
 </style>

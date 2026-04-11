@@ -152,9 +152,6 @@ export class LayoutContainer {
 		const newHeight = maxColumnBottom + meta.padding.bottom;
 		const newWidth = maxColumnRight + meta.padding.right;
 		const oldHeight = this.expandedSize.height;
-		console.log(
-			`[REFLOW] ${this.id.substring(0, 8)} w=${newWidth} h=${newHeight} children=${children.length} cols=${columns.size} changed=${changedChildId?.substring(0, 8) ?? 'full'}`
-		);
 		this.expandedSize = { width: newWidth, height: newHeight };
 		return newHeight - oldHeight;
 	}

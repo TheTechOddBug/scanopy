@@ -412,7 +412,7 @@
 {#if nodeRenderData}
 	<div
 		class={`${cardClass} ${isNewNode ? 'animate-pulse-highlight' : ''} ${serviceHoverShadowStyle ? 'animate-pulse-highlight-once' : ''}`}
-		style={`width: ${effectiveWidth}px; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out, box-shadow 0.15s ease-in-out; ${isNewNode ? `--pulse-color: ${discoveryColorHelper.rgb};` : ''} ${serviceHoverShadowStyle} ${tagHoverRingStyle}`}
+		style={`width: ${effectiveWidth}px; height: 100%; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out, box-shadow 0.15s ease-in-out; ${isNewNode ? `--pulse-color: ${discoveryColorHelper.rgb};` : ''} ${serviceHoverShadowStyle} ${tagHoverRingStyle}`}
 	>
 		<!-- Rest of component stays the same -->
 		<!-- Header section with gradient transition to body -->
@@ -438,7 +438,7 @@
 		{/if}
 
 		<!-- Body section -->
-		<div class="flex flex-col items-center px-3 py-2">
+		<div class="flex flex-1 flex-col items-center justify-center px-3 py-2">
 			{#if nodeRenderData.showServices}
 				<!-- Show services list -->
 				<div class="flex w-full flex-col items-center" style="min-width: 0; max-width: 100%;">
@@ -603,20 +603,22 @@
 
 		<!-- Footer section -->
 		{#if nodeRenderData.portStatus}
-			<div class="flex flex-shrink-0 items-center justify-center gap-1.5 px-2 pb-1.5">
-				<span
-					class="text-xs font-medium"
-					style="color: {nodeRenderData.portStatus.operStatus === 'Up'
-						? '#22c55e'
-						: nodeRenderData.portStatus.operStatus === 'Down'
-							? '#ef4444'
-							: '#9ca3af'}">●</span
-				>
-				{#if nodeRenderData.portStatus.speed}
-					<span class="text-tertiary text-xs">{nodeRenderData.portStatus.speed}</span>
-				{/if}
+			<div class="flex flex-col items-center gap-0.5 px-2">
+				<div class="flex items-center gap-1.5">
+					<span
+						class="text-xs font-medium"
+						style="color: {nodeRenderData.portStatus.operStatus === 'Up'
+							? '#22c55e'
+							: nodeRenderData.portStatus.operStatus === 'Down'
+								? '#ef4444'
+								: '#9ca3af'}">●</span
+					>
+					{#if nodeRenderData.portStatus.speed}
+						<span class="text-tertiary text-xs">{nodeRenderData.portStatus.speed}</span>
+					{/if}
+				</div>
 				{#if nodeRenderData.portStatus.macAddress}
-					<span class="text-tertiary truncate font-mono text-xs" style="font-size: 0.6rem"
+					<span class="text-tertiary truncate font-mono" style="font-size: 0.55rem; opacity: 0.7"
 						>{nodeRenderData.portStatus.macAddress}</span
 					>
 				{/if}

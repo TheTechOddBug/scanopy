@@ -315,13 +315,7 @@ impl ViewBuilder for WorkloadsBuilder {
             });
         }
 
-        // --- Dependency edges (connecting host containers) ---
-
-        let service_to_host: HashMap<Uuid, Uuid> = ctx
-            .services
-            .iter()
-            .map(|s| (s.id, s.base.host_id))
-            .collect();
+        // --- Dependency edges (connecting service elements) ---
 
         let binding_to_service: HashMap<Uuid, Uuid> = ctx
             .services
@@ -329,20 +323,25 @@ impl ViewBuilder for WorkloadsBuilder {
             .flat_map(|s| s.base.bindings.iter().map(move |b| (b.id, s.id)))
             .collect();
 
-        let host_container_ids: HashSet<Uuid> = ctx
-            .hosts
+        // Set of service IDs that exist as element nodes in this view
+        let service_node_ids: HashSet<Uuid> = nodes
             .iter()
-            .filter(|h| h.base.virtualization.is_none())
-            .map(|h| h.id)
+            .filter(|n| matches!(n.node_type, NodeType::Element { .. }))
+            .map(|n| n.id)
             .collect();
 
         for dep in ctx.dependencies {
             let service_ids: Vec<Uuid> = match &dep.base.members {
-                DependencyMembers::Services { service_ids } => service_ids.clone(),
+                DependencyMembers::Services { service_ids } => service_ids
+                    .iter()
+                    .copied()
+                    .filter(|id| service_node_ids.contains(id))
+                    .collect(),
                 DependencyMembers::Bindings { binding_ids } => {
                     let mut ids = Vec::new();
                     for binding_id in binding_ids {
                         if let Some(&service_id) = binding_to_service.get(binding_id)
+                            && service_node_ids.contains(&service_id)
                             && ids.last() != Some(&service_id)
                         {
                             ids.push(service_id);
@@ -352,30 +351,13 @@ impl ViewBuilder for WorkloadsBuilder {
                 }
             };
 
-            let host_container_chain: Vec<Uuid> = service_ids
-                .iter()
-                .filter_map(|sid| {
-                    let host_id = service_to_host.get(sid)?;
-                    if host_container_ids.contains(host_id) {
-                        Some(Self::container_id_for_host(*host_id))
-                    } else {
-                        None
-                    }
-                })
-                .fold(Vec::new(), |mut acc, cid| {
-                    if acc.last() != Some(&cid) {
-                        acc.push(cid);
-                    }
-                    acc
-                });
-
-            if host_container_chain.len() < 2 {
+            if service_ids.len() < 2 {
                 continue;
             }
 
             match dep.base.dependency_type {
                 DependencyType::RequestPath => {
-                    for window in host_container_chain.windows(2) {
+                    for window in service_ids.windows(2) {
                         edges.push(Edge {
                             id: Uuid::new_v4(),
                             source: window[0],
@@ -394,7 +376,7 @@ impl ViewBuilder for WorkloadsBuilder {
                     }
                 }
                 DependencyType::HubAndSpoke => {
-                    if let Some((&hub_id, spokes)) = host_container_chain.split_first() {
+                    if let Some((&hub_id, spokes)) = service_ids.split_first() {
                         for &spoke_id in spokes {
                             edges.push(Edge {
                                 id: Uuid::new_v4(),

@@ -650,6 +650,10 @@ import { useQueryClient } from '@tanstack/svelte-query';
 						if (useGraph && layoutGraph) {
 							const graphPos = layoutGraph.getPosition(node.id);
 							position = graphPos ?? { x: node.position.x, y: node.position.y };
+							if (!isElement && containerSize) {
+								const c = layoutGraph.containers.get(node.id);
+								console.log(`[SIZE] ${node.id.substring(0, 8)} collapsed=${isNodeCollapsed} w=${containerSize.width} h=${containerSize.height} measured=${!!c?.measuredCollapsedSize} expanded=${JSON.stringify(c?.expandedSize)}`);
+							}
 							width = isNodeCollapsed
 								? (containerSize?.width ?? undefined)
 								: isElement
@@ -1340,14 +1344,16 @@ import { useQueryClient } from '@tanstack/svelte-query';
 						// Phase 2: after animation, show full node set then compact
 						const fullNodes = [...allNodes];
 						const fullEdges = [...flowEdges];
-						setTimeout(() => {
+						setTimeout(async () => {
 							animateLayout = false;
 							animatingExpandIds = new Set();
 							nodes.set(fullNodes);
 							edges.set(fullEdges);
+							// Wait for DOM to render new nodes before compaction
+							await tick();
 							// Phase 3: trigger ELK re-run for gap compaction.
-							// Use in-place measurement (no flash) since all
-							// nodes are already rendered from Phase 1.
+							// In-place measurement (no flash) since all nodes
+							// are now rendered in the DOM.
 							useInPlaceMeasurement = true;
 							sessionStructureKey = '';
 							void loadTopologyData();

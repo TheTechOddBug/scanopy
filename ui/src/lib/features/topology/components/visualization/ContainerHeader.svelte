@@ -257,7 +257,7 @@
 					{topology_ungroupedCount({ count: ungroupedCount, label: elementLabel })}
 				</span>
 			{/if}
-			{#each subgroupSummaries as summary (summary.headerText)}
+			{#each subgroupSummaries as summary, i (i)}
 				<div
 					class="flex items-center gap-1 whitespace-nowrap rounded-md border border-dashed border-gray-300 px-2 py-1 dark:border-gray-600"
 					style="background: var(--color-topology-subgroup-bg);"
@@ -271,7 +271,7 @@
 							>{summary.headerText}{summary.labels.length > 0 ? ':' : ''}</span
 						>
 					{/if}
-					{#each summary.labels.slice(0, 2) as pill (pill.label)}
+					{#each summary.labels.slice(0, 2) as pill, j (j)}
 						<Tag label={pill.label} color={pill.color} />
 					{/each}
 					{#if summary.labels.length > 2}

@@ -98,33 +98,40 @@
 	const layoutEngine = new ElkLayoutEngine();
 
 	// Props
-	export let topology: Topology;
-	export let readonly: boolean = false;
-	export let showControls: boolean = true;
-	export let isEmbed: boolean = false;
-	export let showBranding: boolean = false;
-	export let showMinimap: boolean | undefined = undefined;
+	let {
+		topology,
+		readonly = false,
+		showControls = true,
+		isEmbed = false,
+		showBranding = false,
+		showMinimap = undefined,
+		onNodeDragStop = null,
+		onReconnect = null,
+		onOpenShortcuts = null,
+		editMode = false,
+		onToggleEditMode = null,
+		sidebarCollapsed = false
+	}: {
+		topology: Topology;
+		readonly?: boolean;
+		showControls?: boolean;
+		isEmbed?: boolean;
+		showBranding?: boolean;
+		showMinimap?: boolean | undefined;
+		onNodeDragStop?: ((node: Node) => void) | null;
+		onReconnect?: ((edge: Edge, newConnection: Connection) => void) | null;
+		onOpenShortcuts?: (() => void) | null;
+		editMode?: boolean;
+		onToggleEditMode?: (() => void) | null;
+		sidebarCollapsed?: boolean;
+	} = $props();
 
 	// Create a context store for the topology so child nodes can access it
 	const topologyContext = svelteWritable<Topology>(topology);
 	setContext('topology', topologyContext);
 
 	// Keep context in sync with prop
-	$: topologyContext.set(topology);
-
-	// Optional callbacks for editing
-	export let onNodeDragStop: ((node: Node) => void) | null = null;
-	export let onReconnect: ((edge: Edge, newConnection: Connection) => void) | null = null;
-
-	// Optional callback for shortcuts overlay
-	export let onOpenShortcuts: (() => void) | null = null;
-
-	// Edit mode toggle
-	export let editMode: boolean = false;
-	export let onToggleEditMode: (() => void) | null = null;
-
-	// Sidebar buttons collapse to icon-only after a brief delay
-	export let sidebarCollapsed: boolean = false;
+	$effect(() => { topologyContext.set(topology); });
 
 	// Resolve selection stores from context (share/embed) or fall back to global stores.
 	// These are the SINGLE source of truth for selection state.
@@ -201,12 +208,14 @@
 
 	// Refit viewport when panel expands/collapses (after 300ms CSS transition)
 	let panelInitialized = false;
-	$: if ($optionsPanelExpanded !== undefined) {
-		if (panelInitialized) {
-			setTimeout(() => fitView({ padding: getFitViewPadding() }), 300);
+	$effect(() => {
+		if ($optionsPanelExpanded !== undefined) {
+			if (panelInitialized) {
+				setTimeout(() => fitView({ padding: getFitViewPadding() }), 300);
+			}
+			panelInitialized = true;
 		}
-		panelInitialized = true; // eslint-disable-line no-useless-assignment -- read on next reactive trigger
-	}
+	});
 
 	// Stores for SvelteFlow
 	let nodes = writable<Node[]>([]);
@@ -225,8 +234,8 @@
 	let seenAutoCollapseIds = new Set<string>();
 	let collapseLevelInferred = false;
 	let lastSeenTopologyId = '';
-	let isMeasuring = false;
-	let animateLayout = false;
+	let isMeasuring = $state(false);
+	let animateLayout = $state(false);
 	let prevCollapsedForAnim = new Set<string>();
 	let animatingExpandIds = new Set<string>();
 	let layoutGeneration = 0;
@@ -255,9 +264,11 @@
 	}
 
 	// Clear expanded bundles when bundling is toggled off
-	$: if (!$topologyOptions.local.bundle_edges) {
-		collapseAllBundles();
-	}
+	$effect(() => {
+		if (!$topologyOptions.local.bundle_edges) {
+			collapseAllBundles();
+		}
+	});
 
 	// Load topology data when it changes, collapse state changes, bundle state changes, or port expansion changes
 	// Read layout-relevant options imperatively inside loadTopologyData instead
@@ -269,30 +280,28 @@
 		(o.local.hide_edge_types ?? []).join(',')
 	);
 
-	$: if (topology && (topology.edges || topology.nodes)) {
-		void $collapsedContainers;
-		void $expandedBundles;
-		void $expandedPortNodeIds;
-		void $bundleEdgesStore;
-		void $hideEdgeTypesStore;
-		void loadTopologyData();
-	}
+	$effect(() => {
+		if (topology && (topology.edges || topology.nodes)) {
+			void $collapsedContainers;
+			void $expandedBundles;
+			void $expandedPortNodeIds;
+			void $bundleEdgesStore;
+			void $hideEdgeTypesStore;
+			void loadTopologyData();
+		}
+	});
 
 	// Update edges when selection or search/tag filter changes — stores are the single source of truth
-	$: {
+	$effect(() => {
 		const curSelectedNode = $selNodeStore;
 		const curSelectedEdge = $selEdgeStore;
 		const multiSelected = $selNodesStore;
-		// Reactive subscriptions — block re-runs when search or tag filter changes
 		const searchHidden = $searchHiddenNodeIds;
 		const tagHidden = $tagHiddenNodeIds;
 
 		if (topology && (topology.edges || topology.nodes)) {
 			const currentEdges = get(edges);
 			const currentNodes = get(nodes);
-			// Read hide_edge_types imperatively to avoid making this $: block
-			// depend on $topologyOptions (which would cause a race with the
-			// loadTopologyData block that also depends on it).
 			const opts = get(topologyOptions);
 
 			updateConnectedNodes(
@@ -329,13 +338,15 @@
 
 			edges.set(updatedEdges);
 		}
-	}
+	});
 
 	// Add edges when nodes are ready
-	$: if (nodesInitialized.current && pendingEdges.length > 0) {
-		edges.set(pendingEdges);
-		pendingEdges = [];
-	}
+	$effect(() => {
+		if (nodesInitialized.current && pendingEdges.length > 0) {
+			edges.set(pendingEdges);
+			pendingEdges = [];
+		}
+	});
 
 	async function loadTopologyData() {
 		const thisGeneration = ++layoutGeneration;
@@ -1654,14 +1665,11 @@
 		}
 	}
 
-	$: expandDisabled = $collapseLevel === 4;
-	$: collapseDisabled = $collapseLevel === 1;
-	$: collapseLevelLabel = `${$collapseLevel}/4 ${getCollapseLevelName($collapseLevel)}`;
-	$: collapseLevelTooltipCollapse = `${topology_collapseLevelDown()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`;
-	$: collapseLevelTooltipExpand = `${topology_expandLevelUp()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`;
-	$: console.log(
-		`[COLLAPSE-LEVEL] $collapseLevel=${$collapseLevel}, expandDisabled=${$collapseLevel === 4}, collapseDisabled=${$collapseLevel === 1}`
-	);
+	let expandDisabled = $derived($collapseLevel === 4);
+	let collapseDisabled = $derived($collapseLevel === 1);
+	let collapseLevelLabel = $derived(`${$collapseLevel}/4 ${getCollapseLevelName($collapseLevel)}`);
+	let collapseLevelTooltipCollapse = $derived(`${topology_collapseLevelDown()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`);
+	let collapseLevelTooltipExpand = $derived(`${topology_expandLevelUp()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`);
 
 	function handleStepCollapse() {
 		stepCollapse(topology.nodes, containerTypes, getInfrastructureRuleId());
@@ -1694,11 +1702,10 @@
 	}
 
 	// Merge preview edges into the edge store when they change
-	$: {
+	$effect(() => {
 		const preview = $previewEdges;
 		if (preview.length > 0) {
 			const currentEdges = get(edges);
-			// Remove old preview edges, add new ones
 			const realEdges = currentEdges.filter((e) => !e.id.startsWith('preview-'));
 			edges.set([...realEdges, ...preview]);
 		} else {
@@ -1708,7 +1715,7 @@
 				edges.set(currentEdges.filter((e) => !e.id.startsWith('preview-')));
 			}
 		}
-	}
+	});
 </script>
 
 <div

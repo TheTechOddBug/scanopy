@@ -767,7 +767,6 @@ function buildElkGraph(
 	if (useLayeredChildren) {
 		// Root options set via ternary below
 	}
-	const isWorkloads = view === 'Workloads';
 
 	// Workloads: assign descending priority so box packing places
 	// highest-workload containers first (top-left).

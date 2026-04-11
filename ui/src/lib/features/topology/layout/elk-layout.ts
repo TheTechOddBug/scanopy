@@ -36,17 +36,9 @@ async function getElk(): Promise<import('elkjs/lib/elk-api')['default']> {
 	return elkPromise;
 }
 
-/**
- * Root-level ELK layout options.
- * Uses DisCo (Disconnected Components) algorithm: identifies connected components,
- * lays out each with the layered algorithm, then packs the resulting rectangles
- * densely using polyomino-based strategies. This gives edge-aware layering for
- * connected containers while packing disconnected containers side-by-side.
- */
+/** Root-level ELK layout options for layered compound layout. */
 const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
-	'elk.algorithm': 'disco',
-	'elk.disco.componentCompaction.componentLayoutAlgorithm': 'layered',
-	// Layered options inherited by DisCo's per-component sub-layout
+	'elk.algorithm': 'layered',
 	'elk.direction': 'DOWN',
 	'elk.layered.spacing.nodeNodeBetweenLayers': '75',
 	'elk.layered.spacing.edgeNodeBetweenLayers': '50',
@@ -59,6 +51,7 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 	'elk.hierarchyHandling': 'SEPARATE_CHILDREN',
 	'elk.layered.layering.strategy': 'NETWORK_SIMPLEX',
 	'elk.layered.compaction.postCompaction.strategy': 'LEFT_RIGHT_CONSTRAINT_LOCKING',
+	'elk.layered.compaction.connectedComponents': 'true',
 	'elk.aspectRatio': '1.6',
 	'elk.padding': '[top=25,left=25,bottom=25,right=25]'
 };
@@ -120,7 +113,8 @@ function buildElkGraph(
 			// wider 5.0 to spread children horizontally; root containers use 1.4
 			const aspectRatio = useLayeredChildren ? '0.3' : isSubcontainer ? '5.0' : '1.4';
 			const childLayoutOptions: Record<string, string> = {
-				'elk.algorithm': 'rectpacking',
+				'elk.algorithm': 'box',
+				'elk.box.packingMode': 'SIMPLE',
 				'elk.aspectRatio': aspectRatio,
 				'elk.padding': padding,
 				'elk.nodeSize.constraints': 'MINIMUM_SIZE',
@@ -1214,6 +1208,113 @@ export function applySubgroupCollapseAdjustment(
 }
 
 /**
+ * Repack disconnected root containers beside the connected layout.
+ * ELK's layered algorithm places disconnected containers in separate layers,
+ * wasting vertical space. This post-processing step moves them to available
+ * space beside the connected component, producing a denser layout.
+ */
+function repackDisconnectedContainers(
+	result: ElkLayoutResult,
+	input: ElkLayoutInput
+): ElkLayoutResult {
+	const view = input.topology?.options?.request?.view;
+	if (view === 'L2Physical' || view === 'Workloads') return result;
+
+	// Build element → root container mapping
+	const parentContainerMap = new Map<string, string>();
+	const rootContainerIds = new Set<string>();
+	for (const node of input.nodes) {
+		if (node.node_type === 'Container') {
+			const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
+			if (parentId) parentContainerMap.set(node.id, parentId);
+			else rootContainerIds.add(node.id);
+		}
+	}
+
+	const elementToRoot = new Map<string, string>();
+	for (const node of input.nodes) {
+		if (node.node_type === 'Element') {
+			let rootId = node.container_id;
+			while (parentContainerMap.has(rootId)) rootId = parentContainerMap.get(rootId)!;
+			elementToRoot.set(node.id, rootId);
+		}
+	}
+
+	// Identify connected root containers (have cross-container layout-affecting edges)
+	const connectedIds = new Set<string>();
+	for (const edge of input.edges) {
+		if (!affectsLayout(edge)) continue;
+		const srcRoot = elementToRoot.get(edge.source);
+		const tgtRoot = elementToRoot.get(edge.target);
+		if (srcRoot && tgtRoot && srcRoot !== tgtRoot) {
+			connectedIds.add(srcRoot);
+			connectedIds.add(tgtRoot);
+		}
+	}
+
+	// Find disconnected root containers
+	const disconnectedIds: string[] = [];
+	for (const id of rootContainerIds) {
+		if (!connectedIds.has(id) && result.containerSizes.has(id)) {
+			disconnectedIds.push(id);
+		}
+	}
+
+	if (disconnectedIds.length === 0 || connectedIds.size === 0) return result;
+
+	// Compute bounding box of connected containers
+	const SPACING = 75;
+	let connTop = Infinity;
+	let connRight = 0;
+	let connBottom = 0;
+	for (const id of connectedIds) {
+		const pos = result.nodePositions.get(id);
+		const size = result.containerSizes.get(id);
+		if (pos && size) {
+			connTop = Math.min(connTop, pos.y);
+			connRight = Math.max(connRight, pos.x + size.width);
+			connBottom = Math.max(connBottom, pos.y + size.height);
+		}
+	}
+
+	// Sort disconnected containers by height descending for better shelf packing
+	disconnectedIds.sort((a, b) => {
+		const sA = result.containerSizes.get(a)?.height ?? 0;
+		const sB = result.containerSizes.get(b)?.height ?? 0;
+		return sB - sA;
+	});
+
+	// Place disconnected containers beside the connected layout using shelf packing.
+	// Fill a column to the right of the connected group. When the column exceeds
+	// the connected group's height, start a new row below everything.
+	const nodePositions = new Map(result.nodePositions);
+	let x = connRight + SPACING;
+	let y = connTop;
+	let shelfBottom = connBottom;
+	let maxColumnWidth = 0;
+
+	for (const id of disconnectedIds) {
+		const size = result.containerSizes.get(id);
+		if (!size) continue;
+
+		// If this container would overflow the connected group's height,
+		// start a new column or row
+		if (y + size.height > shelfBottom + SPACING && y > connTop) {
+			// Move to next column
+			x += maxColumnWidth + SPACING;
+			y = connTop;
+			maxColumnWidth = 0;
+		}
+
+		nodePositions.set(id, { x, y });
+		y += size.height + SPACING;
+		maxColumnWidth = Math.max(maxColumnWidth, size.width);
+	}
+
+	return { ...result, nodePositions };
+}
+
+/**
  * Compute layout positions using elkjs compound layered algorithm.
  * Returns positions for all nodes and computed sizes for containers.
  */
@@ -1298,5 +1399,6 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 		}
 	}
 
-	return mapElkResults(result2, cids2, input);
+	const layoutResult = mapElkResults(result2, cids2, input);
+	return repackDisconnectedContainers(layoutResult, input);
 }

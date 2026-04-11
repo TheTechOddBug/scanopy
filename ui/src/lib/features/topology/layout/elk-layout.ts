@@ -46,6 +46,7 @@ const ROOT_LAYOUT_OPTIONS: Record<string, string> = {
 	'elk.hierarchyHandling': 'SEPARATE_CHILDREN',
 	'elk.layered.layering.strategy': 'NETWORK_SIMPLEX',
 	'elk.layered.compaction.postCompaction.strategy': 'LEFT_RIGHT_CONSTRAINT_LOCKING',
+	'elk.layered.compaction.connectedComponents': 'true',
 	'elk.aspectRatio': '1.6',
 	'elk.padding': '[top=25,left=25,bottom=25,right=25]'
 };

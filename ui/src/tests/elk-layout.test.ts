@@ -513,6 +513,50 @@ describe('computeElkLayout', () => {
 		expect(containerSize.width).toBeLessThan(180 * 8 + 25 * 7); // ~1615px
 	});
 
+	it('packs disconnected containers densely instead of stacking in separate layers', async () => {
+		const containerA = uuid();
+		const containerB = uuid();
+		const containerC = uuid(); // disconnected — no edges to A or B
+		const elemA = uuid();
+		const elemB = uuid();
+		const elemC = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(containerA),
+			makeContainer(containerB),
+			makeContainer(containerC),
+			makeElement(elemA, containerA),
+			makeElement(elemB, containerB),
+			makeElement(elemC, containerC)
+		];
+
+		// Only A↔B are connected; C is disconnected
+		const edges: TopologyEdge[] = [primaryEdge(elemA, elemB, 'Dependency')];
+		const subnets = [
+			makeSubnet(containerA, 'Lan'),
+			makeSubnet(containerB, 'Lan'),
+			makeSubnet(containerC, 'Lan')
+		];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		const posA = result.nodePositions.get(containerA)!;
+		const posB = result.nodePositions.get(containerB)!;
+		const posC = result.nodePositions.get(containerC)!;
+		const sizeA = result.containerSizes.get(containerA)!;
+		const sizeB = result.containerSizes.get(containerB)!;
+
+		// The connected pair (A, B) are in different layers (one above the other)
+		expect(posA.y).not.toBe(posB.y);
+
+		// The disconnected container C should be packed beside the connected
+		// components, not stacked far below both. Its top should be within
+		// the vertical range of the connected component layout.
+		const connectedBottom = Math.max(posA.y + sizeA.height, posB.y + sizeB.height);
+		expect(posC.y).toBeLessThan(connectedBottom + 100); // allow some margin for spacing
+	});
+
 	it('does not pass disabled edges to ELK layout', async () => {
 		const subnetId = uuid();
 		const elem1 = uuid();

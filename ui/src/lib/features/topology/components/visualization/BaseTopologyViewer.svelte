@@ -231,6 +231,7 @@ import { useQueryClient } from '@tanstack/svelte-query';
 	let animateLayout = $state(false);
 	let prevCollapsedForAnim = new Set<string>();
 	let animatingExpandIds = new Set<string>();
+	let useInPlaceMeasurement = false;
 	let layoutGeneration = 0;
 	let prevExpandedPortIds = new Set<string>();
 	let prevView = get(activeView);
@@ -767,43 +768,56 @@ import { useQueryClient } from '@tanstack/svelte-query';
 							elementNodeSizes.set(node.id, cached ?? { x: 250, y: 100 });
 						}
 					} else {
-						// First visit to view or non-view structural change:
-						// full DOM measurement pass
-						isMeasuring = true;
-						edges.set([]);
-						const measureNodes = sortFlowNodes(buildFlowNodes(false));
-						nodes.set(measureNodes);
+						// Check if all visible nodes are already in the DOM — if so,
+						// read sizes in-place without hiding the container (no flash).
+						const canMeasureInPlace =
+							containerElement &&
+							visibleNodes.every((n) =>
+								containerElement.querySelector(`[data-id="${n.id}"]`)
+							);
 
-						await tick();
-						await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-						if (isStale()) {
-							isMeasuring = false;
-							return;
-						}
-
-						// Read actual DOM sizes
-						if (containerElement) {
+						if (canMeasureInPlace) {
+							// In-place measurement: read sizes from current DOM elements
+							useInPlaceMeasurement = false;
 							const nodeEls = containerElement.querySelectorAll('.svelte-flow__node');
-							let zeroSizeCount = 0;
 							for (const el of nodeEls) {
 								const id = (el as HTMLElement).dataset.id;
 								if (id) {
 									const htmlEl = el as HTMLElement;
-									const w = htmlEl.offsetWidth || 250;
-									const h = htmlEl.offsetHeight || 100;
-									if (htmlEl.offsetWidth === 0 || htmlEl.offsetHeight === 0) zeroSizeCount++;
-									elementNodeSizes.set(id, { x: w, y: h });
+									elementNodeSizes.set(id, {
+										x: htmlEl.offsetWidth || 250,
+										y: htmlEl.offsetHeight || 100
+									});
 								}
 							}
-							// Log container measurements separately for debugging subcontainer sizing
-							if (layoutGraph) {
-								const containerMeasurements = [...elementNodeSizes.entries()]
-									.filter(([id]) => layoutGraph!.containers.has(id))
-									.map(
-										([id, s]) =>
-											`${id.substring(0, 8)}=${s.x}x${s.y}${layoutGraph!.containers.get(id)?.isSubcontainer ? '(sub)' : ''}`
-									);
-								if (containerMeasurements.length > 0) {
+						} else {
+							// Full measurement pass: hide container, place nodes at origin,
+							// measure DOM, then reveal after ELK completes
+							isMeasuring = true;
+							edges.set([]);
+							const measureNodes = sortFlowNodes(buildFlowNodes(false));
+							nodes.set(measureNodes);
+
+							await tick();
+							await new Promise((r) =>
+								requestAnimationFrame(() => requestAnimationFrame(r))
+							);
+							if (isStale()) {
+								isMeasuring = false;
+								return;
+							}
+
+							if (containerElement) {
+								const nodeEls = containerElement.querySelectorAll('.svelte-flow__node');
+								for (const el of nodeEls) {
+									const id = (el as HTMLElement).dataset.id;
+									if (id) {
+										const htmlEl = el as HTMLElement;
+										elementNodeSizes.set(id, {
+											x: htmlEl.offsetWidth || 250,
+											y: htmlEl.offsetHeight || 100
+										});
+									}
 								}
 							}
 						}
@@ -1332,8 +1346,9 @@ import { useQueryClient } from '@tanstack/svelte-query';
 							nodes.set(fullNodes);
 							edges.set(fullEdges);
 							// Phase 3: trigger ELK re-run for gap compaction.
-							// Invalidate structureKey so next loadTopologyData sees
-							// isNewStructure=true and runs measurement + ELK.
+							// Use in-place measurement (no flash) since all
+							// nodes are already rendered from Phase 1.
+							useInPlaceMeasurement = true;
 							sessionStructureKey = '';
 							void loadTopologyData();
 						}, 350);

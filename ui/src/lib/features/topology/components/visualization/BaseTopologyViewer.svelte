@@ -1385,6 +1385,7 @@ import { useQueryClient } from '@tanstack/svelte-query';
 				// Cache collapsed container sizes after render. Unconstrain
 				// width to read natural content size, then restore. Synchronous
 				// — no paint between write-read-restore.
+				let newCollapsedCacheEntries = 0;
 				if (containerElement && layoutGraph) {
 					const saved = new Map<HTMLElement, { w: string; h: string }>();
 					const nodeEls = containerElement.querySelectorAll('.svelte-flow__node');
@@ -1392,8 +1393,7 @@ import { useQueryClient } from '@tanstack/svelte-query';
 						const htmlEl = el as HTMLElement;
 						const id = htmlEl.dataset.id;
 						if (id && layoutGraph.containers.has(id) && collapsed.has(id)) {
-							const existing = containerSizeCache.get(id);
-							if (!existing?.collapsed) {
+							if (!containerSizeCache.get(id)?.collapsed) {
 								saved.set(htmlEl, { w: htmlEl.style.width, h: htmlEl.style.height });
 								htmlEl.style.width = 'auto';
 								htmlEl.style.height = 'auto';
@@ -1407,35 +1407,34 @@ import { useQueryClient } from '@tanstack/svelte-query';
 						}
 					}
 					if (saved.size > 0) {
-						const newlyCached: string[] = [];
 						for (const el of nodeEls) {
 							const htmlEl = el as HTMLElement;
 							const id = htmlEl.dataset.id;
 							if (id && saved.has(htmlEl)) {
-								const w = htmlEl.offsetWidth || 250;
-								const h = htmlEl.offsetHeight || 100;
 								const entry = containerSizeCache.get(id) ?? {};
-								entry.collapsed = { x: w, y: h };
+								entry.collapsed = {
+									x: htmlEl.offsetWidth || 250,
+									y: htmlEl.offsetHeight || 100
+								};
 								containerSizeCache.set(id, entry);
-								newlyCached.push(`${id.substring(0, 8)}=${w}x${h}`);
+								newCollapsedCacheEntries++;
 							}
 						}
 						for (const [el, { w, h }] of saved) {
 							el.style.width = w;
 							el.style.height = h;
 						}
-						console.log(`[POST-RENDER-CACHE] ${newlyCached.length} collapsed sizes: ${newlyCached.join(', ')}`);
-
-							// Cache was just populated with new collapsed sizes.
-							// Re-run ELK with the now-complete cache for a compact
-							// layout. Uses the fast cache path (no flash).
-							if (!isStale()) {
-								sessionStructureKey = '';
-								await loadTopologyData();
-								return; // the recursive call handled rendering
-							}
-						}
 					}
+				}
+
+				// If new collapsed sizes were just cached, re-run ELK with the
+				// complete cache for a compact layout (no flash).
+				if (newCollapsedCacheEntries > 0 && !isStale()) {
+					sessionStructureKey = '';
+					lastRenderedTopoKey = topoKey;
+					lastRenderedView = currentView;
+					await loadTopologyData();
+					return;
 				}
 
 				const isFirstRender = lastRenderedTopoKey === '';

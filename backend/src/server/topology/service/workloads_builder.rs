@@ -3,14 +3,14 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
-    edge_builder::EdgeBuilder,
     element_rules::{ElementMatchData, apply_element_rules_with_titles},
     view::ViewBuilder,
 };
 use crate::server::{
+    interfaces::r#impl::base::Neighbor,
     services::r#impl::definitions::ServiceDefinitionExt,
     topology::types::{
-        edges::Edge,
+        edges::{DiscoveryProtocol, Edge, EdgeHandle, EdgeType, EdgeViewConfig},
         grouping::GroupingConfig,
         nodes::{ContainerType, ElementEntityType, Node, NodeType},
     },
@@ -259,8 +259,60 @@ impl ViewBuilder for WorkloadsBuilder {
             Some(&virtualizer_titles),
         );
 
-        // Physical link edges between hosts (LLDP/CDP discovered connections)
-        let edges = EdgeBuilder::create_physical_link_edges(ctx);
+        // Physical link edges between host containers (LLDP/CDP discovered connections)
+        // Build inline using host container IDs as source/target, since
+        // create_physical_link_edges uses IP address IDs which don't exist in this view.
+        let mut edges = Vec::new();
+        let mut processed_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
+
+        for source_entry in ctx.get_if_entries_with_neighbor() {
+            let target_interface_id = match &source_entry.base.neighbor {
+                Some(Neighbor::Interface(id)) => *id,
+                _ => continue,
+            };
+
+            let target_entry = match ctx.get_if_entry_by_id(target_interface_id) {
+                Some(e) => e,
+                None => continue,
+            };
+
+            // Skip self-loops (same host)
+            if source_entry.base.host_id == target_entry.base.host_id {
+                continue;
+            }
+
+            // Dedup bidirectional pairs (A→B and B→A are the same physical link)
+            let pair_key = if source_entry.id < target_interface_id {
+                (source_entry.id, target_interface_id)
+            } else {
+                (target_interface_id, source_entry.id)
+            };
+            if !processed_pairs.insert(pair_key) {
+                continue;
+            }
+
+            let label = Some(format!(
+                "{} ↔ {}",
+                source_entry.display_name(),
+                target_entry.display_name()
+            ));
+
+            edges.push(Edge {
+                id: Uuid::new_v4(),
+                source: Self::container_id_for_host(source_entry.base.host_id),
+                target: Self::container_id_for_host(target_entry.base.host_id),
+                edge_type: EdgeType::PhysicalLink {
+                    source_entity_id: source_entry.id,
+                    target_entity_id: target_entry.id,
+                    protocol: DiscoveryProtocol::default(),
+                },
+                label,
+                source_handle: EdgeHandle::Bottom,
+                target_handle: EdgeHandle::Top,
+                is_multi_hop: false,
+                view_config: EdgeViewConfig::default(),
+            });
+        }
 
         (nodes, edges)
     }

@@ -1380,7 +1380,9 @@
 							edges.set(fullEdges);
 						}, 350);
 					}
-					prevCollapsedForAnim = new Set(collapsed);
+					if (!isMeasuring) {
+						prevCollapsedForAnim = new Set(collapsed);
+					}
 				}
 
 				if (!isMeasuring) {

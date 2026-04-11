@@ -754,7 +754,7 @@ function buildElkGraph(
 			const hostB = containerToHost.get(b.id);
 			const countA = hostA ? (appRelevantCountByHost.get(hostA) ?? 0) : 0;
 			const countB = hostB ? (appRelevantCountByHost.get(hostB) ?? 0) : 0;
-			return countB - countA;
+			return countA - countB;
 		});
 	}
 

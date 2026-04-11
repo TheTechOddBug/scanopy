@@ -530,8 +530,6 @@
 				const structureKey =
 					baseKey + ':' + Array.from(collapsed).sort().join(',');
 				const isNewStructure = sessionStructureKey !== structureKey;
-				// Track whether non-collapse parts changed (topology data, view, etc.)
-				// to decide if element size cache should be cleared
 				const isNewBaseStructure = sessionBaseKey !== baseKey;
 
 				// Capture expanded sizes and child positions from the current graph
@@ -735,11 +733,21 @@
 				const isViewTransition = isNewStructure && viewChanged && topologyChanged;
 				const needsElk = isNewStructure || needsElkForExpand;
 
-				// Clear cached sizes only when topology data/view changes, not just
-				// collapse state. Collapse-only changes reuse cached element sizes
-				// so ELK can re-layout without a measurement pass (no flash).
+				// Invalidate cached sizes for containers whose collapse state changed.
+				// Element sizes don't change on collapse, so they stay cached.
+				// Full cache clear only when topology data/view changes.
 				if (isNewBaseStructure) {
 					viewSizeCache.delete(`${currentView}:${topology.id}`);
+				} else if (isNewStructure) {
+					const viewCacheMap = viewSizeCache.get(`${currentView}:${topology.id}`);
+					if (viewCacheMap) {
+						for (const c of layoutGraph?.containers.values() ?? []) {
+							const shouldBeCollapsed = collapsed.has(c.id);
+							if (c.collapsed !== shouldBeCollapsed) {
+								viewCacheMap.delete(c.id);
+							}
+						}
+					}
 				}
 				console.log(
 					`[LAYOUT-DEBUG] Layout decision: needsElk=${needsElk} isNewStructure=${isNewStructure} needsElkForExpand=${needsElkForExpand} deferCollapse=${deferCollapse} collapseChanged=${collapseChanged} collapsed=${collapsed.size}`
@@ -749,15 +757,18 @@
 					// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local variable, not reactive state
 					const elementNodeSizes = new Map<string, { x: number; y: number }>();
 					const viewCacheKey = `${currentView}:${topology.id}`;
-					// Use cached element sizes when only collapse state changed (no need
-					// to re-measure DOM), on view transitions, or for expand-after-autocollapse.
+					// Use cached sizes when only collapse changed (element sizes are
+					// still valid; container entries were already invalidated above).
 					const collapseOnlyCachedSizes =
-						isNewStructure && !isNewBaseStructure ? viewSizeCache.get(viewCacheKey) : undefined;
+						isNewStructure && !isNewBaseStructure
+							? viewSizeCache.get(viewCacheKey)
+							: undefined;
 					const cachedSizes = isViewTransition ? viewSizeCache.get(viewCacheKey) : undefined;
 					const expandCachedSizes =
 						needsElkForExpand && !isNewStructure ? viewSizeCache.get(viewCacheKey) : undefined;
 					if (collapseOnlyCachedSizes) {
-						// Collapse-only re-layout: element sizes haven't changed
+						// Collapse-only re-layout: element sizes are cached, containers
+						// whose state changed were invalidated and fall to metadata defaults
 						for (const node of visibleNodes) {
 							const cached = collapseOnlyCachedSizes.get(node.id);
 							elementNodeSizes.set(node.id, cached ?? { x: 250, y: 100 });

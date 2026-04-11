@@ -1,127 +1,126 @@
 var TEST_PLANS = [
 {
-  "branch": "feat/compute-perspective",
+  "branch": "fix/layout-debug-harness",
+  "tests": []
+}
+,
+{
+  "branch": "fix/dynamic-spacing-animation",
   "tests": [
     {
-      "id": "workloads-bare-metal-host",
-      "category": "Workloads Perspective",
-      "description": "Bare metal host with services shows as container with service elements",
+      "id": "collapse-root-reduces-gaps",
+      "category": "Gap Reduction",
+      "description": "Collapsing root containers reduces gaps between them",
       "steps": [
-        "Navigate to the topology view",
-        "Switch to the Workloads perspective",
-        "Find a bare metal host (no virtualization) that has services"
+        "Open the topology view with multiple root containers expanded",
+        "Note the spacing between containers",
+        "Collapse one root container using the chevron icon",
+        "Observe the spacing between containers after collapse"
       ],
-      "setup": "Ensure at least one host exists with non-virtualization services (e.g., Samba, NFS) and no hypervisor or Docker daemon.",
-      "expected": "Host appears as a container (external title style). Services appear as elements directly inside the host container. No sub-containers.",
+      "setup": "Ensure the topology has at least 3 root containers with varying sizes, some containing many hosts.",
+      "expected": "After collapsing, the collapsed container should be compact and gaps between containers should be proportional to the collapsed size, not the previous expanded size.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-docker-host",
-      "category": "Workloads Perspective",
-      "description": "Docker host shows Docker sub-container with container elements",
+      "id": "collapse-subcontainer-reduces-gaps",
+      "category": "Gap Reduction",
+      "description": "Collapsing subcontainers reduces gaps within parent container",
       "steps": [
-        "Navigate to the topology view",
-        "Switch to the Workloads perspective",
-        "Find a host running Docker with containers"
+        "Open the topology view with an expanded root container containing multiple subcontainers",
+        "Collapse one subcontainer",
+        "Observe the parent container size and sibling positions"
       ],
-      "setup": "Ensure at least one host exists with a Docker daemon service and Docker containers discovered.",
-      "expected": "Host appears as a container. Inside it, a 'Docker' Virtualizer sub-container (inline title style) contains the Docker container services as elements.",
+      "setup": "Ensure the topology has a root container with at least 2 subcontainers, each containing multiple hosts.",
+      "expected": "After collapsing a subcontainer, the parent container should shrink both vertically and horizontally (if the collapsed subcontainer was the widest). Siblings below should shift up to fill the gap.",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-proxmox-hypervisor",
-      "category": "Workloads Perspective",
-      "description": "Proxmox hypervisor shows VMs inside Virtualizer sub-container",
+      "id": "expand-no-overlap",
+      "category": "Gap Reduction",
+      "description": "Expanding a collapsed container does not cause overlap",
       "steps": [
-        "Navigate to the topology view",
-        "Switch to the Workloads perspective",
-        "Find a Proxmox hypervisor host"
+        "From the collapsed state (after previous tests), expand the previously collapsed root container",
+        "Verify no containers overlap each other"
       ],
-      "setup": "Ensure at least one host exists with a Proxmox VE service and VMs (hosts with HostVirtualization::Proxmox) assigned to it.",
-      "expected": "Hypervisor host appears as a container. Inside it, a 'Proxmox VE' Virtualizer sub-container contains the VMs as Host{} elements.",
+      "expected": "The expanded container should grow to its full size and the layout should recompute correctly with no overlapping containers.",
       "flow": "setup",
       "sequence": 3,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-vm-not-container",
-      "category": "Workloads Perspective",
-      "description": "VMs do not appear as their own containers",
+      "id": "collapse-animates-smoothly",
+      "category": "Animation",
+      "description": "Container collapse animates size and position changes",
       "steps": [
-        "Navigate to the topology view",
-        "Switch to the Workloads perspective",
-        "Verify VM hosts only appear as elements inside their hypervisor"
+        "Open the topology view with containers expanded",
+        "Collapse a container and watch carefully for animation"
       ],
-      "setup": "Ensure at least one Proxmox VM exists that also has services running on it.",
-      "expected": "The VM appears only as an element inside the hypervisor's Proxmox sub-container. It does NOT appear as a separate top-level Host container.",
+      "expected": "The container should shrink smoothly over ~300ms (not snap instantly). Sibling containers should slide into new positions smoothly.",
       "flow": "setup",
       "sequence": 4,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-no-edges",
-      "category": "Workloads Perspective",
-      "description": "No edges are drawn in the Workloads perspective",
+      "id": "expand-animates-smoothly",
+      "category": "Animation",
+      "description": "Container expand animates size and position changes",
       "steps": [
-        "Navigate to the topology view",
-        "Switch to the Workloads perspective",
-        "Observe the canvas"
+        "From a state with collapsed containers, expand one container",
+        "Watch carefully for animation"
       ],
-      "expected": "No edges (lines) are drawn between any elements or containers. The nesting/containment is the only structural information.",
+      "expected": "The container should grow smoothly over ~300ms. Sibling containers should slide to make room smoothly.",
       "flow": "setup",
       "sequence": 5,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-perspective-name-icon",
-      "category": "Workloads Perspective",
-      "description": "Perspective shows correct name, icon, and color",
+      "id": "view-switch-no-animation",
+      "category": "Animation",
+      "description": "Switching views does not trigger collapse/expand animation",
       "steps": [
-        "Open the perspective switcher in the topology view",
-        "Find the Workloads perspective"
+        "Open the topology view",
+        "Switch to a different view (e.g., from Application to Infrastructure)",
+        "Observe the layout transition"
       ],
-      "expected": "Perspective is named 'Workloads' with Amber color and Boxes icon.",
+      "expected": "The layout should update without the 300ms collapse/expand animation. Nodes should snap to new positions immediately (no sliding/resizing transitions).",
       "flow": "setup",
       "sequence": 6,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-inspector-element",
-      "category": "Workloads Perspective",
-      "description": "Inspector panel shows correct sections for selected element",
+      "id": "collapse-level-stepper-animates",
+      "category": "Animation",
+      "description": "Using the collapse level stepper triggers animation",
       "steps": [
-        "Switch to Workloads perspective",
-        "Click on a workload element (VM or service)"
+        "Open the topology view at full expand (level 4)",
+        "Step down to level 1 (all collapsed) using the collapse stepper",
+        "Step back up to level 2"
       ],
-      "setup": "Ensure hosts with services exist.",
-      "expected": "Inspector panel shows: Identity, Host Detail, Virtualization, Services, Other Interfaces, Tags sections.",
+      "expected": "Each level change should animate the container size and position changes smoothly.",
       "flow": "setup",
       "sequence": 7,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-empty-host",
-      "category": "Workloads Perspective",
-      "description": "Host with no services still appears as container",
+      "id": "rapid-collapse-expand-stable",
+      "category": "Edge Cases",
+      "description": "Rapid collapse/expand does not break layout",
       "steps": [
-        "Switch to Workloads perspective",
-        "Find a host that has no services"
+        "Rapidly click collapse/expand on a container several times in quick succession",
+        "Wait for animations to settle"
       ],
-      "setup": "Ensure at least one host exists with no services discovered on it.",
-      "expected": "Host appears as an empty container.",
-      "flow": "setup",
-      "sequence": 8,
+      "expected": "The final state should be correct (collapsed or expanded based on final click). No visual glitches, stuck animations, or layout corruption.",
       "status": null,
       "feedback": null
     }
@@ -129,120 +128,58 @@ var TEST_PLANS = [
 }
 ,
 {
-  "branch": "refactor/entity-naming",
+  "branch": "refactor/physical-link-fields",
   "tests": [
     {
-      "id": "host-ip-addresses-tab",
-      "category": "IP Address Management",
-      "description": "Verify IP Addresses tab works in host editor",
+      "id": "physical-link-inspector-details",
+      "category": "PhysicalLink Inspector",
+      "description": "Verify PhysicalLink edge inspector shows correct port details after field rename",
       "steps": [
-        "Open a host with IP addresses in the edit modal",
-        "Navigate to the 'IP Addresses' tab",
-        "Verify IP addresses are listed with correct data",
-        "Select an IP address to view its config panel"
-      ],
-      "expected": "IP addresses display correctly with subnet, IP, MAC data. Tab is labeled 'IP Addresses'.",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "host-interfaces-tab",
-      "category": "Interface Management",
-      "description": "Verify Interfaces tab (SNMP data) works in host editor",
-      "steps": [
-        "Open a host that has SNMP interface data in the edit modal",
-        "Navigate to the 'Interfaces' tab (only visible for existing hosts)",
-        "Verify SNMP interfaces are listed with if_descr, status, MAC",
-        "Select an interface to view its details card"
-      ],
-      "setup": "Ensure at least one host has SNMP interface data (run an SNMP discovery scan).",
-      "expected": "SNMP interfaces display correctly with operational status, speed, LLDP/CDP neighbor data. Tab is labeled 'Interfaces'.",
-      "flow": "setup",
-      "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "topology-l2-interfaces",
-      "category": "Topology Visualization",
-      "description": "Verify L2 Physical view shows Interface elements (was Port/IfEntry)",
-      "steps": [
-        "Navigate to topology view",
+        "Open the topology view",
         "Switch to L2 Physical perspective",
-        "Click on a physical link between two devices",
-        "Verify the inspector shows interface details"
+        "Click on a PhysicalLink edge (cable between two hosts)",
+        "Verify the inspector panel shows source host, source interface, target host, and target interface details",
+        "Verify the protocol tag (LLDP/CDP) is displayed"
       ],
-      "setup": "Ensure SNMP discovery has run and L2 physical links exist.",
-      "expected": "L2 view shows Interface elements with correct SNMP data. Inspector displays interface details card.",
+      "setup": "Ensure at least two hosts with SNMP interfaces have LLDP/CDP neighbor discovery data creating a physical link between them.",
+      "expected": "The inspector panel should display the correct host and interface details for both ends of the physical link, with the discovery protocol tag shown.",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "physical-link-aggregated-edge",
+      "category": "PhysicalLink Inspector",
+      "description": "Verify aggregated PhysicalLink edges display correctly",
+      "steps": [
+        "Open the topology view",
+        "Switch to L3 Logical perspective where PhysicalLink edges may be aggregated",
+        "Click on an aggregated edge that contains PhysicalLink sub-edges",
+        "Expand the PhysicalLink section in the aggregated edge inspector",
+        "Verify each PhysicalLink sub-edge shows the correct host names in its label (e.g. 'HostA <-> HostB')"
+      ],
+      "setup": "Ensure at least two hosts with multiple physical links between them exist, so edges aggregate in the L3 view.",
+      "expected": "Each PhysicalLink sub-edge in the aggregated display should show correct host-to-host labels derived from the interface/entity data.",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "physical-link-cross-view-consistency",
+      "category": "PhysicalLink Inspector",
+      "description": "Verify PhysicalLink inspector works across different topology perspectives",
+      "steps": [
+        "Open the topology view in L2 Physical perspective",
+        "Click a PhysicalLink edge and note the source/target interface details",
+        "Switch to Workloads perspective",
+        "If the same PhysicalLink edge is visible, click it and verify the same interface details appear",
+        "Switch to L3 Logical perspective and check if PhysicalLink edges (if visible) show correct details"
+      ],
+      "expected": "The PhysicalLink edge inspector should show the same entity details regardless of which perspective/view the edge appears in.",
       "flow": "setup",
       "sequence": 3,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "topology-l3-ip-addresses",
-      "category": "Topology Visualization",
-      "description": "Verify L3 Logical view shows IPAddress elements (was Interface)",
-      "steps": [
-        "Navigate to topology view",
-        "Switch to L3 Logical perspective",
-        "Click on a host's IP address element in the topology",
-        "Verify the inspector shows IP address details"
-      ],
-      "expected": "L3 view shows IPAddress elements correctly grouped by subnet. Inspector shows IP address data.",
-      "flow": "setup",
-      "sequence": 4,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "service-bindings-ip-address",
-      "category": "Service Bindings",
-      "description": "Verify service bindings reference IP addresses correctly",
-      "steps": [
-        "Open a service that has IP address bindings",
-        "Verify binding displays show 'IP Address' type correctly",
-        "Edit a binding and verify the IP address selector works",
-        "Verify 'All IP Addresses' option works for port bindings"
-      ],
-      "expected": "Bindings display and edit correctly with IPAddress terminology.",
-      "flow": "setup",
-      "sequence": 5,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "host-card-display",
-      "category": "Host Display",
-      "description": "Verify host cards show both IP Addresses and Interfaces sections",
-      "steps": [
-        "Navigate to the hosts list",
-        "Find a host with both IP addresses and SNMP interfaces",
-        "Expand the host card",
-        "Verify separate 'IP Addresses' and 'Interfaces' sections exist"
-      ],
-      "setup": "Ensure at least one host has both IP addresses and SNMP interface data.",
-      "expected": "Host card shows IP Addresses section with IPs and Interfaces section with SNMP data. Both sections are separate.",
-      "flow": "setup",
-      "sequence": 6,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "api-paths-correct",
-      "category": "API",
-      "description": "Verify API paths are renamed correctly",
-      "steps": [
-        "Open browser dev tools network tab",
-        "Navigate through the app to trigger API calls",
-        "Verify /api/v1/ip-addresses is called for IP address data",
-        "Verify /api/v1/interfaces is called for SNMP interface data"
-      ],
-      "expected": "API calls use the new paths. No 404s from old paths.",
-      "flow": "setup",
-      "sequence": 7,
       "status": null,
       "feedback": null
     }
@@ -250,127 +187,376 @@ var TEST_PLANS = [
 }
 ,
 {
-  "branch": "fix/topology-view-persist",
-  "tests": []
-}
-,
-{
-  "branch": "feat/app-irrelevant-category-group",
-  "tests": []
-}
-,
-{
-  "branch": "refactor/color-icon-compute",
+  "branch": "fix/workloads-container-sort",
   "tests": [
     {
-      "id": "compute-perspective-tab",
-      "category": "Perspective Rename",
-      "description": "Verify the Infrastructure perspective is now labeled 'Compute' in the topology view selector",
+      "id": "workloads-sort-by-count",
+      "category": "Workloads Container Sorting",
+      "description": "Containers are sorted by workload count (most workloads first)",
+      "steps": [
+        "Navigate to Topology > Workloads view",
+        "Observe the container order"
+      ],
+      "setup": "Ensure at least 3 hosts exist with different numbers of services: one with 5+ services, one with 2-3, and one with 1. All hosts should be on the default network.",
+      "expected": "Containers appear sorted with the host having the most workloads (services, VMs, containers) first, and the host with fewest workloads last.",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "workloads-sort-stable-expand",
+      "category": "Workloads Container Sorting",
+      "description": "Container order stays consistent when expanding collapse levels",
+      "steps": [
+        "Navigate to Topology > Workloads view at collapse level 1 (fully collapsed)",
+        "Note the container order",
+        "Expand to collapse level 2",
+        "Verify container order is the same",
+        "Expand to collapse level 3 (fully expanded)",
+        "Verify container order is still the same"
+      ],
+      "setup": "Ensure at least 3 hosts exist with different numbers of services.",
+      "expected": "Containers remain in the same relative positions at all collapse levels. They get bigger when expanded but do not rearrange.",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "workloads-sort-collapse-toggle",
+      "category": "Workloads Container Sorting",
+      "description": "Expanding and collapsing individual containers doesn't rearrange others",
+      "steps": [
+        "Navigate to Topology > Workloads view",
+        "Note the container order",
+        "Click to expand the first container",
+        "Verify other containers didn't move relative to each other",
+        "Collapse it back",
+        "Verify order is restored"
+      ],
+      "expected": "Expanding/collapsing a single container does not change the relative order of other containers.",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "workloads-sort-equal-count-alpha",
+      "category": "Workloads Container Sorting",
+      "description": "Hosts with equal workload counts are sorted alphabetically",
+      "steps": [
+        "Navigate to Topology > Workloads view",
+        "Look at hosts that have the same number of workloads"
+      ],
+      "setup": "Create 2+ hosts with the same number of services (e.g., 2 services each). Give them names that sort clearly (e.g., 'alpha-host' and 'zulu-host').",
+      "expected": "Hosts with equal workload counts appear in alphabetical order by name.",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    }
+  ]
+}
+,
+{
+  "branch": "feat/license-keys",
+  "tests": [
+    {
+      "id": "community-build-no-key",
+      "category": "License Validation",
+      "description": "Community build runs normally without a license key",
+      "steps": [
+        "Start the server without the 'commercial' feature flag and without SCANOPY_LICENSE_KEY",
+        "Log in and navigate around the app",
+        "Create a host, edit it, delete it"
+      ],
+      "setup": "Build the server without --features commercial. Do not set SCANOPY_LICENSE_KEY env var.",
+      "expected": "Server starts with 'License: not required (community)' in startup log. All operations work normally. No license banner visible.",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "commercial-valid-key",
+      "category": "License Validation",
+      "description": "Commercial build with valid license key operates normally",
+      "steps": [
+        "Start the server with commercial feature and a valid license key",
+        "Log in and navigate around the app",
+        "Create a host, edit it, delete it"
+      ],
+      "setup": "Build with --features commercial. Generate a valid key: SCANOPY_LICENSE_SIGNING_KEY='<private_key>' cargo run --bin license -- create --days 365. Set SCANOPY_LICENSE_KEY to the output.",
+      "expected": "Server starts with 'License: valid (expires YYYY-MM-DD)' in startup log. All operations work normally. No license banner visible.",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "commercial-no-key-locked",
+      "category": "License Locked State",
+      "description": "Commercial build without license key enters read-only mode",
+      "steps": [
+        "Start the server with commercial feature but no SCANOPY_LICENSE_KEY",
+        "Log in and navigate around the app",
+        "Attempt to create a host",
+        "Attempt to edit an existing host",
+        "Verify the license banner is visible"
+      ],
+      "setup": "Build with --features commercial. Do not set SCANOPY_LICENSE_KEY.",
+      "expected": "Server starts with 'License: INVALID (No license key provided)' in startup log. Read operations work (can view pages). Mutation attempts fail with 403 'license_locked' error. Red license banner appears at top of page.",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "commercial-expired-key-locked",
+      "category": "License Locked State",
+      "description": "Commercial build with expired license key enters read-only mode",
+      "steps": [
+        "Start the server with an expired license key",
+        "Log in and navigate around the app",
+        "Attempt to create a host",
+        "Verify the expired license banner is visible"
+      ],
+      "setup": "Build with --features commercial. Generate an expired key: SCANOPY_LICENSE_SIGNING_KEY='<private_key>' cargo run --bin license -- create --days 0. Set SCANOPY_LICENSE_KEY to the output.",
+      "expected": "Server starts with 'License: EXPIRED' warning. Reads work, mutations fail with 403. Red banner says 'Your Scanopy license has expired.'",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "commercial-invalid-key-locked",
+      "category": "License Locked State",
+      "description": "Commercial build with garbage license key enters read-only mode",
+      "steps": [
+        "Start the server with SCANOPY_LICENSE_KEY set to 'not-a-real-key'",
+        "Log in and navigate around the app",
+        "Attempt to create a host"
+      ],
+      "setup": "Build with --features commercial. Set SCANOPY_LICENSE_KEY=not-a-real-key.",
+      "expected": "Server starts with 'License: INVALID' error. Reads work, mutations fail with 403. Red banner says 'Your Scanopy license key is invalid.'",
+      "flow": "setup",
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "locked-auth-still-works",
+      "category": "License Locked State",
+      "description": "Authentication endpoints work in locked state",
+      "steps": [
+        "Start the server in locked state (no key, commercial build)",
+        "Navigate to login page",
+        "Log in with valid credentials",
+        "Log out",
+        "Log in again"
+      ],
+      "setup": "Build with --features commercial. Do not set SCANOPY_LICENSE_KEY.",
+      "expected": "Login, logout, and re-login all work normally despite locked state.",
+      "flow": "setup",
+      "sequence": 6,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "existing-banners-unchanged",
+      "category": "Banner Refactor",
+      "description": "Demo and email verification banners still render correctly after refactor",
+      "steps": [
+        "Log into the demo instance",
+        "Verify the demo banner appears (blue, with Rocket icon and 'Create Account' link)",
+        "Log into an account with unverified email",
+        "Verify the email verification banner appears (yellow, with 'Resend' button)"
+      ],
+      "expected": "Both banners render identically to before — same colors, icons, text, and interactive elements.",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "license-cli-create-verify",
+      "category": "License CLI",
+      "description": "CLI can create and verify license keys",
+      "steps": [
+        "Run license create command with private key",
+        "Run license verify command with the output",
+        "Run license verify with a garbage key"
+      ],
+      "setup": "Export SCANOPY_LICENSE_SIGNING_KEY with the private key PEM content.",
+      "expected": "Create outputs a JWT and prints expiry to stderr. Verify shows VALID with correct dates. Garbage key shows INVALID.",
+      "status": null,
+      "feedback": null
+    }
+  ]
+}
+,
+{
+  "branch": "fix/application-layout-density",
+  "tests": [
+    {
+      "id": "application-disconnected-density",
+      "category": "Application View Layout",
+      "description": "Disconnected containers pack densely in Application view",
+      "steps": [
+        "Navigate to the Application perspective in Topology",
+        "Observe containers that have no dependency edges to other containers (e.g., 'DevOps Pipeline', 'Messaging')",
+        "Verify these small containers are packed beside other containers, not floating in their own row with large vertical gaps"
+      ],
+      "expected": "Disconnected containers are positioned adjacent to or beside connected containers, not stacked far below with wasted vertical space",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "application-connected-layout-preserved",
+      "category": "Application View Layout",
+      "description": "Connected containers still maintain dependency-driven layering",
+      "steps": [
+        "Navigate to the Application perspective in Topology",
+        "Find containers that have dependency edges between them",
+        "Verify that connected containers are still laid out in layers (source above target) as expected"
+      ],
+      "expected": "Containers with dependency edges maintain their layered top-to-bottom ordering",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "l3-layout-no-regression",
+      "category": "L3 View Regression",
+      "description": "L3 (Network) view layout is unchanged",
+      "steps": [
+        "Switch to the L3 / Network perspective in Topology",
+        "Verify subnets are still layered by type (Internet/Remote at top, LAN/WiFi in middle, Docker/Management at bottom)"
+      ],
+      "expected": "L3 subnet ordering matches previous behavior — no visual change",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "workloads-layout-no-regression",
+      "category": "Workloads View Regression",
+      "description": "Workloads view layout is unchanged",
+      "steps": [
+        "Switch to the Workloads perspective in Topology",
+        "Verify containers are still packed in a grid with highest-workload containers in the top-left"
+      ],
+      "expected": "Workloads layout matches previous behavior — no visual change",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "l2-layout-no-regression",
+      "category": "L2 View Regression",
+      "description": "L2 Physical view layout is unchanged",
+      "steps": [
+        "Switch to the L2 Physical perspective in Topology",
+        "Verify hosts are arranged horizontally with port-based crossing minimization"
+      ],
+      "expected": "L2 Physical layout matches previous behavior — no visual change",
+      "flow": "setup",
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    }
+  ]
+}
+,
+{
+  "branch": "fix/demo-data-fixes",
+  "tests": [
+    {
+      "id": "service-definitions-no-fake",
+      "category": "Service Definitions",
+      "description": "Verify no fake service definitions are used in demo data",
+      "steps": [
+        "Create a new demo organization",
+        "Navigate to the Services page",
+        "Look for any service named 'Web Application'",
+        "Verify app servers show 'Tomcat' as their service definition"
+      ],
+      "setup": "Create a demo organization via the organization creation flow (select 'Use demo data').",
+      "expected": "No 'Web Application' services exist. App servers show 'Tomcat' with the correct Tomcat logo.",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "mac-addresses-on-ips",
+      "category": "MAC Addresses",
+      "description": "Verify IP addresses have MAC addresses populated",
+      "steps": [
+        "Navigate to Hosts page in the demo organization",
+        "Click on a server host (e.g., 'proxmox-hv01')",
+        "Check the IP address details for a MAC address",
+        "Repeat for a network device (e.g., 'pfsense-fw01') and an IoT device (e.g., 'hue-bridge')"
+      ],
+      "expected": "Each IP address shows a MAC address. Servers show Dell OUI (f8:bc:12), network gear shows manufacturer OUI, IoT shows device-specific OUI.",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "mac-addresses-on-interfaces",
+      "category": "MAC Addresses",
+      "description": "Verify SNMP interfaces have MAC addresses populated",
+      "steps": [
+        "Navigate to a host with SNMP interfaces (e.g., 'pfsense-fw01')",
+        "View the interfaces tab/section",
+        "Check that interfaces show MAC addresses",
+        "Verify the loopback interface on 'proxmox-hv01' does NOT show a MAC"
+      ],
+      "expected": "Physical interfaces show MAC addresses. Loopback interface correctly shows no MAC.",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "app-groups-reduced-ungrouped",
+      "category": "Application Groups",
+      "description": "Verify most app-relevant services are in application groups",
       "steps": [
         "Navigate to the Topology page",
-        "Open the perspective/view selector dropdown"
+        "Switch to the Application perspective",
+        "Check the 'Ungrouped' section",
+        "Verify 'Storage' and 'Messaging' app groups appear",
+        "Check that TrueNAS, MinIO, Ceph are in 'Storage'",
+        "Check that RabbitMQ, mailcow are in 'Messaging'",
+        "Check that Vaultwarden is in 'DevOps Pipeline'"
       ],
-      "expected": "The tab formerly labeled 'Infrastructure' now shows 'Compute' with a CPU icon and orange color",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "compute-perspective-loads",
-      "category": "Perspective Rename",
-      "description": "Verify the Compute perspective loads and displays hosts correctly",
-      "steps": [
-        "Select the 'Compute' perspective in the topology view selector",
-        "Observe the topology view"
-      ],
-      "setup": "Ensure at least 2 hosts exist with services on the default network",
-      "expected": "Hosts appear as elements in the Compute view with their services shown inline. Layout renders without errors.",
-      "flow": "setup",
-      "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "entity-colors-l3",
-      "category": "Entity Colors",
-      "description": "Verify updated entity colors in L3 Logical view",
-      "steps": [
-        "Navigate to Topology > L3 Logical view",
-        "Observe the IP address nodes, subnet containers, and service badges"
-      ],
-      "setup": "Ensure hosts with services exist across at least 2 subnets",
-      "expected": "IP address nodes use blue color, subnet containers use indigo, service badges use fuchsia. Port badges (if visible) use sky blue.",
-      "flow": "setup",
-      "sequence": 3,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "entity-colors-host-amber",
-      "category": "Entity Colors",
-      "description": "Verify Host entities use amber color consistently",
-      "steps": [
-        "Open the Compute perspective",
-        "Note the host element color",
-        "Switch to L3 Logical and observe host container color"
-      ],
-      "expected": "Hosts display in amber color in both Compute (as elements) and L3 (as containers/parent entities)",
+      "expected": "Storage and Messaging groups visible with correct members. Ungrouped only contains infrastructure-adjacent services (Proxmox VE, Docker, OpenVPN). Vaultwarden appears under DevOps Pipeline.",
       "flow": "setup",
       "sequence": 4,
       "status": null,
       "feedback": null
     },
     {
-      "id": "workloads-tab-visible",
-      "category": "Host Modal",
-      "description": "Verify the host modal Virtualization tab is renamed to Workloads",
+      "id": "dependencies-app-relevant-only",
+      "category": "Dependencies",
+      "description": "Verify dependencies only connect application-relevant services",
       "steps": [
-        "Open an existing host in the host editor modal",
-        "Look at the tab navigation"
+        "Navigate to the Topology page, Application perspective",
+        "Locate the 'Reverse Proxy Path' dependency (Traefik → Gitea)",
+        "Verify pfSense is NOT part of any dependency",
+        "Locate the 'Backup Flow' dependency (Proxmox VE → TrueNAS)",
+        "Verify it still exists and connects correctly"
       ],
-      "setup": "Ensure at least one host exists with a Docker or Proxmox service",
-      "expected": "The tab formerly labeled 'Virtualization' now shows 'Workloads' with a Boxes icon",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "workloads-tab-functional",
-      "category": "Host Modal",
-      "description": "Verify the Workloads tab still shows virtualization manager services",
-      "steps": [
-        "Open an existing host with Docker services in the host editor",
-        "Click the 'Workloads' tab",
-        "Observe the virtualization manager list"
-      ],
-      "setup": "Ensure a host exists with a Docker service managing containers",
-      "expected": "The Workloads tab displays Docker service managers and their containers, identical functionality to the old Virtualization tab",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "concept-colors-in-grouping",
-      "category": "Topology Grouping",
-      "description": "Verify concept colors appear correctly on grouping rule badges",
-      "steps": [
-        "Open Topology > Compute perspective",
-        "Open the grouping rules panel",
-        "Observe the ByVirtualizer rule badge color"
-      ],
-      "expected": "ByVirtualizer rule badge uses orange color (Compute concept color), ByStack rule badge uses fuchsia (Containerization concept color)",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "vlan-color-in-l2",
-      "category": "Entity Colors",
-      "description": "Verify VLAN entities use violet color in L2 Physical view",
-      "steps": [
-        "Navigate to Topology > L2 Physical view",
-        "Observe VLAN-related containers or badges if present"
-      ],
-      "setup": "Ensure hosts with VLAN-tagged interfaces exist",
-      "expected": "VLAN elements display in violet color with CircleDashed icon",
+      "expected": "'Reverse Proxy Path' shows Traefik → Gitea (no pfSense). 'Backup Flow' (Proxmox VE → TrueNAS) still present. No dependency includes infrastructure-only services like SSH, SNMP, or pfSense.",
+      "flow": "setup",
+      "sequence": 5,
       "status": null,
       "feedback": null
     }
@@ -378,106 +564,137 @@ var TEST_PLANS = [
 }
 ,
 {
-  "branch": "refactor/shares-modal",
-  "tests": []
-}
-,
-{
-  "branch": "feat/vlan-entity",
-  "tests": []
-}
-,
-{
-  "branch": "fix/topo-visual-consistency",
-  "tests": []
-}
-,
-{
-  "branch": "fix/subcontainer-expand-sizing",
+  "branch": "feat/workloads-dependencies",
   "tests": [
     {
-      "id": "collapsed-default-width",
-      "category": "Collapsed Subcontainer Sizing",
-      "description": "Collapsed-by-default subcontainers show correct width matching their content",
+      "id": "workloads-create-dependency-multiselect",
+      "category": "Dependency Creation",
+      "description": "Create a dependency via multi-select in Workloads view",
       "steps": [
-        "Navigate to the topology page",
-        "Select L2 Physical view for a network with hosts that have both Up and Down ports",
-        "Observe the 'Down' subcontainer (collapsed by default)"
+        "Navigate to the Workloads topology view",
+        "Multi-select two or more host containers",
+        "In the inspector panel, enter a dependency name and select RequestPath type",
+        "Click Create to create the dependency"
       ],
-      "setup": "Ensure at least one host has multiple Down ports (10+) so the expanded width would be significantly wider than the default 250px collapsed_size.",
-      "expected": "The collapsed 'Down' subcontainer should be approximately the same width as the 'Up' subcontainer (matching the width its children would occupy when expanded), not a narrow 250px box.",
+      "setup": "Ensure at least 3 hosts exist on the network, each with at least one service.",
+      "expected": "Dependency is created successfully. Dependency edges appear automatically connecting the selected host containers with dashed lines.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "expand-collapsed-default-layout",
-      "category": "Collapsed Subcontainer Sizing",
-      "description": "Expanding a collapsed-by-default subcontainer lays out children in a grid",
+      "id": "workloads-dependency-edges-hidden-by-default",
+      "category": "Edge Visibility",
+      "description": "Dependency edges are hidden by default in Workloads view",
       "steps": [
-        "From the previous test state, click to expand the 'Down' subcontainer"
+        "Navigate to the Workloads topology view (fresh load or switch away and back)",
+        "Open the edge visibility options panel",
+        "Check the state of RequestPath and HubAndSpoke edge type toggles"
       ],
-      "expected": "Child port elements should be laid out in a proper grid/box layout (matching how ELK would arrange them), not piled up on top of each other or in a single narrow column.",
+      "setup": "Create at least one dependency that spans hosts visible in Workloads view.",
+      "expected": "RequestPath and HubAndSpoke edge types appear in the options but are toggled off (hidden) by default. No dependency edges are visible on the canvas.",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "expand-after-page-refresh",
-      "category": "Collapsed Subcontainer Sizing",
-      "description": "Expanding works correctly after page refresh with localStorage-persisted collapse state",
+      "id": "workloads-dependency-auto-show-on-create",
+      "category": "Edge Visibility",
+      "description": "Creating a dependency auto-shows dependency edges",
       "steps": [
-        "In L2 Physical view, observe the 'Down' subcontainer is collapsed",
-        "Refresh the page (F5)",
-        "After page loads, click to expand the 'Down' subcontainer"
+        "Navigate to the Workloads topology view",
+        "Verify dependency edges are hidden (check options panel)",
+        "Multi-select hosts and create a new dependency",
+        "Check the edge visibility options panel after creation"
       ],
-      "setup": "Ensure the collapsed state is persisted to localStorage from a prior session.",
-      "expected": "Child port elements should be laid out in a proper grid, same as a fresh expand. ELK should re-run for the expand since it never computed expanded layout.",
+      "setup": "Ensure at least 2 hosts with services exist.",
+      "expected": "After creating the dependency, RequestPath/HubAndSpoke edges become visible automatically without manual toggle.",
       "flow": "setup",
-      "sequence": 1,
+      "sequence": 3,
       "status": null,
       "feedback": null
     },
     {
-      "id": "normal-collapse-expand-cycle",
-      "category": "Collapse/Expand Regression",
-      "description": "Normal collapse/expand cycle continues to work correctly",
+      "id": "workloads-dependency-edges-connect-hosts",
+      "category": "Edge Routing",
+      "description": "Dependency edges connect host containers, not IP addresses or services",
       "steps": [
-        "In the topology view, manually collapse an expanded container (e.g., a subnet)",
-        "Expand the same container again"
+        "Navigate to the Workloads topology view with visible dependency edges",
+        "Inspect the dependency edge endpoints visually"
       ],
-      "expected": "Container collapses to its collapsed representation and re-expands to show all children with correct layout — no regressions from the fix.",
+      "setup": "Create a dependency between services on different hosts. Toggle dependency edges visible.",
+      "expected": "Dependency edges connect at the host container level, not individual service elements or IP addresses within the containers.",
+      "flow": "setup",
+      "sequence": 4,
       "status": null,
       "feedback": null
     },
     {
-      "id": "expand-after-data-refresh",
-      "category": "Collapsed Subcontainer Sizing",
-      "description": "Expanding a collapsed-by-default subcontainer works after topology data refresh",
+      "id": "workloads-hub-and-spoke-dependency",
+      "category": "Dependency Creation",
+      "description": "Create a Hub and Spoke dependency in Workloads view",
       "steps": [
-        "Navigate to L2 Physical view with Down ports",
-        "Wait for a topology data refresh (or trigger a discovery scan)",
-        "Click to expand the 'Down' subcontainer"
+        "Navigate to the Workloads topology view",
+        "Multi-select three or more host containers",
+        "Create a HubAndSpoke dependency with the first selected as hub"
       ],
-      "setup": "Ensure topology polling or a manual refresh triggers a data reload while the Down subcontainer is still collapsed.",
-      "expected": "Children should be laid out correctly in a grid, not piled up. The expanded width should be correct.",
+      "setup": "Ensure at least 3 hosts with services exist on the network.",
+      "expected": "Hub and Spoke dependency is created. Edges radiate from the hub host container to each spoke host container.",
       "flow": "setup",
-      "sequence": 1,
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "workloads-dependency-same-host-dedup",
+      "category": "Edge Routing",
+      "description": "No self-loop edges when dependency services are on the same host",
+      "steps": [
+        "Navigate to the Workloads topology view",
+        "Toggle dependency edges visible",
+        "Inspect the topology for self-loop edges on any host"
+      ],
+      "setup": "Create a RequestPath dependency where two consecutive services are on the same host.",
+      "expected": "No self-loop edge appears on the host container. Consecutive same-host services are deduplicated in the edge chain.",
+      "flow": "setup",
+      "sequence": 6,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "application-auto-show-dependency-edges",
+      "category": "Edge Visibility",
+      "description": "Auto-show works in Application view too",
+      "steps": [
+        "Navigate to the Application topology view",
+        "Hide dependency edges via the options panel",
+        "Multi-select services and create a new dependency",
+        "Check edge visibility after creation"
+      ],
+      "expected": "Dependency edges become visible automatically after creating a dependency, even though they were manually hidden.",
+      "flow": null,
+      "sequence": null,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "l3-auto-show-dependency-edges",
+      "category": "Edge Visibility",
+      "description": "Auto-show works in L3 view too",
+      "steps": [
+        "Navigate to the L3 topology view",
+        "Hide dependency edges via the options panel",
+        "Multi-select IP addresses and create a new dependency",
+        "Check edge visibility after creation"
+      ],
+      "expected": "Dependency edges become visible automatically after creating a dependency, even though they were manually hidden.",
+      "flow": null,
+      "sequence": null,
       "status": null,
       "feedback": null
     }
   ]
-}
-,
-{
-  "branch": "feat/topology-url-params",
-  "tests": []
-}
-,
-{
-  "branch": "fix/edge-label-deselect",
-  "tests": []
 }
 ];

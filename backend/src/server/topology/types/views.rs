@@ -284,7 +284,7 @@ impl TopologyView {
                 }
             },
             Self::Workloads => match edge_type {
-                PhysicalLink => active(true, Hidden, Dashed, WhenVisible, false, false),
+                PhysicalLink => active(false, Hidden, Dashed, WhenVisible, false, false),
                 RequestPath | HubAndSpoke => {
                     active(false, Hidden, Dashed, WhenVisible, false, true)
                 }

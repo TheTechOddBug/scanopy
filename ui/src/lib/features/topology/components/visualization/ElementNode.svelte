@@ -599,31 +599,32 @@
 					{nodeRenderData.bodyText}
 				</div>
 			{/if}
+			{#if nodeRenderData.portStatus}
+				<div class="flex flex-col items-center gap-0.5">
+					<div class="flex items-center gap-1.5">
+						<span
+							class="text-xs font-medium"
+							style="color: {nodeRenderData.portStatus.operStatus === 'Up'
+								? '#22c55e'
+								: nodeRenderData.portStatus.operStatus === 'Down'
+									? '#ef4444'
+									: '#9ca3af'}">●</span
+						>
+						{#if nodeRenderData.portStatus.speed}
+							<span class="text-tertiary text-xs">{nodeRenderData.portStatus.speed}</span>
+						{/if}
+					</div>
+					{#if nodeRenderData.portStatus.macAddress}
+						<span class="text-tertiary truncate font-mono" style="font-size: 0.55rem; opacity: 0.7"
+							>{nodeRenderData.portStatus.macAddress}</span
+						>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<!-- Footer section -->
-		{#if nodeRenderData.portStatus}
-			<div class="flex flex-col items-center gap-0.5 px-2">
-				<div class="flex items-center gap-1.5">
-					<span
-						class="text-xs font-medium"
-						style="color: {nodeRenderData.portStatus.operStatus === 'Up'
-							? '#22c55e'
-							: nodeRenderData.portStatus.operStatus === 'Down'
-								? '#ef4444'
-								: '#9ca3af'}">●</span
-					>
-					{#if nodeRenderData.portStatus.speed}
-						<span class="text-tertiary text-xs">{nodeRenderData.portStatus.speed}</span>
-					{/if}
-				</div>
-				{#if nodeRenderData.portStatus.macAddress}
-					<span class="text-tertiary truncate font-mono" style="font-size: 0.55rem; opacity: 0.7"
-						>{nodeRenderData.portStatus.macAddress}</span
-					>
-				{/if}
-			</div>
-		{:else if nodeRenderData.footerText}
+		{#if nodeRenderData.footerText}
 			<div class="relative flex flex-shrink-0 items-center justify-center px-2 pb-2">
 				<div class="text-tertiary truncate text-xs font-medium leading-none">
 					{nodeRenderData.footerText}

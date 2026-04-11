@@ -383,14 +383,11 @@
 		// Mark as checked BEFORE triggering rebuild to prevent race conditions
 		initialRebuildChecked.add(currentTopology.id);
 
-		// Determine if rebuild is needed: stale or empty
-		const needsRebuild = currentTopology.is_stale || currentTopology.nodes.length === 0;
-
-		if (needsRebuild) {
-			void rebuildTopologyMutation.mutateAsync(currentTopology).then(() => {
-				topologyViewer?.triggerFitView();
-			});
-		}
+		// Always rebuild on initial load to ensure topology data matches
+		// current options/view (stored data may be from a different session)
+		void rebuildTopologyMutation.mutateAsync(currentTopology).then(() => {
+			topologyViewer?.triggerFitView();
+		});
 	});
 
 	function handleCreateTopology() {

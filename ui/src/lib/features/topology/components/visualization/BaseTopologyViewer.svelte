@@ -1398,8 +1398,12 @@
 						[...prevCollapsedForAnim].some((id) => !collapsed.has(id));
 
 					if (collapsedSetChanged && preLayoutPositions.size > 0) {
-						// FLIP: reveal at old positions, then animate to new
-						// 1. Set nodes at OLD positions with new collapse state
+						// FLIP animation: reveal at old positions, then animate to new.
+						// Critical: the transition class must be PAINTED before positions
+						// change, otherwise the browser batches both into one frame and
+						// there's nothing to animate from.
+
+						// 1. Set nodes at OLD positions (still hidden)
 						const flipNodes = allNodes.map((n) => {
 							const oldPos = preLayoutPositions.get(n.id);
 							return oldPos ? { ...n, position: oldPos } : n;
@@ -1408,14 +1412,14 @@
 						edges.set(flowEdges);
 						await tick();
 
-						// 2. Reveal — user sees old positions (looks like nothing changed)
+						// 2. Reveal WITH transition class — same frame
 						isMeasuring = false;
-						prevCollapsedForAnim = new Set(collapsed);
-						await tick();
-						await new Promise((r) => requestAnimationFrame(r));
-
-						// 3. Animate to new ELK positions
 						animateLayout = true;
+						prevCollapsedForAnim = new Set(collapsed);
+						await tick(); // DOM: visible + old positions + .animate-layout
+						await new Promise((r) => requestAnimationFrame(r)); // browser paints
+
+						// 3. Change positions — transition fires (old → new)
 						nodes.set(allNodes);
 						setTimeout(() => {
 							animateLayout = false;

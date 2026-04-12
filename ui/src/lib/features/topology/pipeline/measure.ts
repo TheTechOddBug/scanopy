@@ -132,25 +132,20 @@ export async function resolveNodeSizes(
 			}
 		}
 
-		// Populate container size cache from this measurement
-		const measuredContainers: string[] = [];
+		// Populate container size cache from this measurement.
+		// During deferred collapse, everything was measured EXPANDED
+		// regardless of the collapsed store — categorize accordingly.
 		for (const [id, size] of elementNodeSizes) {
 			if (state.layoutGraph?.containers.has(id)) {
 				const entry = state.containerSizeCache.get(id) ?? {};
-				const isCollapsed = collapsed.has(id);
-				if (isCollapsed) {
-					entry.collapsed = { ...size };
-				} else {
+				const wasExpandedInMeasurement = prep.deferCollapse || !collapsed.has(id);
+				if (wasExpandedInMeasurement) {
 					entry.expanded = { ...size };
+				} else {
+					entry.collapsed = { ...size };
 				}
 				state.containerSizeCache.set(id, entry);
-				if (measuredContainers.length < 5) {
-					measuredContainers.push(`${id.substring(0, 8)}=${size.x}x${size.y}(${isCollapsed ? 'c' : 'e'})`);
-				}
 			}
-		}
-		if (measuredContainers.length > 0) {
-			console.log(`[MEASURE] ${measuredContainers.length}+ containers measured: ${measuredContainers.join(', ')}`);
 		}
 	}
 

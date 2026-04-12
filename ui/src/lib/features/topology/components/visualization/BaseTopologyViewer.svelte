@@ -409,7 +409,9 @@
 		}
 
 		// Post-render: cache collapsed sizes, re-run if needed
-		console.log(`[FLOW] reached post-render. containerElement=${!!containerElement} layoutGraph=${!!layoutState.layoutGraph} collapsed=${collapsed.size}`);
+		console.log(
+			`[FLOW] reached post-render. containerElement=${!!containerElement} layoutGraph=${!!layoutState.layoutGraph} collapsed=${collapsed.size}`
+		);
 		if (containerElement && layoutState.layoutGraph) {
 			const newEntries = cacheCollapsedSizes(
 				containerElement,

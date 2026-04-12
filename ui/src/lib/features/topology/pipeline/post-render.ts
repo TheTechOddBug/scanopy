@@ -52,7 +52,9 @@ export function cacheCollapsedSizes(
 				if (samples.length < 5) samples.push(`${id.substring(0, 8)}=${w}x${h}`);
 			}
 		}
-		console.log(`[POST-RENDER-CACHE] ${newCollapsedCacheEntries} collapsed: ${samples.join(', ')}${newCollapsedCacheEntries > 5 ? '...' : ''}`);
+		console.log(
+			`[POST-RENDER-CACHE] ${newCollapsedCacheEntries} collapsed: ${samples.join(', ')}${newCollapsedCacheEntries > 5 ? '...' : ''}`
+		);
 		for (const [el, { w, h }] of saved) {
 			el.style.width = w;
 			el.style.height = h;

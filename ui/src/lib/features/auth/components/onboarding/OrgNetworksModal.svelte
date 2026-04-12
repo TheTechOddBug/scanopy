@@ -106,7 +106,7 @@
 	let title = $derived(
 		useCase === 'msp'
 			? onboarding_visualizeMsp()
-			: useCase === 'company'
+			: useCase === 'internal_it'
 				? onboarding_visualizeCompany()
 				: onboarding_visualizeHomelab()
 	);

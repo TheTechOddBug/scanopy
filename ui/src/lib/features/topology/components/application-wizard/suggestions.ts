@@ -17,7 +17,7 @@ export const USE_CASE_SUGGESTIONS: Record<string, string[]> = {
 		'File Storage',
 		'Other'
 	],
-	company: [
+	internal_it: [
 		'Production',
 		'Staging',
 		'Internal Tools',

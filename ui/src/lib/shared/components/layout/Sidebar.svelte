@@ -621,7 +621,9 @@
 				{#if !collapsed}
 					<div class="absolute left-1/2 flex -translate-x-1/2 transform items-center">
 						<img src="/logos/scanopy-logo.png" alt="Logo" class="h-6 w-auto rounded" />
-						<h1 class="text-primary ml-2 truncate whitespace-nowrap text-base font-bold">Scanopy</h1>
+						<h1 class="text-primary ml-2 truncate whitespace-nowrap text-base font-bold">
+							Scanopy
+						</h1>
 					</div>
 				{/if}
 			</button>

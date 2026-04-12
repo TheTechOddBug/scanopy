@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-11T23:13:47.521981Z",
-             *       "id": "acd03e19-3233-4579-99fc-4012d346a7d3",
+             *       "created_at": "2026-04-12T04:00:44.909460Z",
+             *       "id": "1292fd6b-6a43-4ec6-b257-89d91263b570",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-11T23:13:47.521981Z"
+             *       "updated_at": "2026-04-12T04:00:44.909460Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-11T23:13:47.509857Z",
-             *               "id": "3ad1e47c-52a1-4dc2-89ce-adf7591cb25d",
+             *               "created_at": "2026-04-12T04:00:44.897300Z",
+             *               "id": "f4cf9131-3a43-490b-b53e-3eff1604d0ca",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-11T23:13:47.509857Z"
+             *               "updated_at": "2026-04-12T04:00:44.897300Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "CUPS",
+             *           "service_definition": "TrueNAS",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3531,14 +3531,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-11T23:13:47.518302Z",
-             *           "id": "975061a9-72ca-499c-b3b8-816275df0812",
+             *           "created_at": "2026-04-12T04:00:44.905746Z",
+             *           "id": "b0bd170d-497e-4811-8173-edb4731d6083",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-11T23:13:47.518302Z"
+             *           "updated_at": "2026-04-12T04:00:44.905746Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3547,7 +3547,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "CUPS",
+             *       "service_definition": "TrueNAS",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3898,14 +3898,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-11T23:13:47.510093Z",
-         *       "id": "01539c8c-8125-4dd5-8af3-ad7bb39bc73b",
+         *       "created_at": "2026-04-12T04:00:44.897516Z",
+         *       "id": "89ffc0e1-3604-4fcb-937a-552adbb662d3",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-11T23:13:47.510093Z"
+         *       "updated_at": "2026-04-12T04:00:44.897516Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4090,7 +4090,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "CUPS",
+         *           "service_definition": "TrueNAS",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4949,14 +4949,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-11T23:13:47.509481Z",
-         *               "id": "74140305-8087-4f0d-8af8-5f1d7d4b06aa",
+         *               "created_at": "2026-04-12T04:00:44.897007Z",
+         *               "id": "733574bd-2d45-4808-bcfb-e6ffb2dcdd48",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-11T23:13:47.509481Z"
+         *               "updated_at": "2026-04-12T04:00:44.897007Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4965,7 +4965,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "CUPS",
+         *           "service_definition": "TrueNAS",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6094,14 +6094,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-11T23:13:47.510020Z",
-         *           "id": "630f1118-a3b9-489d-bb30-347e8ae61f93",
+         *           "created_at": "2026-04-12T04:00:44.897445Z",
+         *           "id": "9bafd48d-256c-45fa-a4d6-d1cd0286989e",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-11T23:13:47.510020Z"
+         *           "updated_at": "2026-04-12T04:00:44.897445Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6110,7 +6110,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "CUPS",
+         *       "service_definition": "TrueNAS",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6588,7 +6588,7 @@ export interface components {
             new_password: string;
         };
         /** @enum {string} */
-        UseCase: "homelab" | "company" | "msp" | "other";
+        UseCase: "homelab" | "internal_it" | "msp" | "other";
         User: components["schemas"]["UserBase"] & {
             /** Format: date-time */
             readonly created_at: string;

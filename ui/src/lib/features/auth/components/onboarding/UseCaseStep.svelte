@@ -37,14 +37,14 @@
 
 	// Icons for each use case (kept separate from types for flexibility)
 	const useCaseIcons: Record<UseCase, typeof Home> = {
-		homelab: Home,
-		company: Building2,
+		internal_it: Building2,
 		msp: Users,
+		homelab: Home,
 		other: Boxes
 	};
 
 	// Use case IDs for iteration
-	const useCaseIds: UseCase[] = ['homelab', 'company', 'msp', 'other'];
+	const useCaseIds: UseCase[] = ['internal_it', 'msp', 'homelab', 'other'];
 
 	function submitAndProceed() {
 		if (!selectedUseCase) return;

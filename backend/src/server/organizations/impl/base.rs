@@ -17,7 +17,8 @@ use crate::server::{
 #[serde(rename_all = "lowercase")]
 pub enum UseCase {
     Homelab,
-    Company,
+    #[serde(rename = "internal_it", alias = "company")]
+    InternalIt,
     Msp,
     #[default]
     Other,
@@ -31,7 +32,7 @@ where
     let opt: Option<String> = Option::deserialize(deserializer)?;
     match opt.as_deref() {
         Some("homelab") => Ok(UseCase::Homelab),
-        Some("company") => Ok(UseCase::Company),
+        Some("internal_it") | Some("company") => Ok(UseCase::InternalIt),
         Some("msp") => Ok(UseCase::Msp),
         Some("other") => Ok(UseCase::Other),
         _ => Ok(UseCase::Other),

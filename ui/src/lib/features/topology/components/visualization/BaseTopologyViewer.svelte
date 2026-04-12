@@ -419,12 +419,26 @@
 
 		if (shouldAnimate) {
 			animatingCollapse = true;
-			// Hide newly visible nodes during animation — show after
-			// container finishes transitioning to its new size.
 			const previousNodeIds = new Set(get(nodes).map((n) => n.id));
 			const phase1Nodes = allNodes.filter((n) => previousNodeIds.has(n.id));
 			nodes.set(phase1Nodes);
 			edges.set(flowEdges);
+
+			// DEBUG: watch for ResizeObserver feedback during transition
+			if (containerElement) {
+				const debugObs = new ResizeObserver((entries) => {
+					for (const e of entries) {
+						const id = (e.target as HTMLElement).dataset.id;
+						if (id) {
+							console.log(`[RESIZE-OBS] ${id.substring(0, 8)} ${Math.round(e.contentRect.width)}x${Math.round(e.contentRect.height)}`);
+						}
+					}
+				});
+				const nodeEls = containerElement.querySelectorAll('.svelte-flow__node');
+				for (const el of nodeEls) debugObs.observe(el);
+				setTimeout(() => debugObs.disconnect(), 400);
+			}
+
 			const fullNodes = [...allNodes];
 			const fullEdges = [...flowEdges];
 			setTimeout(() => {

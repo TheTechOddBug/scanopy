@@ -129,9 +129,7 @@
 	let resolved = $derived(
 		topology ? resolveContainerNode(id, data as TopologyNode, topology) : null
 	);
-	// TODO(views): subnet is used for tag hover. When containers represent other
-	// entity types, refactor to use a generic entity tags lookup instead.
-	let subnet = $derived(resolved?.subnet);
+	let containerTags = $derived(resolved?.tags ?? []);
 
 	let currentView = $state(get(activeView));
 	activeView.subscribe((v) => (currentView = v));
@@ -223,13 +221,13 @@
 		return [];
 	});
 
-	// TODO(views): tag hover highlight is subnet-specific. When containers
-	// represent other entity types, refactor to use generic entity tags.
 	let tagHoverRingStyle = $derived.by(() => {
-		if (!currentHoveredTag || currentHoveredTag.entityType !== 'subnet' || !subnet) return '';
+		if (!currentHoveredTag) return '';
+		// Only highlight if the hovered entity type matches this container's type
+		if (currentHoveredTag.entityType !== containerType.toLowerCase()) return '';
 		const { tagId, color } = currentHoveredTag;
-		const isUntagged = subnet.tags.length === 0;
-		const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : subnet.tags.includes(tagId);
+		const isUntagged = containerTags.length === 0;
+		const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : containerTags.includes(tagId);
 		if (!hasTag) return '';
 		const ch = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
 		return `box-shadow: 0 0 0 3px ${ch.rgb};`;

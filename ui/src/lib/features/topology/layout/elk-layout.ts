@@ -439,10 +439,8 @@ function buildElkGraph(
 		if (!container.ports) container.ports = [];
 		if (!container.layoutOptions) container.layoutOptions = {};
 
-		const hasElementPositions = elementPositions && elementPositions.size > 0;
-		const hasSubPositions = useLayeredChildren && subcontainerPositions && subcontainerPositions.size > 0;
-		const hasPositionalInfo = hasElementPositions || hasSubPositions;
-		container.layoutOptions['elk.portConstraints'] = hasPositionalInfo ? 'FIXED_POS' : 'FIXED_SIDE';
+		const useFixedPos = elementPositions && elementPositions.size > 0;
+		container.layoutOptions['elk.portConstraints'] = useFixedPos ? 'FIXED_POS' : 'FIXED_SIDE';
 
 		// Port side depends on layout direction: DOWN→SOUTH/NORTH, RIGHT→EAST/WEST
 		const srcSide = useLayeredChildren ? 'EAST' : 'SOUTH';
@@ -450,11 +448,7 @@ function buildElkGraph(
 		for (const [elemId] of sortedElements) {
 			const portId = `port-${elemId}-${srcSide}`;
 			const pos = elementPositions?.get(elemId);
-			// Fall back to subcontainer center when element is inside a collapsed container
-			const immContainer = elementToImmediateContainer.get(elemId);
-			const subPos = immContainer ? subcontainerPositions?.get(immContainer) : undefined;
-			const subNode = immContainer ? containers.get(immContainer) : undefined;
-			if (hasPositionalInfo && pos) {
+			if (useFixedPos && pos) {
 				// Pass 2: place port at the element's actual position within the container
 				const portPos = useLayeredChildren
 					? { x: pos.containerW * 0.9, y: pos.x + pos.w / 2 } // RIGHT: port on east side, y = element center
@@ -467,22 +461,10 @@ function buildElkGraph(
 					height: 1,
 					layoutOptions: { 'elk.port.side': srcSide }
 				});
-			} else if (hasPositionalInfo && subPos && subNode && useLayeredChildren) {
-				// Collapsed subcontainer: use subcontainer center Y within root as port position
-				const portPos = {
-					x: (container.width ?? container.children?.[0]?.width ?? 200) * 0.9,
-					y: subPos.y + (subNode.height ?? 34) / 2
-				};
-				container.ports.push({
-					id: portId,
-					x: portPos.x,
-					y: portPos.y,
-					width: 1,
-					height: 1,
-					layoutOptions: { 'elk.port.side': srcSide }
-				});
 			} else {
-				// Pass 1: let ELK decide port positions
+				// FIXED_SIDE: ELK decides port positions, constrained to srcSide.
+				// At collapse level 2, elements are hidden but EAST/WEST side
+				// constraint ensures edges route horizontally.
 				container.ports.push({
 					id: portId,
 					layoutOptions: { 'elk.port.side': srcSide }
@@ -511,17 +493,11 @@ function buildElkGraph(
 			if (!tgtContainer) continue;
 
 			// Sort target elements by their position within the container
-			if (hasPositionalInfo) {
+			if (elementPositions && elementPositions.size > 0) {
 				elemIds.sort((a, b) => {
-					const posA = elementPositions?.get(a);
-					const posB = elementPositions?.get(b);
-					if (posA && posB) return (posA.x ?? 0) - (posB.x ?? 0);
-					// Fall back to subcontainer Y position
-					const immA = elementToImmediateContainer.get(a);
-					const immB = elementToImmediateContainer.get(b);
-					const subA = immA ? subcontainerPositions?.get(immA) : undefined;
-					const subB = immB ? subcontainerPositions?.get(immB) : undefined;
-					return (subA?.y ?? 0) - (subB?.y ?? 0);
+					const posA = elementPositions.get(a);
+					const posB = elementPositions.get(b);
+					return (posA?.x ?? 0) - (posB?.x ?? 0);
 				});
 			}
 
@@ -530,7 +506,7 @@ function buildElkGraph(
 
 			// Use FIXED_POS in pass 2 so port Y-positions match element positions,
 			// giving ELK crossing minimization real positional signals
-			const useFixedPosTgt = hasPositionalInfo && useLayeredChildren;
+			const useFixedPosTgt = elementPositions && elementPositions.size > 0 && useLayeredChildren;
 			if (useLayeredChildren) {
 				// Layered layout handled below via portConstraints
 			}
@@ -543,13 +519,10 @@ function buildElkGraph(
 				if (!tgtContainer.ports.some((p: { id: string }) => p.id === tgtPortId)) {
 					if (useFixedPosTgt) {
 						// Compute absolute Y within the root container
-						const elemPos = elementPositions?.get(elemId);
+						const elemPos = elementPositions!.get(elemId);
 						const immContainer = elementToImmediateContainer.get(elemId);
 						const subPos = immContainer ? subcontainerPositions?.get(immContainer) : undefined;
-						const subNode = immContainer ? containers.get(immContainer) : undefined;
-						const absY = elemPos
-							? (subPos?.y ?? 0) + elemPos.y + elemPos.h / 2
-							: (subPos?.y ?? 0) + (subNode?.height ?? 34) / 2;
+						const absY = (subPos?.y ?? 0) + (elemPos?.y ?? 0) + (elemPos?.h ?? 0) / 2;
 						tgtContainer.ports.push({
 							id: tgtPortId,
 							x: 0,
@@ -708,10 +681,10 @@ function buildElkGraph(
 
 	// L2: sort root containers so hosts match their target port order inside the switch.
 	// With forceNodeModelOrder, ELK preserves this order for crossing-free layout.
-	if (useLayeredChildren && ((elementPositions && elementPositions.size > 0) || (subcontainerPositions && subcontainerPositions.size > 0))) {
+	if (useLayeredChildren && elementPositions && elementPositions.size > 0) {
 		// Map each root container to its target element's Y position inside the switch.
-		// Uses element positions when available, falls back to subcontainer center
-		// when elements are inside collapsed subcontainers.
+		// elementPositions has positions relative to immediate parent container.
+		// For box layout with vertical stacking, x = vertical position within container.
 		const rootTargetY = new Map<string, number>();
 		for (const edge of input.edges) {
 			if (!affectsLayout(edge)) continue;
@@ -721,31 +694,19 @@ function buildElkGraph(
 
 			// Compute absolute Y of target element within its root container.
 			// subPos = subcontainer position within root, elemPos = element within subcontainer.
-			const tgtElemPos = elementPositions?.get(edge.target);
-			const tgtImm = elementToImmediateContainer.get(edge.target);
-			const tgtSubPos = tgtImm ? subcontainerPositions?.get(tgtImm) : undefined;
-			if (!rootTargetY.has(srcRoot)) {
-				if (tgtElemPos) {
-					const absY = (tgtSubPos?.y ?? 0) + tgtElemPos.y + tgtElemPos.h / 2;
-					rootTargetY.set(srcRoot, absY);
-				} else if (tgtSubPos) {
-					const subNode = tgtImm ? containers.get(tgtImm) : undefined;
-					const absY = tgtSubPos.y + (subNode?.height ?? 34) / 2;
-					rootTargetY.set(srcRoot, absY);
-				}
+			const tgtElemPos = elementPositions.get(edge.target);
+			if (tgtElemPos && !rootTargetY.has(srcRoot)) {
+				const tgtImm = elementToImmediateContainer.get(edge.target);
+				const subPos = tgtImm ? subcontainerPositions?.get(tgtImm) : undefined;
+				const absY = (subPos?.y ?? 0) + tgtElemPos.y + tgtElemPos.h / 2;
+				rootTargetY.set(srcRoot, absY);
 			}
-			const srcElemPos = elementPositions?.get(edge.source);
-			const srcImm = elementToImmediateContainer.get(edge.source);
-			const srcSubPos = srcImm ? subcontainerPositions?.get(srcImm) : undefined;
-			if (!rootTargetY.has(tgtRoot)) {
-				if (srcElemPos) {
-					const absY = (srcSubPos?.y ?? 0) + srcElemPos.y + srcElemPos.h / 2;
-					rootTargetY.set(tgtRoot, absY);
-				} else if (srcSubPos) {
-					const subNode = srcImm ? containers.get(srcImm) : undefined;
-					const absY = srcSubPos.y + (subNode?.height ?? 34) / 2;
-					rootTargetY.set(tgtRoot, absY);
-				}
+			const srcElemPos = elementPositions.get(edge.source);
+			if (srcElemPos && !rootTargetY.has(tgtRoot)) {
+				const srcImm = elementToImmediateContainer.get(edge.source);
+				const subPos = srcImm ? subcontainerPositions?.get(srcImm) : undefined;
+				const absY = (subPos?.y ?? 0) + srcElemPos.y + srcElemPos.h / 2;
+				rootTargetY.set(tgtRoot, absY);
 			}
 		}
 
@@ -1444,18 +1405,42 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 	// L2: top-align layers by shifting each layer's top node to the same Y.
 	// ELK centers layers independently, causing vertical misalignment.
 	if (input.topology?.options?.request?.view === 'L2Physical' && result2.children) {
-		// Group children by X-band (layer) — allow some tolerance for rounding
-		const layers = new Map<number, ElkNode[]>();
+		// Group children by X-band (layer). Merge bands whose containers
+		// would horizontally overlap after top-alignment — without merging,
+		// containers in nearby but distinct X-bands both get y=TOP and overlap.
+		const bandMap = new Map<number, ElkNode[]>();
 		for (const child of result2.children) {
 			const layerX = Math.round((child.x ?? 0) / 50) * 50;
-			if (!layers.has(layerX)) layers.set(layerX, []);
-			layers.get(layerX)!.push(child);
+			if (!bandMap.has(layerX)) bandMap.set(layerX, []);
+			bandMap.get(layerX)!.push(child);
 		}
-		// Top-align each layer and re-stack with consistent 50px gaps
+
+		// Merge bands that would overlap: sort by X, merge if any container
+		// in band A horizontally overlaps with any container in band B.
+		const sortedBands = Array.from(bandMap.entries()).sort(([a], [b]) => a - b);
+		const mergedLayers: ElkNode[][] = [];
+		for (const [, nodes] of sortedBands) {
+			if (mergedLayers.length === 0) {
+				mergedLayers.push(nodes);
+				continue;
+			}
+			const prev = mergedLayers[mergedLayers.length - 1];
+			// Check if any node in this band overlaps horizontally with prev band
+			const prevRight = Math.max(...prev.map((n) => (n.x ?? 0) + (n.width ?? 0)));
+			const thisLeft = Math.min(...nodes.map((n) => n.x ?? 0));
+			if (thisLeft < prevRight) {
+				// Overlapping — merge into previous layer
+				prev.push(...nodes);
+			} else {
+				mergedLayers.push(nodes);
+			}
+		}
+
+		// Top-align each merged layer and re-stack with consistent gaps
 		const SNAP = 25;
 		const GAP = 50;
 		const TOP = 25;
-		for (const [, layerNodes] of layers) {
+		for (const layerNodes of mergedLayers) {
 			layerNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
 			let y = TOP;
 			for (const node of layerNodes) {

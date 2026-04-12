@@ -87,7 +87,6 @@ function getDefaultLocalOptions(view: TopologyView): TopologyLocalOptions {
 	return {
 		hide_edge_types: getDefaultHiddenEdgeTypes(view),
 		no_fade_edges: false,
-		hide_resize_handles: false,
 		bundle_edges: true,
 		tag_filter: {
 			hidden_host_tag_ids: [],

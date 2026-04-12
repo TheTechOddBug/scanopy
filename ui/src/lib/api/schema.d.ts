@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-12T04:00:44.909460Z",
-             *       "id": "1292fd6b-6a43-4ec6-b257-89d91263b570",
+             *       "created_at": "2026-04-12T06:46:10.147611Z",
+             *       "id": "3eaec01b-9b42-466c-b014-1b7710706371",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-12T04:00:44.909460Z"
+             *       "updated_at": "2026-04-12T06:46:10.147611Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-12T04:00:44.897300Z",
-             *               "id": "f4cf9131-3a43-490b-b53e-3eff1604d0ca",
+             *               "created_at": "2026-04-12T06:46:10.132018Z",
+             *               "id": "0b1c0f72-2a67-4fcc-be06-8e44e925ae80",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-12T04:00:44.897300Z"
+             *               "updated_at": "2026-04-12T06:46:10.132018Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "TrueNAS",
+             *           "service_definition": "LinkStack",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3531,14 +3531,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-12T04:00:44.905746Z",
-             *           "id": "b0bd170d-497e-4811-8173-edb4731d6083",
+             *           "created_at": "2026-04-12T06:46:10.143511Z",
+             *           "id": "62f6bbe1-3d3a-42bf-ad4e-edea5538392f",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-12T04:00:44.905746Z"
+             *           "updated_at": "2026-04-12T06:46:10.143511Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3547,7 +3547,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "TrueNAS",
+             *       "service_definition": "LinkStack",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3898,14 +3898,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-12T04:00:44.897516Z",
-         *       "id": "89ffc0e1-3604-4fcb-937a-552adbb662d3",
+         *       "created_at": "2026-04-12T06:46:10.132237Z",
+         *       "id": "4c8f91af-7cd1-4578-8d42-61610e3ce4c0",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-12T04:00:44.897516Z"
+         *       "updated_at": "2026-04-12T06:46:10.132237Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4090,7 +4090,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "TrueNAS",
+         *           "service_definition": "LinkStack",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4949,14 +4949,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-12T04:00:44.897007Z",
-         *               "id": "733574bd-2d45-4808-bcfb-e6ffb2dcdd48",
+         *               "created_at": "2026-04-12T06:46:10.131723Z",
+         *               "id": "6d8fb18d-298d-4766-a7c9-a6d11f19c5d1",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-12T04:00:44.897007Z"
+         *               "updated_at": "2026-04-12T06:46:10.131723Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4965,7 +4965,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "TrueNAS",
+         *           "service_definition": "LinkStack",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6094,14 +6094,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-12T04:00:44.897445Z",
-         *           "id": "9bafd48d-256c-45fa-a4d6-d1cd0286989e",
+         *           "created_at": "2026-04-12T06:46:10.132162Z",
+         *           "id": "e7099a1a-05c1-4b54-92f5-5af3b8bbeddb",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-12T04:00:44.897445Z"
+         *           "updated_at": "2026-04-12T06:46:10.132162Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6110,7 +6110,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "TrueNAS",
+         *       "service_definition": "LinkStack",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6413,7 +6413,6 @@ export interface components {
         TopologyLocalOptions: {
             bundle_edges?: boolean;
             hide_edge_types: components["schemas"]["EdgeTypeDiscriminants"][];
-            hide_resize_handles: boolean;
             no_fade_edges: boolean;
             show_minimap?: boolean;
             tag_filter?: components["schemas"]["TopologyTagFilter"];

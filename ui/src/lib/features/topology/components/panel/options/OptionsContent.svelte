@@ -32,8 +32,6 @@
 		topology_groupBy,
 		topology_hidePorts,
 		topology_hidePortsHelp,
-		topology_hideResizeHandles,
-		topology_hideResizeHandlesHelp,
 		topology_showMinimap,
 		topology_showMinimapHelp,
 		common_byCategory,
@@ -250,15 +248,6 @@
 			path: 'local',
 			key: 'no_fade_edges',
 			helpText: () => topology_dontFadeEdgesHelp(),
-			section: () => common_visual()
-		},
-		{
-			id: 'hide_resize_handles',
-			label: () => topology_hideResizeHandles(),
-			type: 'boolean',
-			path: 'local',
-			key: 'hide_resize_handles',
-			helpText: () => topology_hideResizeHandlesHelp(),
 			section: () => common_visual()
 		},
 		{

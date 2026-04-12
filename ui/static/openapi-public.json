@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-12T04:00:44.909460Z",
-              "id": "4364a940-a496-4595-8d73-563e96143b6a",
+              "created_at": "2026-04-12T06:46:10.147608Z",
+              "id": "c285a4f8-c7f4-4f22-82d8-ad764590e827",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-12T04:00:44.909460Z"
+              "updated_at": "2026-04-12T06:46:10.147608Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-12T04:00:44.897289Z",
-                      "id": "25316ce5-8d35-4b82-afe2-b85031949312",
+                      "created_at": "2026-04-12T06:46:10.132004Z",
+                      "id": "fa871ba2-e17c-448b-aba1-5de4c274cd7b",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-12T04:00:44.897289Z"
+                      "updated_at": "2026-04-12T06:46:10.132004Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "TrueNAS",
+                  "service_definition": "LinkStack",
                   "source": {
                     "type": "Manual"
                   },
@@ -12003,14 +12003,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-12T04:00:44.905806Z",
-                  "id": "0aa64b1b-897b-4c61-9248-638517349b6c",
+                  "created_at": "2026-04-12T06:46:10.143523Z",
+                  "id": "94809bb1-63ae-4822-876d-1a497e365b2a",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-12T04:00:44.905806Z"
+                  "updated_at": "2026-04-12T06:46:10.143523Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12019,7 +12019,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "TrueNAS",
+              "service_definition": "LinkStack",
               "source": {
                 "type": "Manual"
               },
@@ -13384,14 +13384,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-12T04:00:44.897503Z",
-          "id": "73613627-e3e5-497e-8800-b8463879d7e5",
+          "created_at": "2026-04-12T06:46:10.132222Z",
+          "id": "0572c013-7167-4bf0-831f-da4e3de44532",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-12T04:00:44.897503Z"
+          "updated_at": "2026-04-12T06:46:10.132222Z"
         }
       },
       "BindingBase": {
@@ -13921,7 +13921,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "TrueNAS",
+              "service_definition": "LinkStack",
               "tags": [],
               "virtualization": null
             }
@@ -16442,14 +16442,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-12T04:00:44.897004Z",
-                  "id": "5d33893e-d476-4cde-a632-ea8cd5d72216",
+                  "created_at": "2026-04-12T06:46:10.131717Z",
+                  "id": "13b4bf18-e166-42bc-9df2-02a778de4db4",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-12T04:00:44.897004Z"
+                  "updated_at": "2026-04-12T06:46:10.131717Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16458,7 +16458,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "TrueNAS",
+              "service_definition": "LinkStack",
               "source": {
                 "type": "Manual"
               },
@@ -18639,14 +18639,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-12T04:00:44.890782Z",
-                        "id": "7ac00939-c7bc-4488-9c21-e363fe9c23e0",
+                        "created_at": "2026-04-12T06:46:10.123036Z",
+                        "id": "5a934dff-ea05-47cd-88cc-1cf01278a85d",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-12T04:00:44.890782Z"
+                        "updated_at": "2026-04-12T06:46:10.123036Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18655,7 +18655,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "TrueNAS",
+                    "service_definition": "LinkStack",
                     "source": {
                       "type": "Manual"
                     },
@@ -18732,14 +18732,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-12T04:00:44.904759Z",
-                    "id": "ce8eba09-d391-4f2d-9778-97ba359c3652",
+                    "created_at": "2026-04-12T06:46:10.142574Z",
+                    "id": "644a12e8-de16-4061-8df8-3bc449883edf",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-12T04:00:44.904759Z"
+                    "updated_at": "2026-04-12T06:46:10.142574Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18748,7 +18748,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "TrueNAS",
+                "service_definition": "LinkStack",
                 "source": {
                   "type": "Manual"
                 },
@@ -19978,14 +19978,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-12T04:00:44.897432Z",
-              "id": "25daa0a3-4ccd-45f6-844d-14e0239be0b3",
+              "created_at": "2026-04-12T06:46:10.132146Z",
+              "id": "999e95d9-6d3b-4cd9-afc3-801a92fc4272",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-12T04:00:44.897432Z"
+              "updated_at": "2026-04-12T06:46:10.132146Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -19994,7 +19994,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "TrueNAS",
+          "service_definition": "LinkStack",
           "source": {
             "type": "Manual"
           },
@@ -20935,7 +20935,6 @@
         "type": "object",
         "required": [
           "no_fade_edges",
-          "hide_resize_handles",
           "hide_edge_types"
         ],
         "properties": {
@@ -20947,9 +20946,6 @@
             "items": {
               "$ref": "#/components/schemas/EdgeTypeDiscriminants"
             }
-          },
-          "hide_resize_handles": {
-            "type": "boolean"
           },
           "no_fade_edges": {
             "type": "boolean"

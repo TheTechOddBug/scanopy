@@ -228,7 +228,6 @@ pub struct TopologyTagFilter {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]
 pub struct TopologyLocalOptions {
     pub no_fade_edges: bool,
-    pub hide_resize_handles: bool,
     pub hide_edge_types: Vec<EdgeTypeDiscriminants>,
     #[serde(default)]
     pub tag_filter: TopologyTagFilter,
@@ -246,7 +245,6 @@ impl Default for TopologyLocalOptions {
     fn default() -> Self {
         Self {
             no_fade_edges: false,
-            hide_resize_handles: false,
             hide_edge_types: vec![EdgeTypeDiscriminants::HostVirtualization],
             tag_filter: TopologyTagFilter::default(),
             show_minimap: true,

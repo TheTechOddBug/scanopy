@@ -446,7 +446,7 @@
 				style="background: var(--color-topology-node-bg); width: 100%; height: 100%; position: relative; overflow: hidden; transition: box-shadow 0.15s ease-in-out; border-top: 2px solid {colorHelper.rgb}; {tagHoverRingStyle}"
 			></div>
 
-			{#if resizeHandleZoomLevel && $editModeEnabled && !$topologyOptions.local.hide_resize_handles}
+			{#if resizeHandleZoomLevel && $editModeEnabled}
 				<NodeResizeControl
 					position="bottom-right"
 					onResizeEnd={onResize}

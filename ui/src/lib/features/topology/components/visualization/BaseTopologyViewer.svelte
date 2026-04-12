@@ -409,6 +409,9 @@
 		aggregatedEdgeOriginals.set(originalsMap);
 
 		// Render
+		const elemCount = allNodes.filter((n) => n.type === 'Element').length;
+		const contCount = allNodes.filter((n) => n.type === 'Container').length;
+		console.log(`[RENDER] ${allNodes.length} nodes (${elemCount} elements, ${contCount} containers), collapsed=${collapsed.size}`);
 		if (!isMeasuring) {
 			nodes.set(allNodes);
 			edges.set(flowEdges);

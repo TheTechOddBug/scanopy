@@ -103,18 +103,18 @@ export async function executeLayout(
 			visibleNodes = state.layoutGraph.getVisibleNodes(layoutNodes);
 		}
 
-		// Log ELK input vs output for containers
-		const elkSamples: string[] = [];
+		// Log ELK input vs output for all containers
+		const elkExpanded: string[] = [];
+		const elkCollapsedLog: string[] = [];
 		for (const [id, size] of elkResult.containerSizes) {
 			const input = elementNodeSizes.get(id);
 			const isCol = elkCollapsed.has(id);
-			if (elkSamples.length < 5) {
-				elkSamples.push(`${id.substring(0, 8)}: in=${input ? `${input.x}x${input.y}` : 'none'} out=${size.width}x${size.height} ${isCol ? '(c)' : '(e)'}`);
-			}
+			const entry = `${id.substring(0, 8)}: in=${input ? `${input.x}x${input.y}` : 'none'} out=${size.width}x${size.height}`;
+			if (isCol) elkCollapsedLog.push(entry);
+			else elkExpanded.push(entry);
 		}
-		if (elkSamples.length > 0) {
-			console.log(`[ELK] container sizes: ${elkSamples.join(', ')}`);
-		}
+		console.log(`[ELK] ${elkExpanded.length} expanded: ${elkExpanded.slice(0, 8).join(', ')}${elkExpanded.length > 8 ? '...' : ''}`);
+		console.log(`[ELK] ${elkCollapsedLog.length} collapsed: ${elkCollapsedLog.slice(0, 8).join(', ')}${elkCollapsedLog.length > 8 ? '...' : ''}`);
 
 		// Cache container sizes from ELK result
 		for (const [id, size] of elkResult.containerSizes) {

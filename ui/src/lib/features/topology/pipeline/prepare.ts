@@ -42,6 +42,7 @@ export function prepareTopologyData(
 	const topologyChanged = topoKey !== state.lastRenderedTopoKey;
 
 	if (topologyChanged) {
+		console.log(`[PREPARE] topology changed: ${state.lastRenderedTopoKey.substring(0, 8)} → ${topoKey.substring(0, 8)}`);
 		state.viewSizeCache.clear();
 		// Remove seenAutoCollapseIds entries that don't exist in the new topology
 		const newContainerIds = new Set(
@@ -54,6 +55,7 @@ export function prepareTopologyData(
 
 	// Skip if view changed but topology data hasn't been rebuilt yet
 	if (viewChanged && !topologyChanged) {
+		console.log(`[PREPARE] view changed without topology change: ${state.lastRenderedView} → ${currentView}, skipping`);
 		return null;
 	}
 
@@ -93,6 +95,7 @@ export function prepareTopologyData(
 	// When topology identity changes, reset tracking and strip stale collapsed IDs
 	const topologyId = topology.id ?? '';
 	if (topologyId !== state.lastSeenTopologyId && state.lastSeenTopologyId !== '') {
+		console.log(`[PREPARE] topology ID changed: ${state.lastSeenTopologyId.substring(0, 8)} → ${topologyId.substring(0, 8)}, clearing caches`);
 		state.seenAutoCollapseIds = new Set<string>();
 		state.containerSizeCache.clear();
 		state.collapseLevelInferred = false;

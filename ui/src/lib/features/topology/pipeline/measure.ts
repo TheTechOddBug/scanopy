@@ -108,6 +108,7 @@ export async function resolveNodeSizes(
 
 	// Full DOM measurement pass if no cache
 	if (elementNodeSizes.size === 0) {
+		console.log(`[MEASURE] starting full measurement pass, deferCollapse=${prep.deferCollapse}`);
 		callbacks.setMeasuring(true);
 		callbacks.setEdges([]);
 		callbacks.setNodes(callbacks.buildMeasureNodes());
@@ -131,6 +132,8 @@ export async function resolveNodeSizes(
 				}
 			}
 		}
+
+		console.log(`[MEASURE] DOM read complete: ${elementNodeSizes.size} nodes measured`);
 
 		// Populate container size cache from this measurement.
 		// During deferred collapse, everything was measured EXPANDED

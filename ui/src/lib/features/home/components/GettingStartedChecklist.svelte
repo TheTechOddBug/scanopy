@@ -22,6 +22,29 @@
 		trackChecklistStepClicked,
 		type ChecklistStep
 	} from '$lib/shared/onboarding/checklist';
+	import {
+		common_dismiss,
+		gettingStarted_allSet,
+		gettingStarted_allSetDescription,
+		gettingStarted_complete,
+		gettingStarted_emailNotification,
+		gettingStarted_funCompanyReddit,
+		gettingStarted_funCompanyRestart,
+		gettingStarted_funDaydream,
+		gettingStarted_funFallbackCoffee,
+		gettingStarted_funFallbackStretch,
+		gettingStarted_funHomelabReddit,
+		gettingStarted_funHomelabUpgrade,
+		gettingStarted_funMspReddit,
+		gettingStarted_funMspScope,
+		gettingStarted_havingTrouble,
+		gettingStarted_inviteTeamMembers,
+		gettingStarted_scanningNetwork,
+		gettingStarted_setupSnmpCredentials,
+		gettingStarted_createTags,
+		gettingStarted_title,
+		gettingStarted_whileYouWait
+	} from '$lib/paraglide/messages';
 
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
 
@@ -162,7 +185,7 @@
 	function getInAppSuggestions(): Array<{ label: string; action: () => void; completed: boolean }> {
 		const suggestions: Array<{ label: string; action: () => void; completed: boolean }> = [];
 		suggestions.push({
-			label: 'Set up SNMP credentials',
+			label: gettingStarted_setupSnmpCredentials(),
 			action: () => {
 				onNavigate('credentials');
 				openModal('credential-editor');
@@ -170,7 +193,7 @@
 			completed: onboarding.includes('FirstSnmpCredentialCreated')
 		});
 		suggestions.push({
-			label: 'Create tags to organize hosts',
+			label: gettingStarted_createTags(),
 			action: () => {
 				onNavigate('tags');
 				openModal('tag-editor');
@@ -182,7 +205,7 @@
 			((organization.plan.included_seats ?? 0) > 1 || (organization.plan.seat_cents ?? 0) > 0)
 		) {
 			suggestions.push({
-				label: 'Invite team members',
+				label: gettingStarted_inviteTeamMembers(),
 				action: () => {
 					onNavigate('users');
 					openModal('invite-user');
@@ -199,39 +222,39 @@
 			return [
 				{
 					id: 'homelab-reddit',
-					label: 'Browse r/homelab for inspiration',
+					label: gettingStarted_funHomelabReddit(),
 					url: 'https://reddit.com/r/homelab'
 				},
-				{ id: 'homelab-upgrade', label: 'Convince yourself you do need another Raspberry Pi' },
-				{ id: 'homelab-daydream', label: 'Daydream about a fully documented network' }
+				{ id: 'homelab-upgrade', label: gettingStarted_funHomelabUpgrade() },
+				{ id: 'homelab-daydream', label: gettingStarted_funDaydream() }
 			];
 		}
 		if (useCase === 'msp') {
 			return [
 				{
 					id: 'msp-reddit',
-					label: 'Commiserate on r/msp for a few minutes',
+					label: gettingStarted_funMspReddit(),
 					url: 'https://reddit.com/r/msp'
 				},
-				{ id: 'msp-scope', label: "Practice saying 'that's out of scope' in the mirror" },
-				{ id: 'msp-daydream', label: 'Daydream about a fully documented network' }
+				{ id: 'msp-scope', label: gettingStarted_funMspScope() },
+				{ id: 'msp-daydream', label: gettingStarted_funDaydream() }
 			];
 		}
-		if (useCase === 'company') {
+		if (useCase === 'internal_it') {
 			return [
 				{
 					id: 'company-reddit',
-					label: "Confirm you're not alone on r/sysadmin",
+					label: gettingStarted_funCompanyReddit(),
 					url: 'https://reddit.com/r/sysadmin'
 				},
-				{ id: 'company-restart', label: "Rehearse your 'have you tried restarting it?' delivery" },
-				{ id: 'company-daydream', label: 'Daydream about a fully documented network' }
+				{ id: 'company-restart', label: gettingStarted_funCompanyRestart() },
+				{ id: 'company-daydream', label: gettingStarted_funDaydream() }
 			];
 		}
 		return [
-			{ id: 'fallback-coffee', label: 'Grab a coffee' },
-			{ id: 'fallback-stretch', label: 'Take a quick stretch break' },
-			{ id: 'fallback-daydream', label: 'Daydream about a fully documented network' }
+			{ id: 'fallback-coffee', label: gettingStarted_funFallbackCoffee() },
+			{ id: 'fallback-stretch', label: gettingStarted_funFallbackStretch() },
+			{ id: 'fallback-daydream', label: gettingStarted_funDaydream() }
 		];
 	}
 
@@ -255,9 +278,9 @@
 		<div
 			class="rounded-lg border border-green-300 bg-green-50 p-6 text-center dark:border-green-600/30 dark:bg-green-900/20"
 		>
-			<h3 class="text-primary text-base font-semibold">You're all set!</h3>
+			<h3 class="text-primary text-base font-semibold">{gettingStarted_allSet()}</h3>
 			<p class="text-secondary mt-1 text-sm">
-				Your network is mapped. Explore your topology and discover what Scanopy can do.
+				{gettingStarted_allSetDescription()}
 			</p>
 		</div>
 	</section>
@@ -265,15 +288,20 @@
 	<section>
 		<div class="card">
 			<div class="mb-3 flex items-center justify-between">
-				<h3 class="text-primary text-base font-semibold">Getting Started</h3>
+				<h3 class="text-primary text-base font-semibold">{gettingStarted_title()}</h3>
 				<div class="flex items-center gap-3">
-					<span class="text-tertiary text-sm">{completedCount} of {steps.length} complete</span>
+					<span class="text-tertiary text-sm"
+						>{gettingStarted_complete({
+							completed: String(completedCount),
+							total: String(steps.length)
+						})}</span
+					>
 					{#if completedCount > 0}
 						<button
 							onclick={dismiss}
 							class="text-tertiary hover:text-secondary text-sm transition-colors"
 						>
-							Dismiss
+							{common_dismiss()}
 						</button>
 					{/if}
 				</div>
@@ -289,7 +317,7 @@
 						checked={complete}
 						disabled={complete || !enabled || isAccountStep}
 						onToggle={() => handleStepClick(step)}
-						label={isActiveDiscoveryStep ? 'Scanning your network' : step.label}
+						label={isActiveDiscoveryStep ? gettingStarted_scanningNetwork() : step.label}
 					>
 						{#snippet icon()}
 							{#if complete}
@@ -311,7 +339,7 @@
 									onclick={handleTroubleTagClick}
 								>
 									<Info class="h-3 w-3" />
-									Having trouble?
+									{gettingStarted_havingTrouble()}
 								</span>
 							{/if}
 						{/snippet}
@@ -331,12 +359,13 @@
 							{#if isActiveDiscoveryStep}
 								{#if hasEmail}
 									<p class="text-secondary mt-1 text-xs">
-										We'll email you when your scan is complete — feel free to leave and come back
-										later.
+										{gettingStarted_emailNotification()}
 									</p>
 								{/if}
 
-								<p class="text-tertiary mb-1 mt-2 text-xs font-medium">While you wait:</p>
+								<p class="text-tertiary mb-1 mt-2 text-xs font-medium">
+									{gettingStarted_whileYouWait()}
+								</p>
 
 								<!-- In-app suggestions -->
 								{#each inAppSuggestions as suggestion (suggestion.label)}

@@ -111,7 +111,7 @@
 
 	// Helper to validate use case
 	function isValidUseCase(useCase: string): useCase is UseCase {
-		return ['homelab', 'company', 'msp'].includes(useCase);
+		return ['homelab', 'internal_it', 'msp'].includes(useCase);
 	}
 
 	// Helper to validate step

@@ -206,30 +206,30 @@ export function prepareTopologyData(
 		state.layoutGraph = LayoutGraph.fromTopology(layoutNodes);
 	}
 
-	// Defer collapse so ELK runs with everything expanded
+	// Defer collapse so ELK runs with everything expanded — only if
+	// no expanded size is available from either the graph or the cache.
 	let deferCollapse = false;
 	if (isNewStructure && collapsed.size > 0) {
-		if (!prevExpandedSizes || prevExpandedSizes.size === 0) {
-			deferCollapse = true;
-			console.log(`[PREPARE] deferCollapse=true: prevExpandedSizes empty (${prevExpandedSizes?.size ?? 'null'})`);
-		} else {
-			for (const id of collapsed) {
-				const hasChildren = layoutNodes.some(
-					(n) =>
-						(n.node_type === 'Element' && (n as Record<string, unknown>).container_id === id) ||
-						(n.node_type === 'Container' &&
-							(n as Record<string, unknown>).parent_container_id === id)
+		for (const id of collapsed) {
+			const hasChildren = layoutNodes.some(
+				(n) =>
+					(n.node_type === 'Element' && (n as Record<string, unknown>).container_id === id) ||
+					(n.node_type === 'Container' &&
+						(n as Record<string, unknown>).parent_container_id === id)
+			);
+			const hasExpandedSize =
+				prevExpandedSizes?.has(id) || !!state.containerSizeCache.get(id)?.expanded;
+			if (hasChildren && !hasExpandedSize) {
+				deferCollapse = true;
+				console.log(
+					`[PREPARE] deferCollapse=true: ${id.substring(0, 8)} has children, no expanded size (prevExpanded=${prevExpandedSizes?.has(id)}, cache=${!!state.containerSizeCache.get(id)?.expanded})`
 				);
-				if (hasChildren && !prevExpandedSizes.has(id) && !state.containerSizeCache.get(id)?.expanded) {
-					deferCollapse = true;
-					console.log(`[PREPARE] deferCollapse=true: container ${id.substring(0, 8)} has children but no prevExpandedSize or cached expanded`);
-					break;
-				}
+				break;
 			}
 		}
 	}
-	if (!deferCollapse && isNewStructure) {
-		console.log(`[PREPARE] deferCollapse=false: all ${collapsed.size} collapsed containers have prevExpandedSizes`);
+	if (!deferCollapse && isNewStructure && collapsed.size > 0) {
+		console.log(`[PREPARE] deferCollapse=false: all ${collapsed.size} collapsed containers have expanded sizes`);
 	}
 
 	// Sync collapse state from store -> graph

@@ -619,10 +619,8 @@
 			>
 				<Menu class="h-5 w-5 flex-shrink-0" />
 				{#if !collapsed}
-					<div class="absolute left-1/2 flex -translate-x-1/2 transform items-center">
-						<img src="/logos/scanopy-logo.png" alt="Logo" class="h-6 w-auto rounded" />
-						<h1 class="text-primary ml-2 truncate whitespace-nowrap text-base font-bold">Scanopy</h1>
-					</div>
+					<img src="/logos/scanopy-logo.png" alt="Logo" class="ml-2 h-6 w-auto rounded" />
+					<h1 class="text-primary ml-1.5 text-sm font-bold">Scanopy</h1>
 				{/if}
 			</button>
 			{#if !collapsed && isDemoOrg}

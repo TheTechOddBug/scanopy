@@ -1444,18 +1444,42 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 	// L2: top-align layers by shifting each layer's top node to the same Y.
 	// ELK centers layers independently, causing vertical misalignment.
 	if (input.topology?.options?.request?.view === 'L2Physical' && result2.children) {
-		// Group children by X-band (layer) — allow some tolerance for rounding
-		const layers = new Map<number, ElkNode[]>();
+		// Group children by X-band (layer). Merge bands whose containers
+		// would horizontally overlap after top-alignment — without merging,
+		// containers in nearby but distinct X-bands both get y=TOP and overlap.
+		const bandMap = new Map<number, ElkNode[]>();
 		for (const child of result2.children) {
 			const layerX = Math.round((child.x ?? 0) / 50) * 50;
-			if (!layers.has(layerX)) layers.set(layerX, []);
-			layers.get(layerX)!.push(child);
+			if (!bandMap.has(layerX)) bandMap.set(layerX, []);
+			bandMap.get(layerX)!.push(child);
 		}
-		// Top-align each layer and re-stack with consistent 50px gaps
+
+		// Merge bands that would overlap: sort by X, merge if any container
+		// in band A horizontally overlaps with any container in band B.
+		const sortedBands = Array.from(bandMap.entries()).sort(([a], [b]) => a - b);
+		const mergedLayers: ElkNode[][] = [];
+		for (const [, nodes] of sortedBands) {
+			if (mergedLayers.length === 0) {
+				mergedLayers.push(nodes);
+				continue;
+			}
+			const prev = mergedLayers[mergedLayers.length - 1];
+			// Check if any node in this band overlaps horizontally with prev band
+			const prevRight = Math.max(...prev.map((n) => (n.x ?? 0) + (n.width ?? 0)));
+			const thisLeft = Math.min(...nodes.map((n) => n.x ?? 0));
+			if (thisLeft < prevRight) {
+				// Overlapping — merge into previous layer
+				prev.push(...nodes);
+			} else {
+				mergedLayers.push(nodes);
+			}
+		}
+
+		// Top-align each merged layer and re-stack with consistent gaps
 		const SNAP = 25;
 		const GAP = 50;
 		const TOP = 25;
-		for (const [, layerNodes] of layers) {
+		for (const layerNodes of mergedLayers) {
 			layerNodes.sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
 			let y = TOP;
 			for (const node of layerNodes) {

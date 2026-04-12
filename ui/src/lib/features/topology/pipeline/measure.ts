@@ -133,16 +133,24 @@ export async function resolveNodeSizes(
 		}
 
 		// Populate container size cache from this measurement
+		const measuredContainers: string[] = [];
 		for (const [id, size] of elementNodeSizes) {
 			if (state.layoutGraph?.containers.has(id)) {
 				const entry = state.containerSizeCache.get(id) ?? {};
-				if (collapsed.has(id)) {
+				const isCollapsed = collapsed.has(id);
+				if (isCollapsed) {
 					entry.collapsed = { ...size };
 				} else {
 					entry.expanded = { ...size };
 				}
 				state.containerSizeCache.set(id, entry);
+				if (measuredContainers.length < 5) {
+					measuredContainers.push(`${id.substring(0, 8)}=${size.x}x${size.y}(${isCollapsed ? 'c' : 'e'})`);
+				}
 			}
+		}
+		if (measuredContainers.length > 0) {
+			console.log(`[MEASURE] ${measuredContainers.length}+ containers measured: ${measuredContainers.join(', ')}`);
 		}
 	}
 

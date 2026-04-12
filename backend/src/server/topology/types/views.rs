@@ -331,6 +331,7 @@ impl TopologyView {
                 ],
                 container_sections: vec![
                     InspectorSection::Identity,
+                    InspectorSection::ElementSummary,
                     InspectorSection::DependencySummary,
                 ],
                 bulk_tag_entity,

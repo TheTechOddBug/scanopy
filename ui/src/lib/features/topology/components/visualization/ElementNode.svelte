@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
-	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { concepts, entities, serviceDefinitions, views } from '$lib/shared/stores/metadata';
 	import {
 		selectedEdge as globalSelectedEdge,
 		selectedNode as globalSelectedNode,
@@ -351,8 +351,14 @@
 	const discoveryColorHelper = entities.getColorHelper('Discovery');
 
 	// Check if this host should be highlighted by tag hover
+	// Skip when the hovered entity type matches the container entity (container handles it)
 	let tagHoverRingStyle = $derived.by(() => {
 		if (!currentHoveredTag || currentHoveredTag.entityType !== 'host' || !host) return '';
+		const containerEntity = (
+			views.getMetadata($activeView) as { element_config?: { container_entity?: string } } | null
+		)?.element_config?.container_entity;
+		if (containerEntity && currentHoveredTag.entityType === containerEntity.toLowerCase())
+			return '';
 		const { tagId, color } = currentHoveredTag;
 		const isUntagged = host.tags.length === 0;
 		const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : host.tags.includes(tagId);

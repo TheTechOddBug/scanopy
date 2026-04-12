@@ -23,7 +23,7 @@ use crate::server::{
     organizations::r#impl::base::Organization,
     shared::types::{
         Color, Icon,
-        metadata::{EntityMetadataProvider, HasId},
+        metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
     },
     user_api_keys::r#impl::base::UserApiKey,
     users::r#impl::base::User,
@@ -110,6 +110,36 @@ impl HasId for EntityDiscriminants {
     }
 }
 
+impl EntityDiscriminants {
+    /// The parent entity type that owns instances of this entity.
+    pub fn parent_entity(&self) -> Option<EntityDiscriminants> {
+        match self {
+            EntityDiscriminants::Interface => Some(EntityDiscriminants::Host),
+            EntityDiscriminants::IPAddress => Some(EntityDiscriminants::Host),
+            EntityDiscriminants::Service => Some(EntityDiscriminants::Host),
+            EntityDiscriminants::Port => Some(EntityDiscriminants::Host),
+            EntityDiscriminants::Binding
+            | EntityDiscriminants::Organization
+            | EntityDiscriminants::Network
+            | EntityDiscriminants::User
+            | EntityDiscriminants::Invite
+            | EntityDiscriminants::Share
+            | EntityDiscriminants::Tag
+            | EntityDiscriminants::DaemonApiKey
+            | EntityDiscriminants::UserApiKey
+            | EntityDiscriminants::Daemon
+            | EntityDiscriminants::Discovery
+            | EntityDiscriminants::Credential
+            | EntityDiscriminants::Host
+            | EntityDiscriminants::Subnet
+            | EntityDiscriminants::Vlan
+            | EntityDiscriminants::Dependency
+            | EntityDiscriminants::Topology
+            | EntityDiscriminants::Unknown => None,
+        }
+    }
+}
+
 impl EntityMetadataProvider for EntityDiscriminants {
     fn color(&self) -> Color {
         match self {
@@ -166,6 +196,19 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Topology => Icon::ChartBarStacked,
 
             EntityDiscriminants::Unknown => Icon::CircleQuestionMark,
+        }
+    }
+}
+
+impl TypeMetadataProvider for EntityDiscriminants {
+    fn name(&self) -> &'static str {
+        self.into()
+    }
+
+    fn metadata(&self) -> serde_json::Value {
+        match self.parent_entity() {
+            Some(parent) => serde_json::json!({ "parent_entity": parent }),
+            None => serde_json::json!({}),
         }
     }
 }

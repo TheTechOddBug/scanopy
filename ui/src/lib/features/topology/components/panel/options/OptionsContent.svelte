@@ -9,7 +9,7 @@
 	import { hoveredEdgeType } from '../../../interactions';
 	import { isDisabledEdge } from '../../../layout/edge-classification';
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
-	import { edgeTypes, views, serviceCategories } from '$lib/shared/stores/metadata';
+	import { edgeTypes, views, serviceCategories, entities } from '$lib/shared/stores/metadata';
 	import { activeView } from '../../../queries';
 	import { type Color, COLOR_MAP } from '$lib/shared/utils/styling';
 	import viewsJson from '$lib/data/views.json';
@@ -80,15 +80,21 @@
 		} | null
 	);
 	let elementConfig = $derived(viewMetaObj?.element_config);
-	let filterableEntities = $derived(
-		new Set(
-			[
-				elementConfig?.container_entity,
-				elementConfig?.element_entity,
-				...(elementConfig?.inline_entities ?? [])
-			].filter(Boolean)
-		)
-	);
+	let filterableEntities = $derived.by(() => {
+		const config = elementConfig;
+		if (!config) return new Set<string>();
+		const set = new Set(
+			[config.container_entity, config.element_entity, ...config.inline_entities].filter(Boolean)
+		);
+		// Expand element's parent entity when the view has containers and the parent isn't already the container
+		if (config.container_entity) {
+			const parentEntity = entities.getMetadata(config.element_entity)?.parent_entity;
+			if (parentEntity && parentEntity !== config.container_entity) {
+				set.add(parentEntity);
+			}
+		}
+		return set;
+	});
 	let showHostFilter = $derived(filterableEntities.has('Host'));
 	let showServiceFilter = $derived(filterableEntities.has('Service'));
 	let showSubnetFilter = $derived(filterableEntities.has('Subnet'));

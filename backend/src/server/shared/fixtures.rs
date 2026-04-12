@@ -85,9 +85,11 @@ pub fn generate_ui_data_fixtures(output_dir: &Path) {
         .collect();
     write_fixture(&permissions, output_dir, "permissions.json");
 
-    // EntityMetadata categories
-    let entities: Vec<EntityMetadata> = EntityDiscriminants::iter()
-        .map(|e| e.to_metadata())
+    // Entity metadata (uses TypeMetadata for the metadata field with parent_entity)
+    let entities: Vec<TypeMetadata> = EntityDiscriminants::iter()
+        .map(|e: EntityDiscriminants| {
+            <EntityDiscriminants as MetadataProvider<TypeMetadata>>::to_metadata(&e)
+        })
         .collect();
     write_fixture(&entities, output_dir, "entities.json");
 

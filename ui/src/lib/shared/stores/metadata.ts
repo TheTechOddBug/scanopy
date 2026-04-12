@@ -73,7 +73,7 @@ export interface MetadataRegistry {
 	subnet_types: TypeMetadata[];
 	edge_types: TypeMetadata[];
 	dependency_types: TypeMetadata[];
-	entities: EntityMetadata[];
+	entities: TypeMetadata[];
 	ports: TypeMetadata[];
 	discovery_types: TypeMetadata[];
 	billing_plans: TypeMetadata[];
@@ -380,7 +380,10 @@ export const dependencyTypes = createTypeMetadataHelpers<
 	'dependency_types',
 	DependencyTypeMetadata
 >('dependency_types');
-export const entities = createEntityMetadataHelpers('entities');
+interface EntityParentMetadata {
+	parent_entity?: string;
+}
+export const entities = createTypeMetadataHelpers<'entities', EntityParentMetadata>('entities');
 export const ports = createTypeMetadataHelpers<'ports', PortTypeMetadata>('ports');
 export const discoveryTypes = createTypeMetadataHelpers<'discovery_types', DiscoveryTypeMetadata>(
 	'discovery_types'

@@ -16,7 +16,7 @@ export interface ElementRenderContext {
 }
 
 export interface ContainerRenderContext {
-	subnet: Topology['subnets'][number] | undefined;
+	tags: string[];
 	title: string | null;
 	containerType: string;
 }
@@ -115,13 +115,24 @@ function resolveContainer(
 	const containerType = 'container_type' in node ? (node.container_type as string) : 'Subnet';
 	const title = 'header' in node ? (node.header as string | null) : null;
 
-	// Only Subnet containers have a subnet entity to look up
 	if (containerType === 'Subnet') {
 		const subnet = topology.subnets.find((s) => s.id === nodeId);
-		return { subnet, title, containerType };
+		return { tags: subnet?.tags ?? [], title, containerType };
 	}
 
-	return { subnet: undefined, title, containerType };
+	if (containerType === 'Host') {
+		// Find any child element's host_id to look up the host entity
+		const childElement = topology.nodes.find(
+			(n) => n.node_type === 'Element' && (n as Record<string, unknown>).container_id === nodeId
+		);
+		const hostId = childElement
+			? ((childElement as Record<string, unknown>).host_id as string | undefined)
+			: undefined;
+		const host = hostId ? topology.hosts.find((h) => h.id === hostId) : undefined;
+		return { tags: host?.tags ?? [], title, containerType };
+	}
+
+	return { tags: [], title, containerType };
 }
 
 // Selection context for multi-select operations

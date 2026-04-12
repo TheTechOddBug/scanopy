@@ -89,16 +89,19 @@ export async function resolveNodeSizes(
 			}
 		}
 
-		// Fill missing elements from viewSizeCache
+		// Fill ALL missing visible nodes from viewSizeCache — not just
+		// liveNodes misses. Elements newly visible from collapse changes
+		// aren't in getNodes() yet and weren't counted as misses.
 		const viewCache = state.viewSizeCache.get(viewCacheKey);
-		if (viewCache && elemMisses > 0) {
+		if (viewCache) {
 			for (const node of visibleNodes) {
 				if (!elementNodeSizes.has(node.id)) {
 					const cached = viewCache.get(node.id);
 					if (cached) {
 						elementNodeSizes.set(node.id, cached);
-						elemMisses--;
 						elemHits++;
+					} else {
+						elemMisses++;
 					}
 				}
 			}

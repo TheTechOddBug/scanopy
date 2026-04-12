@@ -601,6 +601,20 @@ function buildElkGraph(
 		}
 	}
 
+	// DEBUG: Log cross-child edge detection results
+	for (const rootId of rootsWithCrossChildEdges) {
+		const innerEdges = seenInnerEdges.get(rootId);
+		console.log(`[ELK-DEBUG] Root ${rootId.substring(0, 8)} switching box→layered due to ${innerEdges?.size ?? 0} cross-child edges`);
+		if (innerEdges) {
+			for (const key of innerEdges) {
+				const [src, tgt] = key.split('->');
+				const srcCollapsed = collapsed.has(src);
+				const tgtCollapsed = collapsed.has(tgt);
+				console.log(`  inner edge: ${src.substring(0, 8)} (collapsed=${srcCollapsed}) → ${tgt.substring(0, 8)} (collapsed=${tgtCollapsed})`);
+			}
+		}
+	}
+
 	// Switch root containers with cross-child edges from box to layered
 	if (useLayeredChildren) {
 		// Cross-child edge containers switched to layered below
@@ -1372,6 +1386,18 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 		subcontainerPositions
 	);
 	const result2 = await elk.layout(graph2);
+
+	// DEBUG: Log ELK output positions for children of root containers
+	if (result2.children) {
+		for (const root of result2.children) {
+			if (root.children && root.children.length > 0) {
+				console.log(`[ELK-DEBUG] Root ${root.id.substring(0, 8)} algo=${root.layoutOptions?.['elk.algorithm'] ?? 'inherited'} size=${root.width}x${root.height} children:`);
+				for (const child of root.children) {
+					console.log(`  ${child.id.substring(0, 8)}: pos=(${child.x},${child.y}) size=${child.width}x${child.height} hasChildren=${!!(child.children && child.children.length > 0)} childCount=${child.children?.length ?? 'none'}`);
+				}
+			}
+		}
+	}
 
 	// L2: top-align layers by shifting each layer's top node to the same Y.
 	// ELK centers layers independently, causing vertical misalignment.

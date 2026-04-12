@@ -606,13 +606,17 @@ function buildElkGraph(
 	// DEBUG: Log cross-child edge detection results
 	for (const rootId of rootsWithCrossChildEdges) {
 		const innerEdges = seenInnerEdges.get(rootId);
-		console.log(`[ELK-DEBUG] Root ${rootId.substring(0, 8)} switching box→layered due to ${innerEdges?.size ?? 0} cross-child edges`);
+		console.log(
+			`[ELK-DEBUG] Root ${rootId.substring(0, 8)} switching box→layered due to ${innerEdges?.size ?? 0} cross-child edges`
+		);
 		if (innerEdges) {
 			for (const key of innerEdges) {
 				const [src, tgt] = key.split('->');
 				const srcCollapsed = collapsed.has(src);
 				const tgtCollapsed = collapsed.has(tgt);
-				console.log(`  inner edge: ${src.substring(0, 8)} (collapsed=${srcCollapsed}) → ${tgt.substring(0, 8)} (collapsed=${tgtCollapsed})`);
+				console.log(
+					`  inner edge: ${src.substring(0, 8)} (collapsed=${srcCollapsed}) → ${tgt.substring(0, 8)} (collapsed=${tgtCollapsed})`
+				);
 			}
 		}
 	}

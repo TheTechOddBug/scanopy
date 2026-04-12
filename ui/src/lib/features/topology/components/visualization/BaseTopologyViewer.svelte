@@ -286,6 +286,11 @@
 	// --- Main layout pipeline ---
 
 	async function loadTopologyData() {
+		// Wait for containerElement to be available (bind:this fires after mount)
+		if (!containerElement) {
+			await tick();
+			if (!containerElement) return;
+		}
 		console.log(`[FLOW] loadTopologyData called, cacheSize=${layoutState.containerSizeCache.size}`);
 		const thisGeneration = ++layoutState.layoutGeneration;
 		const isStale = (): boolean => thisGeneration !== layoutState.layoutGeneration;

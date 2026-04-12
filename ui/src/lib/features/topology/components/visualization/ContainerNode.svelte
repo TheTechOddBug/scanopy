@@ -196,6 +196,7 @@
 	});
 
 	let groupLabels = $derived.by((): { label: string; color: Color }[] => {
+		if (isInfraRule) return [];
 		if (!elementRule?.rule) return [];
 		const rule = elementRule.rule;
 		if (typeof rule === 'string') return [];
@@ -283,12 +284,13 @@
 				})();
 
 				const infraId = getInfrastructureRuleId();
+				const isInfra = !!(infraId && ruleId === infraId);
 				return {
 					logoComponent: groupLogoComponent,
 					headerText: sHeader,
-					labels,
+					labels: isInfra ? [] : labels,
 					childCount: summary.childCount,
-					hideCount: !!(infraId && ruleId === infraId)
+					hideCount: isInfra
 				};
 			});
 		}

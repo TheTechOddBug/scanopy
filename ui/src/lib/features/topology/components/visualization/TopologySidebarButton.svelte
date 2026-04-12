@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import KbdKey from '$lib/shared/components/feedback/KbdKey.svelte';
 
 	let {
 		onclick,
 		title,
 		icon,
 		label,
+		shortcut,
 		active = false,
 		collapsed = false,
 		disabled = false
@@ -14,6 +16,7 @@
 		title: string;
 		icon: Snippet;
 		label: string;
+		shortcut?: string;
 		active?: boolean;
 		collapsed?: boolean;
 		disabled?: boolean;
@@ -40,6 +43,9 @@
 	<span class="flex h-4 w-4 shrink-0 items-center justify-center">
 		{@render icon()}
 	</span>
+	{#if shortcut}
+		<KbdKey key={shortcut} size="sm" class="shrink-0 !shadow-none" />
+	{/if}
 	<span
 		class="overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out"
 		style="max-width: {showLabel ? '150px' : '0px'}; opacity: {showLabel ? 1 : 0};"

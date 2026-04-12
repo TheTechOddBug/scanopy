@@ -447,6 +447,7 @@
 	// --- Event handlers ---
 
 	let ignoreNextSelectionChange = false;
+	let selectionGeneration = 0;
 
 	function handleNodeClick({ node, event }: { node: Node; event: MouseEvent | TouchEvent }) {
 		const isModifierClick = event instanceof MouseEvent && (event.ctrlKey || event.metaKey);
@@ -454,6 +455,7 @@
 			handleModifierNodeClick(node, selectionStores);
 			ignoreNextSelectionChange = true;
 		} else {
+			selectionGeneration++;
 			collapseAllBundles();
 			selectNode(node, selectionStores);
 			ignoreNextSelectionChange = true;
@@ -461,6 +463,7 @@
 	}
 
 	function handleEdgeClick({ edge }: { edge: Edge; event: MouseEvent }) {
+		selectionGeneration++;
 		collapseAllBundles();
 		selectEdge(edge, selectionStores);
 		ignoreNextSelectionChange = true;
@@ -521,7 +524,10 @@
 			return;
 		}
 		if (selNodes.length === 0 && !viewportMoved) {
+			const genAtSchedule = selectionGeneration;
 			tick().then(() => {
+				// Skip if a click handler fired between scheduling and execution
+				if (selectionGeneration !== genAtSchedule) return;
 				clearSelection(selectionStores);
 				clearEdgeHoverState();
 				syncEdgeDisplayState();

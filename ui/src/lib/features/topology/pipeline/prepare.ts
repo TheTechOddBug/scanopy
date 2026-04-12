@@ -214,8 +214,7 @@ export function prepareTopologyData(
 			const hasChildren = layoutNodes.some(
 				(n) =>
 					(n.node_type === 'Element' && (n as Record<string, unknown>).container_id === id) ||
-					(n.node_type === 'Container' &&
-						(n as Record<string, unknown>).parent_container_id === id)
+					(n.node_type === 'Container' && (n as Record<string, unknown>).parent_container_id === id)
 			);
 			const hasExpandedSize =
 				prevExpandedSizes?.has(id) || !!state.containerSizeCache.get(id)?.expanded;
@@ -229,7 +228,9 @@ export function prepareTopologyData(
 		}
 	}
 	if (!deferCollapse && isNewStructure && collapsed.size > 0) {
-		console.log(`[PREPARE] deferCollapse=false: all ${collapsed.size} collapsed containers have expanded sizes`);
+		console.log(
+			`[PREPARE] deferCollapse=false: all ${collapsed.size} collapsed containers have expanded sizes`
+		);
 	}
 
 	// Sync collapse state from store -> graph

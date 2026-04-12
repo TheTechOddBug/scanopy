@@ -44,6 +44,7 @@ export function prepareTopologyData(
 	if (topologyChanged) {
 		console.log(`[PREPARE] topology changed: ${state.lastRenderedTopoKey.substring(0, 8)} → ${topoKey.substring(0, 8)}`);
 		state.viewSizeCache.clear();
+		state.containerSizeCache.clear();
 		// Remove seenAutoCollapseIds entries that don't exist in the new topology
 		const newContainerIds = new Set(
 			topology.nodes.filter((n) => n.node_type === 'Container').map((n) => n.id)

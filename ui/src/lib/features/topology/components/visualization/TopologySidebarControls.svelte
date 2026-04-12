@@ -1,15 +1,17 @@
 <script lang="ts">
-	import { Controls, Panel } from '@xyflow/svelte';
-	import { Keyboard, Expand, Shrink, PencilOff, Pencil } from 'lucide-svelte';
+	import { Panel } from '@xyflow/svelte';
+	import { Keyboard, Expand, Shrink, Pencil, ZoomIn, ZoomOut, Maximize } from 'lucide-svelte';
 	import {
 		topology_shortcutsTitle,
 		topology_editModeTooltip,
 		topology_viewModeTooltip,
+		topology_zoomIn,
+		topology_zoomOut,
+		topology_shortcutFitView,
 		common_edit,
 		common_shortcuts
 	} from '$lib/paraglide/messages';
 	import TopologySidebarButton from './TopologySidebarButton.svelte';
-	import type { Padding } from '@xyflow/system';
 
 	let {
 		editMode = false,
@@ -18,12 +20,14 @@
 		sidebarCollapsed = false,
 		onStepExpand,
 		onStepCollapse,
+		onZoomIn,
+		onZoomOut,
+		onFitView,
 		expandDisabled,
 		collapseDisabled,
-		collapseLevelLabel,
+		collapseLevel,
 		collapseLevelTooltipExpand,
-		collapseLevelTooltipCollapse,
-		fitViewOptions
+		collapseLevelTooltipCollapse
 	}: {
 		editMode?: boolean;
 		onToggleEditMode?: (() => void) | null;
@@ -31,12 +35,14 @@
 		sidebarCollapsed?: boolean;
 		onStepExpand: () => void;
 		onStepCollapse: () => void;
+		onZoomIn: () => void;
+		onZoomOut: () => void;
+		onFitView: () => void;
 		expandDisabled: boolean;
 		collapseDisabled: boolean;
-		collapseLevelLabel: string;
+		collapseLevel: number;
 		collapseLevelTooltipExpand: string;
 		collapseLevelTooltipCollapse: string;
-		fitViewOptions: { padding: Padding };
 	} = $props();
 </script>
 
@@ -46,22 +52,20 @@
 			onclick={onToggleEditMode}
 			title={editMode ? topology_editModeTooltip() : topology_viewModeTooltip()}
 			label={common_edit()}
+			shortcut="E"
 			active={editMode}
 			collapsed={sidebarCollapsed}
 		>
 			{#snippet icon()}
-				{#if editMode}
-					<Pencil class="h-4 w-4" />
-				{:else}
-					<PencilOff class="h-4 w-4" />
-				{/if}
+				<Pencil class="h-4 w-4" />
 			{/snippet}
 		</TopologySidebarButton>
 	{/if}
 	<TopologySidebarButton
 		onclick={onStepExpand}
 		title={collapseLevelTooltipExpand}
-		label={collapseLevelLabel}
+		shortcut="]"
+		label=""
 		disabled={expandDisabled}
 		collapsed={sidebarCollapsed}
 	>
@@ -69,10 +73,16 @@
 			<Expand class="h-4 w-4" />
 		{/snippet}
 	</TopologySidebarButton>
+	<span
+		class="flex h-5 w-5 items-center justify-center rounded text-xs font-semibold text-gray-500 dark:text-gray-400"
+	>
+		{collapseLevel}
+	</span>
 	<TopologySidebarButton
 		onclick={onStepCollapse}
 		title={collapseLevelTooltipCollapse}
-		label={collapseLevelLabel}
+		shortcut="["
+		label=""
 		disabled={collapseDisabled}
 		collapsed={sidebarCollapsed}
 	>
@@ -85,6 +95,7 @@
 			onclick={onOpenShortcuts}
 			title={topology_shortcutsTitle()}
 			label={common_shortcuts()}
+			shortcut="?"
 			collapsed={sidebarCollapsed}
 		>
 			{#snippet icon()}
@@ -92,11 +103,35 @@
 			{/snippet}
 		</TopologySidebarButton>
 	{/if}
-	<Controls
-		showZoom={true}
-		showFitView={true}
-		{fitViewOptions}
-		showLock={false}
-		class="!static !m-0 !rounded !border !border-gray-300 !bg-white !shadow-lg dark:!border-gray-600 dark:!bg-gray-800 [&_button:hover]:!bg-gray-100 dark:[&_button:hover]:!bg-gray-600 [&_button]:!border-gray-300 [&_button]:!bg-gray-50 [&_button]:!text-gray-700 dark:[&_button]:!border-gray-600 dark:[&_button]:!bg-gray-700 dark:[&_button]:!text-gray-100"
-	/>
+	<TopologySidebarButton
+		onclick={onZoomIn}
+		title={topology_zoomIn()}
+		label=""
+		collapsed={sidebarCollapsed}
+	>
+		{#snippet icon()}
+			<ZoomIn class="h-4 w-4" />
+		{/snippet}
+	</TopologySidebarButton>
+	<TopologySidebarButton
+		onclick={onZoomOut}
+		title={topology_zoomOut()}
+		label=""
+		collapsed={sidebarCollapsed}
+	>
+		{#snippet icon()}
+			<ZoomOut class="h-4 w-4" />
+		{/snippet}
+	</TopologySidebarButton>
+	<TopologySidebarButton
+		onclick={onFitView}
+		title={topology_shortcutFitView()}
+		shortcut="F"
+		label=""
+		collapsed={sidebarCollapsed}
+	>
+		{#snippet icon()}
+			<Maximize class="h-4 w-4" />
+		{/snippet}
+	</TopologySidebarButton>
 </Panel>

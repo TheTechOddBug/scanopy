@@ -61,7 +61,8 @@
 		topology_showDisabledRules,
 		topology_hideDisabledRules,
 		topology_showAllToReorder,
-		topology_noHiddenRules
+		topology_noHiddenRules,
+		topology_infraRuleNote
 	} from '$lib/paraglide/messages';
 	import viewsJson from '$lib/data/views.json';
 
@@ -548,6 +549,9 @@
 				onclick={(e) => e.stopPropagation()}
 				class="mt-2 w-full space-y-3 border-t border-gray-200 pt-2 dark:border-gray-700"
 			>
+				{#if item.id === getInfrastructureRuleId()}
+					<p class="text-tertiary text-xs">{topology_infraRuleNote()}</p>
+				{/if}
 				<!-- Title input -->
 				<input
 					type="text"

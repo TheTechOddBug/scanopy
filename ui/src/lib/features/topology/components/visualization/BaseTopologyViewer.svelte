@@ -10,8 +10,8 @@
 		useSvelteFlow
 	} from '@xyflow/svelte';
 	import {
-		topology_collapseLevelDown,
-		topology_expandLevelUp,
+		common_collapse,
+		common_expand,
 		topology_levelFullyCollapsed,
 		topology_levelContainersExpanded,
 		topology_levelSubcontainersExpanded,
@@ -125,7 +125,7 @@
 	let viewportMoved = false;
 	let viewportMoveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const { fitView, getNodes } = useSvelteFlow();
+	const { fitView, getNodes, zoomIn, zoomOut } = useSvelteFlow();
 	const queryClient = useQueryClient();
 	let containerElement: HTMLDivElement;
 
@@ -351,9 +351,7 @@
 							});
 						});
 						// One more rAF to ensure DOM is painted
-						await new Promise((r) =>
-							requestAnimationFrame(() => requestAnimationFrame(r))
-						);
+						await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 					}
 				}
 			);
@@ -412,10 +410,7 @@
 
 		// Render
 		const shouldAnimate =
-			needsElk &&
-			!isMeasuring &&
-			layoutState.lastRenderedTopoKey !== '' &&
-			!prep.viewChanged;
+			needsElk && !isMeasuring && layoutState.lastRenderedTopoKey !== '' && !prep.viewChanged;
 
 		if (shouldAnimate) {
 			animatingCollapse = true;
@@ -631,12 +626,15 @@
 
 	let expandDisabled = $derived($collapseLevel === 4);
 	let collapseDisabled = $derived($collapseLevel === 1);
-	let collapseLevelLabel = $derived(`${$collapseLevel}/4 ${getCollapseLevelName($collapseLevel)}`);
 	let collapseLevelTooltipCollapse = $derived(
-		`${topology_collapseLevelDown()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`
+		$collapseLevel > 1
+			? `${common_collapse()}: ${getCollapseLevelName(($collapseLevel - 1) as CollapseLevel)}`
+			: ''
 	);
 	let collapseLevelTooltipExpand = $derived(
-		`${topology_expandLevelUp()} (${$collapseLevel}/4: ${getCollapseLevelName($collapseLevel)})`
+		$collapseLevel < 4
+			? `${common_expand()}: ${getCollapseLevelName(($collapseLevel + 1) as CollapseLevel)}`
+			: ''
 	);
 
 	function handleStepCollapse() {
@@ -730,16 +728,14 @@
 				{sidebarCollapsed}
 				onStepExpand={handleStepExpand}
 				onStepCollapse={handleStepCollapse}
+				onZoomIn={() => zoomIn()}
+				onZoomOut={() => zoomOut()}
+				onFitView={() => triggerFitView()}
 				{expandDisabled}
 				{collapseDisabled}
-				{collapseLevelLabel}
+				collapseLevel={$collapseLevel}
 				{collapseLevelTooltipExpand}
 				{collapseLevelTooltipCollapse}
-				fitViewOptions={{
-					padding: $optionsPanelExpanded
-						? { top: 0.2, right: 0.2, bottom: 0.2, left: `${OPTIONS_PANEL_FITVIEW_PADDING_PX}px` }
-						: 0.2
-				}}
 			/>
 		{/if}
 

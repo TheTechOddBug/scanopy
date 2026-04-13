@@ -17,23 +17,31 @@ use crate::server::{
         types::{
             edges::Edge,
             grouping::GroupingConfig,
-            layout::{Ixy, Uxy},
-            nodes::{ContainerChild, ContainerType, ElementEntityType, Node, NodeType},
+            nodes::{ContainerType, ElementEntityType, Node, NodeType},
         },
     },
 };
 
-pub struct GraphBuilder {
+/// Builder-internal struct for grouping IP address children by subnet.
+#[derive(Debug, Clone)]
+struct SubnetChildData {
+    pub id: Uuid,
+    pub header: Option<String>,
+    pub host_id: Uuid,
+    pub ip_address_id: Option<Uuid>,
+}
+
+pub struct SubnetGraphBuilder {
     consolidated_docker_subnets: HashMap<Uuid, Vec<Uuid>>,
 }
 
-impl Default for GraphBuilder {
+impl Default for SubnetGraphBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GraphBuilder {
+impl SubnetGraphBuilder {
     pub fn new() -> Self {
         Self {
             consolidated_docker_subnets: HashMap::new(),
@@ -158,8 +166,8 @@ impl GraphBuilder {
         all_edges: &mut [Edge],
         grouping: &GroupingConfig,
         docker_bridge_host_subnet_id_to_group_on: HashMap<Uuid, Uuid>,
-    ) -> HashMap<Uuid, Vec<ContainerChild>> {
-        let mut children_by_subnet: HashMap<Uuid, Vec<ContainerChild>> = HashMap::new();
+    ) -> HashMap<Uuid, Vec<SubnetChildData>> {
+        let mut children_by_subnet: HashMap<Uuid, Vec<SubnetChildData>> = HashMap::new();
 
         // Track DockerBridge ip_addresses by host (only used if grouping is enabled)
         // Map: (host_id, primary_subnet_id) -> Vec<subnet_id>)
@@ -179,18 +187,16 @@ impl GraphBuilder {
             let subnet_type = subnet.map(|s| s.base.subnet_type).unwrap_or_default();
 
             // Update source/target handles for edges
-            let edges = ChildAnchorPlanner::plan_anchors(ip_address.id, all_edges, ctx);
+            ChildAnchorPlanner::plan_anchors(ip_address.id, all_edges, ctx);
 
             let header_text =
                 self.determine_subnet_child_header_text(ctx, ip_address, host, &subnet_type);
 
-            let child = ContainerChild {
+            let child = SubnetChildData {
                 id: ip_address.id,
                 host_id: host.id,
-                size: Uxy::default(),
                 header: header_text,
                 ip_address_id: Some(ip_address.id),
-                edges,
             };
 
             // Special handling for DockerBridge (only if grouping is enabled)
@@ -238,7 +244,7 @@ impl GraphBuilder {
     fn create_child_nodes(
         &mut self,
         subnet_id: Uuid,
-        children: &[ContainerChild],
+        children: &[SubnetChildData],
         ctx: &TopologyContext,
         child_nodes: &mut Vec<Node>,
     ) {
@@ -254,7 +260,6 @@ impl GraphBuilder {
                     ip_address_id: child.ip_address_id,
                 },
             );
-            node.size = child.size;
             node.header = child.header.clone();
             child_nodes.push(node);
         }
@@ -268,12 +273,12 @@ impl GraphBuilder {
     fn create_nested_group_containers(
         &self,
         _subnet_id: Uuid,
-        children: &[ContainerChild],
+        children: &[SubnetChildData],
         ctx: &TopologyContext,
         child_nodes: &mut Vec<Node>,
     ) {
         let grouping = GroupingConfig::from_request_options(&ctx.options.request);
-        let children_by_id: HashMap<Uuid, &ContainerChild> =
+        let children_by_id: HashMap<Uuid, &SubnetChildData> =
             children.iter().map(|c| (c.id, c)).collect();
 
         apply_element_rules(child_nodes, &grouping.element_rules, |node| {
@@ -418,16 +423,15 @@ impl GraphBuilder {
                         container_type: ContainerType::Subnet,
                         parent_container_id: None,
                         entity_id: Some(*subnet_id),
-                        layer_hint: None,
                         icon: None,
                         color: None,
                         associated_service_definition: None,
+                        element_rule_id: None,
+                        will_accept_edges,
                     },
-                    position: Ixy { x: 0, y: 0 },
-                    size: Uxy { x: 0, y: 0 },
+                    position: Default::default(),
+                    size: Default::default(),
                     header,
-                    element_rule_id: None,
-                    will_accept_edges,
                 }
             })
             .collect()
@@ -519,7 +523,7 @@ mod tests {
     }
 
     fn make_element_node(id: Uuid, host_id: Uuid, container_id: Uuid) -> Node {
-        let mut node = Node::element(
+        Node::element(
             id,
             container_id,
             host_id,
@@ -527,19 +531,15 @@ mod tests {
                 subnet_id: container_id,
                 ip_address_id: Some(id),
             },
-        );
-        node.size = Uxy { x: 100, y: 50 };
-        node
+        )
     }
 
-    fn make_container_child(id: Uuid, host_id: Uuid) -> ContainerChild {
-        ContainerChild {
+    fn make_subnet_child(id: Uuid, host_id: Uuid) -> SubnetChildData {
+        SubnetChildData {
             id,
             host_id,
             ip_address_id: Some(id),
             header: None,
-            size: Uxy { x: 100, y: 50 },
-            edges: vec![],
         }
     }
 
@@ -558,8 +558,8 @@ mod tests {
         let child_tag_id = Uuid::new_v4();
 
         let children = vec![
-            make_container_child(child_both_id, host_both.id),
-            make_container_child(child_tag_id, host_tag_only.id),
+            make_subnet_child(child_both_id, host_both.id),
+            make_subnet_child(child_tag_id, host_tag_only.id),
         ];
 
         let mut child_nodes = vec![
@@ -601,7 +601,7 @@ mod tests {
             &options,
         );
 
-        let planner = GraphBuilder::new();
+        let planner = SubnetGraphBuilder::new();
         planner.create_nested_group_containers(subnet_id, &children, &ctx, &mut child_nodes);
 
         // Find group containers
@@ -666,13 +666,13 @@ mod tests {
             "Tag group with no custom title should have no header"
         );
 
-        // Verify element_rule_id is set
+        // Verify element_rule_id is set on the container
         assert!(
-            cat_group.element_rule_id.is_some(),
+            matches!(&cat_group.node_type, NodeType::Container { element_rule_id, .. } if element_rule_id.is_some()),
             "Category group should have element_rule_id"
         );
         assert!(
-            tag_group.element_rule_id.is_some(),
+            matches!(&tag_group.node_type, NodeType::Container { element_rule_id, .. } if element_rule_id.is_some()),
             "Tag group should have element_rule_id"
         );
     }
@@ -686,7 +686,7 @@ mod tests {
         let subnet_id = Uuid::new_v4();
         let child_id = Uuid::new_v4();
 
-        let children = vec![make_container_child(child_id, host.id)];
+        let children = vec![make_subnet_child(child_id, host.id)];
 
         // This time: ByTag FIRST, then ByServiceCategory
         let mut options = TopologyOptions::default();
@@ -722,7 +722,7 @@ mod tests {
 
         let mut child_nodes = vec![make_element_node(child_id, host.id, subnet_id)];
 
-        let planner = GraphBuilder::new();
+        let planner = SubnetGraphBuilder::new();
         planner.create_nested_group_containers(subnet_id, &children, &ctx, &mut child_nodes);
 
         // Find the tag group (should be first match now)
@@ -775,7 +775,7 @@ mod tests {
         let subnet_id = Uuid::new_v4();
         let child_id = Uuid::new_v4();
 
-        let children = vec![make_container_child(child_id, host.id)];
+        let children = vec![make_subnet_child(child_id, host.id)];
         let mut child_nodes = vec![make_element_node(child_id, host.id, subnet_id)];
 
         let mut options = TopologyOptions::default();
@@ -802,7 +802,7 @@ mod tests {
             &options,
         );
 
-        let planner = GraphBuilder::new();
+        let planner = SubnetGraphBuilder::new();
         planner.create_nested_group_containers(subnet_id, &children, &ctx, &mut child_nodes);
 
         // Should create a NestedTag container via service tag inheritance

@@ -449,11 +449,6 @@
 							>
 								{isCurrentlyTrialing ? 'Your trial continues' : `${plan.trial_days}-day free trial`}
 							</div>
-							<div
-								class={`text-tertiary text-xs ${hasTrial(plan) && !hasCustomPrice(plan) ? 'opacity-100' : 'opacity-0'}`}
-							>
-								{billing_noCreditCardRequired()}
-							</div>
 						</div>
 
 						<!-- Description -->
@@ -489,6 +484,11 @@
 										{trial ? `Start ${plan.trial_days}-day free trial` : 'Get Started'}
 									{/if}
 								</button>
+								{#if trial}
+									<p class="text-tertiary mt-2 text-center text-xs">
+										{billing_noCreditCardRequired()}
+									</p>
+								{/if}
 							{:else if hosting === 'SelfHosted'}
 								{#if commercial && onPlanInquiry}
 									<button

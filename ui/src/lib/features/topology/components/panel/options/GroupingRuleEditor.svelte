@@ -106,10 +106,13 @@
 	let elementRules = $derived(pendingElementRules ?? committedElementRules);
 
 	// Editing state tracked by rule UUID + the view it was opened on.
-	// When the view changes, isElementEditing returns false and the
-	// next edit toggle flushes stale pending state.
+	// When the view changes, activeEditingId becomes null so the editor
+	// collapses. The next edit toggle flushes stale pending state.
 	let editingElementId = $state<string | null>(null);
 	let editingView = $state<string | null>(null);
+	let activeEditingId = $derived(
+		editingView === currentView ? editingElementId : null
+	);
 
 	// Show/hide disabled (non-applicable) element rules
 	let hideDisabledElementRules = $state(false);
@@ -419,7 +422,7 @@
 	}
 
 	function isElementEditing(item: ElementGraphRule): boolean {
-		return item.id === editingElementId && editingView === currentView;
+		return item.id === activeEditingId;
 	}
 
 	function getElementEditIcon(item: ElementGraphRule) {
@@ -595,7 +598,7 @@
 	{/snippet}
 	{#snippet itemExpandedSnippet({ item, index })}
 		{@const realIndex = visibleToRealIndexMap[index]}
-		{#if isElementEditing(item) && typeof item.rule !== 'string'}
+		{#if item.id === activeEditingId && typeof item.rule !== 'string'}
 			{@const rule = item.rule}
 			<!-- eslint-disable-next-line svelte/no-static-element-interactions -->
 			<div

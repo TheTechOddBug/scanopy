@@ -18,6 +18,8 @@
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';
 	import type { TagProps } from '$lib/shared/components/data/types';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { billingPlans } from '$lib/shared/stores/metadata';
 	import {
 		common_delete,
 		common_disable,
@@ -27,7 +29,8 @@
 		discovery_cannotDeleteWhileRunning,
 		discovery_cannotToggleWhileRunning,
 		discovery_disableScheduleTooltip,
-		discovery_enableScheduleTooltip
+		discovery_enableScheduleTooltip,
+		discovery_schedulePausedFreePlan
 	} from '$lib/paraglide/messages';
 
 	// Queries
@@ -36,6 +39,7 @@
 	const hostsQuery = useHostsQuery({ limit: 0 });
 	const subnetsQuery = useSubnetsQuery();
 	const credentialsQuery = useCredentialsQuery();
+	const organizationQuery = useOrganizationQuery();
 
 	// Derived data
 	let daemonsData = $derived(daemonsQuery.data ?? []);
@@ -43,6 +47,11 @@
 	let hostsData = $derived(hostsQuery.data?.items ?? []);
 	let subnetsData = $derived(subnetsQuery.data ?? []);
 	let credentialsData = $derived(credentialsQuery.data ?? []);
+	let org = $derived(organizationQuery.data);
+	let schedulePaused = $derived.by(() => {
+		if (!org?.plan?.type) return false;
+		return !billingPlans.getMetadata(org.plan.type).features.scheduled_discovery;
+	});
 
 	let {
 		viewMode,
@@ -123,7 +132,9 @@
 				label: 'Schedule',
 				value:
 					discovery.run_type.type == 'Scheduled'
-						? formatScheduleDisplay(discovery.run_type.cron_schedule, discovery.run_type.timezone)
+						? schedulePaused
+							? discovery_schedulePausedFreePlan()
+							: formatScheduleDisplay(discovery.run_type.cron_schedule, discovery.run_type.timezone)
 						: 'Manual'
 			},
 			{

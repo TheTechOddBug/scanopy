@@ -6,6 +6,7 @@
 	import TimeInput from '$lib/shared/components/forms/input/TimeInput.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import {
 		common_fri,
 		common_mon,
@@ -22,6 +23,7 @@
 		discovery_scheduleCronInfo,
 		discovery_scheduleDaysOfWeek,
 		discovery_scheduleEditAsCron,
+		discovery_scheduleFreePlanWarning,
 		discovery_scheduleHelp,
 		discovery_scheduleResetToDayPicker,
 		discovery_scheduleTimezoneHelp
@@ -34,13 +36,15 @@
 		formData: Discovery;
 		readOnly?: boolean;
 		rawCronMode?: boolean;
+		schedulePaused?: boolean;
 	}
 
 	let {
 		form,
 		formData = $bindable(),
 		readOnly = false,
-		rawCronMode = $bindable(false)
+		rawCronMode = $bindable(false),
+		schedulePaused = false
 	}: Props = $props();
 
 	const dayLabels = [
@@ -150,6 +154,9 @@
 
 {#if formData.run_type.type === 'Scheduled'}
 	<div class="space-y-4">
+		{#if schedulePaused}
+			<InlineWarning body={discovery_scheduleFreePlanWarning()} />
+		{/if}
 		<p class="text-tertiary text-sm">
 			{discovery_scheduleHelp()}
 		</p>

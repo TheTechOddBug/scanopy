@@ -404,6 +404,10 @@
 			scheduleCron = formData.run_type.cron_schedule;
 			scheduleTimezone = formData.run_type.timezone || scheduleTimezone;
 
+			// Sync computed timezone back to formData so submit sends the correct value
+			// even if the user never touches the timezone dropdown
+			formData.run_type = { ...formData.run_type, timezone: scheduleTimezone };
+
 			const parsed = parseDayTimeCronSchedule(formData.run_type.cron_schedule);
 			if (parsed) {
 				scheduleDaysOfWeek = parsed.daysOfWeek.join(',');
@@ -542,7 +546,13 @@
 				</div>
 			{:else if activeTab === 'schedule'}
 				<div class="space-y-8 p-6">
-					<DiscoveryScheduleForm {form} bind:formData {readOnly} bind:rawCronMode />
+					<DiscoveryScheduleForm
+						{form}
+						bind:formData
+						{readOnly}
+						bind:rawCronMode
+						schedulePaused={!hasScheduledDiscovery}
+					/>
 				</div>
 			{/if}
 			{#if hasCredentialsTab}

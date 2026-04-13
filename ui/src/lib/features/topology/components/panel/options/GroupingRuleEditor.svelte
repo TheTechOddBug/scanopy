@@ -338,7 +338,8 @@
 			case 'ByTag':
 				newRule = { ByTag: { tag_ids: [], title: null } };
 				break;
-			case 'ByVirtualizer':
+			case 'ByHypervisor':
+			case 'ByContainerRuntime':
 			case 'ByStack':
 				newRule = optionId;
 				break;
@@ -559,7 +560,9 @@
 	onEdit={handleVisibleElementEdit}
 >
 	{#snippet helpSnippet()}
-		<p class="text-tertiary text-xs">{topology_elementGroupingHelp({ label: elementGroupingLabelPlural })}</p>
+		<p class="text-tertiary text-xs">
+			{topology_elementGroupingHelp({ label: elementGroupingLabelPlural })}
+		</p>
 	{/snippet}
 	{#snippet headerSnippet()}
 		<button

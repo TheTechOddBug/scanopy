@@ -2,7 +2,13 @@ import { writable, get } from 'svelte/store';
 import type { Edge } from '@xyflow/svelte';
 import type { Node } from '@xyflow/svelte';
 import type { QueryClient } from '@tanstack/svelte-query';
-import { edgeTypes, views, serviceDefinitions, subnetTypes } from '$lib/shared/stores/metadata';
+import {
+	edgeTypes,
+	entities,
+	views,
+	serviceDefinitions,
+	subnetTypes
+} from '$lib/shared/stores/metadata';
 import type { TopologyEdge, TopologyNode, Topology } from './types/base';
 import {
 	isDisabledEdge,
@@ -116,6 +122,47 @@ interface TagFilter {
  * - Subnets with hidden tags -> Container nodes fade out
  * - UNTAGGED_SENTINEL in hidden arrays -> hide entities with no tags
  */
+/**
+ * Hide a set of containers and all their descendants (subcontainers + elements).
+ * Recursively finds nested subcontainers via parent_container_id, then hides
+ * all elements whose container_id matches any hidden container.
+ */
+function hideContainersAndDescendants(
+	containerIds: Set<string>,
+	nodes: TopologyNode[],
+	hiddenNodeIds: Set<string>
+) {
+	if (containerIds.size === 0) return;
+
+	// Add containers themselves to hidden
+	for (const cid of containerIds) hiddenNodeIds.add(cid);
+
+	// Recursively find subcontainers inside hidden containers
+	let changed = true;
+	while (changed) {
+		changed = false;
+		for (const node of nodes) {
+			if (node.node_type !== 'Container' || containerIds.has(node.id)) continue;
+			const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
+			if (parentId && containerIds.has(parentId)) {
+				containerIds.add(node.id);
+				hiddenNodeIds.add(node.id);
+				changed = true;
+			}
+		}
+	}
+
+	// Hide all element nodes inside any hidden container
+	for (const node of nodes) {
+		if (node.node_type === 'Element') {
+			const containerId = (node as Record<string, unknown>).container_id as string | undefined;
+			if (containerId && containerIds.has(containerId)) {
+				hiddenNodeIds.add(node.id);
+			}
+		}
+	}
+}
+
 export function updateTagFilter(
 	topology: Topology | undefined,
 	tagFilter: TagFilter | undefined,
@@ -149,12 +196,16 @@ export function updateTagFilter(
 		: null;
 	const config = meta?.element_config;
 	const containerEntity = config?.container_entity ?? null;
-	const elementEntities = config?.element_entities ?? ['Interface'];
+	const elementEntities = config?.element_entities ?? [];
 	const inlineEntities = config?.inline_entities ?? [];
 
-	// Determine filter roles from element config
+	// Determine filter roles from element config and parent_entity relationships
 	const hostIsContainer = containerEntity === 'Host';
 	const hostIsElement = elementEntities.includes('Host');
+	const hostIsParent = elementEntities.some(
+		(e) => entities.getMetadata(e)?.parent_entity === 'Host'
+	);
+	const hostIsRelevant = hostIsContainer || hostIsElement || hostIsParent;
 	const serviceIsElement = elementEntities.includes('Service');
 	const serviceIsInline = inlineEntities.includes('Service');
 	const serviceIsVisible = serviceIsElement || serviceIsInline;
@@ -172,8 +223,8 @@ export function updateTagFilter(
 	const hiddenServiceIds = new Set<string>();
 	const index = buildEntityNodeIndex(topology.nodes);
 
-	// Host filtering: behavior depends on whether Host is container vs element
-	if (hostIsContainer || hostIsElement) {
+	// Host filtering: runs when Host is container, element, or parent of an element entity
+	if (hostIsRelevant) {
 		const hiddenHostIds = new Set<string>();
 		for (const host of topology.hosts) {
 			const isUntagged = host.tags.length === 0;
@@ -191,41 +242,10 @@ export function updateTagFilter(
 			const hiddenContainerIds = new Set<string>();
 			for (const [hostId, containerIds] of index.hostIdToContainerIds) {
 				if (hiddenHostIds.has(hostId)) {
-					containerIds.forEach((cid) => {
-						hiddenNodeIds.add(cid);
-						hiddenContainerIds.add(cid);
-					});
+					containerIds.forEach((cid) => hiddenContainerIds.add(cid));
 				}
 			}
-			// Recursively find subcontainers inside hidden containers
-			if (hiddenContainerIds.size > 0) {
-				let changed = true;
-				while (changed) {
-					changed = false;
-					for (const node of topology.nodes) {
-						if (node.node_type !== 'Container' || hiddenContainerIds.has(node.id)) continue;
-						const parentId = (node as Record<string, unknown>).parent_container_id as
-							| string
-							| undefined;
-						if (parentId && hiddenContainerIds.has(parentId)) {
-							hiddenContainerIds.add(node.id);
-							hiddenNodeIds.add(node.id);
-							changed = true;
-						}
-					}
-				}
-				// Hide all element nodes inside hidden containers
-				for (const node of topology.nodes) {
-					if (node.node_type === 'Element') {
-						const containerId = (node as Record<string, unknown>).container_id as
-							| string
-							| undefined;
-						if (containerId && hiddenContainerIds.has(containerId)) {
-							hiddenNodeIds.add(node.id);
-						}
-					}
-				}
-			}
+			hideContainersAndDescendants(hiddenContainerIds, topology.nodes, hiddenNodeIds);
 		}
 	}
 
@@ -257,36 +277,7 @@ export function updateTagFilter(
 				hiddenContainerIds.add(subnet.id);
 			}
 		}
-		// Also hide subcontainers and all descendant elements inside hidden containers
-		if (hiddenContainerIds.size > 0) {
-			// Find all subcontainers recursively (breadth-first)
-			let changed = true;
-			while (changed) {
-				changed = false;
-				for (const node of topology.nodes) {
-					if (node.node_type !== 'Container' || hiddenContainerIds.has(node.id)) continue;
-					const parentId = (node as Record<string, unknown>).parent_container_id as
-						| string
-						| undefined;
-					if (parentId && hiddenContainerIds.has(parentId)) {
-						hiddenContainerIds.add(node.id);
-						hiddenNodeIds.add(node.id);
-						changed = true;
-					}
-				}
-			}
-			// Hide all element nodes inside any hidden container
-			for (const node of topology.nodes) {
-				if (node.node_type === 'Element') {
-					const parentId =
-						(node as Record<string, unknown>).container_id ??
-						(node as Record<string, unknown>).subnet_id;
-					if (typeof parentId === 'string' && hiddenContainerIds.has(parentId)) {
-						hiddenNodeIds.add(node.id);
-					}
-				}
-			}
-		}
+		hideContainersAndDescendants(hiddenContainerIds, topology.nodes, hiddenNodeIds);
 	}
 
 	tagHiddenNodeIds.set(hiddenNodeIds);

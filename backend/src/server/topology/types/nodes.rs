@@ -3,7 +3,6 @@ use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use crate::server::shared::types::{Color, Icon};
 use crate::server::subnets::r#impl::types::SubnetType;
-use crate::server::topology::types::edges::Edge;
 use crate::server::topology::types::layout::{Ixy, Uxy};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
@@ -18,13 +17,6 @@ pub struct Node {
     pub position: Ixy,
     pub size: Uxy,
     pub header: Option<String>,
-    /// ID of the element rule that created this container (for NestedTag/NestedServiceCategory)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub element_rule_id: Option<Uuid>,
-    /// When true, this container accepts edges with `will_target_container`, causing
-    /// them to visually attach here instead of at elements inside.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub will_accept_edges: bool,
 }
 
 impl Node {
@@ -44,8 +36,6 @@ impl Node {
             position: Ixy::default(),
             size: Uxy::default(),
             header: None,
-            element_rule_id: None,
-            will_accept_edges: false,
         }
     }
 }
@@ -178,21 +168,6 @@ impl TypeMetadataProvider for ContainerType {
     }
 
     fn metadata(&self) -> serde_json::Value {
-        let title_style = match self {
-            ContainerType::Subnet
-            | ContainerType::ServiceCategory
-            | ContainerType::Application
-            | ContainerType::Root
-            | ContainerType::Host => TitleStyle::External,
-            ContainerType::NestedTag
-            | ContainerType::NestedServiceCategory
-            | ContainerType::Hypervisor
-            | ContainerType::ContainerRuntime
-            | ContainerType::Stack
-            | ContainerType::TrunkPort
-            | ContainerType::VLAN
-            | ContainerType::PortOpStatus => TitleStyle::Inline,
-        };
         let is_subcontainer = matches!(
             self,
             ContainerType::NestedTag
@@ -204,28 +179,16 @@ impl TypeMetadataProvider for ContainerType {
                 | ContainerType::VLAN
                 | ContainerType::PortOpStatus
         );
-        let (padding_top, padding_side) = match self {
-            ContainerType::Subnet
-            | ContainerType::ServiceCategory
-            | ContainerType::Application
-            | ContainerType::Root
-            | ContainerType::Host => (25, 25),
-            ContainerType::NestedTag
-            | ContainerType::NestedServiceCategory
-            | ContainerType::Hypervisor
-            | ContainerType::ContainerRuntime
-            | ContainerType::Stack
-            | ContainerType::TrunkPort
-            | ContainerType::VLAN
-            | ContainerType::PortOpStatus => (50, 25),
+        let title_style = if is_subcontainer {
+            TitleStyle::Inline
+        } else {
+            TitleStyle::External
         };
-        let (collapsed_width, collapsed_height) = match self {
-            ContainerType::Subnet
-            | ContainerType::ServiceCategory
-            | ContainerType::Application
-            | ContainerType::Root
-            | ContainerType::Host => (200, 80),
-            _ => (250, 40),
+        let padding_top = if is_subcontainer { 50 } else { 25 };
+        let (collapsed_width, collapsed_height) = if is_subcontainer {
+            (250, 40)
+        } else {
+            (200, 80)
         };
         let fill_icon = matches!(self, ContainerType::PortOpStatus);
         let collapsed_by_default = matches!(self, ContainerType::PortOpStatus);
@@ -236,7 +199,7 @@ impl TypeMetadataProvider for ContainerType {
             "has_border": true,
             "fill_icon": fill_icon,
             "collapsed_by_default": collapsed_by_default,
-            "padding": { "top": padding_top, "left": padding_side, "bottom": padding_side, "right": padding_side },
+            "padding": { "top": padding_top, "left": 25, "bottom": 25, "right": 25 },
             "collapsed_size": { "width": collapsed_width, "height": collapsed_height },
         })
     }
@@ -301,9 +264,6 @@ pub enum NodeType {
         /// subnet ID for Subnet containers). Used for ownership mapping on the frontend.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         entity_id: Option<Uuid>,
-        /// Sugiyama layer assignment for compound layout (from SubnetType::vertical_order)
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        layer_hint: Option<i32>,
         /// Display icon name (set by graph builder from the source entity, e.g. subnet type)
         #[serde(default, skip_serializing_if = "Option::is_none")]
         icon: Option<String>,
@@ -314,6 +274,13 @@ pub enum NodeType {
         /// Used by Hypervisor and Stack subcontainers to show the service's logo.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         associated_service_definition: Option<String>,
+        /// ID of the element rule that created this container (for subcontainers like NestedTag, Hypervisor, etc.)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        element_rule_id: Option<Uuid>,
+        /// When true, this container accepts edges with `will_target_container`, causing
+        /// them to visually attach here instead of at elements inside.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        will_accept_edges: bool,
     },
     Element {
         #[serde(default)]
@@ -324,20 +291,9 @@ pub enum NodeType {
     },
 }
 
-#[derive(Debug, Clone)]
-pub struct ContainerChild {
-    pub id: Uuid,
-    pub header: Option<String>,
-    pub host_id: Uuid,
-    pub ip_address_id: Option<Uuid>,
-    pub size: Uxy,
-    pub edges: Vec<Edge>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     #[test]
     fn test_container_round_trip() {
@@ -345,15 +301,15 @@ mod tests {
             container_type: ContainerType::Subnet,
             parent_container_id: None,
             entity_id: None,
-            layer_hint: Some(2),
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["node_type"], "Container");
         assert_eq!(json["container_type"], "Subnet");
-        assert_eq!(json["layer_hint"], 2);
         assert!(json.get("parent_container_id").is_none());
 
         let deserialized: NodeType = serde_json::from_value(json).unwrap();
@@ -367,10 +323,11 @@ mod tests {
             container_type: ContainerType::NestedServiceCategory,
             parent_container_id: Some(parent_id),
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["container_type"], "NestedServiceCategory");
@@ -381,18 +338,24 @@ mod tests {
     }
 
     #[test]
-    fn test_container_no_layer_hint_omitted_in_json() {
+    fn test_container_element_rule_id_round_trip() {
+        let rule_id = Uuid::new_v4();
         let node_type = NodeType::Container {
-            container_type: ContainerType::Subnet,
+            container_type: ContainerType::NestedTag,
             parent_container_id: None,
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: Some(rule_id),
+            will_accept_edges: true,
         };
         let json = serde_json::to_value(&node_type).unwrap();
-        assert!(json.get("layer_hint").is_none());
+        assert_eq!(json["element_rule_id"], rule_id.to_string());
+        assert_eq!(json["will_accept_edges"], true);
+
+        let deserialized: NodeType = serde_json::from_value(json).unwrap();
+        assert_eq!(deserialized, node_type);
     }
 
     #[test]
@@ -468,10 +431,11 @@ mod tests {
             container_type: ContainerType::NestedTag,
             parent_container_id: Some(Uuid::new_v4()),
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&tag).unwrap();
         assert_eq!(json["container_type"], "NestedTag");
@@ -480,10 +444,11 @@ mod tests {
             container_type: ContainerType::NestedServiceCategory,
             parent_container_id: Some(Uuid::new_v4()),
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&svc).unwrap();
         assert_eq!(json["container_type"], "NestedServiceCategory");
@@ -495,10 +460,11 @@ mod tests {
             container_type: ContainerType::ServiceCategory,
             parent_container_id: None,
             entity_id: None,
-            layer_hint: None,
             icon: Some("Zap".to_string()),
             color: Some("Purple".to_string()),
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["container_type"], "ServiceCategory");
@@ -566,10 +532,11 @@ mod tests {
             container_type: ContainerType::Host,
             parent_container_id: None,
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["container_type"], "Host");
@@ -601,10 +568,11 @@ mod tests {
             container_type: ContainerType::Hypervisor,
             parent_container_id: None,
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["container_type"], "Hypervisor");
@@ -618,10 +586,11 @@ mod tests {
             container_type: ContainerType::ContainerRuntime,
             parent_container_id: None,
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["container_type"], "ContainerRuntime");
@@ -636,10 +605,11 @@ mod tests {
             container_type: ContainerType::Stack,
             parent_container_id: Some(parent_id),
             entity_id: None,
-            layer_hint: None,
             icon: None,
             color: None,
             associated_service_definition: None,
+            element_rule_id: None,
+            will_accept_edges: false,
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["container_type"], "Stack");

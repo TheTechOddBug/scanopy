@@ -1,12 +1,12 @@
 import type { components } from '$lib/api/schema';
 
 export type GraphRule<T> = { id: string; rule: T };
-export type ContainerRule = components['schemas']['GraphRule_ContainerRule']['rule'];
-export type ElementRule = components['schemas']['GraphRule_ElementRule']['rule'];
-export type ContainerGraphRule = components['schemas']['GraphRule_ContainerRule'];
-export type ElementGraphRule = components['schemas']['GraphRule_ElementRule'];
+export type ContainerRule = components['schemas']['IdentifiedRule_ContainerRule']['rule'];
+export type ElementRule = components['schemas']['IdentifiedRule_ElementRule']['rule'];
+export type ContainerGraphRule = components['schemas']['IdentifiedRule_ContainerRule'];
+export type ElementGraphRule = components['schemas']['IdentifiedRule_ElementRule'];
 
-export type ContainerRuleType = 'BySubnet' | 'MergeDockerBridges' | 'ByApplication';
+export type ContainerRuleType = 'BySubnet' | 'MergeDockerBridges' | 'ByApplication' | 'ByHost';
 
 export function getContainerRuleDiscriminant(rule: ContainerRule): ContainerRuleType {
 	if (typeof rule === 'string') return rule;
@@ -18,7 +18,10 @@ export type ElementRuleType =
 	| 'ByTag'
 	| 'ByHypervisor'
 	| 'ByContainerRuntime'
-	| 'ByStack';
+	| 'ByStack'
+	| 'ByTrunkPort'
+	| 'ByVLAN'
+	| 'ByPortOpStatus';
 
 export function getElementRuleType(rule: ElementRule): ElementRuleType {
 	if (typeof rule === 'string') return rule;

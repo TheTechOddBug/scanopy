@@ -140,20 +140,19 @@ pub fn apply_element_rules_with_titles(
                                 container_type,
                                 parent_container_id: Some(*parent_id),
                                 entity_id: None,
-                                layer_hint: None,
                                 icon: None,
                                 color: None,
                                 associated_service_definition: virtualizer_titles
                                     .as_ref()
                                     .and_then(|t| t.get(&vid).cloned()),
+                                element_rule_id: Some(*rule_id),
+                                will_accept_edges: rule.will_accept_edges(),
                             },
                             position: Default::default(),
                             size: Default::default(),
                             header: virtualizer_titles
                                 .as_ref()
                                 .and_then(|t| t.get(&vid).cloned()),
-                            element_rule_id: Some(*rule_id),
-                            will_accept_edges: rule.will_accept_edges(),
                         });
 
                         for id in &ids {
@@ -199,16 +198,15 @@ pub fn apply_element_rules_with_titles(
                                 container_type: ContainerType::Stack,
                                 parent_container_id: Some(*parent_id),
                                 entity_id: None,
-                                layer_hint: None,
                                 icon: None,
                                 color: None,
                                 associated_service_definition: None,
+                                element_rule_id: Some(*rule_id),
+                                will_accept_edges: rule.will_accept_edges(),
                             },
                             position: Default::default(),
                             size: Default::default(),
                             header: Some(project),
-                            element_rule_id: Some(*rule_id),
-                            will_accept_edges: rule.will_accept_edges(),
                         });
 
                         for id in &ids {
@@ -248,16 +246,15 @@ pub fn apply_element_rules_with_titles(
                             container_type: ContainerType::NestedServiceCategory,
                             parent_container_id: Some(*parent_id),
                             entity_id: None,
-                            layer_hint: None,
                             icon: None,
                             color: None,
                             associated_service_definition: None,
+                            element_rule_id: Some(*rule_id),
+                            will_accept_edges: rule.will_accept_edges(),
                         },
                         position: Default::default(),
                         size: Default::default(),
                         header: title.clone(),
-                        element_rule_id: Some(*rule_id),
-                        will_accept_edges: rule.will_accept_edges(),
                     });
 
                     for id in &matched_ids {
@@ -289,16 +286,15 @@ pub fn apply_element_rules_with_titles(
                             container_type: ContainerType::TrunkPort,
                             parent_container_id: Some(*parent_id),
                             entity_id: None,
-                            layer_hint: None,
                             icon: None,
                             color: None,
                             associated_service_definition: None,
+                            element_rule_id: Some(*rule_id),
+                            will_accept_edges: rule.will_accept_edges(),
                         },
                         position: Default::default(),
                         size: Default::default(),
                         header: Some("Trunk Ports".to_string()),
-                        element_rule_id: Some(*rule_id),
-                        will_accept_edges: rule.will_accept_edges(),
                     });
 
                     for id in &matched_ids {
@@ -348,16 +344,15 @@ pub fn apply_element_rules_with_titles(
                                 container_type: ContainerType::VLAN,
                                 parent_container_id: Some(*parent_id),
                                 entity_id: None,
-                                layer_hint: None,
                                 icon: None,
                                 color: None,
                                 associated_service_definition: None,
+                                element_rule_id: Some(*rule_id),
+                                will_accept_edges: rule.will_accept_edges(),
                             },
                             position: Default::default(),
                             size: Default::default(),
                             header: Some(header),
-                            element_rule_id: Some(*rule_id),
-                            will_accept_edges: rule.will_accept_edges(),
                         });
 
                         for id in &ids {
@@ -408,16 +403,15 @@ pub fn apply_element_rules_with_titles(
                                 container_type: ContainerType::PortOpStatus,
                                 parent_container_id: Some(*parent_id),
                                 entity_id: None,
-                                layer_hint: None,
                                 icon: None,
                                 color: Some(color.to_string()),
                                 associated_service_definition: None,
+                                element_rule_id: Some(*rule_id),
+                                will_accept_edges: rule.will_accept_edges(),
                             },
                             position: Default::default(),
                             size: Default::default(),
                             header: Some(status_name),
-                            element_rule_id: Some(*rule_id),
-                            will_accept_edges: rule.will_accept_edges(),
                         });
 
                         for id in &ids {
@@ -455,16 +449,15 @@ pub fn apply_element_rules_with_titles(
                             container_type: ContainerType::NestedTag,
                             parent_container_id: Some(*parent_id),
                             entity_id: None,
-                            layer_hint: None,
                             icon: None,
                             color: None,
                             associated_service_definition: None,
+                            element_rule_id: Some(*rule_id),
+                            will_accept_edges: rule.will_accept_edges(),
                         },
                         position: Default::default(),
                         size: Default::default(),
                         header: title.clone(),
-                        element_rule_id: Some(*rule_id),
-                        will_accept_edges: rule.will_accept_edges(),
                     });
 
                     for id in &matched_ids {

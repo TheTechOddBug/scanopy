@@ -301,7 +301,6 @@
 
 		const prep = prepareTopologyData(topology, layoutState, getInfrastructureRuleId);
 		if (!prep) return;
-
 		const { needsElk, collapsed, visibleNodes: initialVisibleNodes } = prep;
 		let visibleNodes = initialVisibleNodes;
 
@@ -340,11 +339,16 @@
 						// nodesInitialized becomes true after adoptUserNodes processes.
 						await tick();
 						if (nodesInitialized.current) return;
-						// Not ready yet — wait for it via $effect
+						// Not ready yet — wait for it via $effect, with timeout
 						await new Promise<void>((resolve) => {
+							const timeout = setTimeout(() => {
+								console.warn('[LAYOUT] nodesInitialized timeout — proceeding with DOM measurement');
+								resolve();
+							}, 500);
 							const unsub = $effect.root(() => {
 								$effect(() => {
 									if (nodesInitialized.current) {
+										clearTimeout(timeout);
 										resolve();
 										unsub();
 									}

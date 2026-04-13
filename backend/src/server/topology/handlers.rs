@@ -22,6 +22,7 @@ use crate::server::{
         types::base::{
             SetEntitiesParams, Topology, TopologyEdgeHandleUpdate, TopologyMetadataUpdate,
             TopologyNodePositionUpdate, TopologyNodeResizeUpdate, TopologyRebuildRequest,
+            TopologyRequestOptions,
         },
     },
 };
@@ -225,6 +226,14 @@ async fn create_topology(
     );
 
     let service = Topology::get_service(&state);
+
+    // Override request options with backend defaults — the backend is the
+    // source of truth for default rules (element_rules, container_rules, etc.)
+    // The frontend only sends view and local display preferences.
+    let default_request = TopologyRequestOptions::default();
+    topology.base.options.request.element_rules = default_request.element_rules;
+    topology.base.options.request.container_rules = default_request.container_rules;
+    topology.base.options.request.hide_service_categories = default_request.hide_service_categories;
 
     let (hosts, ip_addresses, subnets, dependencies, ports, bindings, interfaces) =
         service.get_entity_data(topology.base.network_id).await?;

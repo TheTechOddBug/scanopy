@@ -134,7 +134,8 @@ function defaultRequestOptions(): components['schemas']['TopologyRequestOptions'
 				const rule = makeGraphRule({
 					ByServiceCategory: {
 						categories: getIrrelevantCategories(getOrgUseCase()),
-						title: common_infrastructure()
+						title: common_infrastructure(),
+						is_infra_rule: true
 					}
 				});
 				elementRules.push(rule);

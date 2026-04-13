@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-13T20:41:32.629898Z",
-              "id": "3ef6683c-5f1a-4aee-9238-36a0157ca797",
+              "created_at": "2026-04-13T21:28:05.169001Z",
+              "id": "7b225eb5-b65e-4a08-a31b-9fd1ba50a7a6",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-13T20:41:32.629898Z"
+              "updated_at": "2026-04-13T21:28:05.169001Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-13T20:41:32.609781Z",
-                      "id": "ca75164e-f7a0-40eb-b127-327d879d626d",
+                      "created_at": "2026-04-13T21:28:05.144919Z",
+                      "id": "6624b07c-0dc9-4195-8c09-3418dc05b79d",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-13T20:41:32.609781Z"
+                      "updated_at": "2026-04-13T21:28:05.144919Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Prometheus",
+                  "service_definition": "OpenVPN",
                   "source": {
                     "type": "Manual"
                   },
@@ -12003,14 +12003,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-13T20:41:32.625152Z",
-                  "id": "6c74673f-2a1d-4a74-8595-7e96b71112cd",
+                  "created_at": "2026-04-13T21:28:05.159355Z",
+                  "id": "8e6869f7-a3c0-49de-9d93-f96aa2f2cf02",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-13T20:41:32.625152Z"
+                  "updated_at": "2026-04-13T21:28:05.159355Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12019,7 +12019,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Prometheus",
+              "service_definition": "OpenVPN",
               "source": {
                 "type": "Manual"
               },
@@ -13384,14 +13384,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-13T20:41:32.610002Z",
-          "id": "857192b1-24ea-4f04-bbb6-7a26db013cf4",
+          "created_at": "2026-04-13T21:28:05.145141Z",
+          "id": "2b353916-1447-4edc-aa27-7a4723115e74",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-13T20:41:32.610002Z"
+          "updated_at": "2026-04-13T21:28:05.145141Z"
         }
       },
       "BindingBase": {
@@ -13921,7 +13921,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Prometheus",
+              "service_definition": "OpenVPN",
               "tags": [],
               "virtualization": null
             }
@@ -16442,14 +16442,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-13T20:41:32.609474Z",
-                  "id": "e4cbbece-8f54-4553-9484-5ab0b980defe",
+                  "created_at": "2026-04-13T21:28:05.144628Z",
+                  "id": "0783f1c9-2085-4c4b-ad1d-682d4b4f4b80",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-13T20:41:32.609474Z"
+                  "updated_at": "2026-04-13T21:28:05.144628Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16458,7 +16458,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Prometheus",
+              "service_definition": "OpenVPN",
               "source": {
                 "type": "Manual"
               },
@@ -17813,14 +17813,6 @@
               "size"
             ],
             "properties": {
-              "element_rule_id": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "uuid",
-                "description": "ID of the element rule that created this container (for NestedTag/NestedServiceCategory)"
-              },
               "header": {
                 "type": [
                   "string",
@@ -17836,10 +17828,6 @@
               },
               "size": {
                 "$ref": "#/components/schemas/Uxy"
-              },
-              "will_accept_edges": {
-                "type": "boolean",
-                "description": "When true, this container accepts edges with `will_target_container`, causing\nthem to visually attach here instead of at elements inside."
               }
             }
           }
@@ -17870,6 +17858,14 @@
               "container_type": {
                 "$ref": "#/components/schemas/ContainerType"
               },
+              "element_rule_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "ID of the element rule that created this container (for subcontainers like NestedTag, Hypervisor, etc.)"
+              },
               "entity_id": {
                 "type": [
                   "string",
@@ -17885,14 +17881,6 @@
                 ],
                 "description": "Display icon name (set by graph builder from the source entity, e.g. subnet type)"
               },
-              "layer_hint": {
-                "type": [
-                  "integer",
-                  "null"
-                ],
-                "format": "int32",
-                "description": "Sugiyama layer assignment for compound layout (from SubnetType::vertical_order)"
-              },
               "node_type": {
                 "type": "string",
                 "enum": [
@@ -17905,6 +17893,10 @@
                   "null"
                 ],
                 "format": "uuid"
+              },
+              "will_accept_edges": {
+                "type": "boolean",
+                "description": "When true, this container accepts edges with `will_target_container`, causing\nthem to visually attach here instead of at elements inside."
               }
             }
           },
@@ -18654,14 +18646,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-13T20:41:32.599172Z",
-                        "id": "663807f6-bb74-4bde-aeab-c3a19dba4ba3",
+                        "created_at": "2026-04-13T21:28:05.134426Z",
+                        "id": "9ce39252-0aa9-4993-81dc-a311e8a71295",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-13T20:41:32.599172Z"
+                        "updated_at": "2026-04-13T21:28:05.134426Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18670,7 +18662,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Prometheus",
+                    "service_definition": "OpenVPN",
                     "source": {
                       "type": "Manual"
                     },
@@ -18747,14 +18739,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-13T20:41:32.623386Z",
-                    "id": "d9e54d2f-0ae2-4967-bb80-3499a57446fc",
+                    "created_at": "2026-04-13T21:28:05.158247Z",
+                    "id": "a9e06e84-9814-42c1-9ddb-dfbec0f6938a",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-13T20:41:32.623386Z"
+                    "updated_at": "2026-04-13T21:28:05.158247Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18763,7 +18755,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Prometheus",
+                "service_definition": "OpenVPN",
                 "source": {
                   "type": "Manual"
                 },
@@ -19993,14 +19985,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-13T20:41:32.609919Z",
-              "id": "dd2c85ca-7d4d-45e2-bb30-a88c0d91c586",
+              "created_at": "2026-04-13T21:28:05.145065Z",
+              "id": "aaeda3b0-9d48-441a-9f05-bb078de5ab2e",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-13T20:41:32.609919Z"
+              "updated_at": "2026-04-13T21:28:05.145065Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20009,7 +20001,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Prometheus",
+          "service_definition": "OpenVPN",
           "source": {
             "type": "Manual"
           },

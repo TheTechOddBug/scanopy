@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-13T20:41:32.625687Z",
-             *       "id": "07942d72-375d-4b37-8ec3-68586d278056",
+             *       "created_at": "2026-04-13T21:28:05.168999Z",
+             *       "id": "4ba68d04-0209-4157-b8a6-7ab2dba8bd05",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-13T20:41:32.625687Z"
+             *       "updated_at": "2026-04-13T21:28:05.168999Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-13T20:41:32.609870Z",
-             *               "id": "826a20b4-3998-42f3-9657-21b6a9bcf3de",
+             *               "created_at": "2026-04-13T21:28:05.144929Z",
+             *               "id": "c8d56e58-435f-4da4-ab05-568853aacc27",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-13T20:41:32.609870Z"
+             *               "updated_at": "2026-04-13T21:28:05.144929Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Prometheus",
+             *           "service_definition": "OpenVPN",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3531,14 +3531,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-13T20:41:32.620287Z",
-             *           "id": "85f77850-72d1-4885-b651-278faf16af69",
+             *           "created_at": "2026-04-13T21:28:05.159366Z",
+             *           "id": "9edf7b3f-26c1-499a-8d0c-79ca3a0e186b",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-13T20:41:32.620287Z"
+             *           "updated_at": "2026-04-13T21:28:05.159366Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3547,7 +3547,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Prometheus",
+             *       "service_definition": "OpenVPN",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3898,14 +3898,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-13T20:41:32.610125Z",
-         *       "id": "019b0270-9ba0-4698-b1b1-4cf74cb6ea4b",
+         *       "created_at": "2026-04-13T21:28:05.145150Z",
+         *       "id": "4ac1278d-a6da-46b0-ba6d-b559b30cd2e3",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-13T20:41:32.610125Z"
+         *       "updated_at": "2026-04-13T21:28:05.145150Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4090,7 +4090,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Prometheus",
+         *           "service_definition": "OpenVPN",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4949,14 +4949,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-13T20:41:32.609330Z",
-         *               "id": "09874939-6883-4b68-98eb-110bc457b5e0",
+         *               "created_at": "2026-04-13T21:28:05.144624Z",
+         *               "id": "56165652-beb4-4177-8cb8-a33aec042912",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-13T20:41:32.609330Z"
+         *               "updated_at": "2026-04-13T21:28:05.144624Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4965,7 +4965,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Prometheus",
+         *           "service_definition": "OpenVPN",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5447,21 +5447,11 @@ export interface components {
             subnet_count: number;
         };
         Node: components["schemas"]["NodeType"] & {
-            /**
-             * Format: uuid
-             * @description ID of the element rule that created this container (for NestedTag/NestedServiceCategory)
-             */
-            element_rule_id?: string | null;
             header?: string | null;
             /** Format: uuid */
             id: string;
             position: components["schemas"]["Ixy"];
             size: components["schemas"]["Uxy"];
-            /**
-             * @description When true, this container accepts edges with `will_target_container`, causing
-             *     them to visually attach here instead of at elements inside.
-             */
-            will_accept_edges?: boolean;
         };
         NodeType: {
             /**
@@ -5474,21 +5464,26 @@ export interface components {
             container_type?: components["schemas"]["ContainerType"];
             /**
              * Format: uuid
+             * @description ID of the element rule that created this container (for subcontainers like NestedTag, Hypervisor, etc.)
+             */
+            element_rule_id?: string | null;
+            /**
+             * Format: uuid
              * @description The entity this container represents (e.g. host ID for Host containers,
              *     subnet ID for Subnet containers). Used for ownership mapping on the frontend.
              */
             entity_id?: string | null;
             /** @description Display icon name (set by graph builder from the source entity, e.g. subnet type) */
             icon?: string | null;
-            /**
-             * Format: int32
-             * @description Sugiyama layer assignment for compound layout (from SubnetType::vertical_order)
-             */
-            layer_hint?: number | null;
             /** @enum {string} */
             node_type: "Container";
             /** Format: uuid */
             parent_container_id?: string | null;
+            /**
+             * @description When true, this container accepts edges with `will_target_container`, causing
+             *     them to visually attach here instead of at elements inside.
+             */
+            will_accept_edges?: boolean;
         } | (components["schemas"]["ElementEntityType"] & {
             /** Format: uuid */
             container_id?: string;
@@ -6100,14 +6095,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-13T20:41:32.610030Z",
-         *           "id": "aaa086ad-9f7f-428f-8cc4-d3df0dbac1d6",
+         *           "created_at": "2026-04-13T21:28:05.145074Z",
+         *           "id": "75975799-9e5b-41f0-a780-0f257d00f216",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-13T20:41:32.610030Z"
+         *           "updated_at": "2026-04-13T21:28:05.145074Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6116,7 +6111,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Prometheus",
+         *       "service_definition": "OpenVPN",
          *       "source": {
          *         "type": "Manual"
          *       },

@@ -78,7 +78,14 @@
 	// Update URL hash when activeTab changes
 	$effect(() => {
 		if (typeof window !== 'undefined' && activeTab) {
-			window.location.hash = activeTab;
+			// Clear topology-specific URL params when leaving the topology tab
+			const url = new URL(window.location.href);
+			if (activeTab !== 'topology') {
+				url.searchParams.delete('topologyId');
+				url.searchParams.delete('view');
+			}
+			url.hash = activeTab;
+			window.history.replaceState(window.history.state, '', url.toString());
 		}
 	});
 

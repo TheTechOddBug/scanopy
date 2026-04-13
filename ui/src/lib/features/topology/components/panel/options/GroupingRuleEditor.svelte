@@ -39,6 +39,7 @@
 	type ServiceCategory = components['schemas']['ServiceCategory'];
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import { COLOR_MAP, type Color } from '$lib/shared/utils/styling';
+	type RuleEditability = 'System' | 'Singleton' | 'Multi';
 	interface RuleTypeMetadata {
 		id: string;
 		name: string | null;
@@ -46,7 +47,7 @@
 		category: string | null;
 		icon: string | null;
 		color: string | null;
-		metadata: { is_user_editable: boolean; views?: string[] } | null;
+		metadata: { editability: RuleEditability; views?: string[] } | null;
 	}
 	import _containerRuleTypes from '$lib/data/container-rule-types.json';
 	import _elementRuleTypes from '$lib/data/element-rule-types.json';
@@ -65,7 +66,8 @@
 		topology_hideDisabledRules,
 		topology_showAllToReorder,
 		topology_noHiddenRules,
-		topology_infraRuleNote
+		topology_infraRuleNote,
+		topology_elementRuleSingletonPresent
 	} from '$lib/paraglide/messages';
 	import viewsJson from '$lib/data/views.json';
 
@@ -174,7 +176,7 @@
 		return filteredContainerRuleTypes
 			.filter(
 				(m) =>
-					m.metadata?.is_user_editable &&
+					m.metadata?.editability !== 'System' &&
 					!containerRules.some((r) => getContainerRuleDiscriminant(r.rule) === m.id)
 			)
 			.map((m) => ({
@@ -215,11 +217,7 @@
 	);
 
 	let filteredElementRuleTypes = $derived(
-		typedElementRuleTypes.filter((m) => {
-			if (m.metadata?.is_user_editable === false) return false;
-			const applicableViews = m.metadata?.views;
-			return !applicableViews || applicableViews.includes(currentView);
-		})
+		typedElementRuleTypes.filter((m) => m.metadata?.editability !== 'System')
 	);
 
 	function updateContainerRules(newRules: ContainerGraphRule[]) {
@@ -264,16 +262,16 @@
 	}
 
 	function isContainerRuleEditable(rule: ContainerGraphRule): boolean {
-		return (
-			containerRuleMeta[getContainerRuleDiscriminant(rule.rule)]?.metadata?.is_user_editable ?? true
-		);
+		const ruleId = getContainerRuleDiscriminant(rule.rule);
+		const meta = containerRuleMeta[ruleId];
+		return meta?.metadata?.editability !== 'System';
 	}
 
-	/** Whether an element rule is user-editable (not locked) — used for reorder */
+	/** Whether an element rule is user-editable (not locked) — used for reorder/remove */
 	function isElementRuleEditable(item: ElementGraphRule): boolean {
 		const ruleId = getElementRuleType(item.rule);
 		const meta = elementRuleMeta[ruleId];
-		if (!(meta?.metadata?.is_user_editable ?? true)) return false;
+		if (meta?.metadata?.editability === 'System') return false;
 		// Infrastructure services rule is non-deletable
 		const infraId = getInfrastructureRuleId();
 		if (infraId && item.id === infraId) return false;
@@ -283,11 +281,33 @@
 	// --- Element Rules ---
 
 	let elementAddOptions = $derived(
-		filteredElementRuleTypes.map((m) => ({
-			value: m.id,
-			label: m.name ?? m.id,
-			description: m.description ?? undefined
-		}))
+		filteredElementRuleTypes.map((m) => {
+			const applicableViews = m.metadata?.views;
+			const isApplicable = !applicableViews || applicableViews.includes(currentView);
+			const isSingleton = m.metadata?.editability === 'Singleton';
+			const alreadyPresent =
+				isSingleton && elementRules.some((r) => getElementRuleType(r.rule) === m.id);
+
+			let disabled = false;
+			let disabledReason: string | undefined;
+
+			if (!isApplicable) {
+				disabled = true;
+				const viewNames = (applicableViews ?? []).join(', ');
+				disabledReason = topology_elementRuleNotApplicable({ perspectives: viewNames });
+			} else if (alreadyPresent) {
+				disabled = true;
+				disabledReason = topology_elementRuleSingletonPresent();
+			}
+
+			return {
+				value: m.id,
+				label: m.name ?? m.id,
+				description: m.description ?? undefined,
+				disabled,
+				disabledReason
+			};
+		})
 	);
 
 	const elementRuleDisplayComponent = {

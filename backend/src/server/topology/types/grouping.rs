@@ -9,13 +9,24 @@ use strum_macros::{EnumIter, IntoStaticStr};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+/// Controls how users can interact with a grouping rule.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub enum RuleEditability {
+    /// System-managed rule. Cannot be added, removed, or reordered by users.
+    System,
+    /// User can add/edit/remove, but only one instance allowed.
+    Singleton,
+    /// User can add/edit/remove multiple instances with different configs.
+    Multi,
+}
+
 pub trait GraphRule {
     /// Whether edges targeting elements inside containers created by this rule
     /// should be elevated to target the container itself.
     fn will_accept_edges(&self) -> bool;
 
-    /// Whether this rule is locked (not user-removable or orderable)
-    fn is_user_editable(&self) -> bool;
+    /// How users can interact with this rule type.
+    fn editability(&self) -> RuleEditability;
 
     fn applicable_views(&self) -> &'static [TopologyView];
 }
@@ -65,8 +76,11 @@ impl GraphRule for ContainerRule {
         matches!(self, ContainerRule::MergeDockerBridges)
     }
 
-    fn is_user_editable(&self) -> bool {
-        matches!(self, ContainerRule::MergeDockerBridges)
+    fn editability(&self) -> RuleEditability {
+        match self {
+            ContainerRule::MergeDockerBridges => RuleEditability::Singleton,
+            _ => RuleEditability::System,
+        }
     }
 }
 
@@ -117,7 +131,7 @@ impl TypeMetadataProvider for ContainerRule {
 
     fn metadata(&self) -> serde_json::Value {
         serde_json::json!({
-            "is_user_editable": self.is_user_editable(),
+            "editability": self.editability(),
             "views": self.applicable_views(),
             "will_accept_edges": self.will_accept_edges(),
         })
@@ -158,11 +172,16 @@ impl GraphRule for ElementRule {
         matches!(self, ElementRule::ByStack | ElementRule::ByVirtualizer)
     }
 
-    fn is_user_editable(&self) -> bool {
-        !matches!(
-            self,
-            ElementRule::ByTrunkPort | ElementRule::ByVLAN | ElementRule::ByPortOpStatus
-        )
+    fn editability(&self) -> RuleEditability {
+        match self {
+            ElementRule::ByTrunkPort | ElementRule::ByVLAN | ElementRule::ByPortOpStatus => {
+                RuleEditability::System
+            }
+            ElementRule::ByVirtualizer | ElementRule::ByStack => RuleEditability::Singleton,
+            ElementRule::ByServiceCategory { .. } | ElementRule::ByTag { .. } => {
+                RuleEditability::Multi
+            }
+        }
     }
 
     fn applicable_views(&self) -> &'static [TopologyView] {
@@ -244,7 +263,7 @@ impl TypeMetadataProvider for ElementRule {
 
     fn metadata(&self) -> serde_json::Value {
         serde_json::json!({
-            "is_user_editable": self.is_user_editable(),
+            "editability": self.editability(),
             "views": self.applicable_views(),
             "will_accept_edges": self.will_accept_edges(),
         })

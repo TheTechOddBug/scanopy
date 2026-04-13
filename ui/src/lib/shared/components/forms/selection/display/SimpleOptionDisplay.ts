@@ -11,6 +11,7 @@ export interface SimpleOption {
 	value: string;
 	label: string;
 	disabled?: boolean;
+	disabledReason?: string;
 	description?: string;
 	tags?: TagProps[];
 	icon?: IconComponent;
@@ -22,6 +23,7 @@ export const SimpleOptionDisplay: EntityDisplayComponent<SimpleOption, void> = {
 	getLabel: (item) => item.label,
 	getDescription: (item) => item.description ?? '',
 	getDisabled: (item) => item.disabled ?? false,
+	getDisabledReason: (item) => item.disabledReason ?? null,
 	getTags: (item) => item.tags ?? [],
 	getIcon: (item) => item.icon ?? null,
 	getIconColor: (item) => item.iconColor ?? null

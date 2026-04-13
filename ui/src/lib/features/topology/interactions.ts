@@ -196,7 +196,7 @@ export function updateTagFilter(
 		: null;
 	const config = meta?.element_config;
 	const containerEntity = config?.container_entity ?? null;
-	const elementEntities = config?.element_entities ?? ['Interface'];
+	const elementEntities = config?.element_entities ?? [];
 	const inlineEntities = config?.inline_entities ?? [];
 
 	// Determine filter roles from element config and parent_entity relationships

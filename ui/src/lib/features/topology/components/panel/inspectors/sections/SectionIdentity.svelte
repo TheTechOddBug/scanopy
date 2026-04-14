@@ -52,7 +52,7 @@
 
 	// For Interface elements: show the interface
 	let thisIPAddress = $derived(elementContext?.ipAddress ?? null);
-	let interfaceDisplayContext = $derived({ subnets: topology.subnets });
+	let interfaceDisplayContext = $derived({ subnets: topology.subnets, compact: true });
 
 	// For Service elements: show the service
 	let thisService = $derived(
@@ -66,7 +66,8 @@
 		ports: isApplicationView ? [] : topology.ports,
 		showEntityTagPicker: !editState.isReadonly,
 		tagPickerDisabled: !editState.isEditable,
-		entityTags: topology.entity_tags
+		entityTags: topology.entity_tags,
+		compact: true
 	});
 
 	// For Interface (SNMP) elements: show the Interface
@@ -93,7 +94,8 @@
 	let hostDisplayContext = $derived({
 		showEntityTagPicker: !editState.isReadonly,
 		tagPickerDisabled: !editState.isEditable,
-		entityTags: topology.entity_tags
+		entityTags: topology.entity_tags,
+		compact: true
 	});
 
 	// For containers: show the header/title

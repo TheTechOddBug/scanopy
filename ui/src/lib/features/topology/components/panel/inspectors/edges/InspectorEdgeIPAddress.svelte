@@ -46,7 +46,7 @@
 	let targetInterface = $derived(topology?.ip_addresses.find((i) => i.id == edge.target));
 
 	// Context for interface displays
-	let interfaceContext = $derived({ subnets: topology?.subnets ?? [] });
+	let interfaceContext = $derived({ subnets: topology?.subnets ?? [], compact: true });
 </script>
 
 <div class="space-y-3">
@@ -58,7 +58,8 @@
 					services: topology?.services.filter((s) => host && s.host_id == host.id) ?? [],
 					showEntityTagPicker: true,
 					tagPickerDisabled: !editState.isEditable,
-					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined
+					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined,
+					compact: true
 				}}
 				item={host}
 				displayComponent={HostDisplay}

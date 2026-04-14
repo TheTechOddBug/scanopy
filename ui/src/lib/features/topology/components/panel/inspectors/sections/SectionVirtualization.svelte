@@ -41,7 +41,8 @@
 			: [],
 		showEntityTagPicker: !editState.isReadonly,
 		tagPickerDisabled: !editState.isEditable,
-		entityTags: isReadonly ? (topology.entity_tags ?? []) : undefined
+		entityTags: isReadonly ? (topology.entity_tags ?? []) : undefined,
+		compact: true
 	});
 </script>
 

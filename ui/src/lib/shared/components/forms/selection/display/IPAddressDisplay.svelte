@@ -6,6 +6,7 @@
 	// Context for interface display - needs access to subnets for lookups
 	export interface IPAddressDisplayContext {
 		subnets: Subnet[];
+		compact?: boolean;
 	}
 
 	export const IPAddressDisplay: EntityDisplayComponent<IPAddress, IPAddressDisplayContext> = {
@@ -25,6 +26,7 @@
 		getIcon: () => entities.getIconComponent('IPAddress'),
 		getIconColor: () => entities.getColorHelper('IPAddress').icon,
 		getTags: (iface: IPAddress, context: IPAddressDisplayContext) => {
+			if (context?.compact) return [];
 			const subnetsData = context?.subnets ?? [];
 			const subnet = getSubnetById(subnetsData, iface.subnet_id);
 			const tags = [];

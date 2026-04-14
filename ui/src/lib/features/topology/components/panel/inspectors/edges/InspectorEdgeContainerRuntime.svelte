@@ -117,7 +117,8 @@
 						) ?? [],
 					showEntityTagPicker: true,
 					tagPickerDisabled: !editState.isEditable,
-					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined
+					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined,
+					compact: true
 				}}
 				item={containerizingHost}
 				displayComponent={HostDisplay}
@@ -133,7 +134,8 @@
 					ports: topology?.ports ?? [],
 					showEntityTagPicker: true,
 					tagPickerDisabled: !editState.isEditable,
-					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined
+					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined,
+					compact: true
 				}}
 				item={containerizingService}
 				displayComponent={ServiceDisplay}
@@ -152,7 +154,8 @@
 					ports: topology?.ports ?? [],
 					showEntityTagPicker: true,
 					tagPickerDisabled: !editState.isEditable,
-					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined
+					entityTags: isReadonly ? (topology?.entity_tags ?? []) : undefined,
+					compact: true
 				}}
 				item={service}
 				displayComponent={ServiceDisplay}
@@ -166,7 +169,11 @@
 		>
 		{#each allDockerSubnets as subnet (subnet.id)}
 			<div class="card card-static">
-				<EntityDisplayWrapper context={{}} item={subnet} displayComponent={SubnetDisplay} />
+				<EntityDisplayWrapper
+					context={{ compact: true }}
+					item={subnet}
+					displayComponent={SubnetDisplay}
+				/>
 			</div>
 		{/each}
 	{/if}

@@ -1,7 +1,11 @@
 <script lang="ts" context="module">
 	import { entities, dependencyTypes } from '$lib/shared/stores/metadata';
 
-	export const DependencyDisplay: EntityDisplayComponent<Dependency, object> = {
+	export interface DependencyDisplayContext {
+		compact?: boolean;
+	}
+
+	export const DependencyDisplay: EntityDisplayComponent<Dependency, DependencyDisplayContext> = {
 		getId: (dependency: Dependency) => dependency.id,
 		getLabel: (dependency: Dependency) => dependency.name,
 		getDescription: (dependency: Dependency) => {
@@ -17,12 +21,15 @@
 		getIcon: (dependency: Dependency) =>
 			dependencyTypes.getIconComponent(dependency.dependency_type),
 		getIconColor: () => entities.getColorHelper('Dependency').icon,
-		getTags: (dependency: Dependency) => [
-			{
-				label: dependencyTypes.getName(dependency.dependency_type),
-				color: dependencyTypes.getColorHelper(dependency.dependency_type).color
-			}
-		]
+		getTags: (dependency: Dependency, context: DependencyDisplayContext) => {
+			if (context?.compact) return [];
+			return [
+				{
+					label: dependencyTypes.getName(dependency.dependency_type),
+					color: dependencyTypes.getColorHelper(dependency.dependency_type).color
+				}
+			];
+		}
 	};
 </script>
 
@@ -32,7 +39,7 @@
 	import type { Dependency } from '$lib/features/dependencies/types/base';
 
 	export let item: Dependency;
-	export let context = {};
+	export let context: DependencyDisplayContext = {};
 </script>
 
 <ListSelectItem {item} {context} displayComponent={DependencyDisplay} />

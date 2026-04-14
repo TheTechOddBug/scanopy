@@ -40,7 +40,8 @@
 			if (subnet) {
 				updateSubnetMutation.mutate({ ...subnet, description: desc });
 			}
-		}
+		},
+		compact: true
 	});
 </script>
 

@@ -32,7 +32,7 @@
 		)
 	);
 
-	let interfaceContext = $derived({ subnets: topology.subnets });
+	let interfaceContext = $derived({ subnets: topology.subnets, compact: true });
 </script>
 
 {#if otherInterfaces.length > 0}

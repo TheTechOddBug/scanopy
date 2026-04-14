@@ -9,6 +9,7 @@
 		entityDescription?: string | null;
 		entityDescriptionDisabled?: boolean;
 		onEntityDescriptionSave?: (value: string | null) => void;
+		compact?: boolean;
 	}
 
 	export const SubnetDisplay: EntityDisplayComponent<Subnet, SubnetDisplayContext> = {
@@ -20,7 +21,8 @@
 		},
 		getIcon: (subnet: Subnet) => subnetTypes.getIconComponent(subnet.subnet_type),
 		getIconColor: (subnet: Subnet) => subnetTypes.getColorHelper(subnet.subnet_type).icon,
-		getTags: (subnet: Subnet) => {
+		getTags: (subnet: Subnet, context: SubnetDisplayContext) => {
+			if (context?.compact) return [];
 			if (!subnetTypes.getMetadata(subnet.subnet_type).show_label) return [];
 			return [
 				{

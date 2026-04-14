@@ -59,7 +59,11 @@
 			<div class="space-y-1">
 				{#each crossBoundaryDeps as dep (dep.id)}
 					<div class="card card-static">
-						<EntityDisplayWrapper item={dep} context={{}} displayComponent={DependencyDisplay} />
+						<EntityDisplayWrapper
+							item={dep}
+							context={{ compact: true }}
+							displayComponent={DependencyDisplay}
+						/>
 					</div>
 				{/each}
 			</div>

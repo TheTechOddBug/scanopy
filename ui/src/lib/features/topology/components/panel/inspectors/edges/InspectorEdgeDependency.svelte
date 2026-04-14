@@ -146,11 +146,13 @@
 		hosts: topology?.hosts ?? [],
 		ip_addresses: topology?.ip_addresses ?? [],
 		ports: topology?.ports ?? [],
-		isContainerSubnet: isContainerSubnetFn
+		isContainerSubnet: isContainerSubnetFn,
+		compact: true
 	});
 
 	// Context for group display with description
 	let groupContext = $derived({
+		compact: true,
 		showEditableEntityDescription: true,
 		entityDescription: group?.description ?? null,
 		entityDescriptionDisabled: !editState.isEditable,
@@ -221,7 +223,7 @@
 				{#if service}
 					<div class="card card-static">
 						<EntityDisplayWrapper
-							context={{} satisfies ServiceDisplayContext}
+							context={{ compact: true } satisfies ServiceDisplayContext}
 							item={service}
 							displayComponent={ServiceDisplay}
 						/>

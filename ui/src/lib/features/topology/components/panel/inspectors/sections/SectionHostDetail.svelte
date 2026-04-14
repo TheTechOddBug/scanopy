@@ -39,7 +39,8 @@
 			if (host) {
 				updateHostDescriptionMutation.mutate({ host, description: desc });
 			}
-		}
+		},
+		compact: true
 	});
 </script>
 

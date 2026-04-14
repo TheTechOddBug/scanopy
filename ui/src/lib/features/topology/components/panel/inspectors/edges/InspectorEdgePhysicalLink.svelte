@@ -50,7 +50,8 @@
 			<div class="card card-static">
 				<EntityDisplayWrapper
 					context={{
-						services: topology?.services.filter((s) => s.host_id === sourceHost.id) ?? []
+						services: topology?.services.filter((s) => s.host_id === sourceHost.id) ?? [],
+						compact: true
 					}}
 					item={sourceHost}
 					displayComponent={HostDisplay}
@@ -74,7 +75,8 @@
 			<div class="card card-static">
 				<EntityDisplayWrapper
 					context={{
-						services: topology?.services.filter((s) => s.host_id === targetHost.id) ?? []
+						services: topology?.services.filter((s) => s.host_id === targetHost.id) ?? [],
+						compact: true
 					}}
 					item={targetHost}
 					displayComponent={HostDisplay}

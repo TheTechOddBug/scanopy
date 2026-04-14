@@ -9,6 +9,7 @@
 		tagPickerDisabled?: boolean;
 		entityTags?: import('$lib/features/tags/types/base').Tag[];
 		allowTagCreate?: boolean;
+		compact?: boolean;
 	}
 
 	export const ServiceDisplay: EntityDisplayComponent<Service, ServiceDisplayContext> = {
@@ -66,7 +67,8 @@
 		},
 		getIconColor: (service: Service) =>
 			serviceDefinitions.getColorHelper(service.service_definition).icon,
-		getTags: (service: Service) => {
+		getTags: (service: Service, context: ServiceDisplayContext) => {
+			if (context?.compact) return [];
 			let tags: TagProps[] = [];
 
 			const category = serviceDefinitions.getCategory(service.service_definition);

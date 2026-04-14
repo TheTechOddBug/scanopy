@@ -168,7 +168,11 @@
 				{@const uniqueDeps = dependencyEdgeGroups.get(edgeType) ?? []}
 				{#each uniqueDeps as dep (dep.id)}
 					<div class="card card-static">
-						<EntityDisplayWrapper item={dep} context={{}} displayComponent={DependencyDisplay} />
+						<EntityDisplayWrapper
+							item={dep}
+							context={{ compact: true }}
+							displayComponent={DependencyDisplay}
+						/>
 					</div>
 				{:else}
 					<div class="card card-static">
@@ -184,7 +188,7 @@
 						<div class="card card-static">
 							<EntityDisplayWrapper
 								item={svcVirtData.containerizer}
-								context={{ ipAddressId: null, ports: topology?.ports ?? [] }}
+								context={{ ipAddressId: null, ports: topology?.ports ?? [], compact: true }}
 								displayComponent={ServiceDisplay}
 							/>
 						</div>
@@ -197,7 +201,7 @@
 							<div class="card card-static">
 								<EntityDisplayWrapper
 									item={service}
-									context={{ ipAddressId: null, ports: topology?.ports ?? [] }}
+									context={{ ipAddressId: null, ports: topology?.ports ?? [], compact: true }}
 									displayComponent={ServiceDisplay}
 								/>
 							</div>
@@ -209,7 +213,8 @@
 							<EntityDisplayWrapper
 								item={host}
 								context={{
-									services: topology?.services.filter((s) => s.host_id === host.id) ?? []
+									services: topology?.services.filter((s) => s.host_id === host.id) ?? [],
+									compact: true
 								}}
 								displayComponent={HostDisplay}
 							/>

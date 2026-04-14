@@ -81,7 +81,7 @@
 							<div class="card card-static">
 								<EntityDisplayWrapper
 									item={dep}
-									context={{}}
+									context={{ compact: true }}
 									displayComponent={DependencyDisplay}
 								/>
 							</div>
@@ -99,7 +99,7 @@
 							<div class="card card-static">
 								<EntityDisplayWrapper
 									item={dep}
-									context={{}}
+									context={{ compact: true }}
 									displayComponent={DependencyDisplay}
 								/>
 							</div>

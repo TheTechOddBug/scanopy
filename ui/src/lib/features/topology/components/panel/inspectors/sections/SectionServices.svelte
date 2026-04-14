@@ -37,7 +37,8 @@
 		ports: topology.ports,
 		showEntityTagPicker: true,
 		tagPickerDisabled: !editState.isEditable,
-		entityTags: isReadonly ? (topology.entity_tags ?? []) : undefined
+		entityTags: isReadonly ? (topology.entity_tags ?? []) : undefined,
+		compact: true
 	});
 </script>
 

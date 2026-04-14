@@ -12,6 +12,7 @@
 		ip_addresses: IPAddress[];
 		ports: Port[];
 		isContainerSubnet: (subnetId: string) => boolean;
+		compact?: boolean;
 	}
 
 	// Helper to format interface for display
@@ -58,7 +59,8 @@
 			const service = servicesData.find((s) => s.bindings.some((b) => b.id === binding.id));
 			return service?.name || 'Unknown Service';
 		},
-		getDescription: () => '',
+		getDescription: (binding: Binding, context: BindingWithServiceContext) =>
+			getBindingDisplayNameFromContext(binding, context),
 		getIcon: (binding: Binding, context: BindingWithServiceContext) => {
 			const servicesData = context?.services ?? [];
 			const service = servicesData.find((s) => s.bindings.some((b) => b.id === binding.id));
@@ -73,12 +75,7 @@
 
 			return serviceDefinitions.getColorHelper(service.service_definition).icon;
 		},
-		getTags: (binding: Binding, context: BindingWithServiceContext) => [
-			{
-				label: getBindingDisplayNameFromContext(binding, context),
-				color: entities.getColorHelper('IPAddress').color
-			}
-		],
+		getTags: () => [],
 		getCategory: (binding: Binding, context: BindingWithServiceContext) => {
 			const servicesData = context?.services ?? [];
 			const hostsData = context?.hosts ?? [];

@@ -16,6 +16,7 @@
 		entityDescription?: string | null;
 		entityDescriptionDisabled?: boolean;
 		onEntityDescriptionSave?: (value: string | null) => void;
+		compact?: boolean;
 	}
 
 	export const HostDisplay: EntityDisplayComponent<Host, HostDisplayContext> = {
@@ -33,6 +34,7 @@
 		},
 		getIconColor: () => entities.getColorHelper('Host').icon,
 		getTags: (host, context) => {
+			if (context?.compact) return [];
 			const services = context?.services?.filter((s) => s.host_id == host.id) ?? [];
 			return services.map((service) => ({
 				label: serviceDefinitions.getName(service.service_definition),

@@ -125,7 +125,7 @@
 						maxZoom={1.5}
 						nodesDraggable={false}
 						nodesConnectable={false}
-						elementsSelectable={false}
+						elementsSelectable={true}
 						panOnDrag={false}
 						zoomOnScroll={false}
 						zoomOnDoubleClick={false}

@@ -429,6 +429,20 @@ function buildElkGraph(
 	const seenEdges = new Set<string>();
 	let edgeIndex = 0;
 
+	// Build container → first child element lookup (for container-targeted edges).
+	// After edge elevation, will_target_container edges have a container ID as their
+	// target. ELK needs element-based ports for proper layer separation, so we
+	// substitute the container target with its first child element.
+	const containerFirstElement = new Map<string, string>();
+	for (const node of input.nodes) {
+		if (node.node_type === 'Element') {
+			const cid = elementToRootContainer.get(node.id);
+			if (cid && !containerFirstElement.has(cid)) {
+				containerFirstElement.set(cid, node.id);
+			}
+		}
+	}
+
 	// Collect all cross-container edges grouped by source container
 	const edgesBySourceContainer = new Map<
 		string,
@@ -444,10 +458,20 @@ function buildElkGraph(
 		const tgtRoot = resolveRoot(edge.target);
 		if (!srcRoot || !tgtRoot || srcRoot === tgtRoot) continue;
 
+		// For edges targeting containers (after edge elevation), substitute
+		// the first element inside the target container as the edge target.
+		// ELK creates proper port-based layer constraints for element targets
+		// but not for direct container targets.
+		let effectiveTarget = edge.target;
+		if (containerIds.has(edge.target)) {
+			const elem = containerFirstElement.get(tgtRoot);
+			if (elem) effectiveTarget = elem;
+		}
+
 		if (!edgesBySourceContainer.has(srcRoot)) edgesBySourceContainer.set(srcRoot, []);
 		edgesBySourceContainer
 			.get(srcRoot)!
-			.push({ source: edge.source, target: edge.target, srcRoot, tgtRoot });
+			.push({ source: edge.source, target: effectiveTarget, srcRoot, tgtRoot });
 	}
 
 	// For each source container, distribute ports evenly ordered by target group
@@ -572,31 +596,6 @@ function buildElkGraph(
 				}
 				targetPortIds.set(elemId, tgtPortId);
 			}
-		}
-
-		// Handle edges targeting containers directly (after edge elevation).
-		// When will_target_container elevates an edge target to a container,
-		// e.target becomes a container ID. Create a port on it so ELK gets
-		// a port-to-port edge with proper positional constraint.
-		for (const e of containerEdges) {
-			if (!containerIds.has(e.target)) continue;
-			if (targetPortIds.has(e.target)) continue;
-
-			const tgtContainer = containers.get(e.tgtRoot);
-			if (!tgtContainer) continue;
-			if (!tgtContainer.ports) tgtContainer.ports = [];
-			if (!tgtContainer.layoutOptions) tgtContainer.layoutOptions = {};
-			tgtContainer.layoutOptions['elk.portConstraints'] =
-				tgtContainer.layoutOptions['elk.portConstraints'] ?? 'FIXED_SIDE';
-
-			const tgtPortId = `port-container-${e.target}-${tgtSide}`;
-			if (!tgtContainer.ports.some((p: { id: string }) => p.id === tgtPortId)) {
-				tgtContainer.ports.push({
-					id: tgtPortId,
-					layoutOptions: { 'elk.port.side': tgtSide }
-				});
-			}
-			targetPortIds.set(e.target, tgtPortId);
 		}
 
 		// Create edges from source ports to target ports
@@ -1315,8 +1314,14 @@ function repackDisconnectedContainers(
 	const connectedIds = new Set<string>();
 	for (const edge of input.edges) {
 		if (!affectsLayout(edge)) continue;
-		const srcRoot = elementToRoot.get(edge.source);
-		const tgtRoot = elementToRoot.get(edge.target);
+		// Resolve edge endpoints: elements map through elementToRoot,
+		// but after edge elevation a target may be a container ID directly
+		const srcRoot =
+			elementToRoot.get(edge.source) ??
+			(rootContainerIds.has(edge.source) ? edge.source : undefined);
+		const tgtRoot =
+			elementToRoot.get(edge.target) ??
+			(rootContainerIds.has(edge.target) ? edge.target : undefined);
 		if (srcRoot && tgtRoot && srcRoot !== tgtRoot) {
 			connectedIds.add(srcRoot);
 			connectedIds.add(tgtRoot);

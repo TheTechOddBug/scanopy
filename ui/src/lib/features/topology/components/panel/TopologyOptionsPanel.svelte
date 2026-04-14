@@ -93,8 +93,6 @@
 					>
 						<ChevronLeft class="text-secondary h-5 w-5" />
 					</button>
-				{:else}
-					<div class="flex-shrink-0 p-3"></div>
 				{/if}
 				{#if showingOptions && !isTutorial}
 					<div class="flex flex-1">
@@ -111,7 +109,7 @@
 							</button>
 						{/each}
 					</div>
-				{:else}
+				{:else if !isTutorial}
 					<div class="flex-1 border-b-2" style="border-color: var(--color-border)"></div>
 				{/if}
 			</div>

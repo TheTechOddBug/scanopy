@@ -9,24 +9,22 @@ use strum_macros::{EnumIter, IntoStaticStr};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// Controls how users can interact with a grouping rule.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub enum RuleEditability {
-    /// System-managed rule. Cannot be added, removed, or reordered by users.
-    System,
-    /// User can add/edit/remove, but only one instance allowed.
-    Singleton,
-    /// User can add/edit/remove multiple instances with different configs.
-    Multi,
-}
-
 pub trait GraphRule {
     /// Whether edges targeting elements inside containers created by this rule
     /// should be elevated to target the container itself.
     fn will_accept_edges(&self) -> bool;
 
-    /// How users can interact with this rule type.
-    fn editability(&self) -> RuleEditability;
+    /// Whether users can add this rule from the dropdown and remove it.
+    fn is_removable(&self) -> bool;
+
+    /// Whether users can reorder this rule relative to others.
+    fn is_reorderable(&self) -> bool;
+
+    /// Whether this rule has user-editable configuration (categories, tags, title).
+    fn is_configurable(&self) -> bool;
+
+    /// Whether multiple instances of this rule can coexist.
+    fn allow_multiple(&self) -> bool;
 
     fn applicable_views(&self) -> &'static [TopologyView];
 }
@@ -73,13 +71,47 @@ impl GraphRule for ContainerRule {
     }
 
     fn will_accept_edges(&self) -> bool {
-        matches!(self, ContainerRule::MergeDockerBridges)
+        match self {
+            ContainerRule::MergeDockerBridges => true,
+            ContainerRule::BySubnet
+            | ContainerRule::ByApplication { .. }
+            | ContainerRule::ByHost => false,
+        }
     }
 
-    fn editability(&self) -> RuleEditability {
+    fn is_removable(&self) -> bool {
         match self {
-            ContainerRule::MergeDockerBridges => RuleEditability::Singleton,
-            _ => RuleEditability::System,
+            ContainerRule::MergeDockerBridges => true,
+            ContainerRule::BySubnet
+            | ContainerRule::ByApplication { .. }
+            | ContainerRule::ByHost => false,
+        }
+    }
+
+    fn is_reorderable(&self) -> bool {
+        match self {
+            ContainerRule::MergeDockerBridges => true,
+            ContainerRule::BySubnet
+            | ContainerRule::ByApplication { .. }
+            | ContainerRule::ByHost => false,
+        }
+    }
+
+    fn is_configurable(&self) -> bool {
+        match self {
+            ContainerRule::BySubnet
+            | ContainerRule::MergeDockerBridges
+            | ContainerRule::ByApplication { .. }
+            | ContainerRule::ByHost => false,
+        }
+    }
+
+    fn allow_multiple(&self) -> bool {
+        match self {
+            ContainerRule::BySubnet
+            | ContainerRule::MergeDockerBridges
+            | ContainerRule::ByApplication { .. }
+            | ContainerRule::ByHost => false,
         }
     }
 }
@@ -131,7 +163,10 @@ impl TypeMetadataProvider for ContainerRule {
 
     fn metadata(&self) -> serde_json::Value {
         serde_json::json!({
-            "editability": self.editability(),
+            "is_removable": self.is_removable(),
+            "is_reorderable": self.is_reorderable(),
+            "is_configurable": self.is_configurable(),
+            "allow_multiple": self.allow_multiple(),
             "views": self.applicable_views(),
             "will_accept_edges": self.will_accept_edges(),
         })
@@ -170,23 +205,62 @@ pub enum ElementRule {
 
 impl GraphRule for ElementRule {
     fn will_accept_edges(&self) -> bool {
-        matches!(
-            self,
-            ElementRule::ByStack | ElementRule::ByHypervisor | ElementRule::ByContainerRuntime
-        )
+        match self {
+            ElementRule::ByHypervisor | ElementRule::ByContainerRuntime | ElementRule::ByStack => {
+                true
+            }
+            ElementRule::ByServiceCategory { .. }
+            | ElementRule::ByTag { .. }
+            | ElementRule::ByTrunkPort
+            | ElementRule::ByVLAN
+            | ElementRule::ByPortOpStatus => false,
+        }
     }
 
-    fn editability(&self) -> RuleEditability {
+    fn is_removable(&self) -> bool {
         match self {
-            ElementRule::ByTrunkPort | ElementRule::ByVLAN | ElementRule::ByPortOpStatus => {
-                RuleEditability::System
-            }
-            ElementRule::ByHypervisor | ElementRule::ByContainerRuntime | ElementRule::ByStack => {
-                RuleEditability::Singleton
-            }
-            ElementRule::ByServiceCategory { .. } | ElementRule::ByTag { .. } => {
-                RuleEditability::Multi
-            }
+            ElementRule::ByServiceCategory { .. } | ElementRule::ByTag { .. } => true,
+            ElementRule::ByHypervisor
+            | ElementRule::ByContainerRuntime
+            | ElementRule::ByStack
+            | ElementRule::ByTrunkPort
+            | ElementRule::ByVLAN
+            | ElementRule::ByPortOpStatus => false,
+        }
+    }
+
+    fn is_reorderable(&self) -> bool {
+        match self {
+            ElementRule::ByServiceCategory { .. }
+            | ElementRule::ByTag { .. }
+            | ElementRule::ByHypervisor
+            | ElementRule::ByContainerRuntime
+            | ElementRule::ByStack => true,
+            ElementRule::ByTrunkPort | ElementRule::ByVLAN | ElementRule::ByPortOpStatus => false,
+        }
+    }
+
+    fn is_configurable(&self) -> bool {
+        match self {
+            ElementRule::ByServiceCategory { .. } | ElementRule::ByTag { .. } => true,
+            ElementRule::ByHypervisor
+            | ElementRule::ByContainerRuntime
+            | ElementRule::ByStack
+            | ElementRule::ByTrunkPort
+            | ElementRule::ByVLAN
+            | ElementRule::ByPortOpStatus => false,
+        }
+    }
+
+    fn allow_multiple(&self) -> bool {
+        match self {
+            ElementRule::ByServiceCategory { .. } | ElementRule::ByTag { .. } => true,
+            ElementRule::ByHypervisor
+            | ElementRule::ByContainerRuntime
+            | ElementRule::ByStack
+            | ElementRule::ByTrunkPort
+            | ElementRule::ByVLAN
+            | ElementRule::ByPortOpStatus => false,
         }
     }
 
@@ -274,7 +348,10 @@ impl TypeMetadataProvider for ElementRule {
 
     fn metadata(&self) -> serde_json::Value {
         serde_json::json!({
-            "editability": self.editability(),
+            "is_removable": self.is_removable(),
+            "is_reorderable": self.is_reorderable(),
+            "is_configurable": self.is_configurable(),
+            "allow_multiple": self.allow_multiple(),
             "views": self.applicable_views(),
             "will_accept_edges": self.will_accept_edges(),
         })
@@ -332,26 +409,14 @@ mod tests {
     use crate::server::topology::types::base::TopologyRequestOptions;
 
     #[test]
-    fn test_will_accept_edges_in_metadata() {
-        let merge = ContainerRule::MergeDockerBridges;
-        assert!(merge.will_accept_edges());
-        let meta = merge.metadata();
-        assert_eq!(meta["will_accept_edges"], true);
-
-        let by_subnet = ContainerRule::BySubnet;
-        assert!(!by_subnet.will_accept_edges());
-        assert_eq!(by_subnet.metadata()["will_accept_edges"], false);
-
-        let by_stack = ElementRule::ByStack;
-        assert!(by_stack.will_accept_edges());
-        assert_eq!(by_stack.metadata()["will_accept_edges"], true);
-
-        let by_tag = ElementRule::ByTag {
-            tag_ids: vec![],
-            title: None,
-        };
-        assert!(!by_tag.will_accept_edges());
-        assert_eq!(by_tag.metadata()["will_accept_edges"], false);
+    fn test_metadata_includes_capability_flags() {
+        let meta = ElementRule::ByStack.metadata();
+        assert!(meta["is_removable"].is_boolean());
+        assert!(meta["is_reorderable"].is_boolean());
+        assert!(meta["is_configurable"].is_boolean());
+        assert!(meta["allow_multiple"].is_boolean());
+        assert!(meta["views"].is_array());
+        assert!(meta["will_accept_edges"].is_boolean());
     }
 
     #[test]

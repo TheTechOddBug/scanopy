@@ -7,6 +7,7 @@ import {
 	isHiddenByDefault,
 	getDefaultHiddenEdgeTypes
 } from '$lib/features/topology/layout/edge-classification';
+import { elevateEdgesToContainers } from '$lib/features/topology/layout/edge-elevation';
 import type { components } from '$lib/api/schema';
 
 type TopologyNode = components['schemas']['Node'];
@@ -555,6 +556,279 @@ describe('computeElkLayout', () => {
 		// the vertical range of the connected component layout.
 		const connectedBottom = Math.max(posA.y + sizeA.height, posB.y + sizeB.height);
 		expect(posC.y).toBeLessThan(connectedBottom + 100); // allow some margin for spacing
+	});
+
+	it('container-targeted edge (post-elevation) positions containers adjacently', async () => {
+		// Simulates a ServiceVirtualization edge after edge elevation:
+		// source = IP element in host subnet, target = Docker bridge container
+		const hostSubnet = uuid();
+		const dockerBridge = uuid();
+		const disconnectedSubnet = uuid(); // a subnet far away with no edges
+		const hostIP = uuid();
+		const disconnectedElem = uuid();
+
+		// Docker bridge has a single element (the container IP)
+		const containerIP = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(hostSubnet),
+			makeContainer(dockerBridge, { container_type: 'Subnet' }),
+			makeContainer(disconnectedSubnet),
+			makeElement(hostIP, hostSubnet),
+			makeElement(containerIP, dockerBridge),
+			makeElement(disconnectedElem, disconnectedSubnet)
+		];
+
+		// Post-elevation edge: source = element, target = container
+		// (will_target_container already applied by edge-elevation)
+		const edges: TopologyEdge[] = [
+			{
+				edge_type: 'ServiceVirtualization',
+				source: hostIP,
+				target: dockerBridge, // container ID, not element
+				source_handle: 'Bottom',
+				target_handle: 'Top',
+				view_config: {
+					type: 'active' as const,
+					affects_layout: true,
+					default_visibility: 'visible',
+					stroke: 'solid',
+					highlight_behavior: 'when_visible',
+					will_target_container: true,
+					show_directionality: false
+				}
+			} as TopologyEdge
+		];
+
+		const subnets = [
+			makeSubnet(hostSubnet, 'Lan'),
+			makeSubnet(dockerBridge, 'DockerBridge'),
+			makeSubnet(disconnectedSubnet, 'Lan')
+		];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		const hostPos = result.nodePositions.get(hostSubnet)!;
+		const dockerPos = result.nodePositions.get(dockerBridge)!;
+		const disconnectedPos = result.nodePositions.get(disconnectedSubnet)!;
+
+		expect(hostPos).toBeDefined();
+		expect(dockerPos).toBeDefined();
+		expect(disconnectedPos).toBeDefined();
+
+		// Edge creates a layered relationship: host subnet in layer N,
+		// Docker bridge in layer N+1 (directly below in DOWN layout).
+		// They should share the same x column, proving the edge connects them.
+		expect(hostPos.x).toBe(dockerPos.x);
+		// Docker bridge should be below host subnet (connected by edge)
+		expect(dockerPos.y).toBeGreaterThan(hostPos.y);
+	});
+
+	it('container-targeted edge works in complex topology with many subnets', async () => {
+		// Realistic L3 scenario: 5 regular subnets connected by SameHost edges,
+		// plus a Docker bridge that should be pulled near subnet1 by a ServiceVirtualization edge
+		const subnet1 = uuid(); // Has the Docker host
+		const subnet2 = uuid();
+		const subnet3 = uuid();
+		const subnet4 = uuid();
+		const subnet5 = uuid();
+		const dockerBridge = uuid();
+
+		// Elements in each subnet
+		const elem1a = uuid();
+		const elem1b = uuid();
+		const elem2a = uuid();
+		const elem2b = uuid();
+		const elem3a = uuid();
+		const elem4a = uuid();
+		const elem5a = uuid();
+		const dockerElem = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(subnet1),
+			makeContainer(subnet2),
+			makeContainer(subnet3),
+			makeContainer(subnet4),
+			makeContainer(subnet5),
+			makeContainer(dockerBridge, { container_type: 'Subnet' }),
+			makeElement(elem1a, subnet1),
+			makeElement(elem1b, subnet1),
+			makeElement(elem2a, subnet2),
+			makeElement(elem2b, subnet2),
+			makeElement(elem3a, subnet3),
+			makeElement(elem4a, subnet4),
+			makeElement(elem5a, subnet5),
+			makeElement(dockerElem, dockerBridge)
+		];
+
+		// Regular SameHost edges connecting subnets in a chain
+		const edges: TopologyEdge[] = [
+			primaryEdge(elem1a, elem2a, 'SameHost'),
+			primaryEdge(elem2b, elem3a, 'SameHost'),
+			primaryEdge(elem3a, elem4a, 'SameHost'),
+			primaryEdge(elem4a, elem5a, 'SameHost'),
+			// ServiceVirtualization: elem1b → dockerBridge container (post-elevation)
+			{
+				edge_type: 'ServiceVirtualization',
+				source: elem1b,
+				target: dockerBridge,
+				source_handle: 'Bottom',
+				target_handle: 'Top',
+				view_config: {
+					type: 'active' as const,
+					affects_layout: true,
+					default_visibility: 'visible',
+					stroke: 'solid',
+					highlight_behavior: 'when_visible',
+					will_target_container: true,
+					show_directionality: false
+				}
+			} as TopologyEdge
+		];
+
+		const subnets = [
+			makeSubnet(subnet1, 'Lan'),
+			makeSubnet(subnet2, 'Lan'),
+			makeSubnet(subnet3, 'Lan'),
+			makeSubnet(subnet4, 'Lan'),
+			makeSubnet(subnet5, 'Lan'),
+			makeSubnet(dockerBridge, 'DockerBridge')
+		];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		const pos1 = result.nodePositions.get(subnet1)!;
+		const posDocker = result.nodePositions.get(dockerBridge)!;
+
+		// Docker bridge should be below subnet1 (connected by edge, DOWN layout)
+		expect(posDocker.y).toBeGreaterThan(pos1.y);
+	});
+
+	it('element-to-element ServiceVirtualization edge (no elevation) positions subnets adjacently', async () => {
+		// When MergeDockerBridges is off, the edge stays as IP→IP (no elevation)
+		const hostSubnet = uuid();
+		const dockerBridge = uuid();
+		const farSubnet = uuid();
+		const hostIP = uuid();
+		const containerIP = uuid();
+		const farElem = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(hostSubnet),
+			makeContainer(dockerBridge, { container_type: 'Subnet' }),
+			makeContainer(farSubnet),
+			makeElement(hostIP, hostSubnet),
+			makeElement(containerIP, dockerBridge),
+			makeElement(farElem, farSubnet)
+		];
+
+		// Non-elevated edge: both endpoints are elements
+		const edges: TopologyEdge[] = [
+			{
+				edge_type: 'ServiceVirtualization',
+				source: hostIP,
+				target: containerIP, // still an element, not elevated to container
+				source_handle: 'Bottom',
+				target_handle: 'Top',
+				view_config: {
+					type: 'active' as const,
+					affects_layout: true,
+					default_visibility: 'visible',
+					stroke: 'solid',
+					highlight_behavior: 'when_visible',
+					will_target_container: true,
+					show_directionality: false
+				}
+			} as TopologyEdge
+		];
+
+		const subnets = [
+			makeSubnet(hostSubnet, 'Lan'),
+			makeSubnet(dockerBridge, 'DockerBridge'),
+			makeSubnet(farSubnet, 'Lan')
+		];
+
+		const input = makeTopology(nodes, edges, subnets);
+		const result = await computeElkLayout(input);
+
+		const hostPos = result.nodePositions.get(hostSubnet)!;
+		const dockerPos = result.nodePositions.get(dockerBridge)!;
+
+		// Docker bridge should be in adjacent layer (connected by edge)
+		expect(hostPos.x).toBe(dockerPos.x);
+		expect(dockerPos.y).toBeGreaterThan(hostPos.y);
+	});
+
+	it('full pipeline: edge elevation + ELK positions Docker bridge near host', async () => {
+		// End-to-end test: raw edges → edge elevation → ELK layout
+		// Docker bridge has will_accept_edges: true (MergeDockerBridges)
+		const hostSubnet = uuid();
+		const dockerBridge = uuid();
+		const farSubnet = uuid();
+		const hostIP = uuid();
+		const containerIP = uuid();
+		const farElem = uuid();
+
+		const nodes: TopologyNode[] = [
+			makeContainer(hostSubnet),
+			{
+				...makeContainer(dockerBridge, { container_type: 'Subnet' }),
+				will_accept_edges: true // MergeDockerBridges enables this
+			} as TopologyNode,
+			makeContainer(farSubnet),
+			makeElement(hostIP, hostSubnet),
+			makeElement(containerIP, dockerBridge),
+			makeElement(farElem, farSubnet)
+		];
+
+		// Raw (pre-elevation) edge: IP element → IP element
+		const rawEdges: TopologyEdge[] = [
+			{
+				edge_type: 'ServiceVirtualization',
+				source: hostIP,
+				target: containerIP, // pre-elevation: still targets the element
+				source_handle: 'Bottom',
+				target_handle: 'Top',
+				view_config: {
+					type: 'active' as const,
+					affects_layout: true,
+					default_visibility: 'visible',
+					stroke: 'solid',
+					highlight_behavior: 'when_visible',
+					will_target_container: true,
+					show_directionality: false
+				}
+			} as TopologyEdge
+		];
+
+		// Run edge elevation (same as prepare.ts pipeline)
+		const elevatedEdges = elevateEdgesToContainers(rawEdges, nodes);
+
+		// Verify elevation happened: target should now be dockerBridge container
+		expect(elevatedEdges.length).toBe(1);
+		expect(elevatedEdges[0].source).toBe(hostIP); // unchanged
+		expect(elevatedEdges[0].target).toBe(dockerBridge); // elevated to container
+
+		const subnets = [
+			makeSubnet(hostSubnet, 'Lan'),
+			makeSubnet(dockerBridge, 'DockerBridge'),
+			makeSubnet(farSubnet, 'Lan')
+		];
+
+		const input = makeTopology(nodes, elevatedEdges, subnets);
+		const result = await computeElkLayout(input);
+
+		const hostPos = result.nodePositions.get(hostSubnet)!;
+		const dockerPos = result.nodePositions.get(dockerBridge)!;
+
+		expect(hostPos).toBeDefined();
+		expect(dockerPos).toBeDefined();
+
+		// Docker bridge should be in adjacent layer to host subnet
+		expect(hostPos.x).toBe(dockerPos.x);
+		expect(dockerPos.y).toBeGreaterThan(hostPos.y);
 	});
 
 	it('does not pass disabled edges to ELK layout', async () => {

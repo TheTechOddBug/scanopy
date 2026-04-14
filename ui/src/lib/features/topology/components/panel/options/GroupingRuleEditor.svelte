@@ -39,7 +39,6 @@
 	type ServiceCategory = components['schemas']['ServiceCategory'];
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import { COLOR_MAP, type Color } from '$lib/shared/utils/styling';
-	type RuleEditability = 'System' | 'Singleton' | 'Multi';
 	interface RuleTypeMetadata {
 		id: string;
 		name: string | null;
@@ -47,7 +46,13 @@
 		category: string | null;
 		icon: string | null;
 		color: string | null;
-		metadata: { editability: RuleEditability; views?: string[] } | null;
+		metadata: {
+			is_removable: boolean;
+			is_reorderable: boolean;
+			is_configurable: boolean;
+			allow_multiple: boolean;
+			views?: string[];
+		} | null;
 	}
 	import _containerRuleTypes from '$lib/data/container-rule-types.json';
 	import _elementRuleTypes from '$lib/data/element-rule-types.json';
@@ -66,8 +71,8 @@
 		topology_hideDisabledRules,
 		topology_showAllToReorder,
 		topology_noHiddenRules,
-		topology_infraRuleNote,
-		topology_elementRuleSingletonPresent
+		topology_infraRuleDescription,
+		topology_infraRuleNote
 	} from '$lib/paraglide/messages';
 	import viewsJson from '$lib/data/views.json';
 
@@ -180,7 +185,7 @@
 		return filteredContainerRuleTypes
 			.filter(
 				(m) =>
-					m.metadata?.editability !== 'System' &&
+					m.metadata?.is_removable &&
 					!containerRules.some((r) => getContainerRuleDiscriminant(r.rule) === m.id)
 			)
 			.map((m) => ({
@@ -221,7 +226,7 @@
 	);
 
 	let filteredElementRuleTypes = $derived(
-		typedElementRuleTypes.filter((m) => m.metadata?.editability !== 'System')
+		typedElementRuleTypes.filter((m) => m.metadata?.is_removable)
 	);
 
 	function updateContainerRules(newRules: ContainerGraphRule[]) {
@@ -265,21 +270,37 @@
 		updateContainerRules(newRules);
 	}
 
-	function isContainerRuleEditable(rule: ContainerGraphRule): boolean {
-		const ruleId = getContainerRuleDiscriminant(rule.rule);
-		const meta = containerRuleMeta[ruleId];
-		return meta?.metadata?.editability !== 'System';
+	function canRemoveContainerRule(rule: ContainerGraphRule): boolean {
+		const meta = containerRuleMeta[getContainerRuleDiscriminant(rule.rule)];
+		return meta?.metadata?.is_removable ?? false;
 	}
 
-	/** Whether an element rule is user-editable (not locked) — used for reorder/remove */
-	function isElementRuleEditable(item: ElementGraphRule): boolean {
-		const ruleId = getElementRuleType(item.rule);
-		const meta = elementRuleMeta[ruleId];
-		if (meta?.metadata?.editability === 'System') return false;
-		// Infrastructure services rule is non-deletable
-		const infraId = getInfrastructureRuleId();
-		if (infraId && item.id === infraId) return false;
+	function canReorderContainerRule(rule: ContainerGraphRule): boolean {
+		const meta = containerRuleMeta[getContainerRuleDiscriminant(rule.rule)];
+		return meta?.metadata?.is_reorderable ?? false;
+	}
+
+	function canRemoveElementRule(item: ElementGraphRule): boolean {
+		const meta = elementRuleMeta[getElementRuleType(item.rule)];
+		if (!meta?.metadata?.is_removable) return false;
+		if (item.id === getInfrastructureRuleId()) return false;
 		return true;
+	}
+
+	function canReorderElementRule(item: ElementGraphRule): boolean {
+		const meta = elementRuleMeta[getElementRuleType(item.rule)];
+		if (!meta?.metadata?.is_reorderable) return false;
+		if (item.id === getInfrastructureRuleId()) return false;
+		return true;
+	}
+
+	function canConfigureElementRule(item: ElementGraphRule): boolean {
+		const meta = elementRuleMeta[getElementRuleType(item.rule)];
+		return meta?.metadata?.is_configurable ?? false;
+	}
+
+	function isElementRuleLocked(item: ElementGraphRule): boolean {
+		return !canRemoveElementRule(item) && !canReorderElementRule(item);
 	}
 
 	// --- Element Rules ---
@@ -288,9 +309,9 @@
 		filteredElementRuleTypes.map((m) => {
 			const applicableViews = m.metadata?.views;
 			const isApplicable = !applicableViews || applicableViews.includes(currentView);
-			const isSingleton = m.metadata?.editability === 'Singleton';
 			const alreadyPresent =
-				isSingleton && elementRules.some((r) => getElementRuleType(r.rule) === m.id);
+				!m.metadata?.allow_multiple &&
+				elementRules.some((r) => getElementRuleType(r.rule) === m.id);
 
 			let disabled = false;
 			let disabledReason: string | undefined;
@@ -301,7 +322,6 @@
 				disabledReason = topology_elementRuleNotApplicable({ perspectives: viewNames });
 			} else if (alreadyPresent) {
 				disabled = true;
-				disabledReason = topology_elementRuleSingletonPresent();
 			}
 
 			return {
@@ -339,25 +359,12 @@
 			case 'ByTag':
 				newRule = { ByTag: { tag_ids: [], title: null } };
 				break;
-			case 'ByHypervisor':
-			case 'ByContainerRuntime':
-			case 'ByStack':
-				newRule = optionId;
-				break;
 			default:
 				return;
 		}
 		const graphRule = makeGraphRule(newRule);
 		updateElementRules([...elementRules, graphRule]);
-
-		if (typeof newRule === 'string') {
-			// Fieldless rule — no edit needed, flush immediately
-			if (topology) {
-				rebuildMutation.mutate(topology);
-			}
-		} else {
-			editingElementId = graphRule.id;
-		}
+		editingElementId = graphRule.id;
 	}
 
 	function handleElementRemove(index: number) {
@@ -515,8 +522,8 @@
 		allowDuplicates={false}
 		allowAddFromOptions={containerAddOptions.length > 0}
 		allowItemEdit={() => false}
-		allowItemRemove={isContainerRuleEditable}
-		allowItemReorder={isContainerRuleEditable}
+		allowItemRemove={canRemoveContainerRule}
+		allowItemReorder={canReorderContainerRule}
 		onAdd={handleContainerAdd}
 		onRemove={handleContainerRemove}
 		onMoveUp={handleContainerMoveUp}
@@ -531,7 +538,7 @@
 					getContainerRuleDiscriminant(item.rule)}
 				description={containerRuleMeta[getContainerRuleDiscriminant(item.rule)]?.description ??
 					undefined}
-				locked={!isContainerRuleEditable(item)}
+				locked={!canReorderContainerRule(item) && !canRemoveContainerRule(item)}
 			/>
 		{/snippet}
 	</ListManager>
@@ -547,9 +554,9 @@
 	itemDisplayComponent={elementRuleDisplayComponent}
 	allowReorder={true}
 	allowDuplicates={true}
-	allowItemEdit={(item) => typeof item.rule !== 'string' && isElementRuleApplicable(item)}
-	allowItemRemove={(item) => isElementRuleApplicable(item) && isElementRuleEditable(item)}
-	allowItemReorder={isElementRuleEditable}
+	allowItemEdit={(item) => canConfigureElementRule(item) && isElementRuleApplicable(item)}
+	allowItemRemove={(item) => isElementRuleApplicable(item) && canRemoveElementRule(item)}
+	allowItemReorder={canReorderElementRule}
 	reorderDisabledTooltip={hideDisabledElementRules ? topology_showAllToReorder() : undefined}
 	editIcon={getElementEditIcon}
 	editButtonClass={getElementEditButtonClass}
@@ -591,9 +598,11 @@
 	{#snippet itemSnippet({ item })}
 		<GroupingRuleItem
 			label={getElementRuleLabel(item)}
-			description={elementRuleMeta[getElementRuleType(item.rule)]?.description ?? undefined}
+			description={item.id === getInfrastructureRuleId()
+				? topology_infraRuleDescription()
+				: (elementRuleMeta[getElementRuleType(item.rule)]?.description ?? undefined)}
 			disabled={!isElementRuleApplicable(item)}
-			locked={!isElementRuleEditable(item)}
+			locked={isElementRuleLocked(item)}
 			disabledTooltip={getElementRuleDisabledTooltip(item)}
 		/>
 	{/snippet}

@@ -7,7 +7,10 @@
     "icon": "layers",
     "color": "Purple",
     "metadata": {
-      "editability": "Multi",
+      "allow_multiple": true,
+      "is_configurable": true,
+      "is_removable": true,
+      "is_reorderable": true,
       "views": [
         "Application",
         "Workloads"
@@ -23,7 +26,10 @@
     "icon": "tag",
     "color": "Orange",
     "metadata": {
-      "editability": "Multi",
+      "allow_multiple": true,
+      "is_configurable": true,
+      "is_removable": true,
+      "is_reorderable": true,
       "views": [
         "L3Logical",
         "L2Physical",
@@ -41,7 +47,10 @@
     "icon": "monitor-cog",
     "color": "Orange",
     "metadata": {
-      "editability": "Singleton",
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": true,
       "views": [
         "Workloads"
       ],
@@ -56,7 +65,10 @@
     "icon": "container",
     "color": "Fuchsia",
     "metadata": {
-      "editability": "Singleton",
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": true,
       "views": [
         "Workloads"
       ],
@@ -71,7 +83,10 @@
     "icon": "container",
     "color": "Fuchsia",
     "metadata": {
-      "editability": "Singleton",
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": true,
       "views": [
         "L3Logical",
         "Application"
@@ -87,7 +102,10 @@
     "icon": "network",
     "color": "Amber",
     "metadata": {
-      "editability": "System",
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": false,
       "views": [
         "L2Physical"
       ],
@@ -102,7 +120,10 @@
     "icon": "network",
     "color": "Teal",
     "metadata": {
-      "editability": "System",
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": false,
       "views": [
         "L2Physical"
       ],
@@ -117,7 +138,10 @@
     "icon": "circle",
     "color": "Gray",
     "metadata": {
-      "editability": "System",
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": false,
       "views": [
         "L2Physical"
       ],

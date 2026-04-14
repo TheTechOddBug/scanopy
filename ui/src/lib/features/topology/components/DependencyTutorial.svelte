@@ -1,27 +1,14 @@
 <script lang="ts">
-	import {
-		SvelteFlow,
-		SvelteFlowProvider,
-		Background,
-		BackgroundVariant,
-		type NodeMouseHandler
-	} from '@xyflow/svelte';
-	import { writable } from 'svelte/store';
-	import { setContext } from 'svelte';
-	import '@xyflow/svelte/dist/style.css';
-	import './visualization/topology-viewer.css';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import ChecklistItem from '$lib/shared/components/data/ChecklistItem.svelte';
-	import ElementNode from './visualization/ElementNode.svelte';
+	import ElementNodeCard from './visualization/ElementNodeCard.svelte';
 	import { selectedNodes } from '../queries';
-	import { dependencyTypes } from '$lib/shared/stores/metadata';
+	import { dependencyTypes, serviceDefinitions, entities } from '$lib/shared/stores/metadata';
 	import { browser } from '$app/environment';
 	import {
 		TUTORIAL_SERVICES,
-		TUTORIAL_TOPOLOGY,
 		TUTORIAL_XYFLOW_NODES
 	} from './dependency-tutorial-data';
-	import type { Node } from '@xyflow/svelte';
 	import {
 		topology_tutorialTitle,
 		topology_tutorialStep1,
@@ -41,34 +28,35 @@
 
 	const modifier = browser && navigator.platform.includes('Mac') ? '⌘' : 'Ctrl';
 
-	// Provide tutorial topology via context so ElementNode can resolve services
-	const topologyStore = writable(TUTORIAL_TOPOLOGY);
-	setContext('topology', topologyStore);
+	const hostIconClass = entities.getColorHelper('Host').icon;
 
-	// Node types for the mini SvelteFlow
-	const nodeTypes = { Element: ElementNode };
-
-	// Xyflow nodes
-	const nodes = writable<Node[]>(TUTORIAL_XYFLOW_NODES);
+	// Prepare display data for each tutorial node
+	const tutorialCards = TUTORIAL_SERVICES.map((svc) => ({
+		...svc,
+		services: [
+			{
+				name: svc.label,
+				icon: serviceDefinitions.getIconComponent(svc.serviceDefinition),
+				iconClass: hostIconClass
+			}
+		]
+	}));
 
 	// Track which nodes the user has clicked
 	let clickedNodeIds = $state(new Set<string>());
 
-	const handleNodeClick: NodeMouseHandler = (_event, node) => {
-		if (clickedNodeIds.has(node.id)) return;
+	function handleNodeClick(svc: (typeof TUTORIAL_SERVICES)[number]) {
+		if (clickedNodeIds.has(svc.id)) return;
 		const updated = new Set(clickedNodeIds);
-		updated.add(node.id);
+		updated.add(svc.id);
 		clickedNodeIds = updated;
 
-		const xyNode = TUTORIAL_XYFLOW_NODES.find((n) => n.id === node.id);
+		const xyNode = TUTORIAL_XYFLOW_NODES.find((n) => n.id === svc.id);
 		if (xyNode) {
-			const current = [...$selectedNodes];
-			current.push(xyNode);
-			selectedNodes.set(current);
+			selectedNodes.set([...$selectedNodes, xyNode]);
 		}
-	};
+	}
 
-	// Step completion
 	let step1Done = $derived(clickedNodeIds.size >= 1);
 	let step2Done = $derived(clickedNodeIds.size >= 3);
 	let step3Done = $derived(dependencyTypeToggled);
@@ -90,88 +78,100 @@
 		showCloseButton={false}
 		preventCloseOnClickOutside={true}
 		showBackdrop={false}
-		size="xl"
-		fixedHeight={true}
+		size="lg"
 	>
-		<div class="flex min-h-0 flex-1 flex-col">
-			<!-- Mini topology canvas with real ElementNode components -->
-			<div class="h-64">
-				<SvelteFlowProvider>
-					<SvelteFlow
-						{nodes}
-						edges={writable([])}
-						{nodeTypes}
-						onnodeclick={handleNodeClick}
-						fitView={true}
-						minZoom={0.5}
-						maxZoom={1.5}
-						nodesDraggable={false}
-						nodesConnectable={false}
-						elementsSelectable={false}
-						panOnDrag={false}
-						zoomOnScroll={false}
-						zoomOnDoubleClick={false}
-						preventScrolling={true}
-					>
-						<Background
-							variant={BackgroundVariant.Dots}
-							bgColor="var(--color-topology-bg)"
-							gap={50}
-							size={1}
-						/>
-					</SvelteFlow>
-				</SvelteFlowProvider>
+		<div class="flex flex-col p-6">
+			<!-- Mini topology area with dot background -->
+			<div class="tutorial-canvas relative mb-6 h-56 overflow-hidden rounded-xl">
+				<!-- Triangle layout: top-center, bottom-left, bottom-right -->
+				<button
+					class="absolute cursor-pointer"
+					style="top: 12px; left: 50%; transform: translateX(-50%);"
+					onclick={() => handleNodeClick(TUTORIAL_SERVICES[0])}
+					disabled={clickedNodeIds.has(TUTORIAL_SERVICES[0].id)}
+				>
+					<ElementNodeCard
+						headerText={tutorialCards[0].hostName}
+						services={tutorialCards[0].services}
+						selected={clickedNodeIds.has(TUTORIAL_SERVICES[0].id)}
+					/>
+				</button>
+
+				<button
+					class="absolute cursor-pointer"
+					style="bottom: 12px; left: 12%;"
+					onclick={() => handleNodeClick(TUTORIAL_SERVICES[1])}
+					disabled={clickedNodeIds.has(TUTORIAL_SERVICES[1].id)}
+				>
+					<ElementNodeCard
+						headerText={tutorialCards[1].hostName}
+						services={tutorialCards[1].services}
+						selected={clickedNodeIds.has(TUTORIAL_SERVICES[1].id)}
+					/>
+				</button>
+
+				<button
+					class="absolute cursor-pointer"
+					style="bottom: 12px; right: 12%;"
+					onclick={() => handleNodeClick(TUTORIAL_SERVICES[2])}
+					disabled={clickedNodeIds.has(TUTORIAL_SERVICES[2].id)}
+				>
+					<ElementNodeCard
+						headerText={tutorialCards[2].hostName}
+						services={tutorialCards[2].services}
+						selected={clickedNodeIds.has(TUTORIAL_SERVICES[2].id)}
+					/>
+				</button>
 			</div>
 
-			<!-- Checklist below the canvas -->
-			<div class="border-primary/10 border-t p-6">
-				<!-- Selection progress dots -->
-				<div class="mb-3 flex items-center gap-0.5">
-					{#each selectionDots as filled}
-						<span
-							class="inline-block h-1.5 w-1.5 rounded-full {filled
-								? 'bg-green-400'
-								: 'bg-gray-300 dark:bg-gray-600'}"
-						></span>
-					{/each}
-				</div>
+			<!-- Selection progress dots -->
+			<div class="mb-3 flex items-center gap-0.5">
+				{#each selectionDots as filled}
+					<span
+						class="inline-block h-1.5 w-1.5 rounded-full {filled
+							? 'bg-green-400'
+							: 'bg-gray-300 dark:bg-gray-600'}"
+					></span>
+				{/each}
+			</div>
 
-				<div class="space-y-0">
-					<ChecklistItem
-						checked={step1Done}
-						disabled={step1Done}
-						label={topology_tutorialStep1()}
-					/>
-					<ChecklistItem
-						checked={step2Done}
-						disabled={step2Done}
-						label={topology_tutorialStep2({ modifier })}
-					/>
-					<ChecklistItem
-						checked={step3Done}
-						disabled={step3Done || !step2Done}
-						label={topology_tutorialStep3()}
-					>
-						{#snippet labelExtra()}
-							<svelte:component this={RequestPathIcon} class="h-3.5 w-3.5" />
-							<svelte:component this={HubAndSpokeIcon} class="h-3.5 w-3.5" />
-						{/snippet}
-					</ChecklistItem>
-					<ChecklistItem
-						checked={false}
-						disabled={!step3Done}
-						label={topology_tutorialStep4()}
-					/>
-				</div>
+			<!-- Step checklist -->
+			<div class="space-y-0">
+				<ChecklistItem
+					checked={step1Done}
+					disabled={step1Done}
+					label={topology_tutorialStep1()}
+				/>
+				<ChecklistItem
+					checked={step2Done}
+					disabled={step2Done}
+					label={topology_tutorialStep2({ modifier })}
+				/>
+				<ChecklistItem
+					checked={step3Done}
+					disabled={step3Done || !step2Done}
+					label={topology_tutorialStep3()}
+				>
+					{#snippet labelExtra()}
+						<svelte:component this={RequestPathIcon} class="h-3.5 w-3.5" />
+						<svelte:component this={HubAndSpokeIcon} class="h-3.5 w-3.5" />
+					{/snippet}
+				</ChecklistItem>
+				<ChecklistItem
+					checked={false}
+					disabled={!step3Done}
+					label={topology_tutorialStep4()}
+				/>
+			</div>
 
-				<div class="mt-3 text-center">
-					<button
-						class="text-secondary hover:text-primary text-xs underline"
-						onclick={onDismiss}
-					>
-						{topology_tutorialSkip()}
-					</button>
-				</div>
+			<!-- Skip button -->
+			<div class="mt-4 text-center">
+				<button
+					class="text-secondary hover:text-primary text-xs underline"
+					onclick={onDismiss}
+				>
+					{topology_tutorialSkip()}
+				</button>
 			</div>
 		</div>
 	</GenericModal>
@@ -181,5 +181,11 @@
 	.tutorial-anchor :global(.modal-page) {
 		position: absolute;
 		z-index: 30;
+	}
+
+	.tutorial-canvas {
+		background-color: var(--color-topology-bg, #0f1117);
+		background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+		background-size: 50px 50px;
 	}
 </style>

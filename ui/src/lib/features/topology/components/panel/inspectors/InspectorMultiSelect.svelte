@@ -593,9 +593,11 @@
 					<Crosshair class="h-4 w-4" />
 				</button>
 			{/if}
-			<button class="btn-icon p-1" onclick={onClearSelection} title={common_clearSelection()}>
-				<X class="h-4 w-4" />
-			</button>
+			{#if !isTutorial}
+				<button class="btn-icon p-1" onclick={onClearSelection} title={common_clearSelection()}>
+					<X class="h-4 w-4" />
+				</button>
+			{/if}
 		</div>
 	</div>
 

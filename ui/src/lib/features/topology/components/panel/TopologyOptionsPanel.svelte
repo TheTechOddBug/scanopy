@@ -19,7 +19,8 @@
 		topology_expandPanel,
 		common_filters,
 		common_groupsLabel,
-		common_display
+		common_display,
+		topology_tutorialPanelHint
 	} from '$lib/paraglide/messages';
 
 	type OptionsTab = 'filter' | 'group' | 'visual';
@@ -115,7 +116,7 @@
 			</div>
 
 			<!-- Content area -->
-			<div class="overflow-y-auto p-3" style="max-height: calc(100vh - 350px);">
+			<div class="overflow-y-auto p-3" style={isTutorial ? '' : 'max-height: calc(100vh - 350px);'}>
 				{#if multiSelectedNodes.length >= 2}
 					<InspectorMultiSelect
 						topology={effectiveTopology}
@@ -125,15 +126,19 @@
 						{onGroupCreated}
 						{onDependencyTypeChange}
 					/>
-				{:else if $selectedNode && !isTutorial}
+				{:else if isTutorial}
+					<div class="text-secondary py-4 text-center text-sm">
+						{topology_tutorialPanelHint()}
+					</div>
+				{:else if $selectedNode}
 					{#key $selectedNode.id}
 						<InspectorNode node={$selectedNode} />
 					{/key}
-				{:else if $selectedEdge && !isTutorial}
+				{:else if $selectedEdge}
 					{#key $selectedEdge.id}
 						<InspectorEdge edge={$selectedEdge} />
 					{/key}
-				{:else if !isTutorial}
+				{:else}
 					<OptionsContent {activeTab} />
 				{/if}
 			</div>

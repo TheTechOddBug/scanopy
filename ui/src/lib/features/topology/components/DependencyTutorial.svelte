@@ -33,7 +33,8 @@
 		topology_tutorialStep2,
 		topology_tutorialStep3,
 		topology_tutorialStep4,
-		topology_tutorialSkip
+		topology_tutorialSkip,
+		topology_tutorialExplainer
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -107,6 +108,10 @@
 		fixedHeight={true}
 	>
 		<div class="flex min-h-0 flex-1 flex-col">
+			<!-- Explainer -->
+			<div class="border-primary/10 flex-shrink-0 border-b px-6 py-3">
+				<p class="text-secondary text-sm">{topology_tutorialExplainer()}</p>
+			</div>
 			<!-- Mini SvelteFlow canvas with real ElementNode + edge rendering -->
 			<div class="min-h-0 flex-1">
 				<SvelteFlowProvider>

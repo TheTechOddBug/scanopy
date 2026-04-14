@@ -10,6 +10,26 @@ import type { LayoutInput, LayoutResult } from './engine';
 import { getOrgUseCase } from '../queries';
 import { resolveCollapsedAncestor } from '../collapse';
 
+/**
+ * Resolve any node ID (element, subcontainer, or root container) to its
+ * root container ID. Returns undefined if the ID isn't found in any map.
+ */
+function resolveToRootContainer(
+	id: string,
+	elementToRoot: Map<string, string>,
+	containerIds: Set<string>,
+	parentContainerMap: Map<string, string>
+): string | undefined {
+	const fromElem = elementToRoot.get(id);
+	if (fromElem) return fromElem;
+	if (!containerIds.has(id)) return undefined;
+	let rootId = id;
+	while (parentContainerMap.has(rootId)) {
+		rootId = parentContainerMap.get(rootId)!;
+	}
+	return rootId;
+}
+
 /** @deprecated Use LayoutInput from engine.ts */
 export type ElkLayoutInput = LayoutInput;
 
@@ -278,24 +298,22 @@ function buildElkGraph(
 	// Helper: resolve an edge endpoint to its root container.
 	// Handles hidden elements inside collapsed containers via fullParentMap.
 	const resolveRoot = (id: string): string | undefined => {
-		const fromElem = elementToRootContainer.get(id);
-		if (fromElem) return fromElem;
-		if (containerIds.has(id)) {
-			let rootId = id;
-			while (parentContainerMap.has(rootId)) {
-				rootId = parentContainerMap.get(rootId)!;
-			}
-			return rootId;
-		}
-		// Hidden element: resolve via collapsed ancestor, then walk to root
+		const resolved = resolveToRootContainer(
+			id,
+			elementToRootContainer,
+			containerIds,
+			parentContainerMap
+		);
+		if (resolved) return resolved;
+		// Fallback: hidden element inside a collapsed container
 		const ancestor = resolveCollapsedAncestor(id, collapsed, fullParentMap);
-		if (ancestor && containerIds.has(ancestor)) {
-			let rootId = ancestor;
-			while (parentContainerMap.has(rootId)) {
-				rootId = parentContainerMap.get(rootId)!;
-			}
-			return rootId;
-		}
+		if (ancestor)
+			return resolveToRootContainer(
+				ancestor,
+				elementToRootContainer,
+				containerIds,
+				parentContainerMap
+			);
 		return undefined;
 	};
 
@@ -1292,9 +1310,11 @@ function repackDisconnectedContainers(
 
 	// Build element → root container mapping
 	const parentContainerMap = new Map<string, string>();
+	const allContainerIds = new Set<string>();
 	const rootContainerIds = new Set<string>();
 	for (const node of input.nodes) {
 		if (node.node_type === 'Container') {
+			allContainerIds.add(node.id);
 			const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
 			if (parentId) parentContainerMap.set(node.id, parentId);
 			else rootContainerIds.add(node.id);
@@ -1314,14 +1334,18 @@ function repackDisconnectedContainers(
 	const connectedIds = new Set<string>();
 	for (const edge of input.edges) {
 		if (!affectsLayout(edge)) continue;
-		// Resolve edge endpoints: elements map through elementToRoot,
-		// but after edge elevation a target may be a container ID directly
-		const srcRoot =
-			elementToRoot.get(edge.source) ??
-			(rootContainerIds.has(edge.source) ? edge.source : undefined);
-		const tgtRoot =
-			elementToRoot.get(edge.target) ??
-			(rootContainerIds.has(edge.target) ? edge.target : undefined);
+		const srcRoot = resolveToRootContainer(
+			edge.source,
+			elementToRoot,
+			allContainerIds,
+			parentContainerMap
+		);
+		const tgtRoot = resolveToRootContainer(
+			edge.target,
+			elementToRoot,
+			allContainerIds,
+			parentContainerMap
+		);
 		if (srcRoot && tgtRoot && srcRoot !== tgtRoot) {
 			connectedIds.add(srcRoot);
 			connectedIds.add(tgtRoot);

@@ -110,6 +110,8 @@ const POSITIONS = [
 export const TUTORIAL_XYFLOW_NODES: Node[] = TUTORIAL_SERVICES.map((n, i) => ({
 	id: n.id,
 	position: POSITIONS[i],
+	width: 150,
+	height: 80,
 	data: {
 		id: n.id,
 		node_type: 'Element',
@@ -117,7 +119,7 @@ export const TUTORIAL_XYFLOW_NODES: Node[] = TUTORIAL_SERVICES.map((n, i) => ({
 		host_id: n.hostId,
 		header: n.hostName,
 		position: POSITIONS[i],
-		size: { x: 150, y: 60 }
+		size: { x: 150, y: 80 }
 	},
 	type: 'Element'
 }));

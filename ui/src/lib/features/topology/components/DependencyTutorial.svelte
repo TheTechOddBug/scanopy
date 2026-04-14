@@ -2,7 +2,7 @@
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import ChecklistItem from '$lib/shared/components/data/ChecklistItem.svelte';
 	import ElementNodeCard from './visualization/ElementNodeCard.svelte';
-	import { selectedNodes } from '../queries';
+	import { selectedNodes, OPTIONS_PANEL_WIDTH_PX, OPTIONS_PANEL_LEFT_OFFSET_PX } from '../queries';
 	import { dependencyTypes, serviceDefinitions, entities } from '$lib/shared/stores/metadata';
 	import { browser } from '$app/environment';
 	import {
@@ -57,6 +57,9 @@
 		}
 	}
 
+	// Offset modal to the right of the options panel
+	const modalLeftOffset = OPTIONS_PANEL_WIDTH_PX + OPTIONS_PANEL_LEFT_OFFSET_PX + 16;
+
 	let step1Done = $derived(clickedNodeIds.size >= 1);
 	let step2Done = $derived(clickedNodeIds.size >= 3);
 	let step3Done = $derived(dependencyTypeToggled);
@@ -71,7 +74,7 @@
 <div class="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm"></div>
 
 <!-- Modal anchored to topology view -->
-<div class="tutorial-anchor">
+<div class="tutorial-anchor" style="--tutorial-offset: {modalLeftOffset}px;">
 	<GenericModal
 		title={topology_tutorialTitle()}
 		isOpen={true}
@@ -181,6 +184,7 @@
 	.tutorial-anchor :global(.modal-page) {
 		position: absolute;
 		z-index: 30;
+		padding-left: var(--tutorial-offset);
 	}
 
 	.tutorial-canvas {

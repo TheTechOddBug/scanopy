@@ -137,7 +137,7 @@
 	// Unified edit state — tutorial mode always allows edits
 	let editState = $derived(
 		isTutorial
-			? { canEdit: true, disabledReason: null }
+			? { isReadonly: false, isEditable: true, disabledReason: null }
 			: getTopologyEditState(topology, get(autoRebuild), isReadOnly)
 	);
 

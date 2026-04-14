@@ -36,8 +36,8 @@
     "name": "Container Runtime",
     "description": null,
     "category": null,
-    "icon": "container",
-    "color": "Fuchsia",
+    "icon": "box",
+    "color": "Blue",
     "metadata": {
       "edge_style": "Bezier",
       "has_end_marker": false,

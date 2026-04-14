@@ -395,13 +395,8 @@
 
 {#if activeTab === 'filter'}
 	<!-- Filters -->
-	<div
-		class="space-y-3 border-l-2 pl-2"
-		style="border-left-color: {viewMeta?.color
-			? COLOR_MAP[viewMeta.color as Color]?.rgb
-			: 'transparent'}"
-	>
-		<p class="text-tertiary text-xs">
+	<div class="space-y-3">
+		<p class="text-secondary text-xs font-medium">
 			{topology_filtersApplyToView({ viewName: viewMeta?.name ?? $activeView })}
 		</p>
 

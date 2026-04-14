@@ -212,8 +212,8 @@
     "name": "Container runtime",
     "description": "Containers grouped by runtime",
     "category": null,
-    "icon": "container",
-    "color": "Fuchsia",
+    "icon": "box",
+    "color": "Blue",
     "metadata": {
       "collapsed_by_default": false,
       "collapsed_size": {
@@ -238,8 +238,8 @@
     "name": "Docker stack",
     "description": "Elements grouped by Docker Compose project",
     "category": null,
-    "icon": "container",
-    "color": "Fuchsia",
+    "icon": "box",
+    "color": "Blue",
     "metadata": {
       "collapsed_by_default": false,
       "collapsed_size": {

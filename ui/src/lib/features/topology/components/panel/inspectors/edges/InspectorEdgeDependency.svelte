@@ -175,23 +175,6 @@
 			/>
 		</div>
 
-		{#if !isReadonly}
-			<span class="text-secondary mb-2 block text-sm font-medium">Edge Style</span>
-			{#if !editState.isEditable && editState.disabledReason}
-				<InlineWarning
-					title="Editing disabled"
-					body="Editing is only available when topology is unlocked and up-to-date."
-				/>
-			{/if}
-			<div class={`card p-4 ${editState.isEditable ? '' : 'card-static'}`}>
-				<EdgeStyleForm
-					bind:formData={localGroup}
-					collapsed={true}
-					editable={editState.isEditable}
-				/>
-			</div>
-		{/if}
-
 		<span class="text-secondary mb-2 block text-sm font-medium">Services</span>
 		{#if group.members.type === 'Bindings'}
 			{#each group.members.binding_ids as bindingId (bindingId)}

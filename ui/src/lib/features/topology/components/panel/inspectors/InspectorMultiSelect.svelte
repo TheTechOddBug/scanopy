@@ -41,27 +41,30 @@
 	import { browser } from '$app/environment';
 	import {
 		appWizard_selectedCount,
-		topology_multiSelectGroupName,
 		topology_multiSelectNoBindings,
 		topology_multiSelectPickBinding,
 		topology_multiSelectCreateGroupRebuildWarning,
 		topology_multiSelectLockedHint,
 		topology_multiSelectStaleHint,
 		topology_multiSelectReadOnlyHint,
+		topology_multiSelectGroupName,
 		common_clearSelection,
 		tags_entityTags,
 		dependencies_createDependency,
 		dependencies_serviceBindings,
-		dependencies_serviceBindingsInfoTitle,
-		dependencies_serviceBindingsInfoBody,
 		topology_multiSelectPreviewEdge,
 		topology_focusSelection,
-		common_application,
 		tags_crossGroupSelectionHint,
 		tags_inheritedFromHost,
 		tags_inheritedOverrideHint,
 		inspector_createGroupingRuleFromTag,
-		topology_tutorialDone
+		topology_tutorialDone,
+
+		appWizard_applicationTags,
+
+		dependencies_serviceBindingsInfo
+
+
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -304,11 +307,11 @@
 
 	let groupType: DependencyType = $state('RequestPath');
 	let lastAutoName = $state('');
-	let groupName = $state('');
-	let groupColor: Color = $state(
+	let dependencyName = $state('');
+	let dependencyColor: Color = $state(
 		AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)]
 	);
-	let groupEdgeStyle: EdgeStyle = $state('SmoothStep');
+	let dependencyEdgeStyle: EdgeStyle = $state('Bezier');
 
 	// Preview toggle with localStorage persistence
 	let showPreview = $state(false);
@@ -337,10 +340,10 @@
 		}
 	}
 
-	// Fake group data for EdgeStyleForm binding
+	// Fake dependency data for EdgeStyleForm binding
 	let edgeStyleFormData = $derived({
-		color: groupColor,
-		edge_style: groupEdgeStyle,
+		color: dependencyColor,
+		edge_style: dependencyEdgeStyle,
 		id: '',
 		name: '',
 		description: '',
@@ -356,7 +359,7 @@
 	// Binding disambiguation per selected interface
 	interface IPAddressBindingChoice {
 		ipAddressId: string;
-		interfaceName: string;
+		ipAddressName: string;
 		hostName: string;
 		bindings: { id: string; label: string }[];
 	}
@@ -368,7 +371,7 @@
 			const resolved = resolveElementNode(node.id, node.data as TopologyNode, topology);
 			if (!resolved.ipAddressId) continue;
 
-			const iface = resolved.iface;
+			const ipAddress = resolved.ipAddress;
 			const host = resolved.host;
 			if (!host) continue;
 
@@ -394,13 +397,13 @@
 				}
 			}
 
-			const ifaceName = iface
-				? (iface.name ? iface.name + ': ' : '') + iface.ip_address
+			const ipAddressName = ipAddress
+				? (ipAddress.name ? ipAddress.name + ': ' : '') + ipAddress.ip_address
 				: resolved.ipAddressId;
 
 			choices.push({
 				ipAddressId: resolved.ipAddressId,
-				interfaceName: ifaceName,
+				ipAddressName: ipAddressName,
 				hostName: host.name,
 				bindings: interfaceBindings
 			});
@@ -430,10 +433,10 @@
 	let isServicesMode = $derived(inspectorConfig.dependency_creation === 'Services');
 
 	async function confirmGroupCreation() {
-		if (!topology || !groupName.trim()) return;
+		if (!topology || !dependencyName.trim()) return;
 
 		const newDependency = createEmptyDependencyFormData(topology.network_id);
-		newDependency.name = groupName.trim();
+		newDependency.name = dependencyName.trim();
 		newDependency.dependency_type = groupType;
 
 		if (isServicesMode) {
@@ -452,8 +455,8 @@
 			newDependency.members = { type: 'Bindings', binding_ids: bindingIds };
 		}
 
-		newDependency.color = groupColor;
-		newDependency.edge_style = groupEdgeStyle;
+		newDependency.color = dependencyColor;
+		newDependency.edge_style = dependencyEdgeStyle;
 
 		const created = await createDependencyMutation.mutateAsync(newDependency);
 		previewEdges.set([]);
@@ -498,7 +501,7 @@
 	function updatePreviewEdges() {
 		if (nodes.length < 2) return;
 
-		const colorHelper = createColorHelper(groupColor);
+		const colorHelper = createColorHelper(dependencyColor);
 		const preview: Edge[] = [];
 
 		if (groupType === 'RequestPath') {
@@ -517,8 +520,8 @@
 						edge_type: 'RequestPath',
 						is_preview: true,
 						dependency_id: '__preview__',
-						preview_color: groupColor,
-						preview_edge_style: groupEdgeStyle
+						preview_color: dependencyColor,
+						preview_edge_style: dependencyEdgeStyle
 					},
 					markerEnd: {
 						type: 'arrow',
@@ -542,8 +545,8 @@
 						edge_type: 'HubAndSpoke',
 						is_preview: true,
 						dependency_id: '__preview__',
-						preview_color: groupColor,
-						preview_edge_style: groupEdgeStyle
+						preview_color: dependencyColor,
+						preview_edge_style: dependencyEdgeStyle
 					},
 					markerEnd: {
 						type: 'arrow',
@@ -558,8 +561,8 @@
 	// Auto-generate dependency name when type or selection changes
 	$effect(() => {
 		const newName = generateDependencyName(groupType, getNodeNames());
-		if (groupName === '' || groupName === lastAutoName) {
-			groupName = newName;
+		if (dependencyName === '' || dependencyName === lastAutoName) {
+			dependencyName = newName;
 		}
 		lastAutoName = newName;
 	});
@@ -567,9 +570,9 @@
 	// Start preview edges on mount and update when dependencies change
 	$effect(() => {
 		if (showPreview) {
-			void groupColor;
+			void dependencyColor;
 			void groupType;
-			void groupEdgeStyle;
+			void dependencyEdgeStyle;
 			void nodes;
 			updatePreviewEdges();
 		}
@@ -636,7 +639,7 @@
 			{#if inspectorConfig.show_application_picker}
 				<!-- App-group tag picker — with cross-group and inheritance awareness -->
 				<div class="space-y-2">
-					<span class="text-secondary block text-sm font-medium">{common_application()}</span>
+					<span class="text-secondary block text-sm font-medium">{appWizard_applicationTags()}</span>
 					<div class="card card-static space-y-2 p-2">
 						{#if appState.type === 'cross-group'}
 							<p class="text-tertiary text-xs">{tags_crossGroupSelectionHint()}</p>
@@ -706,7 +709,7 @@
 					<!-- Name input -->
 					<input
 						type="text"
-						bind:value={groupName}
+						bind:value={dependencyName}
 						placeholder={topology_multiSelectGroupName()}
 						class="h-8 w-full rounded px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
 						style="border: 1px solid var(--color-border-input); background: var(--color-bg-input); color: var(--color-text-primary)"
@@ -718,28 +721,26 @@
 						collapsed={false}
 						editable={true}
 						showCollapseToggle={false}
-						onColorChange={(c) => (groupColor = c)}
-						onEdgeStyleChange={(s) => (groupEdgeStyle = s)}
+						onColorChange={(c) => (dependencyColor = c)}
+						onEdgeStyleChange={(s) => (dependencyEdgeStyle = s)}
 					/>
 
 					<!-- Binding selection (L3 only — not shown in Services mode) -->
 					{#if !isServicesMode}
 						<div class="space-y-2">
-							<span class="text-secondary block text-xs font-medium"
+							<span class="text-secondary block text-sm font-medium"
 								>{dependencies_serviceBindings()}</span
 							>
-							<InlineInfo
-								title={dependencies_serviceBindingsInfoTitle()}
-								body={dependencies_serviceBindingsInfoBody()}
-								dismissableKey="group-bindings-info"
-							/>
+							<span class="text-tertiary block text-xs"
+								>{dependencies_serviceBindingsInfo()}</span
+							>
 							{#each ipAddressBindingChoices as choice (choice.ipAddressId)}
 								<div class="card card-static space-y-1 p-2">
 									<div class="text-primary truncate text-xs font-medium">
 										{choice.hostName}
 									</div>
 									<div class="text-tertiary truncate text-[10px]">
-										{choice.interfaceName}
+										{choice.ipAddressName}
 									</div>
 									{#if choice.bindings.length === 0}
 										<div class="text-tertiary text-xs italic">
@@ -783,7 +784,7 @@
 							<button
 								class="btn-primary w-full text-xs"
 								onclick={confirmGroupCreation}
-								disabled={!groupName.trim() ||
+								disabled={!dependencyName.trim() ||
 									createDependencyMutation.isPending ||
 									(isServicesMode ? selectedServiceIds.length < 2 : false)}
 							>

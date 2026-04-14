@@ -47,7 +47,11 @@ pub enum ServiceCategory {
     Backup,
     Media,          // Plex, Jellyfin
     HomeAutomation, // Home Assistant
-    Virtualization, // Proxmox, ESXi
+    #[serde(alias = "Virtualization")]
+    Hypervisor,       // Proxmox, ESXi, Hyper-V
+    ContainerRuntime, // Docker, Podman
+    Container,        // Docker containers, LXC instances
+    Orchestrator,     // Kubernetes, Portainer, Rancher, Nomad
 
     // Network Services
     DNS, // All DNS services
@@ -109,7 +113,10 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Storage => Icon::HardDrive,
             ServiceCategory::Media => Icon::CirclePlay,
             ServiceCategory::HomeAutomation => Icon::House,
-            ServiceCategory::Virtualization => Concept::Containerization.icon(),
+            ServiceCategory::Hypervisor => Concept::Virtualization.icon(),
+            ServiceCategory::ContainerRuntime => Concept::Containerization.icon(),
+            ServiceCategory::Container => Concept::Containerization.icon(),
+            ServiceCategory::Orchestrator => Icon::Layers,
             ServiceCategory::Backup => Icon::DatabaseBackup,
 
             // Network Services
@@ -165,7 +172,10 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Storage => Color::Green,
             ServiceCategory::Media => Color::Blue,
             ServiceCategory::HomeAutomation => Color::Blue,
-            ServiceCategory::Virtualization => Concept::Containerization.color(),
+            ServiceCategory::Hypervisor => Concept::Virtualization.color(),
+            ServiceCategory::ContainerRuntime => Concept::Containerization.color(),
+            ServiceCategory::Container => Concept::Containerization.color(),
+            ServiceCategory::Orchestrator => Color::Purple,
             ServiceCategory::Backup => Color::Gray,
 
             // Network Services
@@ -222,7 +232,10 @@ impl TypeMetadataProvider for ServiceCategory {
             Backup => "Backup",
             Media => "Media",
             HomeAutomation => "Home Automation",
-            Virtualization => "Virtualization",
+            Hypervisor => "Hypervisor",
+            ContainerRuntime => "Container Runtime",
+            Container => "Container",
+            Orchestrator => "Orchestrator",
             DNS => "DNS",
             VPN => "VPN",
             Monitoring => "Monitoring",
@@ -262,7 +275,10 @@ impl TypeMetadataProvider for ServiceCategory {
             Backup => "Backup and data protection services",
             Media => "Media servers and streaming services like Plex and Jellyfin",
             HomeAutomation => "Smart home platforms like Home Assistant and openHAB",
-            Virtualization => "Hypervisors and container platforms like Docker and Proxmox",
+            Hypervisor => "Virtual machine managers and hypervisors",
+            ContainerRuntime => "Container engines that directly run containers",
+            Container => "Application and system container instances",
+            Orchestrator => "Container orchestration and management platforms",
             DNS => "DNS servers and resolvers",
             VPN => "VPN servers like OpenVPN and WireGuard",
             Monitoring => "Monitoring, observability, and SNMP agents",

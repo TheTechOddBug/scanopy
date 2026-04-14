@@ -15,7 +15,7 @@ impl ServiceDefinition for Rancher {
         "Kubernetes management"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Orchestrator
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortType::Http, "/v3", "rancher", None)

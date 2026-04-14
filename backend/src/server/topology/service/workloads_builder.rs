@@ -433,28 +433,49 @@ impl ViewBuilder for WorkloadsBuilder {
             .flat_map(|s| s.base.bindings.iter().map(move |b| (b.id, s.id)))
             .collect();
 
-        // Set of service IDs that exist as element nodes in this view
-        let service_node_ids: HashSet<Uuid> = nodes
+        // Map service IDs to their element node IDs in this view.
+        // Most services ARE the node (service.id == node.id).
+        // Services on VMs don't have their own nodes — they're inline on the
+        // VM Host element, so map them to the VM's host_id (the element node ID).
+        let element_node_ids: HashSet<Uuid> = nodes
             .iter()
             .filter(|n| matches!(n.node_type, NodeType::Element { .. }))
             .map(|n| n.id)
+            .collect();
+
+        let service_to_node: HashMap<Uuid, Uuid> = ctx
+            .services
+            .iter()
+            .filter_map(|s| {
+                if element_node_ids.contains(&s.id) {
+                    // Service is its own element node
+                    Some((s.id, s.id))
+                } else if let Some(host) = host_lookup.get(&s.base.host_id)
+                    && host.base.virtualization.is_some()
+                    && element_node_ids.contains(&s.base.host_id)
+                {
+                    // Service is on a VM — resolve to the VM Host element
+                    Some((s.id, s.base.host_id))
+                } else {
+                    None
+                }
+            })
             .collect();
 
         for dep in ctx.dependencies {
             let service_ids: Vec<Uuid> = match &dep.base.members {
                 DependencyMembers::Services { service_ids } => service_ids
                     .iter()
-                    .copied()
-                    .filter(|id| service_node_ids.contains(id))
+                    .filter_map(|id| service_to_node.get(id).copied())
                     .collect(),
                 DependencyMembers::Bindings { binding_ids } => {
                     let mut ids = Vec::new();
                     for binding_id in binding_ids {
                         if let Some(&service_id) = binding_to_service.get(binding_id)
-                            && service_node_ids.contains(&service_id)
-                            && ids.last() != Some(&service_id)
+                            && let Some(&node_id) = service_to_node.get(&service_id)
+                            && ids.last() != Some(&node_id)
                         {
-                            ids.push(service_id);
+                            ids.push(node_id);
                         }
                     }
                     ids
@@ -551,7 +572,7 @@ mod tests {
             "Proxmox"
         }
         fn category(&self) -> ServiceCategory {
-            ServiceCategory::Virtualization
+            ServiceCategory::Hypervisor
         }
         fn discovery_pattern(&self) -> Pattern<'_> {
             Pattern::None
@@ -568,7 +589,7 @@ mod tests {
             "Docker"
         }
         fn category(&self) -> ServiceCategory {
-            ServiceCategory::Virtualization
+            ServiceCategory::ContainerRuntime
         }
         fn discovery_pattern(&self) -> Pattern<'_> {
             Pattern::None

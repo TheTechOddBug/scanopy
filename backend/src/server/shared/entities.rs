@@ -155,17 +155,18 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Share => Color::Teal,
             EntityDiscriminants::Tag => Color::Yellow,
 
-            EntityDiscriminants::Host => Color::Amber,
+            EntityDiscriminants::Dependency => Color::Rose,
+            EntityDiscriminants::Topology => Color::Pink,
             EntityDiscriminants::Service => Color::Fuchsia,
+
+            EntityDiscriminants::Host => Color::Amber,
+
             EntityDiscriminants::IPAddress => Color::Blue,
             EntityDiscriminants::Port => Color::Sky,
             EntityDiscriminants::Binding => Color::Cyan,
             EntityDiscriminants::Interface => Color::Teal,
-
             EntityDiscriminants::Subnet => Color::Indigo,
             EntityDiscriminants::Vlan => Color::Violet,
-            EntityDiscriminants::Dependency => Color::Rose,
-            EntityDiscriminants::Topology => Color::Pink,
 
             EntityDiscriminants::Unknown => Color::Gray,
         }

@@ -14,7 +14,7 @@ impl ServiceDefinition for Docker {
         "Docker"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::ContainerRuntime
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

@@ -521,6 +521,7 @@
 					{@const isServiceTagHidden =
 						nodeRenderData.elementType !== 'Service' && hiddenServices.has(service.id)}
 					{@const ServiceIcon = serviceDefinitions.getIconComponent(service.service_definition)}
+					{@const serviceColorHelper = serviceDefinitions.getColorHelper(service.service_definition)}
 					{@const serviceTagHighlight = (() => {
 						if (!currentHoveredTag || currentHoveredTag.entityType !== 'service') return '';
 						const { tagId, color } = currentHoveredTag;
@@ -550,7 +551,7 @@
 							style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
 							title={service.name}
 						>
-							<ServiceIcon class="h-5 w-5 flex-shrink-0 {hostColorHelper.icon}" />
+							<ServiceIcon class="h-5 w-5 flex-shrink-0 {serviceColorHelper.icon}" />
 							<span
 								class="text-m text-secondary truncate {serviceTagHighlight ||
 								serviceCategoryHighlight
@@ -593,12 +594,20 @@
 							{@render serviceCard(service)}
 						{/each}
 						{#each serviceGroups.containerized as group (group.runtimeId)}
+							{@const RuntimeIcon = group.runtimeService
+								? serviceDefinitions.getIconComponent(group.runtimeService.service_definition)
+								: null}
 							<div
 								class="mb-1 mt-1 w-full rounded-md border border-dashed border-gray-300 px-1 py-0.5 dark:border-gray-600"
 							>
-								{#if group.runtimeService}
-									{@render serviceCard(group.runtimeService)}
-								{/if}
+								<div class="flex items-center gap-1 px-1 pb-2 pt-1">
+									{#if RuntimeIcon}
+										<RuntimeIcon class="h-5 w-5 flex-shrink-0" />
+									{/if}
+									<span class="text-secondary truncate text-xs font-medium">
+										{group.runtimeService?.name ?? 'Containers'}
+									</span>
+								</div>
 								{#each group.containers as service (service.id)}
 									{@render serviceCard(service)}
 								{/each}
@@ -615,6 +624,7 @@
 								{@const ServiceIcon = serviceDefinitions.getIconComponent(
 									service.service_definition
 								)}
+								{@const svcColor = serviceDefinitions.getColorHelper(service.service_definition)}
 								<div
 									class="flex flex-col items-center justify-center"
 									style="min-width: 0; max-width: 100%; width: 100%;"
@@ -624,7 +634,7 @@
 										style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
 										title={service.name}
 									>
-										<ServiceIcon class="h-5 w-5 flex-shrink-0 {hostColorHelper.icon}" />
+										<ServiceIcon class="h-5 w-5 flex-shrink-0 {svcColor.icon}" />
 										<span class="text-m text-secondary truncate" style="transition: color 0.15s;">
 											{service.name}
 										</span>

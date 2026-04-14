@@ -62,8 +62,8 @@
     "name": "Container Runtime",
     "description": "Group containers by runtime",
     "category": null,
-    "icon": "container",
-    "color": "Fuchsia",
+    "icon": "box",
+    "color": "Blue",
     "metadata": {
       "allow_multiple": false,
       "is_configurable": false,
@@ -80,8 +80,8 @@
     "name": "Docker Stack",
     "description": "Group by Docker Compose project",
     "category": null,
-    "icon": "container",
-    "color": "Fuchsia",
+    "icon": "box",
+    "color": "Blue",
     "metadata": {
       "allow_multiple": false,
       "is_configurable": false,

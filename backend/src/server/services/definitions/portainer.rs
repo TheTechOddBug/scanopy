@@ -12,10 +12,10 @@ impl ServiceDefinition for Portainer {
         "Portainer"
     }
     fn description(&self) -> &'static str {
-        "Container management web ip_address"
+        "Orchestration platform for Docker, K8s, and Podman"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Orchestrator
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

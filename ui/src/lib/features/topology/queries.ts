@@ -755,8 +755,8 @@ export function hydrateStoresFromTopology(topology: Topology, isInitial = true):
 
 export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage());
 
-/** Expanded options panel width in px (Tailwind w-96 = 384px). Used by the panel and panel-aware fitView. */
-export const OPTIONS_PANEL_WIDTH_PX = 384;
+/** Expanded options panel width in px (Tailwind w-80 = 320). Used by the panel and panel-aware fitView. */
+export const OPTIONS_PANEL_WIDTH_PX = 320;
 
 /** Left offset of the options panel (Tailwind left-4 = 16px). */
 export const OPTIONS_PANEL_LEFT_OFFSET_PX = 16;

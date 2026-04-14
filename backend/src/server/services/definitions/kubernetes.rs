@@ -15,7 +15,7 @@ impl ServiceDefinition for Kubernetes {
         "Container orchestration platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Orchestrator
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

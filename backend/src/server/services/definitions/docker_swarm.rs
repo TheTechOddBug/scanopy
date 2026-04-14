@@ -15,7 +15,7 @@ impl ServiceDefinition for DockerSwarm {
         "Docker native clustering and orchestration"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Orchestrator
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

@@ -51,19 +51,6 @@
 
 {#if topology && resolved}
 	<div class="space-y-4">
-		{#if !editState.isReadonly && hasPortBindings}
-			<OptionsCard>
-				<OptionToggle
-					label={topology_hidePorts()}
-					helpText={topology_hidePortsHelp()}
-					path="request"
-					optionKey="hide_ports"
-					disabled={!editState.isEditable}
-					disabledReason={getOptionDisabledTooltip(editState.disabledReason)}
-				/>
-			</OptionsCard>
-		{/if}
-
 		{#each sections as section (section)}
 			{@const SectionComponent = getSectionComponent(section)}
 			<SectionComponent {node} {topology} {editState} elementContext={resolved} />

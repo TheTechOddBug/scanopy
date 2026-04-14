@@ -18,7 +18,7 @@ impl ServiceDefinition for DockerContainer {
         "A generic docker container"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Container
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
@@ -56,10 +56,6 @@ impl ServiceDefinition for DockerContainer {
 
     fn is_generic(&self) -> bool {
         true
-    }
-
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg"
     }
 }
 

@@ -505,12 +505,7 @@
 </script>
 
 <!-- Container grouping section -->
-<div
-	class="mb-4 border-l-2 pl-2"
-	style="border-left-color: {viewMeta?.color
-		? COLOR_MAP[viewMeta.color as Color]?.rgb
-		: 'transparent'}"
->
+<div class="mb-4">
 	<ListManager
 		label={topology_containerGroupingPerspective({ perspective: viewMeta?.name ?? '' })}
 		placeholder={topology_addContainerRule()}

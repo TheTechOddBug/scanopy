@@ -15,7 +15,7 @@ impl ServiceDefinition for Proxmox {
         "Open-source virtualization management platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Hypervisor
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

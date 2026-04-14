@@ -183,25 +183,6 @@ pub async fn create_discovery(
         }
     }
 
-    // Check scheduled discovery restriction
-    if matches!(discovery.base.run_type, RunType::Scheduled { .. })
-        && let Some(org_id) = auth.organization_id()
-        && let Some(org) = state
-            .services
-            .organization_service
-            .get_by_id(&org_id)
-            .await?
-        && let Some(plan) = &org.base.plan
-        && !plan.features().scheduled_discovery
-    {
-        return Err(ApiError::coded(
-            StatusCode::FORBIDDEN,
-            ErrorCode::BillingFeatureNotAvailable {
-                feature: "Scheduled Discovery".into(),
-            },
-        ));
-    }
-
     // Validate subnet network membership for Network and Unified types
     let subnet_ids_to_check = match &discovery.base.discovery_type {
         DiscoveryType::Network { subnet_ids, .. } | DiscoveryType::Unified { subnet_ids, .. } => {
@@ -257,25 +238,6 @@ pub async fn update_discovery(
     {
         return Err(ApiError::bad_request(
             "Cannot change the type of a legacy discovery. Create a new Unified discovery instead.",
-        ));
-    }
-
-    // Check scheduled discovery restriction
-    if matches!(discovery.base.run_type, RunType::Scheduled { .. })
-        && let Some(org_id) = auth.organization_id()
-        && let Some(org) = state
-            .services
-            .organization_service
-            .get_by_id(&org_id)
-            .await?
-        && let Some(plan) = &org.base.plan
-        && !plan.features().scheduled_discovery
-    {
-        return Err(ApiError::coded(
-            StatusCode::FORBIDDEN,
-            ErrorCode::BillingFeatureNotAvailable {
-                feature: "Scheduled Discovery".into(),
-            },
         ));
     }
 

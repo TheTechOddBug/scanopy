@@ -126,10 +126,10 @@
 						nodesDraggable={false}
 						nodesConnectable={false}
 						elementsSelectable={true}
-						panOnDrag={false}
+						selectionOnDrag={false}
+						panOnDrag={true}
 						zoomOnScroll={false}
 						zoomOnDoubleClick={false}
-						preventScrolling={true}
 					>
 						<Background
 							variant={BackgroundVariant.Dots}

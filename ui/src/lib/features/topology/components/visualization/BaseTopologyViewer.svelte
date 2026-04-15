@@ -497,13 +497,59 @@
 			nodes.set(allNodes);
 			edges.set(flowEdges);
 		} else if (wantsAnimation) {
-			// Measurement pass ran but we want to animate. The DOM still has
-			// the user's pre-collapse nodes (snapshotNodes) — don't overwrite
-			// them with allNodes. Just become visible and animate directly.
-			console.log('[ANIM] skipping measurement render, animating directly', { gen: thisGeneration });
+			// Measurement pass set nodes to (0,0) while hidden. Restore the
+			// user's pre-collapse positions, become visible, then animate.
+			console.log('[ANIM] post-measurement animate', { gen: thisGeneration });
+
+			// 1. Restore expanded positions while still hidden
+			nodes.set(snapshotNodes);
+			edges.set(flowEdges);
+			await tick();
+
+			// 2. Become visible — nodes are at expanded positions
 			isMeasuring = false;
+
+			// 3. Add transition class (no position change yet)
+			animatingCollapse = true;
+			await tick();
+			// Double rAF: ensure expanded positions + transition class are painted
+			await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+			if (isStale()) {
+				animatingCollapse = false;
+				return;
+			}
+
+			// 4. Now set collapsed positions — CSS transition animates
+			console.log('[ANIM] >>> ANIMATING <<<', { gen: thisGeneration });
 			const previousNodeIds = new Set(snapshotNodes.map((n) => n.id));
-			runAnimation(previousNodeIds);
+			const phase1Nodes = allNodes.filter((n) => previousNodeIds.has(n.id));
+			nodes.set(phase1Nodes);
+			edges.set(flowEdges);
+
+			const fullNodes = [...allNodes];
+			const fullEdges = [...flowEdges];
+			setTimeout(() => {
+				animatingCollapse = false;
+				const newNodeIds = new Set(
+					fullNodes.filter((n) => !previousNodeIds.has(n.id)).map((n) => n.id)
+				);
+				if (newNodeIds.size > 0) {
+					const fadingNodes = fullNodes.map((n) =>
+						newNodeIds.has(n.id)
+							? { ...n, style: 'opacity: 0; transition: opacity 0.3s ease-in-out;' }
+							: n
+					);
+					nodes.set(fadingNodes);
+					edges.set(fullEdges);
+					requestAnimationFrame(() => {
+						nodes.set(fullNodes);
+						edges.set(fullEdges);
+					});
+				} else {
+					nodes.set(fullNodes);
+					edges.set(fullEdges);
+				}
+			}, 350);
 		} else {
 			console.log('[ANIM] measurement render', { gen: thisGeneration });
 			edges.set([]);

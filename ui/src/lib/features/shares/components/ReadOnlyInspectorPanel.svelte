@@ -7,6 +7,11 @@
 	import InspectorEdge from '$lib/features/topology/components/panel/inspectors/InspectorEdge.svelte';
 	import { optionsPanelExpanded } from '$lib/features/topology/queries';
 
+	interface Props {
+		showMinimap?: boolean;
+	}
+	let { showMinimap = false }: Props = $props();
+
 	setContext('staticTags', true);
 
 	// Get selected node/edge from context (set by ReadOnlyTopologyViewer)
@@ -53,7 +58,10 @@
 			</div>
 
 			<!-- Content -->
-			<div class="overflow-y-auto p-3" style="max-height: calc(100vh - 200px);">
+			<div
+				class="overflow-y-auto p-3"
+				style="max-height: calc(100vh - {showMinimap ? 350 : 180}px);"
+			>
 				{#if $selectedNode}
 					{#key $selectedNode.id}
 						<InspectorNode node={$selectedNode} />

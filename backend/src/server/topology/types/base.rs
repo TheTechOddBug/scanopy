@@ -114,8 +114,8 @@ impl Topology {
     }
 
     /// Resolve the available views for a share, filtering by data availability.
-    /// If `configured` is None, all data-supported views are returned.
-    /// If `configured` is Some(list), returns the intersection preserving list order.
+    /// If `configured` is None or empty, all data-supported views are returned.
+    /// If `configured` is Some(non-empty list), returns the intersection preserving list order.
     pub fn resolve_available_views(
         &self,
         configured: &Option<Vec<TopologyView>>,
@@ -130,6 +130,7 @@ impl Topology {
 
         match configured {
             None => data_supported,
+            Some(list) if list.is_empty() => data_supported,
             Some(list) => list
                 .iter()
                 .filter(|v| data_supported.contains(v))

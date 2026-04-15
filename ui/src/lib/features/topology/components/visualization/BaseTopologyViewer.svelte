@@ -422,15 +422,19 @@
 		});
 		aggregatedEdgeOriginals.set(originalsMap);
 
+		// Save pre-render nodes for animation after measurement
+		const preRenderNodes = get(nodes);
+
 		// Render
-		const shouldAnimate =
+		const wantsAnimation =
 			(needsElk || layoutState.animationPending) &&
-			!isMeasuring &&
 			layoutState.lastRenderedTopoKey !== '' &&
 			!prep.viewChanged;
+		const shouldAnimate = wantsAnimation && !isMeasuring;
 		console.log('[ANIM] shouldAnimate decision', {
 			gen: thisGeneration,
 			shouldAnimate,
+			wantsAnimation,
 			needsElk,
 			animationPending: layoutState.animationPending,
 			isMeasuring,
@@ -439,11 +443,11 @@
 		});
 		layoutState.animationPending = false;
 
-		if (shouldAnimate) {
+		// Animate: transition existing nodes to new positions, then fade in new nodes
+		const runAnimation = (fromNodeIds: Set<string>) => {
 			console.log('[ANIM] >>> ANIMATING <<<', { gen: thisGeneration });
 			animatingCollapse = true;
-			const previousNodeIds = new Set(get(nodes).map((n) => n.id));
-			const phase1Nodes = allNodes.filter((n) => previousNodeIds.has(n.id));
+			const phase1Nodes = allNodes.filter((n) => fromNodeIds.has(n.id));
 			nodes.set(phase1Nodes);
 			edges.set(flowEdges);
 
@@ -454,7 +458,7 @@
 				// New nodes get opacity 0 initially, then fade in.
 				animatingCollapse = false;
 				const newNodeIds = new Set(
-					fullNodes.filter((n) => !previousNodeIds.has(n.id)).map((n) => n.id)
+					fullNodes.filter((n) => !fromNodeIds.has(n.id)).map((n) => n.id)
 				);
 				if (newNodeIds.size > 0) {
 					// Set new nodes with opacity 0 via style
@@ -475,6 +479,11 @@
 					edges.set(fullEdges);
 				}
 			}, 350);
+		};
+
+		if (shouldAnimate) {
+			const previousNodeIds = new Set(preRenderNodes.map((n) => n.id));
+			runAnimation(previousNodeIds);
 		} else if (!isMeasuring) {
 			console.log('[ANIM] not animating (normal render)', { gen: thisGeneration });
 			nodes.set(allNodes);
@@ -503,6 +512,21 @@
 			}
 			console.log('[ANIM] measurement complete, setting isMeasuring=false', { gen: thisGeneration });
 			isMeasuring = false;
+
+			// Measurement rendered final positions while hidden. If this
+			// should have been an animated collapse, restore pre-measurement
+			// positions and animate to the new ones.
+			if (wantsAnimation) {
+				console.log('[ANIM] post-measurement animation trigger');
+				// Restore old positions (visible now that isMeasuring is false)
+				nodes.set(preRenderNodes);
+				edges.set(flowEdges);
+				await tick();
+				await new Promise((r) => requestAnimationFrame(r));
+				if (isStale()) return;
+				const previousNodeIds = new Set(preRenderNodes.map((n) => n.id));
+				runAnimation(previousNodeIds);
+			}
 		}
 
 		// Post-render: cache collapsed sizes, re-run if needed

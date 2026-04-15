@@ -124,20 +124,36 @@
 				<ReadOnlyInspectorPanel {showMinimap} />
 			{/if}
 
-			{#if showViewSwitcher && !shareName}
-				<div class="view-switcher-overlay" style:left="{showMinimap ? minimapClearance : 0}px">
-					{#if viewLoading}
-						<LoaderCircle class="text-muted h-4 w-4 animate-spin" />
+			<div class="bottom-bar">
+				{#if showMinimap}
+					<div style="width: {minimapClearance}px; flex-shrink: 0;"></div>
+				{/if}
+				<div class="bottom-bar-center">
+					{#if showViewSwitcher && !shareName}
+						{#if viewLoading}
+							<LoaderCircle class="text-muted h-4 w-4 animate-spin" />
+						{/if}
+						<SegmentedControl
+							options={viewOptions}
+							selected={currentView}
+							onchange={onViewChange}
+							size="sm"
+							disabled={viewLoading}
+						/>
 					{/if}
-					<SegmentedControl
-						options={viewOptions}
-						selected={currentView}
-						onchange={onViewChange}
-						size="sm"
-						disabled={viewLoading}
-					/>
 				</div>
-			{/if}
+				<a
+					href="https://scanopy.net?utm_source={isEmbed
+						? 'embed'
+						: 'share'}&utm_medium=referral&utm_campaign=created_with"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="branding-badge"
+				>
+					<img src="/logos/scanopy-logo.png" alt="Scanopy" class="h-4 w-4" />
+					<span>Created with Scanopy</span>
+				</a>
+			</div>
 
 			<BaseTopologyViewer
 				bind:this={baseViewer}
@@ -145,7 +161,7 @@
 				readonly={true}
 				{showControls}
 				{isEmbed}
-				showBranding={true}
+				showBranding={false}
 				{showMinimap}
 				sidebarCollapsed={true}
 				onOpenShortcuts={() => (shortcutsHelpOpen = true)}
@@ -168,20 +184,40 @@
 </SvelteFlowProvider>
 
 <style>
-	.view-switcher-overlay {
+	.bottom-bar {
 		position: absolute;
 		bottom: 10px;
-		/* left set via inline style based on minimap visibility */
-		right: 200px;
+		left: 10px;
+		right: 10px;
 		z-index: 5;
 		display: flex;
-		justify-content: center;
+		justify-content: space-between;
 		align-items: center;
-		gap: 8px;
 		pointer-events: none;
 	}
 
-	.view-switcher-overlay > :global(*) {
+	.bottom-bar > :global(*) {
 		pointer-events: auto;
+	}
+
+	.bottom-bar-center {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.branding-badge {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--color-text-muted);
+		font-size: 12px;
+		text-decoration: none;
+		transition: color 0.2s;
+		flex-shrink: 0;
+	}
+
+	.branding-badge:hover {
+		color: var(--color-text-secondary);
 	}
 </style>

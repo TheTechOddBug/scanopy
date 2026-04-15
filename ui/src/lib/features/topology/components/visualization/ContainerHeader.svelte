@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { ChevronDown, ChevronRight } from 'lucide-svelte';
+	import { ChevronDown, ChevronRight, Search } from 'lucide-svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import type { ColorStyle, Color } from '$lib/shared/utils/styling';
 	import type { IconComponent } from '$lib/shared/utils/types';
@@ -252,9 +252,10 @@
 		{#if searchMatchCount > 0}
 			<span
 				data-fixed
-				class="ml-auto rounded-full bg-blue-500/20 px-1.5 py-0.5 text-xs text-blue-400"
+				class="ml-auto flex items-center gap-0.5 whitespace-nowrap rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] leading-none text-blue-400"
 			>
-				{topology_searchContainerMatches({ count: String(searchMatchCount) })}
+				<Search class="h-2.5 w-2.5" />
+				{searchMatchCount}
 			</span>
 		{/if}
 		{#if !hideCount}
@@ -282,7 +283,8 @@
 				{topology_elementCount({ count: childCount, label: elementLabel })}
 			</span>
 			{#if searchMatchCount > 0}
-				<span class="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs text-blue-400">
+				<span class="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-xs text-blue-400">
+					<Search class="h-3 w-3" />
 					{topology_searchContainerMatches({ count: String(searchMatchCount) })}
 				</span>
 			{/if}

@@ -111,7 +111,7 @@
 	let searchMatchCount = $derived(searchContainerMap.get(id)?.length ?? 0);
 	let hasSearchMatches = $derived(searchMatchCount > 0);
 	let searchHighlightRingStyle = $derived(
-		hasSearchMatches ? 'box-shadow: 0 0 0 3px rgb(59 130 246);' : ''
+		hasSearchMatches ? 'box-shadow: 0 0 0 2px rgb(59 130 246);' : ''
 	);
 
 	// Fade out when another node is selected or hidden by tag/search filter

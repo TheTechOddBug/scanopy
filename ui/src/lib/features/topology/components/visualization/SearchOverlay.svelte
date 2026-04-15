@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Search, X, ChevronUp, ChevronDown } from 'lucide-svelte';
+	import { get } from 'svelte/store';
 	import { useSvelteFlow } from '@xyflow/svelte';
 	import {
 		searchMatchNodeIds,

@@ -82,8 +82,15 @@
 	>([]);
 
 	// Update URL hash when activeTab changes
+	// Skip the first run — on page load the topology stores haven't hydrated
+	// from URL params yet, so writing them back would overwrite with defaults.
+	let tabEffectInitialized = false;
 	$effect(() => {
 		if (typeof window !== 'undefined' && activeTab) {
+			if (!tabEffectInitialized) {
+				tabEffectInitialized = true;
+				return;
+			}
 			const url = new URL(window.location.href);
 			if (activeTab === 'topology') {
 				// Set topology params when entering the topology tab

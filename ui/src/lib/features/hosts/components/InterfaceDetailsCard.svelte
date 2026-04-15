@@ -135,7 +135,7 @@
 		<InfoRow label={hosts_interfaces_taggedVlans()}>
 			<div class="flex flex-wrap gap-1">
 				{#each taggedVlans as vlan}
-					<Tag label="VLAN {vlan.vlan_number}" color="Teal" />
+					<Tag label="VLAN {vlan.vlan_number}" color={entities.getColorHelper('Vlan').color} />
 				{/each}
 			</div>
 		</InfoRow>

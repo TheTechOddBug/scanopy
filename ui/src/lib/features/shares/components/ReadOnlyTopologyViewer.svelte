@@ -126,6 +126,7 @@
 				{isEmbed}
 				showBranding={true}
 				{showMinimap}
+				sidebarCollapsed={true}
 				onOpenShortcuts={() => (shortcutsHelpOpen = true)}
 				onOpenSearch={() => searchOpen.set(true)}
 			/>

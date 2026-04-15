@@ -56,7 +56,7 @@
 
 	// Hydrate the global activeView + topologyOptions stores so the rendering
 	// pipeline sees the correct view for this shared topology.
-	hydrateStoresFromTopology(topology, true);
+	hydrateStoresFromTopology(topology, true, true);
 
 	// Create a context store for the topology so child components (inspectors) can access it
 	const topologyContext = writable<Topology>(topology);
@@ -74,7 +74,7 @@
 	// Keep context in sync with prop and re-hydrate on topology change (view switch)
 	$: {
 		topologyContext.set(topology);
-		hydrateStoresFromTopology(topology, true);
+		hydrateStoresFromTopology(topology, true, true);
 	}
 
 	// Keyboard shortcuts — same shared handler, no edit-only callbacks

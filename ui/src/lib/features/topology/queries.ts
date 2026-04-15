@@ -693,7 +693,16 @@ function buildOptionsForApi(): TopologyOptions {
  * SSE updates preserve the user's view and local options for other views.
  */
 let hydrating = false;
-export function hydrateStoresFromTopology(topology: Topology, isInitial = true): void {
+/**
+ * @param useDefaultLocal If true, ignore the topology's stored local options and use
+ *   view-appropriate defaults. Used by share/embed views where the viewer has no
+ *   stored preferences and the creator's local options shouldn't leak through.
+ */
+export function hydrateStoresFromTopology(
+	topology: Topology,
+	isInitial = true,
+	useDefaultLocal = false
+): void {
 	hydrating = true;
 	try {
 		const opts = topology.options;
@@ -730,12 +739,14 @@ export function hydrateStoresFromTopology(topology: Topology, isInitial = true):
 			}
 			request.element_rules = elementRules;
 
-			// Full hydration: use backend request options + default local options
+			// Full hydration: use backend request options + default local options.
+			// When useDefaultLocal is true (share/embed), always use view defaults —
+			// the viewer has no stored preferences and the creator's shouldn't leak.
 			topologyOptionsStore.set({
 				request,
 				perViewLocal: {
 					...initDefaultLocalOptions(),
-					[storedView]: opts.local
+					...(useDefaultLocal ? {} : { [storedView]: opts.local })
 				}
 			});
 		} else {

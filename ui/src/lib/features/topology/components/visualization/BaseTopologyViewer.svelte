@@ -348,11 +348,29 @@
 				isStale,
 				{
 					setMeasuring: (v) => {
-						isMeasuring = v;
+						// Only hide viewport during measurement for initial load
+						// (no nodes on screen). For subsequent measurements (e.g.
+						// cacheMisses on collapse), nodes keep their current positions
+						// so hiding is unnecessary — and skipping it lets shouldAnimate
+						// fire normally.
+						if (layoutState.lastRenderedTopoKey === '') {
+							isMeasuring = v;
+						}
 					},
 					setNodes: (n) => nodes.set(n),
 					setEdges: (e) => edges.set(e),
-					buildMeasureNodes: () => makeNodes(false),
+					buildMeasureNodes: () => {
+						const measureNodes = makeNodes(false);
+						// Preserve current positions during measurement — DOM
+						// measurement only needs element presence, not positions.
+						// This prevents nodes from jumping to (0,0) while visible.
+						const currentPositions = new Map(getNodes().map((n) => [n.id, n.position]));
+						if (currentPositions.size === 0) return measureNodes;
+						return measureNodes.map((n) => ({
+							...n,
+							position: currentPositions.get(n.id) ?? n.position
+						}));
+					},
 					waitForNodesRendered: async () => {
 						// Wait for SvelteFlow to render node DOM elements.
 						// We only need DOM presence for measurement, not full initialization.

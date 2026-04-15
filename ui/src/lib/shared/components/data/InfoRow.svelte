@@ -3,9 +3,43 @@
 	export let mono: boolean = false;
 </script>
 
-<div class="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-	<span class="text-secondary flex-shrink-0 text-sm">{label}:</span>
-	<span class="text-primary min-w-0 text-sm" class:font-mono={mono} class:text-xs={mono}>
+<div class="info-row">
+	<span class="info-label">{label}:</span>
+	<span class="info-value" class:font-mono={mono} class:text-xs={mono}>
 		<slot />
 	</span>
 </div>
+
+<style>
+	.info-row {
+		container-type: inline-size;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 2px 8px;
+	}
+
+	.info-label {
+		flex-shrink: 0;
+		font-size: 0.875rem;
+		color: var(--color-text-secondary);
+	}
+
+	.info-value {
+		flex: 1 1 auto;
+		min-width: 0;
+		text-align: right;
+		font-size: 0.875rem;
+		color: var(--color-text-primary);
+	}
+
+	/* Narrow container: value wraps below label with indent marker */
+	@container (max-width: 260px) {
+		.info-value {
+			flex-basis: 100%;
+			text-align: left;
+			border-left: 2px solid var(--color-border);
+			padding-left: 8px;
+		}
+	}
+</style>

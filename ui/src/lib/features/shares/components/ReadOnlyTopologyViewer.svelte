@@ -10,7 +10,7 @@
 	import ExportButton from '$lib/features/topology/components/ExportButton.svelte';
 	import ExportModal from '$lib/features/topology/components/ExportModal.svelte';
 	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
-	import { Share2, LoaderCircle } from 'lucide-svelte';
+	import { Share2 } from 'lucide-svelte';
 	import type { ExportFeatures } from '../types/base';
 	import {
 		hydrateStoresFromTopology,
@@ -106,9 +106,6 @@
 				<div class="flex items-center gap-4">
 					{#if showViewSwitcher}
 						<div class="flex items-center gap-2">
-							{#if viewLoading}
-								<LoaderCircle class="text-muted h-4 w-4 animate-spin" />
-							{/if}
 							<SegmentedControl
 								options={viewOptions}
 								selected={currentView}
@@ -135,9 +132,6 @@
 				{/if}
 				<div class="bottom-bar-center">
 					{#if showViewSwitcher && !shareName}
-						{#if viewLoading}
-							<LoaderCircle class="text-muted h-4 w-4 animate-spin" />
-						{/if}
 						<SegmentedControl
 							options={viewOptions}
 							selected={currentView}

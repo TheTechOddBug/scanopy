@@ -53,7 +53,11 @@ export function bundleEdges(
 			sourceContainer < targetContainer
 				? [sourceContainer, targetContainer]
 				: [targetContainer, sourceContainer];
-		const key = `${c1}:${c2}:${edge.edge_type}`;
+
+		// Dependency edges include dependency_id so different dependencies
+		// are never bundled together (even if between the same containers).
+		const depId = 'dependency_id' in edge ? (edge.dependency_id as string) : '';
+		const key = depId ? `${c1}:${c2}:${edge.edge_type}:${depId}` : `${c1}:${c2}:${edge.edge_type}`;
 
 		const group = groups.get(key);
 		if (group) {

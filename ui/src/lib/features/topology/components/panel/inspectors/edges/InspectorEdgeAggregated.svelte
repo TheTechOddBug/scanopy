@@ -9,7 +9,10 @@
 	import { PhysicalLinkEdgeDisplay } from '$lib/shared/components/forms/selection/display/PhysicalLinkEdgeDisplay.svelte';
 	import { HypervisorEdgeDisplay } from '$lib/shared/components/forms/selection/display/HypervisorEdgeDisplay.svelte';
 	import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
-	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
+	import {
+		ServiceDisplay,
+		type ServiceDisplayContext
+	} from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import type { Dependency } from '$lib/features/dependencies/types/base';
@@ -171,6 +174,35 @@
 							displayComponent={DependencyDisplay}
 						/>
 					</div>
+					{#if dep.members.type === 'Services'}
+						{#each dep.members.service_ids as serviceId (serviceId)}
+							{@const service = topology?.services.find((s) => s.id === serviceId)}
+							{#if service}
+								<div class="card card-static ml-3">
+									<EntityDisplayWrapper
+										context={{ compact: true } satisfies ServiceDisplayContext}
+										item={service}
+										displayComponent={ServiceDisplay}
+									/>
+								</div>
+							{/if}
+						{/each}
+					{:else if dep.members.type === 'Bindings'}
+						{#each dep.members.binding_ids as bindingId (bindingId)}
+							{@const bindingService = topology?.services.find((s) =>
+								s.bindings.some((b) => b.id === bindingId)
+							)}
+							{#if bindingService}
+								<div class="card card-static ml-3">
+									<EntityDisplayWrapper
+										context={{ compact: true } satisfies ServiceDisplayContext}
+										item={bindingService}
+										displayComponent={ServiceDisplay}
+									/>
+								</div>
+							{/if}
+						{/each}
+					{/if}
 				{:else}
 					<div class="card card-static">
 						<div class="px-2 py-1">

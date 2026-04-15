@@ -6,6 +6,7 @@ use crate::server::bindings::r#impl::base::Binding;
 use crate::server::config::AppState;
 use crate::server::networks::r#impl::{Network, NetworkBase};
 use crate::server::organizations::r#impl::base::Organization;
+use crate::server::topology::types::base::Topology;
 use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
 use crate::server::shared::handlers::traits::{CrudHandlers, update_handler};
 use crate::server::shared::services::traits::CrudService;
@@ -23,6 +24,7 @@ use axum::extract::State;
 use chrono::Utc;
 use email_address::EmailAddress;
 use serde::Deserialize;
+use strum::IntoEnumIterator;
 use std::sync::Arc;
 use tower_sessions::Session;
 use utoipa::ToSchema;
@@ -249,9 +251,25 @@ pub async fn reset(
     state
         .services
         .network_service
-        .create_organizational_subnets(network.id, entity)
+        .create_organizational_subnets(network.id, entity.clone())
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to seed data: {}", e)))?;
+
+    // Create a default topology for the new network
+    use crate::server::topology::types::base::TopologyBase;
+    let base = TopologyBase::new("My Topology".to_string(), network.id);
+    let topology = Topology {
+        id: Uuid::new_v4(),
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+        base,
+    };
+    state
+        .services
+        .topology_service
+        .create(topology, entity)
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to create topology: {}", e)))?;
 
     Ok(Json(ApiResponse::success(())))
 }
@@ -385,12 +403,8 @@ pub async fn populate_demo_data(
     // First, reset all existing data
     reset_organization_data(&state, &id, entity.clone()).await?;
 
-    org.base.onboarding = vec![
-        OnboardingOperation::OrgCreated,
-        OnboardingOperation::FirstDaemonRegistered,
-        OnboardingOperation::FirstDiscoveryCompleted,
-    ];
-
+    org.base.onboarding = OnboardingOperation::iter().collect();
+    
     state
         .services
         .organization_service
@@ -714,35 +728,11 @@ async fn reset_organization_data(
     _auth: AuthenticatedEntity,
 ) -> Result<(), ApiError> {
     use crate::server::credentials::r#impl::base::Credential;
-    use crate::server::daemon_api_keys::r#impl::base::DaemonApiKey;
-    use crate::server::daemons::r#impl::base::Daemon;
-    use crate::server::dependencies::r#impl::base::Dependency;
-    use crate::server::discovery::r#impl::base::Discovery;
-    use crate::server::hosts::r#impl::base::Host;
-    use crate::server::interfaces::r#impl::base::Interface;
     use crate::server::invites::r#impl::base::Invite;
-    use crate::server::ip_addresses::r#impl::base::IPAddress;
-    use crate::server::ports::r#impl::base::Port;
-    use crate::server::services::r#impl::base::Service;
-    use crate::server::shares::r#impl::base::Share;
-    use crate::server::subnets::r#impl::base::Subnet;
     use crate::server::tags::r#impl::base::Tag;
-    use crate::server::topology::types::base::Topology;
     use crate::server::user_api_keys::r#impl::base::UserApiKey;
 
-    let org_filter = StorableFilter::<Network>::new_from_org_id(organization_id);
-    let network_ids: Vec<Uuid> = state
-        .services
-        .network_service
-        .get_all(org_filter)
-        .await?
-        .iter()
-        .map(|n| n.id)
-        .collect();
-
-    // 1. Delete tags FIRST — CASCADE on tag_id cleans up all entity_tags automatically.
-    //    This eliminates the O(N) per-entity remove_all_for_entity calls that were
-    //    the primary bottleneck on high-latency databases (Neon).
+    // 1. Delete tags — CASCADE on tag_id cleans up entity_tags automatically.
     state
         .services
         .tag_service
@@ -750,105 +740,17 @@ async fn reset_organization_data(
         .delete_by_filter(StorableFilter::<Tag>::new_from_org_id(organization_id))
         .await?;
 
-    // 2. Delete all remaining data except org and owner user.
-    //    Order matters due to foreign keys:
-    //    - Shares depend on topologies/networks
-    //    - Discoveries depend on daemons/networks
-    //    - Daemons depend on hosts/networks
-    //    - Hosts/services depend on networks
-    //    - Topologies depend on networks
-    //    - API keys (daemon + user) depend on networks/users
-    //    - Networks, credentials, invites
-    let net_filter = &network_ids;
+    // 2. Delete networks — CASCADE handles all network-scoped entities
+    //    (hosts, services, subnets, topologies, shares, daemons, discoveries,
+    //    ports, bindings, interfaces, IP addresses, daemon API keys, etc.)
+    state
+        .services
+        .network_service
+        .storage()
+        .delete_by_filter(StorableFilter::<Network>::new_from_org_id(organization_id))
+        .await?;
 
-    state
-        .services
-        .share_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Share>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .dependency_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Dependency>::new_from_network_ids(
-            net_filter,
-        ))
-        .await?;
-    state
-        .services
-        .discovery_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Discovery>::new_from_network_ids(
-            net_filter,
-        ))
-        .await?;
-    state
-        .services
-        .daemon_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Daemon>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .interface_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Interface>::new_from_network_ids(
-            net_filter,
-        ))
-        .await?;
-    state
-        .services
-        .binding_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Binding>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .service_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Service>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .port_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Port>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .ip_address_service
-        .storage()
-        .delete_by_filter(StorableFilter::<IPAddress>::new_from_network_ids(
-            net_filter,
-        ))
-        .await?;
-    state
-        .services
-        .host_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Host>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .subnet_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Subnet>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .topology_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Topology>::new_from_network_ids(net_filter))
-        .await?;
-    state
-        .services
-        .daemon_api_key_service
-        .storage()
-        .delete_by_filter(StorableFilter::<DaemonApiKey>::new_from_network_ids(
-            net_filter,
-        ))
-        .await?;
+    // 3. Delete org-scoped entities not tied to networks
     state
         .services
         .user_api_key_service
@@ -856,12 +758,6 @@ async fn reset_organization_data(
         .delete_by_filter(StorableFilter::<UserApiKey>::new_from_org_id(
             organization_id,
         ))
-        .await?;
-    state
-        .services
-        .network_service
-        .storage()
-        .delete_by_filter(StorableFilter::<Network>::new_from_org_id(organization_id))
         .await?;
     state
         .services
@@ -877,6 +773,8 @@ async fn reset_organization_data(
             organization_id,
         ))
         .await?;
+
+
 
     // 3. Delete non-owner users
     let user_filter = StorableFilter::<User>::new_from_org_id(organization_id);

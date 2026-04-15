@@ -116,7 +116,7 @@
 		{/if}
 		<div class="relative min-h-0 flex-1">
 			{#if showInspectPanel}
-				<ReadOnlyInspectorPanel />
+				<ReadOnlyInspectorPanel {showMinimap} />
 			{/if}
 			<BaseTopologyViewer
 				bind:this={baseViewer}

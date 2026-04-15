@@ -233,6 +233,7 @@
 				allowCreateNew={false}
 				allowReorder={true}
 				itemClickAction={null}
+				allowItemEdit={() => false}
 				onAdd={handleAddView}
 				onRemove={handleRemoveView}
 				onMoveUp={handleMoveViewUp}

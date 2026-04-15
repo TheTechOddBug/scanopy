@@ -29,6 +29,11 @@
 		topologyOptions,
 		optionsPanelExpanded,
 		OPTIONS_PANEL_FITVIEW_PADDING_PX,
+		MINIMAP_WIDTH_PX,
+		MINIMAP_HEIGHT_PX,
+		MINIMAP_OFFSET_PX,
+		MINIMAP_FITVIEW_BOTTOM_PX,
+		MINIMAP_FITVIEW_LEFT_PX,
 		aggregatedEdgeOriginals,
 		getInfrastructureRuleId
 	} from '../../queries';
@@ -131,21 +136,63 @@
 	const queryClient = useQueryClient();
 	let containerElement: HTMLDivElement;
 
-	/** Returns fitView padding that accounts for overlays (options panel, minimap). */
+	/**
+	 * Returns fitView padding that accounts for overlays (options panel, minimap).
+	 *
+	 * The minimap occupies the bottom-left corner. Rather than padding both
+	 * bottom and left (which wastes space), we check the topology's aspect
+	 * ratio and only pad the direction that conflicts:
+	 * - Tall/vertical topology → pad left (minimap column), not bottom
+	 * - Wide/horizontal topology → pad bottom (minimap row), not left
+	 */
 	function getFitViewPadding(): import('@xyflow/system').Padding {
 		const minimapVisible =
 			showMinimap !== undefined ? showMinimap : get(topologyOptions).local.show_minimap;
 		const hasPanel = get(optionsPanelExpanded);
 
-		if (hasPanel || minimapVisible) {
-			return {
-				top: 0.2,
-				right: 0.2,
-				bottom: minimapVisible ? '200px' : 0.2,
-				left: hasPanel ? `${OPTIONS_PANEL_FITVIEW_PADDING_PX}px` : 0.2
-			};
+		if (!hasPanel && !minimapVisible) return 0.2;
+
+		let minimapBottom: string | number = 0.2;
+		let minimapLeft: string | number = 0.2;
+
+		if (minimapVisible) {
+			// Determine topology aspect ratio from current nodes
+			const allNodes = getNodes();
+			if (allNodes.length > 0) {
+				let minX = Infinity,
+					maxX = -Infinity,
+					minY = Infinity,
+					maxY = -Infinity;
+				for (const n of allNodes) {
+					const x = n.position.x;
+					const y = n.position.y;
+					const w = n.measured?.width ?? n.width ?? 0;
+					const h = n.measured?.height ?? n.height ?? 0;
+					if (x < minX) minX = x;
+					if (x + w > maxX) maxX = x + w;
+					if (y < minY) minY = y;
+					if (y + h > maxY) maxY = y + h;
+				}
+				const topoWidth = maxX - minX;
+				const topoHeight = maxY - minY;
+				const isVertical = topoHeight > topoWidth;
+
+				if (isVertical) {
+					// Tall topology: minimap blocks left side, don't pad bottom
+					minimapLeft = `${MINIMAP_FITVIEW_LEFT_PX}px`;
+				} else {
+					// Wide topology: minimap blocks bottom, don't pad left
+					minimapBottom = `${MINIMAP_FITVIEW_BOTTOM_PX}px`;
+				}
+			}
 		}
-		return 0.2;
+
+		return {
+			top: 0.2,
+			right: 0.2,
+			bottom: minimapBottom,
+			left: hasPanel ? `${OPTIONS_PANEL_FITVIEW_PADDING_PX}px` : minimapLeft
+		};
 	}
 
 	export function triggerFitView() {
@@ -798,6 +845,8 @@
 		{#if (showMinimap !== undefined ? showMinimap : $topologyOptions.local.show_minimap) && !$isExporting}
 			<MiniMap
 				position="bottom-left"
+				width={MINIMAP_WIDTH_PX}
+				height={MINIMAP_HEIGHT_PX}
 				bgColor={themeStore.resolvedTheme === 'dark' ? '#1f2937' : '#ffffff'}
 				nodeColor={themeStore.resolvedTheme === 'dark' ? '#6b7280' : '#9ca3af'}
 				maskColor={themeStore.resolvedTheme === 'dark'

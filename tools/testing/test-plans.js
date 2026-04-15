@@ -250,91 +250,71 @@ var TEST_PLANS = [
 }
 ,
 {
-  "branch": "fix/trial-reuse-bug",
+  "branch": "fix/credential-assignment-regression",
   "tests": [
     {
-      "id": "first-time-trial-works",
-      "category": "Trial Flow",
-      "description": "First-time user can start a 14-day free trial",
+      "id": "credential-assignment-snmp-network-scan",
+      "category": "Credential Assignment",
+      "description": "SNMP credential assigned to host after network discovery",
       "steps": [
-        "Create a new account",
-        "Go to billing settings",
-        "Select Starter plan",
-        "Verify '14-day free trial' text is shown",
-        "Click 'Start 14-day free trial'",
-        "Verify trial activates without requiring credit card"
+        "Navigate to the network's discovery settings",
+        "Ensure an SNMP credential is assigned to the network",
+        "Run a discovery scan",
+        "Wait for the scan to complete",
+        "Open a discovered host that responded to SNMP",
+        "Check the host's credential assignments section"
       ],
-      "expected": "Trial starts successfully, plan status shows 'trialing', trial end date is 14 days from now",
+      "setup": "Create a network with an SNMP credential assigned. Ensure at least one host on the network responds to SNMP.",
+      "expected": "The host should show the SNMP credential in its credential assignments after discovery completes.",
       "flow": "setup",
       "sequence": 1,
       "status": null,
       "feedback": null
     },
     {
-      "id": "trial-messaging-hidden-after-use",
-      "category": "Trial Reuse Prevention",
-      "description": "After trial expires and org downgrades to Free, trial messaging is hidden",
+      "id": "credential-assignment-persists-rescan",
+      "category": "Credential Assignment",
+      "description": "Credential assignment persists after re-scan",
       "steps": [
-        "Go to billing settings",
-        "Verify '14-day free trial' text is NOT shown on any paid plan",
-        "Verify the CTA button says 'Get Started' not 'Start free trial'"
+        "Run a second discovery scan on the same network",
+        "Wait for the scan to complete",
+        "Open the same host from the first test",
+        "Check the host's credential assignments section"
       ],
-      "setup": "Use a Stripe test clock. Create account, start Starter trial, advance clock past trial expiry so org auto-downgrades to Free.",
-      "expected": "No trial messaging visible. Plans show 'Get Started' and require credit card.",
+      "expected": "The SNMP credential assignment should still be present after the re-scan (not lost during upsert).",
       "flow": "setup",
       "sequence": 2,
       "status": null,
       "feedback": null
     },
     {
-      "id": "no-second-trial-after-downgrade",
-      "category": "Trial Reuse Prevention",
-      "description": "Re-subscribing after trial expiry does not create a new trial period",
+      "id": "credential-assignment-docker-host",
+      "category": "Credential Assignment",
+      "description": "Docker credential assigned to daemon host after discovery",
       "steps": [
-        "Go to billing settings",
-        "Select a paid plan (e.g., Starter)",
-        "Complete checkout with credit card",
-        "Verify subscription is active (not trialing)"
+        "Navigate to the daemon host in the hosts list",
+        "Check the host's credential assignments section"
       ],
-      "setup": "Use a Stripe test clock. Create account, start Starter trial, advance clock past trial expiry so org auto-downgrades to Free.",
-      "expected": "Subscription starts immediately as 'active', not 'trialing'. No trial period applied. trial_end_date on org preserved from original trial.",
+      "setup": "Configure a Docker Socket or Docker Proxy credential on the network. Run a discovery scan with a daemon that has Docker available.",
+      "expected": "The daemon host should show the Docker credential in its credential assignments.",
       "flow": "setup",
       "sequence": 3,
       "status": null,
       "feedback": null
     },
     {
-      "id": "no-trial-after-paid-cycle",
-      "category": "Trial Reuse Prevention",
-      "description": "After full cycle (trial → paid → downgrade → re-subscribe), no trial is offered",
+      "id": "credential-assignment-banner-matches-persisted",
+      "category": "Credential Assignment",
+      "description": "Discovery banner credential matches actually persist",
       "steps": [
-        "Go to billing settings",
-        "Select a paid plan",
-        "Verify no trial messaging is shown",
-        "Complete checkout with credit card",
-        "Verify subscription is active with correct trial_end (14 days, not 401 days)"
+        "Run a discovery scan",
+        "Check the daemon logs for the discovery completion banner",
+        "Note which credentials were matched to which IPs",
+        "Open each matched host and verify the credential assignment exists"
       ],
-      "setup": "Use a Stripe test clock. Create account, start trial, advance clock past trial, re-subscribe with CC, then downgrade to Free (scheduled), advance clock past billing period so downgrade completes.",
-      "expected": "No trial messaging shown. Subscription starts as 'active'. trial_end_date reflects original trial, not a new one.",
+      "expected": "Every credential match shown in the banner should have a corresponding persisted host-credential assignment.",
       "flow": "setup",
       "sequence": 4,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "trial-continues-on-plan-switch",
-      "category": "Trial Flow",
-      "description": "Switching plans during trial preserves the trial period",
-      "steps": [
-        "Go to billing settings",
-        "Switch from Starter to Pro plan",
-        "Verify 'Your trial continues' text is shown",
-        "Verify trial end date is unchanged"
-      ],
-      "setup": "Create account, start Starter trial (should be currently in trialing status).",
-      "expected": "Plan changes to Pro, trial continues with same end date, 'Your trial continues' shown on the selected plan.",
-      "flow": "setup",
-      "sequence": 5,
       "status": null,
       "feedback": null
     }
@@ -342,128 +322,13 @@ var TEST_PLANS = [
 }
 ,
 {
+  "branch": "fix/trial-reuse-bug",
+  "tests": []
+}
+,
+{
   "branch": "fix/inspector-density",
-  "tests": [
-    {
-      "id": "service-name-not-truncated",
-      "category": "Inspector Density",
-      "description": "Service names should display fully without truncation in inspector",
-      "steps": [
-        "Open topology in L3 view",
-        "Click on an IP address node that has services bound to it",
-        "Look at the Services section in the inspector panel"
-      ],
-      "expected": "Service names are fully visible (e.g., 'Traefik' not 'Tra...'). No category tags (e.g., 'Reverse Proxy') appear inline. Port/binding info still appears as description text below the name.",
-      "flow": "setup",
-      "sequence": 1,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "host-name-not-truncated",
-      "category": "Inspector Density",
-      "description": "Host names should display fully without service name tags in inspector",
-      "steps": [
-        "Open topology in Workloads view",
-        "Click on a host container node",
-        "Look at the Identity section in the inspector panel"
-      ],
-      "expected": "Host name is fully visible. No service name tags appear inline next to the host name. Hostname description still shows below.",
-      "flow": "setup",
-      "sequence": 2,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "dependency-type-not-shown",
-      "category": "Inspector Density",
-      "description": "Dependency type tag should not appear in inspector",
-      "steps": [
-        "Open topology in Application view",
-        "Click on a dependency edge (request path or hub-and-spoke)",
-        "Look at the dependency card in the inspector"
-      ],
-      "expected": "Dependency name is fully visible. No 'Request Path' or 'Hub and Spoke' type tag appears inline. Member count description still shows.",
-      "flow": "setup",
-      "sequence": 3,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "binding-address-as-description",
-      "category": "Inspector Density",
-      "description": "Binding address should appear as description, not tag",
-      "steps": [
-        "Open topology in L3 view",
-        "Click on a dependency edge that uses bindings (not services)",
-        "Look at the member binding cards in the Services section"
-      ],
-      "expected": "Service name is fully visible on the first line. Binding address (e.g., '172.17.0.1 · 443/tcp') appears as description text below the name, not as a colored tag inline.",
-      "flow": "setup",
-      "sequence": 4,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "ip-address-no-subnet-tag",
-      "category": "Inspector Density",
-      "description": "IP address display should not show subnet CIDR tag in inspector",
-      "steps": [
-        "Open topology in L3 view",
-        "Click on an IP address node",
-        "Look at the Identity section and Other IP Addresses section"
-      ],
-      "expected": "IP address label is fully visible. No subnet CIDR tag appears inline. MAC address description still shows.",
-      "flow": "setup",
-      "sequence": 5,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "non-topology-tags-preserved",
-      "category": "Inspector Density",
-      "description": "Tags should still appear in non-topology list selects",
-      "steps": [
-        "Navigate to Settings or any page with entity list selects (e.g., dependency editor, host list)",
-        "Look at entity cards in list/select contexts outside the topology inspector"
-      ],
-      "expected": "Service cards show category tags, host cards show service name tags, dependency cards show type tags -- all tags display normally in non-topology contexts.",
-      "flow": "setup",
-      "sequence": 6,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "tag-picker-still-works",
-      "category": "Inspector Density",
-      "description": "Entity tag pickers should still work in inspector",
-      "steps": [
-        "Open topology in any view",
-        "Click on a service or host node",
-        "Check that the tag picker (user-created tags) still appears and is functional"
-      ],
-      "expected": "Tag picker displays and allows adding/removing user tags. Compact mode only hides metadata tags, not the tag picker UI.",
-      "flow": "setup",
-      "sequence": 7,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "aggregated-edge-compact",
-      "category": "Inspector Density",
-      "description": "Aggregated edge inspector should show compact display",
-      "steps": [
-        "Open topology and find an aggregated edge (bundled connections between containers)",
-        "Click on the aggregated edge",
-        "Look at the dependency, service, and host cards in the inspector"
-      ],
-      "expected": "All entity names are fully visible without inline tags. Dependencies show name and member count. Services show name and port info. Hosts show name and hostname.",
-      "flow": "setup",
-      "sequence": 8,
-      "status": null,
-      "feedback": null
-    }
-  ]
+  "tests": []
 }
 ,
 {
@@ -568,6 +433,220 @@ var TEST_PLANS = [
       "expected": "Container rules respect the capability flags: BySubnet locked, MergeDockerBridges removable/reorderable",
       "flow": "setup",
       "sequence": 6,
+      "status": null,
+      "feedback": null
+    }
+  ]
+}
+,
+{
+  "branch": "fix/discovery-credential-visibility",
+  "tests": [
+    {
+      "id": "credentials-visible-after-save",
+      "category": "Credential Visibility",
+      "description": "Credentials added to a discovery are visible when reopening the modal",
+      "steps": [
+        "Open the discovery edit modal for an existing Unified discovery",
+        "Go to the Credentials tab",
+        "Add a new SNMP credential with a target IP",
+        "Save the discovery",
+        "Reopen the same discovery modal",
+        "Navigate to the Credentials tab"
+      ],
+      "expected": "The SNMP credential added in step 3 is visible in the credentials list as an existing credential",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "credential-removal-persisted",
+      "category": "Credential Visibility",
+      "description": "Removing all credentials from a discovery is persisted",
+      "steps": [
+        "Open the discovery modal that has credentials from the previous test",
+        "Go to the Credentials tab",
+        "Remove the credential",
+        "Save the discovery",
+        "Reopen the discovery modal",
+        "Navigate to the Credentials tab"
+      ],
+      "expected": "The credentials tab is empty — no credentials listed",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "credentials-cleared-after-scan",
+      "category": "Credential Lifecycle",
+      "description": "Pending credentials are cleared after a scan completes",
+      "setup": "Add an SNMP credential to a Unified discovery and save. Then trigger a scan and wait for it to complete.",
+      "steps": [
+        "Open the discovery modal after the scan has completed",
+        "Navigate to the Credentials tab"
+      ],
+      "expected": "The credentials tab is empty — pending credentials were cleared after the scan ran",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "lifecycle-messaging",
+      "category": "Communication",
+      "description": "The credentials tab explains the ephemeral lifecycle",
+      "steps": [
+        "Open the discovery edit modal for a Unified discovery",
+        "Navigate to the Credentials tab"
+      ],
+      "expected": "The description text explains that credentials will be tried during the next scan, automatically assigned to responding hosts, and not retried after that",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "daemon-modal-no-regression",
+      "category": "No Regression",
+      "description": "Daemon creation modal credential wizard still works",
+      "steps": [
+        "Open the Create Daemon modal",
+        "Navigate to the Credentials step",
+        "Add an SNMP credential",
+        "Complete the daemon creation"
+      ],
+      "expected": "Credential wizard works normally — adding and creating credentials in the daemon flow is unaffected",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "network-credentials-still-shown",
+      "category": "No Regression",
+      "description": "Network-level credentials still displayed as info tags",
+      "setup": "Ensure the network has at least one network-level credential assigned.",
+      "steps": [
+        "Open the discovery edit modal for a Unified discovery on that network",
+        "Navigate to the Credentials tab"
+      ],
+      "expected": "Network-level credentials appear as informational tags in the help section, separate from pending credentials",
+      "status": null,
+      "feedback": null
+    }
+  ]
+}
+,
+{
+  "branch": "fix/billing-plan-features",
+  "tests": [
+    {
+      "id": "onboarding-starter-no-free-reference",
+      "category": "Billing Plan Features",
+      "description": "Starter plan in onboarding mode should not reference hidden Free plan",
+      "steps": [
+        "Open the onboarding billing modal (non-dismissible)",
+        "Look at the Starter plan card's feature section"
+      ],
+      "setup": "Ensure user has no active subscription so onboarding modal appears with Free plan filtered out.",
+      "expected": "Starter plan does NOT show 'Everything in Free, plus:'. Features are listed without a header label.",
+      "flow": "setup",
+      "sequence": 1,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "onboarding-starter-merged-features",
+      "category": "Billing Plan Features",
+      "description": "Starter plan in onboarding shows merged feature list from Free + Starter",
+      "steps": [
+        "Open the onboarding billing modal (non-dismissible)",
+        "Count and review features listed under the Starter plan card"
+      ],
+      "setup": "Ensure user has no active subscription so onboarding modal appears with Free plan filtered out.",
+      "expected": "Starter plan shows ~9 features: Free's features (Automated Network Mapping, Discovery Integrations, PNG Export, CSV Export) merged with Starter's incremental features (SVG Export, Scheduled Discovery, Email Support, Shareable Diagrams, Remove Watermark). No category sub-headers.",
+      "flow": "setup",
+      "sequence": 2,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "settings-starter-everything-in-free",
+      "category": "Billing Plan Features",
+      "description": "Starter plan in settings modal shows 'Everything in Free, plus:'",
+      "steps": [
+        "Open the settings/billing modal (dismissible mode)",
+        "Look at the Starter plan card's feature section"
+      ],
+      "setup": "User must have an active subscription so the settings billing modal can be opened.",
+      "expected": "Starter plan shows 'Everything in Free, plus:' header with only its 5 incremental features listed. Free plan card is visible with its 4 features.",
+      "flow": "setup",
+      "sequence": 3,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "consolidated-features-display",
+      "category": "Billing Plan Features",
+      "description": "Consolidated features show correct names and tooltips",
+      "steps": [
+        "Open any billing modal",
+        "Hover over 'Automated Network Mapping' in a plan card",
+        "Hover over 'Discovery Integrations' in a plan card"
+      ],
+      "expected": "Automated Network Mapping tooltip describes discovery, topology, and service identification. Discovery Integrations tooltip mentions Docker and SNMP.",
+      "flow": "setup",
+      "sequence": 4,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "billed-yearly-inline",
+      "category": "Billing Card Layout",
+      "description": "Yearly pricing shows 'billed yearly' inline with price",
+      "steps": [
+        "Open billing modal with Yearly toggle selected",
+        "Check the price line on Starter, Pro, Business cards"
+      ],
+      "expected": "Price shows as '$X/mo, billed yearly' on a single line. No separate 'billed yearly' text below.",
+      "flow": "setup",
+      "sequence": 5,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "cta-trial-text",
+      "category": "Billing Card Layout",
+      "description": "Trial CTA button includes 'no card required' text",
+      "steps": [
+        "Open onboarding billing modal as a new user (not returning customer)",
+        "Check the CTA button text on trial-eligible plans"
+      ],
+      "setup": "Ensure user/org has never had a paid plan or trial (isReturningCustomer=false).",
+      "expected": "CTA button reads 'Start free trial — no card required'. No separate line below the button.",
+      "flow": "setup",
+      "sequence": 6,
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "plan-descriptions-alignment",
+      "category": "Billing Card Layout",
+      "description": "Plan descriptions are similar length and break consistently",
+      "steps": [
+        "Open billing modal",
+        "Compare description text across all visible plan cards"
+      ],
+      "expected": "All descriptions are roughly the same character length (~37-44 chars) and break to a similar number of lines.",
+      "status": null,
+      "feedback": null
+    },
+    {
+      "id": "comparison-grid-individual-features",
+      "category": "Billing Plan Features",
+      "description": "Full comparison grid shows consolidated features, not old individual ones",
+      "steps": [
+        "Open billing modal",
+        "Click 'Compare all features'",
+        "Scroll through the feature grid"
+      ],
+      "expected": "Grid shows 'Automated Network Mapping' and 'Discovery Integrations' instead of the old individual features (Network Discovery, Topology Visualization, Service Definitions, Docker Discovery, SNMP Discovery, DaemonPoll, Community Support). All plans show checkmarks for the consolidated features.",
       "status": null,
       "feedback": null
     }

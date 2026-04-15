@@ -310,7 +310,7 @@
 	let dependencyEdgeStyle: EdgeStyle = $state('Bezier');
 
 	// Preview toggle with localStorage persistence
-	let showPreview = $state(false);
+	let showPreview = $state(true);
 	if (browser) {
 		try {
 			const stored = localStorage.getItem(PREVIEW_STORAGE_KEY);

@@ -17,9 +17,9 @@
 	// Find the SNMP Interface: from node data or element context
 	let iface = $derived.by(() => {
 		const nodeData = node.data as TopologyNode;
-		const ifEntryId = 'interface_id' in nodeData ? (nodeData.interface_id as string) : undefined;
-		if (ifEntryId) {
-			return topology.interfaces.find((e) => e.id === ifEntryId) ?? null;
+		const interfaceId = 'interface_id' in nodeData ? (nodeData.interface_id as string) : undefined;
+		if (interfaceId) {
+			return topology.interfaces.find((e) => e.id === interfaceId) ?? null;
 		}
 		if (!elementContext?.interfaceId) return null;
 		return topology.interfaces.find((e) => e.id === elementContext.interfaceId) ?? null;

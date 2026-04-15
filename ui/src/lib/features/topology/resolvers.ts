@@ -118,10 +118,8 @@ const elementResolvers: Record<
 	}
 };
 
-// TODO(views): This resolver returns a subnet entity for tag hover support.
-// When containers represent other entity types (hosts, services, hypervisors),
-// this must be refactored to return tags generically from whatever entity
-// the container represents, not specifically a subnet.
+// Returns tags generically from whatever entity
+// the container represents
 function resolveContainer(
 	nodeId: string,
 	node: TopologyNode,

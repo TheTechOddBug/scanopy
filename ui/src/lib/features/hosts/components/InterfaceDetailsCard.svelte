@@ -127,7 +127,7 @@
 
 	{#if nativeVlan}
 		<InfoRow label={hosts_interfaces_nativeVlan()}>
-			<Tag label="VLAN {nativeVlan.vlan_number} ({nativeVlan.name})" color="Teal" />
+			<Tag label="VLAN {nativeVlan.vlan_number} ({nativeVlan.name})" color={entities.getColorHelper('Vlan').color} />
 		</InfoRow>
 	{/if}
 

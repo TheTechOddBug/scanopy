@@ -215,6 +215,7 @@ fn compute_virtualizer_placements(rule: &ElementRule, ctx: &PlacementContext) ->
                     PlacementDecision::InlineOn {
                         node_id: vm_host_id,
                         inline_group: Some(InlineGroup {
+                            entity_id: virt_svc_id,
                             group_id: virt_svc_id,
                             role: InlineGroupRole::Header,
                         }),
@@ -228,6 +229,7 @@ fn compute_virtualizer_placements(rule: &ElementRule, ctx: &PlacementContext) ->
                         PlacementDecision::InlineOn {
                             node_id: vm_host_id,
                             inline_group: Some(InlineGroup {
+                                entity_id: svc_id,
                                 group_id: virt_svc_id,
                                 role: InlineGroupRole::Member,
                             }),

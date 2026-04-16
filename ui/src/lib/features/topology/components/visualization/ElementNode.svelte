@@ -337,8 +337,10 @@
 				return { bare: services, containerized: [] };
 			}
 
-			// Read inline_groups from the topology node data
+			// Read inline_groups from the topology node data.
+			// Each entry has entity_id (the service), group_id (shared by group members), and role.
 			const inlineGroups = ((data as Record<string, unknown>).inline_groups ?? []) as Array<{
+				entity_id: string;
 				group_id: string;
 				role: string;
 			}>;
@@ -347,7 +349,7 @@
 				return { bare: services, containerized: [] };
 			}
 
-			// Build groups from inline_groups metadata
+			// Build groups from inline_groups — generic matching by entity_id, no domain logic
 			const groupMembers = new Map<string, ServiceList>();
 			const groupHeaders = new Map<string, ServiceList[number] | null>();
 			const memberServiceIds = new Set<string>();
@@ -357,32 +359,13 @@
 					groupMembers.set(ig.group_id, []);
 					groupHeaders.set(ig.group_id, null);
 				}
-			}
-
-			// Match services to their inline group by finding services whose ID
-			// appears in the group header/member declarations
-			for (const ig of inlineGroups) {
-				const svc = services.find((s) => s.id === ig.group_id && ig.role === 'Header');
-				if (svc) {
+				const svc = services.find((s) => s.id === ig.entity_id);
+				if (!svc) continue;
+				memberServiceIds.add(svc.id);
+				if (ig.role === 'Header') {
 					groupHeaders.set(ig.group_id, svc);
-					memberServiceIds.add(svc.id);
-				}
-			}
-
-			// Members: services whose virtualization.service_id matches a group_id
-			// (the group_id IS the runtime service ID from the rule)
-			for (const svc of services) {
-				for (const ig of inlineGroups) {
-					if (ig.role === 'Member') {
-						const virt = svc.virtualization as
-							| { type: string; details?: { service_id?: string } }
-							| null
-							| undefined;
-						if (virt?.details?.service_id === ig.group_id) {
-							groupMembers.get(ig.group_id)?.push(svc);
-							memberServiceIds.add(svc.id);
-						}
-					}
+				} else {
+					groupMembers.get(ig.group_id)!.push(svc);
 				}
 			}
 

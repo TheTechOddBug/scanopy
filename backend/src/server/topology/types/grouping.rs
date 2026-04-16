@@ -38,6 +38,9 @@ pub enum PlacementDecision {
 /// Entities sharing the same `group_id` are rendered together in the element card.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 pub struct InlineGroup {
+    /// The inlined entity's ID (e.g., service ID).
+    pub entity_id: Uuid,
+    /// Shared by all members of the visual group.
     pub group_id: Uuid,
     pub role: InlineGroupRole,
 }

@@ -564,8 +564,8 @@ impl ViewBuilder for WorkloadsBuilder {
                             target: window[1],
                             edge_type: EdgeType::RequestPath {
                                 dependency_id: dep.id,
-                                source_binding_id: Uuid::nil(),
-                                target_binding_id: Uuid::nil(),
+                                source_id: Uuid::nil(),
+                                target_id: Uuid::nil(),
                             },
                             label: Some(dep.base.name.clone()),
                             source_handle: EdgeHandle::Bottom,
@@ -584,8 +584,8 @@ impl ViewBuilder for WorkloadsBuilder {
                                 target: spoke_id,
                                 edge_type: EdgeType::HubAndSpoke {
                                     dependency_id: dep.id,
-                                    source_binding_id: Uuid::nil(),
-                                    target_binding_id: Uuid::nil(),
+                                    source_id: Uuid::nil(),
+                                    target_id: Uuid::nil(),
                                 },
                                 label: Some(dep.base.name.clone()),
                                 source_handle: EdgeHandle::Bottom,

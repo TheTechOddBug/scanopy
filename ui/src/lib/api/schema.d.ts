@@ -2938,7 +2938,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.15.5"
+         *       "server_version": "0.16.0"
          *     }
          */
         ApiMeta: {
@@ -2949,7 +2949,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.15.5
+             * @example 0.16.0
              */
             server_version: string;
         };
@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-16T14:30:49.536486Z",
-             *       "id": "77aa8126-9aa7-4f23-baf3-6c9da7902d81",
+             *       "created_at": "2026-04-16T15:30:09.969074Z",
+             *       "id": "ad19c92b-1d37-466a-b5c9-f4f09bf05de8",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-16T14:30:49.536486Z"
+             *       "updated_at": "2026-04-16T15:30:09.969074Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-16T14:30:49.519720Z",
-             *               "id": "0a84e258-63b1-41cb-b576-58237ccff13b",
+             *               "created_at": "2026-04-16T15:30:09.952303Z",
+             *               "id": "5f993cf0-9225-4d33-aa7b-3557d619cb48",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-16T14:30:49.519720Z"
+             *               "updated_at": "2026-04-16T15:30:09.952303Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Chromecast",
+             *           "service_definition": "Eero Gateway",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3537,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-16T14:30:49.531949Z",
-             *           "id": "8faf382c-0137-4032-93c5-d15e925af70d",
+             *           "created_at": "2026-04-16T15:30:09.964421Z",
+             *           "id": "892ee5e0-a17a-4b37-b241-9cbd59b07b76",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-16T14:30:49.531949Z"
+             *           "updated_at": "2026-04-16T15:30:09.964421Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3553,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Chromecast",
+             *       "service_definition": "Eero Gateway",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3904,14 +3904,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-16T14:30:49.519949Z",
-         *       "id": "f9a3b582-1b7a-4331-bad7-ffe65dc0d3a6",
+         *       "created_at": "2026-04-16T15:30:09.952669Z",
+         *       "id": "ebcde390-f2f7-4a18-aee3-bae97dbd148b",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-16T14:30:49.519949Z"
+         *       "updated_at": "2026-04-16T15:30:09.952669Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4096,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Chromecast",
+         *           "service_definition": "Eero Gateway",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4671,32 +4671,32 @@ export interface components {
             /** @enum {string} */
             edge_type: "Hypervisor";
             /** Format: uuid */
-            vm_service_id: string;
+            hypervisor_service_id: string;
         } | {
-            /** Format: uuid */
-            containerizing_service_id: string;
             /** @enum {string} */
             edge_type: "ContainerRuntime";
             /** Format: uuid */
             host_id: string;
+            /** Format: uuid */
+            service_id: string;
         } | {
             /** Format: uuid */
             dependency_id: string;
             /** @enum {string} */
             edge_type: "RequestPath";
             /** Format: uuid */
-            source_binding_id: string;
+            source_id: string;
             /** Format: uuid */
-            target_binding_id: string;
+            target_id: string;
         } | {
             /** Format: uuid */
             dependency_id: string;
             /** @enum {string} */
             edge_type: "HubAndSpoke";
             /** Format: uuid */
-            source_binding_id: string;
+            source_id: string;
             /** Format: uuid */
-            target_binding_id: string;
+            target_id: string;
         } | {
             /** @enum {string} */
             edge_type: "PhysicalLink";
@@ -4955,14 +4955,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-16T14:30:49.519408Z",
-         *               "id": "b6a49b11-89a0-43b5-98b0-d0f6e90f3579",
+         *               "created_at": "2026-04-16T15:30:09.951803Z",
+         *               "id": "6f4abe02-4789-4561-a26b-d66d497a814f",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-16T14:30:49.519408Z"
+         *               "updated_at": "2026-04-16T15:30:09.951803Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4971,7 +4971,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Chromecast",
+         *           "service_definition": "Eero Gateway",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5138,7 +5138,15 @@ export interface components {
          *     Entities sharing the same `group_id` are rendered together in the element card.
          */
         InlineGroup: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The inlined entity's ID (e.g., service ID).
+             */
+            entity_id: string;
+            /**
+             * Format: uuid
+             * @description Shared by all members of the visual group.
+             */
             group_id: string;
             role: components["schemas"]["InlineGroupRole"];
         };
@@ -5601,7 +5609,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.15.5"
+         *       "server_version": "0.16.0"
          *     }
          */
         PaginatedApiMeta: {
@@ -5614,7 +5622,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.15.5
+             * @example 0.16.0
              */
             server_version: string;
         };
@@ -6127,14 +6135,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-16T14:30:49.519875Z",
-         *           "id": "d1300322-71be-4059-bd12-fbfd387331c7",
+         *           "created_at": "2026-04-16T15:30:09.952549Z",
+         *           "id": "35a1d119-8425-4623-8d72-1faf3fb3561c",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-16T14:30:49.519875Z"
+         *           "updated_at": "2026-04-16T15:30:09.952549Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6143,7 +6151,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Chromecast",
+         *       "service_definition": "Eero Gateway",
          *       "source": {
          *         "type": "Manual"
          *       },

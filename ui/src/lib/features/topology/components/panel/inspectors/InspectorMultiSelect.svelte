@@ -41,7 +41,6 @@
 	import TargetServicePicker from './shared/TargetServicePicker.svelte';
 	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
-	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import { createForm } from '@tanstack/svelte-form';
 	import { submitForm } from '$lib/shared/components/forms/form-context';
 	import { required, max } from '$lib/shared/components/forms/validators';
@@ -59,10 +58,8 @@
 		common_clearSelection,
 		tags_entityTags,
 		dependencies_createDependency,
-		dependencies_serviceBindings,
-		dependencies_serviceBindingsInfo,
-		dependencies_addBindingDetails,
-		dependencies_addBindingDetailsHelp,
+		dependencies_servicesOnly,
+		dependencies_withPorts,
 		topology_multiSelectPreviewEdge,
 		topology_focusSelection,
 		tags_crossGroupSelectionHint,
@@ -317,9 +314,15 @@
 		AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)]
 	);
 	let dependencyEdgeStyle: EdgeStyle = $state('Bezier');
+	let edgeStyleCollapsed = $state(true);
 
 	// Initial default for dependency type — forwarded to the form's defaults.
 	const DEFAULT_DEP_TYPE: DependencyType = 'RequestPath';
+
+	let memberModeOptions = $derived([
+		{ value: 'Services', label: dependencies_servicesOnly() },
+		{ value: 'Bindings', label: dependencies_withPorts() }
+	]);
 
 	// Preview toggle with localStorage persistence
 	let showPreview = $state(true);
@@ -379,10 +382,11 @@
 	// TargetServicePicker / BindingPicker render <form.Field name="picks.<elementId>.<serviceId>">
 	// and <form.Field name="bindings.<serviceId>">, matching the CredentialForm pattern
 	// (parent owns the form, children receive it as a prop and register dot-path fields).
+	type MemberMode = 'Services' | 'Bindings';
 	interface DepFormValues {
 		name: string;
 		dependency_type: DependencyType;
-		wantBindings: boolean;
+		memberMode: MemberMode;
 		picks: Record<string, Record<string, boolean>>;
 		bindings: Record<string, string>;
 	}
@@ -391,7 +395,7 @@
 		defaultValues: {
 			name: '',
 			dependency_type: DEFAULT_DEP_TYPE,
-			wantBindings: false,
+			memberMode: 'Services' as MemberMode,
 			picks: {} as Record<string, Record<string, boolean>>,
 			bindings: {} as Record<string, string>
 		} as DepFormValues,
@@ -405,7 +409,7 @@
 			newDependency.color = dependencyColor;
 			newDependency.edge_style = dependencyEdgeStyle;
 
-			if (v.wantBindings) {
+			if (v.memberMode === 'Bindings') {
 				const bindingIds: string[] = [];
 				for (const r of resolvedServices) {
 					const id = v.bindings?.[r.serviceId];
@@ -429,10 +433,7 @@
 	// The final list of services to include as dependency members, with optional IP scope.
 	interface ResolvedService {
 		serviceId: string;
-		serviceName: string;
-		hostName: string;
 		ipAddressIdFilter: string | null;
-		ipScopeLabel: string;
 	}
 
 	let resolvedServices = $derived<ResolvedService[]>(
@@ -446,28 +447,16 @@
 				if (target.kind === 'service') {
 					if (seen.has(target.serviceId)) continue;
 					seen.add(target.serviceId);
-					out.push({
-						serviceId: target.serviceId,
-						serviceName: target.label,
-						hostName: target.hostName,
-						ipAddressIdFilter: null,
-						ipScopeLabel: ''
-					});
+					out.push({ serviceId: target.serviceId, ipAddressIdFilter: null });
 				} else {
 					const targetPicks = picksMap[target.elementId] ?? {};
 					for (const serviceId of target.candidateServiceIds) {
 						if (!targetPicks[serviceId]) continue;
 						if (seen.has(serviceId)) continue;
 						seen.add(serviceId);
-						const service = topology.services.find((s) => s.id === serviceId);
-						if (!service) continue;
-						const host = topology.hosts.find((h) => h.id === service.host_id);
 						out.push({
 							serviceId,
-							serviceName: service.name,
-							hostName: host?.name ?? '',
-							ipAddressIdFilter: target.kind === 'ipAddress' ? target.ipAddressId : null,
-							ipScopeLabel: target.kind === 'ipAddress' ? target.label : ''
+							ipAddressIdFilter: target.kind === 'ipAddress' ? target.ipAddressId : null
 						});
 					}
 				}
@@ -479,10 +468,7 @@
 	let bindingPickerServices = $derived<BindingPickerService[]>(
 		resolvedServices.map((r) => ({
 			serviceId: r.serviceId,
-			serviceName: r.serviceName,
-			hostName: r.hostName,
-			ipAddressIdFilter: r.ipAddressIdFilter,
-			ipScopeLabel: r.ipScopeLabel
+			ipAddressIdFilter: r.ipAddressIdFilter
 		}))
 	);
 
@@ -503,8 +489,8 @@
 
 	// Keep the view-driven "bindings required" flag in sync with the form.
 	$effect(() => {
-		if (bindingsRequired && form.state.values.wantBindings !== true) {
-			form.setFieldValue('wantBindings', true);
+		if (bindingsRequired && form.state.values.memberMode !== 'Bindings') {
+			form.setFieldValue('memberMode', 'Bindings');
 		}
 	});
 
@@ -550,7 +536,7 @@
 		if (createDependencyMutation.isPending) return false;
 		if (resolvedServices.length < 2) return false;
 		if (hasUnresolvedTargets) return false;
-		if (v.wantBindings && !allServicesHaveBindings) return false;
+		if (v.memberMode === 'Bindings' && !allServicesHaveBindings) return false;
 		return true;
 	});
 
@@ -815,12 +801,13 @@
 						{/snippet}
 					</form.Field>
 
-					<!-- Edge style & color -->
+					<!-- Edge style & color — collapsed by default; matches how EdgeStyleForm
+					     renders on a selected dep edge. -->
 					<EdgeStyleForm
 						bind:formData={edgeStyleFormData}
-						collapsed={false}
+						bind:collapsed={edgeStyleCollapsed}
 						editable={true}
-						showCollapseToggle={false}
+						showCollapseToggle={true}
 						onColorChange={(c) => (dependencyColor = c)}
 						onEdgeStyleChange={(s) => (dependencyEdgeStyle = s)}
 					/>
@@ -834,31 +821,23 @@
 						{/each}
 					{/if}
 
-					<!-- Add binding details toggle + per-service binding picker -->
-					{#if !isTutorial}
-						<div class="space-y-2">
-							<form.Field name="wantBindings">
-								{#snippet children(field)}
-									<Checkbox
-										label={dependencies_addBindingDetails()}
-										id="dependency-add-bindings"
-										{field}
-										disabled={bindingsRequired}
-										helpText={bindingsRequired
-											? dependencies_serviceBindingsInfo()
-											: dependencies_addBindingDetailsHelp()}
-									/>
-								{/snippet}
-							</form.Field>
-							{#if form.state.values.wantBindings && topology && resolvedServices.length > 0}
-								<div class="space-y-2">
-									<span class="text-secondary block text-xs font-medium"
-										>{dependencies_serviceBindings()}</span
-									>
-									<BindingPicker {form} {topology} services={bindingPickerServices} />
-								</div>
-							{/if}
-						</div>
+					<!-- Services only / With ports -->
+					{#if !isTutorial && !bindingsRequired}
+						<form.Field name="memberMode">
+							{#snippet children(field)}
+								<SegmentedControl
+									options={memberModeOptions}
+									selected={field.state.value}
+									onchange={(v) => field.handleChange(v as MemberMode)}
+									size="sm"
+									fullWidth={true}
+								/>
+							{/snippet}
+						</form.Field>
+					{/if}
+
+					{#if !isTutorial && form.state.values.memberMode === 'Bindings' && topology && resolvedServices.length > 0}
+						<BindingPicker {form} {topology} services={bindingPickerServices} />
 					{/if}
 
 					<!-- Rebuild warning + Create button -->

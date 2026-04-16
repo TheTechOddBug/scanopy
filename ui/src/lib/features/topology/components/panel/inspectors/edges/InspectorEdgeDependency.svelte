@@ -155,18 +155,9 @@
 	let upgradePickerServices = $derived<BindingPickerService[]>(
 		(() => {
 			if (!topology || !group || group.members.type !== 'Services') return [];
-			const out: BindingPickerService[] = [];
-			for (const serviceId of group.members.service_ids) {
-				const service = topology.services.find((s) => s.id === serviceId);
-				if (!service) continue;
-				const host = topology.hosts.find((h) => h.id === service.host_id);
-				out.push({
-					serviceId,
-					serviceName: service.name,
-					hostName: host?.name ?? ''
-				});
-			}
-			return out;
+			return group.members.service_ids
+				.filter((sid) => topology!.services.some((s) => s.id === sid))
+				.map((serviceId) => ({ serviceId }));
 		})()
 	);
 

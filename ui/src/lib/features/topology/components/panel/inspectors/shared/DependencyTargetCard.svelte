@@ -21,8 +21,27 @@
 		flatIndex: number;
 	} = $props();
 
-	// Read memberMode directly from the form so the card re-renders when it flips.
-	let memberMode = $derived(form.state.values.memberMode as 'Services' | 'Bindings');
+	// TanStack Form's form.state.values is not tracked by $derived in Svelte 5.
+	// Mirror it into a $state variable via form.store.subscribe.
+	// (Pattern from CreateDaemonModal / TopologyModal in this app.)
+	interface MirroredValues {
+		memberMode: 'Services' | 'Bindings';
+		picks: Record<string, string>;
+	}
+	let formValues = $state<MirroredValues>({
+		memberMode: form.state.values.memberMode ?? 'Services',
+		picks: { ...(form.state.values.picks ?? {}) }
+	});
+	$effect(() => {
+		return form.store.subscribe(() => {
+			formValues = {
+				memberMode: form.state.values.memberMode ?? 'Services',
+				picks: { ...(form.state.values.picks ?? {}) }
+			};
+		});
+	});
+
+	let memberMode = $derived(formValues.memberMode);
 
 	let host = $derived(
 		target.kind === 'service'
@@ -47,8 +66,7 @@
 		if (target.kind === 'service') return target.serviceId;
 		if (candidates.length === 0) return null;
 		if (candidates.length === 1) return candidates[0].id;
-		const picked = form.state.values.picks?.[target.elementId];
-		return picked ?? candidates[0].id;
+		return formValues.picks[target.elementId] ?? candidates[0].id;
 	});
 
 	let resolvedService = $derived(
@@ -61,8 +79,7 @@
 	$effect(() => {
 		if (target.kind === 'service') return;
 		if (candidates.length <= 1) return;
-		const picked = form.state.values.picks?.[target.elementId];
-		if (picked) return;
+		if (formValues.picks[target.elementId]) return;
 		form.setFieldValue(`picks.${target.elementId}`, candidates[0].id);
 	});
 

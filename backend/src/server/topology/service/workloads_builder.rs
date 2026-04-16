@@ -3,10 +3,7 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
-    element_rules::{
-        ElementMatchData, InlinePlacementContext, apply_element_rules_with_titles,
-        compute_inline_placements,
-    },
+    element_rules::{ElementMatchData, InlineContext, apply_element_rules},
     view::ViewBuilder,
 };
 use crate::server::{
@@ -95,15 +92,14 @@ impl ViewBuilder for WorkloadsBuilder {
         let service_lookup: HashMap<Uuid, &crate::server::services::r#impl::base::Service> =
             ctx.services.iter().map(|s| (s.id, s)).collect();
 
-        // --- Phase 2: Compute inline placements from element rules ---
-        // Rules declare which services should be inlined on other nodes rather than
-        // getting their own element. This replaces hardcoded skip logic in element creation.
-        let inline_ctx = InlinePlacementContext {
+        // --- Phase 2: Prepare inline context for element rules ---
+        // InlineContext provides host/service data for InlineOn placement decisions
+        // (e.g., ByHypervisor inlines VM services, ByContainerRuntime inlines Docker-on-VM).
+        let inline_ctx = InlineContext {
             hosts: &host_lookup,
             service_lookup: &service_lookup,
             virt_to_container_svcs: &virt_to_container_svcs,
         };
-        let inlined = compute_inline_placements(&grouping.element_rules, &inline_ctx);
 
         // --- Phase 3: Create Host containers for non-VM hosts ---
 
@@ -136,7 +132,6 @@ impl ViewBuilder for WorkloadsBuilder {
 
         // 4a: VM elements — placed in the virtualizer service's host container
         for (virt_svc_id, vm_host_ids) in &virt_to_vm_hosts {
-            // Find the host running this virtualizer service
             let Some(virt_svc) = service_lookup.get(virt_svc_id) else {
                 continue;
             };
@@ -158,24 +153,34 @@ impl ViewBuilder for WorkloadsBuilder {
             }
         }
 
-        // 4b: Container elements — skip if inlined by a rule (e.g., Docker on VM)
+        // 4b: Container elements — placed in their host's container.
+        // For Docker on VMs, elements go in the hypervisor's host container temporarily;
+        // apply_element_rules will produce InlineOn decisions to remove them.
         for (virt_svc_id, container_svc_ids) in &virt_to_container_svcs {
             let Some(virt_svc) = service_lookup.get(virt_svc_id) else {
                 continue;
             };
             let host_id = virt_svc.base.host_id;
+            let is_on_vm = host_lookup
+                .get(&host_id)
+                .is_some_and(|h| h.base.virtualization.is_some());
 
-            // Skip if the virtualizer service itself is inlined (runs on a VM)
-            if inlined.contains_key(virt_svc_id) {
-                continue;
-            }
-
-            let container_id = Self::container_id_for_host(host_id);
+            let container_id = if is_on_vm {
+                // VM host → find hypervisor host container
+                let hypervisor_host_id = virt_to_vm_hosts
+                    .iter()
+                    .find(|(_, vm_ids)| vm_ids.contains(&host_id))
+                    .and_then(|(vid, _)| service_lookup.get(vid))
+                    .map(|vs| vs.base.host_id);
+                match hypervisor_host_id {
+                    Some(hid) => Self::container_id_for_host(hid),
+                    None => continue,
+                }
+            } else {
+                Self::container_id_for_host(host_id)
+            };
 
             for &svc_id in container_svc_ids {
-                if inlined.contains_key(&svc_id) {
-                    continue;
-                }
                 let Some(svc) = service_lookup.get(&svc_id) else {
                     continue;
                 };
@@ -190,7 +195,10 @@ impl ViewBuilder for WorkloadsBuilder {
             }
         }
 
-        // 4c: Remaining services — not a virtualizer, not managed by one
+        // 4c: Remaining services — not a virtualizer, not managed by one.
+        // All services get elements here (including VM services); apply_element_rules
+        // will produce InlineOn decisions for services that shouldn't have elements,
+        // and they'll be removed in Phase 5.5.
         for service in ctx.services {
             if virtualizer_service_ids.contains(&service.id)
                 || managed_service_ids.contains(&service.id)
@@ -203,16 +211,31 @@ impl ViewBuilder for WorkloadsBuilder {
                 continue;
             }
 
-            // Skip services inlined by a rule (e.g., services on VM hosts)
-            if inlined.contains_key(&service.id) {
+            // Skip services on hosts not in the graph
+            if !host_lookup.contains_key(&service.base.host_id) {
                 continue;
             }
 
-            let Some(_host) = host_lookup.get(&service.base.host_id) else {
-                continue;
+            // For VM hosts, place in the hypervisor's host container (VM hosts don't
+            // have their own containers). apply_element_rules will InlineOn these.
+            let container_id = if host_lookup
+                .get(&service.base.host_id)
+                .is_some_and(|h| h.base.virtualization.is_some())
+            {
+                // Find the hypervisor host container via virt_to_vm_hosts reverse lookup
+                let hypervisor_host_id = virt_to_vm_hosts
+                    .iter()
+                    .find(|(_, vm_ids)| vm_ids.contains(&service.base.host_id))
+                    .and_then(|(virt_svc_id, _)| service_lookup.get(virt_svc_id))
+                    .map(|virt_svc| virt_svc.base.host_id);
+                match hypervisor_host_id {
+                    Some(hid) => Self::container_id_for_host(hid),
+                    None => continue, // No hypervisor found — can't place
+                }
+            } else {
+                Self::container_id_for_host(service.base.host_id)
             };
 
-            let container_id = Self::container_id_for_host(service.base.host_id);
             let mut node = Node::element(
                 service.id,
                 container_id,
@@ -223,73 +246,102 @@ impl ViewBuilder for WorkloadsBuilder {
             nodes.push(node);
         }
 
-        // --- Phase 5: Apply element rules (ByHypervisor + ByContainerRuntime + ByTag) ---
+        // --- Phase 5: Apply element rules ---
+        // Unified: produces PlaceInContainer, BecomeSubcontainer, InlineOn, and Element
+        // decisions for all entities via exhaustive ElementRule matching.
 
         let virtualizer_titles = Self::build_virtualizer_titles(ctx);
 
-        let rule_result = apply_element_rules_with_titles(
+        let placements = apply_element_rules(
             &mut nodes,
             &grouping.element_rules,
-            |node| {
-                match &node.node_type {
-                    NodeType::Element {
-                        element: ElementEntityType::Host {},
-                        ..
-                    } => {
-                        // VM element: virtualizer_service_id from host's virtualization
-                        let host = host_lookup.get(&node.id)?;
-                        let virtualizer_service_id = host
-                            .base
-                            .virtualization
-                            .as_ref()
-                            .and_then(|v| v.service_id());
-                        let tag_ids: HashSet<Uuid> = host.base.tags.iter().copied().collect();
-                        Some(ElementMatchData {
-                            categories: HashSet::new(),
-                            tag_ids,
-                            element_entity: EntityDiscriminants::Host,
-                            virtualizer_service_id,
-                            compose_project: None,
-                            native_vlan_id: None,
-                            vlan_number: None,
-                            vlan_name: None,
-                            is_trunk_port: false,
-                            oper_status: None,
-                        })
-                    }
-                    NodeType::Element {
-                        element: ElementEntityType::Service {},
-                        ..
-                    } => {
-                        // Service element: virtualizer_service_id from service's virtualization
-                        let svc = service_lookup.get(&node.id)?;
-                        let virtualizer_service_id = svc
-                            .base
-                            .virtualization
-                            .as_ref()
-                            .and_then(|v| v.service_id());
-                        let tag_ids: HashSet<Uuid> = svc.base.tags.iter().copied().collect();
-                        let categories = [svc.base.service_definition.category()]
-                            .into_iter()
-                            .collect();
-                        Some(ElementMatchData {
-                            categories,
-                            tag_ids,
-                            element_entity: EntityDiscriminants::Service,
-                            virtualizer_service_id,
-                            compose_project: None,
-                            native_vlan_id: None,
-                            vlan_number: None,
-                            vlan_name: None,
-                            is_trunk_port: false,
-                            oper_status: None,
-                        })
-                    }
-                    _ => None,
+            |node| match &node.node_type {
+                NodeType::Element {
+                    element: ElementEntityType::Host {},
+                    ..
+                } => {
+                    let host = host_lookup.get(&node.id)?;
+                    let virtualizer_service_id = host
+                        .base
+                        .virtualization
+                        .as_ref()
+                        .and_then(|v| v.service_id());
+                    let tag_ids: HashSet<Uuid> = host.base.tags.iter().copied().collect();
+                    Some(ElementMatchData {
+                        categories: HashSet::new(),
+                        tag_ids,
+                        element_entity: EntityDiscriminants::Host,
+                        virtualizer_service_id,
+                        compose_project: None,
+                        native_vlan_id: None,
+                        vlan_number: None,
+                        vlan_name: None,
+                        is_trunk_port: false,
+                        oper_status: None,
+                    })
                 }
+                NodeType::Element {
+                    element: ElementEntityType::Service {},
+                    ..
+                } => {
+                    let svc = service_lookup.get(&node.id)?;
+                    let virtualizer_service_id = svc
+                        .base
+                        .virtualization
+                        .as_ref()
+                        .and_then(|v| v.service_id());
+                    let tag_ids: HashSet<Uuid> = svc.base.tags.iter().copied().collect();
+                    let categories = [svc.base.service_definition.category()]
+                        .into_iter()
+                        .collect();
+                    Some(ElementMatchData {
+                        categories,
+                        tag_ids,
+                        element_entity: EntityDiscriminants::Service,
+                        virtualizer_service_id,
+                        compose_project: None,
+                        native_vlan_id: None,
+                        vlan_number: None,
+                        vlan_name: None,
+                        is_trunk_port: false,
+                        oper_status: None,
+                    })
+                }
+                _ => None,
             },
             Some(&virtualizer_titles),
+            Some(&inline_ctx),
         );
+
+        // --- Phase 5.5: Remove inlined elements and attach InlineGroup to target nodes ---
+        let inlined_ids: HashSet<Uuid> = placements
+            .iter()
+            .filter(|(_, d)| matches!(d, PlacementDecision::InlineOn { .. }))
+            .map(|(id, _)| *id)
+            .collect();
+        nodes.retain(|n| !inlined_ids.contains(&n.id));
+
+        // Attach InlineGroup metadata to target element nodes
+        for (_, decision) in &placements {
+            if let PlacementDecision::InlineOn {
+                node_id,
+                inline_group: Some(group),
+            } = decision
+            {
+                for node in nodes.iter_mut() {
+                    if node.id == *node_id {
+                        if let NodeType::Element {
+                            ref mut inline_groups,
+                            ..
+                        } = node.node_type
+                        {
+                            inline_groups.push(group.clone());
+                        }
+                        break;
+                    }
+                }
+            }
+        }
 
         // --- Phase 6: Remove host containers with no workload elements ---
         // After element rules may have created subcontainers and reassigned elements,
@@ -442,60 +494,38 @@ impl ViewBuilder for WorkloadsBuilder {
 
         let binding_to_service = ctx.build_binding_to_service_map();
 
-        // Build service_to_node map from three sources:
-        // 1. Element self-mapping: services that are their own element node
-        // 2. Rule inline mappings: services inlined on another node (from compute_inline_placements)
-        // 3. Virtualizer→subcontainer: virtualizer services mapped to their subcontainer
-        //    (derived from element rule reassignments)
+        // Build service_to_node from unified placement decisions.
+        // Each PlacementDecision variant maps to a specific node:
         let element_node_ids: HashSet<Uuid> = nodes
             .iter()
             .filter(|n| matches!(n.node_type, NodeType::Element { .. }))
             .map(|n| n.id)
             .collect();
 
-        // Derive virtualizer→subcontainer from reassignments: if an element was reassigned
-        // to a subcontainer, and that element has a virtualizer_service_id, then the
-        // virtualizer maps to that subcontainer.
-        let mut virtualizer_to_container: HashMap<Uuid, Uuid> = HashMap::new();
-        for (element_id, &new_container_id) in &rule_result.reassignments {
-            if let Some(host) = host_lookup.get(element_id)
-                && let Some(virt_svc_id) = host
-                    .base
-                    .virtualization
-                    .as_ref()
-                    .and_then(|v| v.service_id())
-            {
-                virtualizer_to_container
-                    .entry(virt_svc_id)
-                    .or_insert(new_container_id);
-            }
-            if let Some(svc) = service_lookup.get(element_id)
-                && let Some(virt_svc_id) = svc
-                    .base
-                    .virtualization
-                    .as_ref()
-                    .and_then(|v| v.service_id())
-            {
-                virtualizer_to_container
-                    .entry(virt_svc_id)
-                    .or_insert(new_container_id);
-            }
-        }
-
         let mut service_to_node: HashMap<Uuid, Uuid> = HashMap::new();
         for service in ctx.services {
-            if element_node_ids.contains(&service.id) {
-                // Service is its own element node
-                service_to_node.insert(service.id, service.id);
-            } else if let Some(placement) = inlined.get(&service.id) {
-                // Service was inlined by a rule — use the rule's target node
-                let PlacementDecision::InlineOn { node_id, .. } = placement;
-                if element_node_ids.contains(node_id) {
-                    service_to_node.insert(service.id, *node_id);
+            if let Some(decision) = placements.get(&service.id) {
+                match decision {
+                    PlacementDecision::Element | PlacementDecision::PlaceInContainer { .. } => {
+                        // Service has its own element node (possibly moved to a subcontainer)
+                        if element_node_ids.contains(&service.id) {
+                            service_to_node.insert(service.id, service.id);
+                        }
+                    }
+                    PlacementDecision::BecomeSubcontainer { container_id } => {
+                        // Virtualizer service → its subcontainer node
+                        service_to_node.insert(service.id, *container_id);
+                    }
+                    PlacementDecision::InlineOn { node_id, .. } => {
+                        // Service inlined on another node
+                        if element_node_ids.contains(node_id) {
+                            service_to_node.insert(service.id, *node_id);
+                        }
+                    }
                 }
-            } else if let Some(&container_id) = virtualizer_to_container.get(&service.id) {
-                // Virtualizer service → its subcontainer node
-                service_to_node.insert(service.id, container_id);
+            } else if element_node_ids.contains(&service.id) {
+                // Service not acted on by any rule — maps to itself if it's an element
+                service_to_node.insert(service.id, service.id);
             }
             // Services not matching any case (OpenPorts, services on hosts not in graph)
             // are intentionally excluded — they have no node representation.

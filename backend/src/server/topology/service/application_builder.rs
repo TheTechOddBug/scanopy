@@ -226,30 +226,36 @@ impl ViewBuilder for ApplicationBuilder {
         // Apply element rules (ByServiceCategory, ByTag) to create nested subcontainers
         let service_lookup: HashMap<Uuid, &crate::server::services::r#impl::base::Service> =
             eligible_services.iter().map(|s| (s.id, *s)).collect();
-        let _ = apply_element_rules(&mut nodes, &grouping.element_rules, |node| {
-            let service = service_lookup.get(&node.id)?;
-            let categories = HashSet::from([service.base.service_definition.category()]);
-            let mut tag_ids: HashSet<Uuid> = service.base.tags.iter().copied().collect();
-            // Inherit host tags for ByTag matching
-            if let Some(host) = ctx.hosts.iter().find(|h| h.id == service.base.host_id) {
-                tag_ids.extend(host.base.tags.iter().copied());
-            }
-            let compose_project = service.base.virtualization.as_ref().and_then(|v| match v {
-                ServiceVirtualization::Docker(dv) => dv.compose_project.clone(),
-            });
-            Some(ElementMatchData {
-                categories,
-                tag_ids,
-                element_entity: EntityDiscriminants::Service,
-                virtualizer_service_id: None,
-                compose_project,
-                native_vlan_id: None,
-                vlan_number: None,
-                vlan_name: None,
-                is_trunk_port: false,
-                oper_status: None,
-            })
-        });
+        let _ = apply_element_rules(
+            &mut nodes,
+            &grouping.element_rules,
+            |node| {
+                let service = service_lookup.get(&node.id)?;
+                let categories = HashSet::from([service.base.service_definition.category()]);
+                let mut tag_ids: HashSet<Uuid> = service.base.tags.iter().copied().collect();
+                // Inherit host tags for ByTag matching
+                if let Some(host) = ctx.hosts.iter().find(|h| h.id == service.base.host_id) {
+                    tag_ids.extend(host.base.tags.iter().copied());
+                }
+                let compose_project = service.base.virtualization.as_ref().and_then(|v| match v {
+                    ServiceVirtualization::Docker(dv) => dv.compose_project.clone(),
+                });
+                Some(ElementMatchData {
+                    categories,
+                    tag_ids,
+                    element_entity: EntityDiscriminants::Service,
+                    virtualizer_service_id: None,
+                    compose_project,
+                    native_vlan_id: None,
+                    vlan_number: None,
+                    vlan_name: None,
+                    is_trunk_port: false,
+                    oper_status: None,
+                })
+            },
+            None,
+            None,
+        );
 
         // Post-process: set associated_service_definition on Stack subcontainers (always Docker)
         for node in nodes.iter_mut() {

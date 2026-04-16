@@ -170,31 +170,37 @@ impl ViewBuilder for L2Builder {
             Uuid,
             &crate::server::interfaces::r#impl::base::Interface,
         > = ctx.interfaces.iter().map(|e| (e.id, e)).collect();
-        let _ = apply_element_rules(&mut nodes, &grouping.element_rules, |node| {
-            if let NodeType::Element { host_id, .. } = &node.node_type {
-                let host = host_lookup.get(host_id)?;
-                let tag_ids: HashSet<Uuid> = host.base.tags.iter().copied().collect();
-                let interface = if_entry_lookup.get(&node.id);
-                let native_vlan_id = interface.and_then(|e| e.base.native_vlan_id);
-                let resolved_vlan = native_vlan_id.and_then(|vid| ctx.get_vlan_by_id(vid));
-                Some(ElementMatchData {
-                    categories: HashSet::new(),
-                    tag_ids,
-                    element_entity: EntityDiscriminants::Interface,
-                    virtualizer_service_id: None,
-                    compose_project: None,
-                    native_vlan_id,
-                    vlan_number: resolved_vlan.map(|v| v.base.vlan_number),
-                    vlan_name: resolved_vlan.map(|v| v.base.name.clone()),
-                    is_trunk_port: interface
-                        .and_then(|e| e.base.vlan_ids.as_ref())
-                        .is_some_and(|v| !v.is_empty()),
-                    oper_status: interface.map(|e| e.base.oper_status),
-                })
-            } else {
-                None
-            }
-        });
+        let _ = apply_element_rules(
+            &mut nodes,
+            &grouping.element_rules,
+            |node| {
+                if let NodeType::Element { host_id, .. } = &node.node_type {
+                    let host = host_lookup.get(host_id)?;
+                    let tag_ids: HashSet<Uuid> = host.base.tags.iter().copied().collect();
+                    let interface = if_entry_lookup.get(&node.id);
+                    let native_vlan_id = interface.and_then(|e| e.base.native_vlan_id);
+                    let resolved_vlan = native_vlan_id.and_then(|vid| ctx.get_vlan_by_id(vid));
+                    Some(ElementMatchData {
+                        categories: HashSet::new(),
+                        tag_ids,
+                        element_entity: EntityDiscriminants::Interface,
+                        virtualizer_service_id: None,
+                        compose_project: None,
+                        native_vlan_id,
+                        vlan_number: resolved_vlan.map(|v| v.base.vlan_number),
+                        vlan_name: resolved_vlan.map(|v| v.base.name.clone()),
+                        is_trunk_port: interface
+                            .and_then(|e| e.base.vlan_ids.as_ref())
+                            .is_some_and(|v| !v.is_empty()),
+                        oper_status: interface.map(|e| e.base.oper_status),
+                    })
+                } else {
+                    None
+                }
+            },
+            None,
+            None,
+        );
 
         (nodes, edges)
     }

@@ -281,84 +281,91 @@ impl SubnetGraphBuilder {
         let children_by_id: HashMap<Uuid, &SubnetChildData> =
             children.iter().map(|c| (c.id, c)).collect();
 
-        let _ = apply_element_rules(child_nodes, &grouping.element_rules, |node| {
-            let child = children_by_id.get(&node.id)?;
-            let categories = ctx
-                .services
-                .iter()
-                .filter(|s| s.base.host_id == child.host_id)
-                .map(|s| s.base.service_definition.category())
-                .collect();
-            let mut tag_ids: HashSet<Uuid> = ctx
-                .hosts
-                .iter()
-                .find(|h| h.id == child.host_id)
-                .map(|h| h.base.tags.iter().copied().collect())
-                .unwrap_or_default();
-            // Inherit service tags so ByTag rules match via host→interface
-            for service in ctx
-                .services
-                .iter()
-                .filter(|s| s.base.host_id == child.host_id)
-            {
-                tag_ids.extend(service.base.tags.iter().copied());
-            }
-            // Resolve compose_project only for elements inside Docker subnets.
-            // LAN ip_addresses shouldn't be grouped by stack.
-            let is_docker_subnet = ctx
-                .subnets
-                .iter()
-                .find(|s| s.id == _subnet_id)
-                .map(|s| s.base.subnet_type.is_docker_network())
-                .unwrap_or(false);
-            let compose_project = if !is_docker_subnet {
-                None
-            } else {
-                let mut projects: HashSet<&str> = HashSet::new();
-                let services_iter: Box<dyn Iterator<Item = _>> =
-                    if let Some(iface_id) = child.ip_address_id {
-                        // Interface-specific: only services bound to this interface
-                        Box::new(ctx.services.iter().filter(move |s| {
-                            s.base.host_id == child.host_id
-                                && s.base
-                                    .bindings
-                                    .iter()
-                                    .any(|b| b.ip_address_id() == Some(iface_id))
-                        }))
-                    } else {
-                        // Fallback: all services on the host
-                        Box::new(
-                            ctx.services
-                                .iter()
-                                .filter(|s| s.base.host_id == child.host_id),
-                        )
-                    };
-                for service in services_iter {
-                    if let Some(ServiceVirtualization::Docker(dv)) = &service.base.virtualization
-                        && let Some(ref project) = dv.compose_project
-                    {
-                        projects.insert(project.as_str());
-                    }
+        let _ = apply_element_rules(
+            child_nodes,
+            &grouping.element_rules,
+            |node| {
+                let child = children_by_id.get(&node.id)?;
+                let categories = ctx
+                    .services
+                    .iter()
+                    .filter(|s| s.base.host_id == child.host_id)
+                    .map(|s| s.base.service_definition.category())
+                    .collect();
+                let mut tag_ids: HashSet<Uuid> = ctx
+                    .hosts
+                    .iter()
+                    .find(|h| h.id == child.host_id)
+                    .map(|h| h.base.tags.iter().copied().collect())
+                    .unwrap_or_default();
+                // Inherit service tags so ByTag rules match via host→interface
+                for service in ctx
+                    .services
+                    .iter()
+                    .filter(|s| s.base.host_id == child.host_id)
+                {
+                    tag_ids.extend(service.base.tags.iter().copied());
                 }
-                if projects.len() == 1 {
-                    projects.into_iter().next().map(String::from)
-                } else {
+                // Resolve compose_project only for elements inside Docker subnets.
+                // LAN ip_addresses shouldn't be grouped by stack.
+                let is_docker_subnet = ctx
+                    .subnets
+                    .iter()
+                    .find(|s| s.id == _subnet_id)
+                    .map(|s| s.base.subnet_type.is_docker_network())
+                    .unwrap_or(false);
+                let compose_project = if !is_docker_subnet {
                     None
-                }
-            };
-            Some(ElementMatchData {
-                categories,
-                tag_ids,
-                element_entity: EntityDiscriminants::IPAddress,
-                virtualizer_service_id: None,
-                compose_project,
-                native_vlan_id: None,
-                vlan_number: None,
-                vlan_name: None,
-                is_trunk_port: false,
-                oper_status: None,
-            })
-        });
+                } else {
+                    let mut projects: HashSet<&str> = HashSet::new();
+                    let services_iter: Box<dyn Iterator<Item = _>> =
+                        if let Some(iface_id) = child.ip_address_id {
+                            // Interface-specific: only services bound to this interface
+                            Box::new(ctx.services.iter().filter(move |s| {
+                                s.base.host_id == child.host_id
+                                    && s.base
+                                        .bindings
+                                        .iter()
+                                        .any(|b| b.ip_address_id() == Some(iface_id))
+                            }))
+                        } else {
+                            // Fallback: all services on the host
+                            Box::new(
+                                ctx.services
+                                    .iter()
+                                    .filter(|s| s.base.host_id == child.host_id),
+                            )
+                        };
+                    for service in services_iter {
+                        if let Some(ServiceVirtualization::Docker(dv)) =
+                            &service.base.virtualization
+                            && let Some(ref project) = dv.compose_project
+                        {
+                            projects.insert(project.as_str());
+                        }
+                    }
+                    if projects.len() == 1 {
+                        projects.into_iter().next().map(String::from)
+                    } else {
+                        None
+                    }
+                };
+                Some(ElementMatchData {
+                    categories,
+                    tag_ids,
+                    element_entity: EntityDiscriminants::IPAddress,
+                    virtualizer_service_id: None,
+                    compose_project,
+                    native_vlan_id: None,
+                    vlan_number: None,
+                    vlan_name: None,
+                    is_trunk_port: false,
+                    oper_status: None,
+                })
+            },
+            None,
+            None,
+        );
 
         // Post-process: set associated_service_definition on Stack subcontainers (always Docker)
         for node in child_nodes.iter_mut() {

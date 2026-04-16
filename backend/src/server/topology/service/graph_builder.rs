@@ -353,7 +353,7 @@ impl GraphBuilder {
                 is_trunk_port: false,
                 oper_status: None,
             })
-        });
+        }, None, None);
 
         // Post-process: set associated_service_definition on Stack subcontainers (always Docker)
         for node in child_nodes.iter_mut() {

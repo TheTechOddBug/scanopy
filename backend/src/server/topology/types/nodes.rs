@@ -3,6 +3,7 @@ use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use crate::server::shared::types::{Color, Icon};
 use crate::server::subnets::r#impl::types::SubnetType;
+use crate::server::topology::types::grouping::InlineGroup;
 use crate::server::topology::types::layout::{Ixy, Uxy};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
@@ -32,6 +33,7 @@ impl Node {
                 container_id,
                 host_id,
                 element,
+                inline_groups: Vec::new(),
             },
             position: Ixy::default(),
             size: Uxy::default(),
@@ -288,6 +290,11 @@ pub enum NodeType {
         host_id: Uuid,
         #[serde(flatten)]
         element: ElementEntityType,
+        /// Visual grouping metadata for services inlined on this element.
+        /// Populated by element rules (e.g., Docker containers on a VM host
+        /// get InlineGroups with Header/Member roles for dotted-border rendering).
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        inline_groups: Vec<InlineGroup>,
     },
 }
 
@@ -371,6 +378,7 @@ mod tests {
                 subnet_id,
                 ip_address_id: Some(iface_id),
             },
+            inline_groups: Vec::new(),
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["node_type"], "Element");
@@ -391,6 +399,7 @@ mod tests {
             container_id,
             host_id,
             element: ElementEntityType::Service {},
+            inline_groups: Vec::new(),
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["node_type"], "Element");
@@ -416,6 +425,7 @@ mod tests {
                 subnet_id,
                 ip_address_id: None,
             },
+            inline_groups: Vec::new(),
         };
         let json = serde_json::to_value(&node_type).unwrap();
         // All fields should be at the top level (flattened)
@@ -516,6 +526,7 @@ mod tests {
             container_id,
             host_id,
             element: ElementEntityType::Interface { interface_id },
+            inline_groups: Vec::new(),
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["node_type"], "Element");
@@ -552,6 +563,7 @@ mod tests {
             container_id,
             host_id,
             element: ElementEntityType::Host {},
+            inline_groups: Vec::new(),
         };
         let json = serde_json::to_value(&node_type).unwrap();
         assert_eq!(json["node_type"], "Element");

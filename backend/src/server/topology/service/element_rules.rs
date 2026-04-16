@@ -8,7 +8,8 @@ use crate::server::{
     shared::entities::EntityDiscriminants,
     topology::types::{
         grouping::{
-            ElementRule, GraphRule, IdentifiedRule, InlineGroup, InlineGroupRole, PlacementDecision,
+            ElementRule, GraphRule, IdentifiedRule, InlineGroup, InlineGroupRole,
+            PlacementDecision, RulePlacement,
         },
         nodes::{ContainerType, Node, NodeType},
     },
@@ -37,152 +38,621 @@ pub struct ElementMatchData {
     pub oper_status: Option<IfOperStatus>,
 }
 
-/// Context for computing inline placement decisions.
-pub struct InlinePlacementContext<'a> {
+/// Optional context for computing InlineOn placement decisions.
+/// Only needed by builders that have virtualizer/host data (Workloads builder).
+pub struct InlineContext<'a> {
     pub hosts: &'a HashMap<Uuid, &'a Host>,
     pub service_lookup: &'a HashMap<Uuid, &'a Service>,
     /// virtualizer_service_id → managed container service IDs
     pub virt_to_container_svcs: &'a HashMap<Uuid, Vec<Uuid>>,
 }
 
-/// Compute inline placement decisions for all applicable element rules.
+/// Context passed to `compute_placements` for each rule invocation.
+struct PlacementContext<'a> {
+    rule_id: Uuid,
+    elements_by_container: &'a HashMap<Uuid, Vec<Uuid>>,
+    match_data: &'a HashMap<Uuid, ElementMatchData>,
+    claimed: &'a HashSet<Uuid>,
+    virtualizer_titles: Option<&'a HashMap<Uuid, String>>,
+    inline_ctx: Option<&'a InlineContext<'a>>,
+}
+
+/// Compute all placement decisions for a single element rule.
 ///
-/// Returns a map of entity_id → PlacementDecision for entities that should be
-/// inlined on another node rather than having their own element.
-///
-/// The match on ElementRule is **exhaustive** — adding a new variant forces
-/// the developer to decide whether it produces inline placements.
-pub fn compute_inline_placements(
-    rules: &[IdentifiedRule<ElementRule>],
-    ctx: &InlinePlacementContext,
-) -> HashMap<Uuid, PlacementDecision> {
-    let mut result = HashMap::new();
-    for IdentifiedRule { rule, .. } in rules {
-        let placements: HashMap<Uuid, PlacementDecision> = match rule {
-            ElementRule::ByHypervisor => {
-                // Services on VM hosts are inlined on the VM host element.
-                // The hypervisor rule groups VMs under their hypervisor; as a consequence,
-                // VMs are elements (not containers), so services on them can't have their
-                // own element nodes.
-                let mut map = HashMap::new();
-                for (host_id, host) in ctx.hosts.iter() {
-                    if host.base.virtualization.is_none() {
-                        continue;
-                    }
-                    // Find all services on this VM host
-                    for svc in ctx.service_lookup.values() {
-                        if svc.base.host_id == *host_id {
-                            // Skip services that ByContainerRuntime will handle with group info
-                            if svc.base.virtualization.is_some() {
-                                continue;
-                            }
-                            map.insert(
-                                svc.id,
-                                PlacementDecision::InlineOn {
-                                    node_id: *host_id,
-                                    inline_group: None,
-                                },
-                            );
-                        }
-                    }
-                }
-                map
+/// The match on `ElementRule` is **exhaustive** — adding a new variant forces
+/// the developer to decide what placement decisions it produces.
+fn compute_placements(rule: &ElementRule, ctx: &PlacementContext) -> RulePlacement {
+    match rule {
+        ElementRule::ByHypervisor | ElementRule::ByContainerRuntime => {
+            compute_virtualizer_placements(rule, ctx)
+        }
+        ElementRule::ByStack => compute_stack_placements(ctx),
+        ElementRule::ByServiceCategory {
+            categories, title, ..
+        } => compute_service_category_placements(categories, title.as_deref(), ctx),
+        ElementRule::ByTag { tag_ids, title } => {
+            compute_tag_placements(tag_ids, title.as_deref(), ctx)
+        }
+        ElementRule::ByTrunkPort => compute_trunk_port_placements(ctx),
+        ElementRule::ByVLAN => compute_vlan_placements(ctx),
+        ElementRule::ByPortOpStatus => compute_port_op_status_placements(ctx),
+    }
+}
+
+/// ByHypervisor / ByContainerRuntime: group elements by virtualizer service,
+/// plus InlineOn decisions for services on VMs and BecomeSubcontainer for virtualizer services.
+fn compute_virtualizer_placements(rule: &ElementRule, ctx: &PlacementContext) -> RulePlacement {
+    let mut result = RulePlacement {
+        containers: Vec::new(),
+        placements: HashMap::new(),
+        claimed: HashSet::new(),
+    };
+
+    let (container_type, target_entity) = if matches!(rule, ElementRule::ByHypervisor) {
+        (ContainerType::Hypervisor, EntityDiscriminants::Host)
+    } else {
+        (
+            ContainerType::ContainerRuntime,
+            EntityDiscriminants::Service,
+        )
+    };
+
+    // Phase 1: Group existing elements into subcontainers (PlaceInContainer)
+    for (parent_id, element_ids) in ctx.elements_by_container {
+        let unclaimed: Vec<Uuid> = element_ids
+            .iter()
+            .filter(|id| !ctx.claimed.contains(id))
+            .filter(|id| {
+                ctx.match_data
+                    .get(id)
+                    .is_some_and(|d| d.element_entity == target_entity)
+            })
+            .copied()
+            .collect();
+        if unclaimed.is_empty() {
+            continue;
+        }
+
+        let mut by_virtualizer: HashMap<Option<Uuid>, Vec<Uuid>> = HashMap::new();
+        for id in &unclaimed {
+            let virt_id = ctx
+                .match_data
+                .get(id)
+                .and_then(|d| d.virtualizer_service_id);
+            by_virtualizer.entry(virt_id).or_default().push(*id);
+        }
+
+        for (virt_id_opt, ids) in by_virtualizer {
+            let Some(vid) = virt_id_opt else {
+                // No virtualizer — this rule doesn't act on these elements.
+                // Don't produce a decision; a later rule or the builder may handle them.
+                continue;
+            };
+
+            let group_key = format!("{parent_id}:{}:{vid}", ctx.rule_id);
+            let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
+
+            result.containers.push(Node {
+                id: group_id,
+                node_type: NodeType::Container {
+                    container_type,
+                    parent_container_id: Some(*parent_id),
+                    entity_id: None,
+                    icon: None,
+                    color: None,
+                    associated_service_definition: ctx
+                        .virtualizer_titles
+                        .and_then(|t| t.get(&vid).cloned()),
+                    element_rule_id: Some(ctx.rule_id),
+                    will_accept_edges: rule.will_accept_edges(),
+                },
+                position: Default::default(),
+                size: Default::default(),
+                header: ctx.virtualizer_titles.and_then(|t| t.get(&vid).cloned()),
+            });
+
+            // Virtualizer service → BecomeSubcontainer
+            result.placements.insert(
+                vid,
+                PlacementDecision::BecomeSubcontainer {
+                    container_id: group_id,
+                },
+            );
+
+            // Elements → PlaceInContainer
+            for id in &ids {
+                result.placements.insert(
+                    *id,
+                    PlacementDecision::PlaceInContainer {
+                        container_id: group_id,
+                    },
+                );
             }
-            ElementRule::ByContainerRuntime => {
-                // Docker runtimes and their containers on VM hosts are inlined on the
-                // VM host element, with InlineGroup metadata for the dotted-border
-                // visual grouping in the frontend.
-                let mut map = HashMap::new();
-                for (&virt_svc_id, container_svc_ids) in ctx.virt_to_container_svcs {
-                    let Some(virt_svc) = ctx.service_lookup.get(&virt_svc_id) else {
-                        continue;
-                    };
-                    let Some(host) = ctx.hosts.get(&virt_svc.base.host_id) else {
-                        continue;
-                    };
-                    // Only inline when the virtualizer runs on a VM
-                    if host.base.virtualization.is_none() {
-                        continue;
-                    }
-                    let vm_host_id = virt_svc.base.host_id;
+            result.claimed.extend(ids);
+        }
+    }
 
-                    // Docker runtime → Header role
-                    map.insert(
-                        virt_svc_id,
-                        PlacementDecision::InlineOn {
-                            node_id: vm_host_id,
-                            inline_group: Some(InlineGroup {
-                                group_id: virt_svc_id,
-                                role: InlineGroupRole::Header,
-                            }),
-                        },
-                    );
-
-                    // Container services → Member role
-                    for &svc_id in container_svc_ids {
-                        map.insert(
-                            svc_id,
+    // Phase 2: InlineOn decisions for services on VM hosts (only if inline context provided)
+    if let Some(inline_ctx) = ctx.inline_ctx {
+        if matches!(rule, ElementRule::ByHypervisor) {
+            // Services on VM hosts → InlineOn (no visual group)
+            for (host_id, host) in inline_ctx.hosts.iter() {
+                if host.base.virtualization.is_none() {
+                    continue;
+                }
+                for svc in inline_ctx.service_lookup.values() {
+                    if svc.base.host_id == *host_id
+                        && svc.base.virtualization.is_none()
+                        && !result.placements.contains_key(&svc.id)
+                    {
+                        result.placements.insert(
+                            svc.id,
                             PlacementDecision::InlineOn {
-                                node_id: vm_host_id,
-                                inline_group: Some(InlineGroup {
-                                    group_id: virt_svc_id,
-                                    role: InlineGroupRole::Member,
-                                }),
+                                node_id: *host_id,
+                                inline_group: None,
                             },
                         );
                     }
                 }
-                map
             }
-            // These rules only create subcontainers — no inline placements.
-            ElementRule::ByStack
-            | ElementRule::ByServiceCategory { .. }
-            | ElementRule::ByTag { .. }
-            | ElementRule::ByTrunkPort
-            | ElementRule::ByVLAN
-            | ElementRule::ByPortOpStatus => HashMap::new(),
-        };
-        result.extend(placements);
+        } else {
+            // ByContainerRuntime: Docker services on VMs → InlineOn with visual group
+            for (&virt_svc_id, container_svc_ids) in inline_ctx.virt_to_container_svcs {
+                let Some(virt_svc) = inline_ctx.service_lookup.get(&virt_svc_id) else {
+                    continue;
+                };
+                let Some(host) = inline_ctx.hosts.get(&virt_svc.base.host_id) else {
+                    continue;
+                };
+                if host.base.virtualization.is_none() {
+                    continue;
+                }
+                let vm_host_id = virt_svc.base.host_id;
+
+                // Docker runtime → Header
+                result.placements.insert(
+                    virt_svc_id,
+                    PlacementDecision::InlineOn {
+                        node_id: vm_host_id,
+                        inline_group: Some(InlineGroup {
+                            group_id: virt_svc_id,
+                            role: InlineGroupRole::Header,
+                        }),
+                    },
+                );
+
+                // Container services → Member
+                for &svc_id in container_svc_ids {
+                    result.placements.insert(
+                        svc_id,
+                        PlacementDecision::InlineOn {
+                            node_id: vm_host_id,
+                            inline_group: Some(InlineGroup {
+                                group_id: virt_svc_id,
+                                role: InlineGroupRole::Member,
+                            }),
+                        },
+                    );
+                }
+            }
+        }
     }
+
     result
 }
 
-/// Result of applying element rules — contains the reassignments made by subcontainer grouping.
-pub struct ElementRuleResult {
-    /// Maps element node ID → new container ID (the subcontainer it was reassigned to).
-    /// Used by builders to derive virtualizer→subcontainer mappings for edge resolution.
-    pub reassignments: HashMap<Uuid, Uuid>,
+/// ByStack: group elements by compose_project.
+fn compute_stack_placements(ctx: &PlacementContext) -> RulePlacement {
+    let mut result = RulePlacement {
+        containers: Vec::new(),
+        placements: HashMap::new(),
+        claimed: HashSet::new(),
+    };
+
+    for (parent_id, element_ids) in ctx.elements_by_container {
+        let unclaimed: Vec<Uuid> = element_ids
+            .iter()
+            .filter(|id| !ctx.claimed.contains(id))
+            .copied()
+            .collect();
+        if unclaimed.is_empty() {
+            continue;
+        }
+
+        let mut by_stack: HashMap<String, Vec<Uuid>> = HashMap::new();
+        for id in &unclaimed {
+            if let Some(project) = ctx
+                .match_data
+                .get(id)
+                .and_then(|d| d.compose_project.clone())
+            {
+                by_stack.entry(project).or_default().push(*id);
+            }
+        }
+
+        for (project, ids) in by_stack {
+            let group_id = Uuid::new_v5(
+                &Uuid::NAMESPACE_OID,
+                format!("stack:{project}:{parent_id}").as_bytes(),
+            );
+
+            result.containers.push(Node {
+                id: group_id,
+                node_type: NodeType::Container {
+                    container_type: ContainerType::Stack,
+                    parent_container_id: Some(*parent_id),
+                    entity_id: None,
+                    icon: None,
+                    color: None,
+                    associated_service_definition: None,
+                    element_rule_id: Some(ctx.rule_id),
+                    will_accept_edges: true,
+                },
+                position: Default::default(),
+                size: Default::default(),
+                header: Some(project),
+            });
+
+            for id in &ids {
+                result.placements.insert(
+                    *id,
+                    PlacementDecision::PlaceInContainer {
+                        container_id: group_id,
+                    },
+                );
+            }
+            result.claimed.extend(ids);
+        }
+    }
+
+    result
 }
 
-/// Apply element rules to nodes, creating nested subcontainers within each parent container.
+/// ByServiceCategory: group elements matching specified categories.
+fn compute_service_category_placements(
+    categories: &[ServiceCategory],
+    title: Option<&str>,
+    ctx: &PlacementContext,
+) -> RulePlacement {
+    let mut result = RulePlacement {
+        containers: Vec::new(),
+        placements: HashMap::new(),
+        claimed: HashSet::new(),
+    };
+
+    for (parent_id, element_ids) in ctx.elements_by_container {
+        let matched_ids: HashSet<Uuid> = element_ids
+            .iter()
+            .filter(|id| !ctx.claimed.contains(id))
+            .filter(|id| {
+                ctx.match_data
+                    .get(id)
+                    .is_some_and(|d| categories.iter().any(|c| d.categories.contains(c)))
+            })
+            .copied()
+            .collect();
+
+        if matched_ids.is_empty() {
+            continue;
+        }
+
+        let group_id = Uuid::new_v5(
+            &Uuid::NAMESPACE_OID,
+            format!("{parent_id}:{}", ctx.rule_id).as_bytes(),
+        );
+
+        result.containers.push(Node {
+            id: group_id,
+            node_type: NodeType::Container {
+                container_type: ContainerType::NestedServiceCategory,
+                parent_container_id: Some(*parent_id),
+                entity_id: None,
+                icon: None,
+                color: None,
+                associated_service_definition: None,
+                element_rule_id: Some(ctx.rule_id),
+                will_accept_edges: false,
+            },
+            position: Default::default(),
+            size: Default::default(),
+            header: title.map(String::from),
+        });
+
+        for id in &matched_ids {
+            result.placements.insert(
+                *id,
+                PlacementDecision::PlaceInContainer {
+                    container_id: group_id,
+                },
+            );
+        }
+        result.claimed.extend(matched_ids);
+    }
+
+    result
+}
+
+/// ByTag: group elements matching specified tag IDs.
+fn compute_tag_placements(
+    tag_ids: &[Uuid],
+    title: Option<&str>,
+    ctx: &PlacementContext,
+) -> RulePlacement {
+    let mut result = RulePlacement {
+        containers: Vec::new(),
+        placements: HashMap::new(),
+        claimed: HashSet::new(),
+    };
+
+    for (parent_id, element_ids) in ctx.elements_by_container {
+        let matched_ids: HashSet<Uuid> = element_ids
+            .iter()
+            .filter(|id| !ctx.claimed.contains(id))
+            .filter(|id| {
+                ctx.match_data
+                    .get(id)
+                    .is_some_and(|d| tag_ids.iter().any(|t| d.tag_ids.contains(t)))
+            })
+            .copied()
+            .collect();
+
+        if matched_ids.is_empty() {
+            continue;
+        }
+
+        let group_id = Uuid::new_v5(
+            &Uuid::NAMESPACE_OID,
+            format!("{parent_id}:{}", ctx.rule_id).as_bytes(),
+        );
+
+        result.containers.push(Node {
+            id: group_id,
+            node_type: NodeType::Container {
+                container_type: ContainerType::NestedTag,
+                parent_container_id: Some(*parent_id),
+                entity_id: None,
+                icon: None,
+                color: None,
+                associated_service_definition: None,
+                element_rule_id: Some(ctx.rule_id),
+                will_accept_edges: false,
+            },
+            position: Default::default(),
+            size: Default::default(),
+            header: title.map(String::from),
+        });
+
+        for id in &matched_ids {
+            result.placements.insert(
+                *id,
+                PlacementDecision::PlaceInContainer {
+                    container_id: group_id,
+                },
+            );
+        }
+        result.claimed.extend(matched_ids);
+    }
+
+    result
+}
+
+/// ByTrunkPort: group trunk ports (ports with tagged VLANs).
+fn compute_trunk_port_placements(ctx: &PlacementContext) -> RulePlacement {
+    let mut result = RulePlacement {
+        containers: Vec::new(),
+        placements: HashMap::new(),
+        claimed: HashSet::new(),
+    };
+
+    for (parent_id, element_ids) in ctx.elements_by_container {
+        let matched_ids: Vec<Uuid> = element_ids
+            .iter()
+            .filter(|id| !ctx.claimed.contains(id))
+            .filter(|id| ctx.match_data.get(id).is_some_and(|d| d.is_trunk_port))
+            .copied()
+            .collect();
+
+        if matched_ids.is_empty() {
+            continue;
+        }
+
+        let group_key = format!("{parent_id}:{}:trunk", ctx.rule_id);
+        let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
+
+        result.containers.push(Node {
+            id: group_id,
+            node_type: NodeType::Container {
+                container_type: ContainerType::TrunkPort,
+                parent_container_id: Some(*parent_id),
+                entity_id: None,
+                icon: None,
+                color: None,
+                associated_service_definition: None,
+                element_rule_id: Some(ctx.rule_id),
+                will_accept_edges: false,
+            },
+            position: Default::default(),
+            size: Default::default(),
+            header: Some("Trunk Ports".to_string()),
+        });
+
+        for id in &matched_ids {
+            result.placements.insert(
+                *id,
+                PlacementDecision::PlaceInContainer {
+                    container_id: group_id,
+                },
+            );
+        }
+        result.claimed.extend(matched_ids);
+    }
+
+    result
+}
+
+/// ByVLAN: group access ports by native VLAN number.
+fn compute_vlan_placements(ctx: &PlacementContext) -> RulePlacement {
+    let mut result = RulePlacement {
+        containers: Vec::new(),
+        placements: HashMap::new(),
+        claimed: HashSet::new(),
+    };
+
+    for (parent_id, element_ids) in ctx.elements_by_container {
+        let unclaimed: Vec<Uuid> = element_ids
+            .iter()
+            .filter(|id| !ctx.claimed.contains(id))
+            .copied()
+            .collect();
+        if unclaimed.is_empty() {
+            continue;
+        }
+
+        let mut by_vlan: HashMap<u16, Vec<Uuid>> = HashMap::new();
+        for id in &unclaimed {
+            if let Some(vlan_number) = ctx.match_data.get(id).and_then(|d| d.vlan_number) {
+                by_vlan.entry(vlan_number).or_default().push(*id);
+            }
+        }
+
+        for (vlan_number, ids) in by_vlan {
+            let group_key = format!("{parent_id}:{}:vlan:{vlan_number}", ctx.rule_id);
+            let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
+
+            let vlan_name = ids
+                .first()
+                .and_then(|id| ctx.match_data.get(id))
+                .and_then(|d| d.vlan_name.as_deref());
+
+            let header = match vlan_name {
+                Some(name) => format!("VLAN {} ({})", vlan_number, name),
+                None => format!("VLAN {}", vlan_number),
+            };
+
+            result.containers.push(Node {
+                id: group_id,
+                node_type: NodeType::Container {
+                    container_type: ContainerType::VLAN,
+                    parent_container_id: Some(*parent_id),
+                    entity_id: None,
+                    icon: None,
+                    color: None,
+                    associated_service_definition: None,
+                    element_rule_id: Some(ctx.rule_id),
+                    will_accept_edges: false,
+                },
+                position: Default::default(),
+                size: Default::default(),
+                header: Some(header),
+            });
+
+            for id in &ids {
+                result.placements.insert(
+                    *id,
+                    PlacementDecision::PlaceInContainer {
+                        container_id: group_id,
+                    },
+                );
+            }
+            result.claimed.extend(ids);
+        }
+    }
+
+    result
+}
+
+/// ByPortOpStatus: group ports by operational status.
+fn compute_port_op_status_placements(ctx: &PlacementContext) -> RulePlacement {
+    let mut result = RulePlacement {
+        containers: Vec::new(),
+        placements: HashMap::new(),
+        claimed: HashSet::new(),
+    };
+
+    for (parent_id, element_ids) in ctx.elements_by_container {
+        let unclaimed: Vec<Uuid> = element_ids
+            .iter()
+            .filter(|id| !ctx.claimed.contains(id))
+            .copied()
+            .collect();
+        if unclaimed.is_empty() {
+            continue;
+        }
+
+        let mut by_status: HashMap<IfOperStatus, Vec<Uuid>> = HashMap::new();
+        for id in &unclaimed {
+            if let Some(status) = ctx.match_data.get(id).and_then(|d| d.oper_status) {
+                by_status.entry(status).or_default().push(*id);
+            }
+        }
+
+        for (status, ids) in by_status {
+            let status_name = format!("{:?}", status);
+            let group_key = format!("{parent_id}:{}:status:{}", ctx.rule_id, status as i32);
+            let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
+
+            let color = match status {
+                IfOperStatus::Up => "Green",
+                IfOperStatus::Down | IfOperStatus::LowerLayerDown => "Red",
+                IfOperStatus::Testing => "Amber",
+                IfOperStatus::Dormant => "Blue",
+                IfOperStatus::Unknown => "Gray",
+                IfOperStatus::NotPresent => "Gray",
+            };
+
+            result.containers.push(Node {
+                id: group_id,
+                node_type: NodeType::Container {
+                    container_type: ContainerType::PortOpStatus,
+                    parent_container_id: Some(*parent_id),
+                    entity_id: None,
+                    icon: None,
+                    color: Some(color.to_string()),
+                    associated_service_definition: None,
+                    element_rule_id: Some(ctx.rule_id),
+                    will_accept_edges: false,
+                },
+                position: Default::default(),
+                size: Default::default(),
+                header: Some(status_name),
+            });
+
+            for id in &ids {
+                result.placements.insert(
+                    *id,
+                    PlacementDecision::PlaceInContainer {
+                        container_id: group_id,
+                    },
+                );
+            }
+            result.claimed.extend(ids);
+        }
+    }
+
+    result
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/// Apply element rules to nodes, returning unified placement decisions.
 ///
-/// `resolve_element` maps an Element node to its matchable data. Returns `None` for nodes
-/// that should be skipped (e.g. not found in the lookup). Each perspective provides its own
-/// resolver:
-/// - L3: resolves via host_id → host's service categories and host's tags
-/// - Application: resolves via node.id (= service.id) → service's category and tags
+/// Creates subcontainers, reassigns elements, and computes inline placements.
+/// Returns a map of entity_id → PlacementDecision for ALL entities acted on.
 ///
-/// First-match-wins: nodes claimed by an earlier rule are not reassigned.
+/// `resolve_element` maps an Element node to its matchable data.
+/// `virtualizer_titles` maps virtualizer service IDs to display names.
+/// `inline_ctx` provides host/service data needed for InlineOn decisions (Workloads builder only).
 pub fn apply_element_rules(
     nodes: &mut Vec<Node>,
     element_rules: &[IdentifiedRule<ElementRule>],
     resolve_element: impl Fn(&Node) -> Option<ElementMatchData>,
-) -> ElementRuleResult {
-    apply_element_rules_with_titles(nodes, element_rules, resolve_element, None)
-}
-
-/// Apply element rules with optional virtualizer title mapping.
-/// `virtualizer_titles` maps virtualizer service IDs to display names (for ByHypervisor/ByContainerRuntime subcontainers).
-pub fn apply_element_rules_with_titles(
-    nodes: &mut Vec<Node>,
-    element_rules: &[IdentifiedRule<ElementRule>],
-    resolve_element: impl Fn(&Node) -> Option<ElementMatchData>,
     virtualizer_titles: Option<&HashMap<Uuid, String>>,
-) -> ElementRuleResult {
+    inline_ctx: Option<&InlineContext>,
+) -> HashMap<Uuid, PlacementDecision> {
     if element_rules.is_empty() {
-        return ElementRuleResult {
-            reassignments: HashMap::new(),
-        };
+        return HashMap::new();
     }
 
     // Collect element nodes grouped by their current parent container
@@ -204,394 +674,35 @@ pub fn apply_element_rules_with_titles(
         .collect();
 
     let mut claimed: HashSet<Uuid> = HashSet::new();
-    // Collect new subcontainers to add after iteration
+    let mut all_placements: HashMap<Uuid, PlacementDecision> = HashMap::new();
     let mut new_containers: Vec<Node> = Vec::new();
-    // Collect reassignments: node_id → new container_id
     let mut reassignments: HashMap<Uuid, Uuid> = HashMap::new();
 
     for IdentifiedRule { id: rule_id, rule } in element_rules {
-        match rule {
-            ElementRule::ByHypervisor | ElementRule::ByContainerRuntime => {
-                // ByHypervisor groups VM (Host) elements by their hypervisor service.
-                // ByContainerRuntime groups container (Service) elements by their runtime.
-                // Each unique virtualizer service gets its own subcontainer.
-                // Elements with no virtualizer stay ungrouped in their parent container.
-                let (container_type, target_entity) = if matches!(rule, ElementRule::ByHypervisor) {
-                    (ContainerType::Hypervisor, EntityDiscriminants::Host)
-                } else {
-                    (
-                        ContainerType::ContainerRuntime,
-                        EntityDiscriminants::Service,
-                    )
-                };
+        let ctx = PlacementContext {
+            rule_id: *rule_id,
+            elements_by_container: &elements_by_container,
+            match_data: &match_data,
+            claimed: &claimed,
+            virtualizer_titles,
+            inline_ctx,
+        };
 
-                for (parent_id, element_ids) in &elements_by_container {
-                    // Only consider elements matching the target entity type
-                    let unclaimed: Vec<Uuid> = element_ids
-                        .iter()
-                        .filter(|id| !claimed.contains(id))
-                        .filter(|id| {
-                            match_data
-                                .get(id)
-                                .is_some_and(|d| d.element_entity == target_entity)
-                        })
-                        .copied()
-                        .collect();
-                    if unclaimed.is_empty() {
-                        continue;
-                    }
+        let placement = compute_placements(rule, &ctx);
 
-                    // Group by virtualizer_service_id
-                    let mut by_virtualizer: HashMap<Option<Uuid>, Vec<Uuid>> = HashMap::new();
-                    for id in &unclaimed {
-                        let virt_id = match_data.get(id).and_then(|d| d.virtualizer_service_id);
-                        by_virtualizer.entry(virt_id).or_default().push(*id);
-                    }
+        // Merge results
+        new_containers.extend(placement.containers);
+        claimed.extend(placement.claimed);
 
-                    for (virt_host_id, ids) in by_virtualizer {
-                        let Some(vid) = virt_host_id else {
-                            continue;
-                        };
-
-                        let group_key = format!("{parent_id}:{rule_id}:{vid}");
-                        let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
-
-                        new_containers.push(Node {
-                            id: group_id,
-                            node_type: NodeType::Container {
-                                container_type,
-                                parent_container_id: Some(*parent_id),
-                                entity_id: None,
-                                icon: None,
-                                color: None,
-                                associated_service_definition: virtualizer_titles
-                                    .as_ref()
-                                    .and_then(|t| t.get(&vid).cloned()),
-                                element_rule_id: Some(*rule_id),
-                                will_accept_edges: rule.will_accept_edges(),
-                            },
-                            position: Default::default(),
-                            size: Default::default(),
-                            header: virtualizer_titles
-                                .as_ref()
-                                .and_then(|t| t.get(&vid).cloned()),
-                        });
-
-                        for id in &ids {
-                            reassignments.insert(*id, group_id);
-                        }
-                        claimed.extend(ids);
-                    }
-                }
+        for (entity_id, decision) in placement.placements {
+            if let PlacementDecision::PlaceInContainer { container_id } = &decision {
+                reassignments.insert(entity_id, *container_id);
             }
-            ElementRule::ByStack => {
-                // ByStack groups elements by their compose_project.
-                // Elements with the same compose_project share a Stack subcontainer.
-                // Elements with no compose_project remain ungrouped.
-                for (parent_id, element_ids) in &elements_by_container {
-                    let unclaimed: Vec<Uuid> = element_ids
-                        .iter()
-                        .filter(|id| !claimed.contains(id))
-                        .copied()
-                        .collect();
-                    if unclaimed.is_empty() {
-                        continue;
-                    }
-
-                    // Group by compose_project (only Some values)
-                    let mut by_stack: HashMap<String, Vec<Uuid>> = HashMap::new();
-                    for id in &unclaimed {
-                        if let Some(project) =
-                            match_data.get(id).and_then(|d| d.compose_project.clone())
-                        {
-                            by_stack.entry(project).or_default().push(*id);
-                        }
-                    }
-
-                    for (project, ids) in by_stack {
-                        let group_id = Uuid::new_v5(
-                            &Uuid::NAMESPACE_OID,
-                            format!("stack:{project}:{parent_id}").as_bytes(),
-                        );
-
-                        new_containers.push(Node {
-                            id: group_id,
-                            node_type: NodeType::Container {
-                                container_type: ContainerType::Stack,
-                                parent_container_id: Some(*parent_id),
-                                entity_id: None,
-                                icon: None,
-                                color: None,
-                                associated_service_definition: None,
-                                element_rule_id: Some(*rule_id),
-                                will_accept_edges: rule.will_accept_edges(),
-                            },
-                            position: Default::default(),
-                            size: Default::default(),
-                            header: Some(project),
-                        });
-
-                        for id in &ids {
-                            reassignments.insert(*id, group_id);
-                        }
-                        claimed.extend(ids);
-                    }
-                }
-            }
-            ElementRule::ByServiceCategory {
-                categories, title, ..
-            } => {
-                for (parent_id, element_ids) in &elements_by_container {
-                    let matched_ids: HashSet<Uuid> = element_ids
-                        .iter()
-                        .filter(|id| !claimed.contains(id))
-                        .filter(|id| {
-                            match_data.get(id).is_some_and(|d| {
-                                categories.iter().any(|c| d.categories.contains(c))
-                            })
-                        })
-                        .copied()
-                        .collect();
-
-                    if matched_ids.is_empty() {
-                        continue;
-                    }
-
-                    let group_id = Uuid::new_v5(
-                        &Uuid::NAMESPACE_OID,
-                        format!("{parent_id}:{rule_id}").as_bytes(),
-                    );
-
-                    new_containers.push(Node {
-                        id: group_id,
-                        node_type: NodeType::Container {
-                            container_type: ContainerType::NestedServiceCategory,
-                            parent_container_id: Some(*parent_id),
-                            entity_id: None,
-                            icon: None,
-                            color: None,
-                            associated_service_definition: None,
-                            element_rule_id: Some(*rule_id),
-                            will_accept_edges: rule.will_accept_edges(),
-                        },
-                        position: Default::default(),
-                        size: Default::default(),
-                        header: title.clone(),
-                    });
-
-                    for id in &matched_ids {
-                        reassignments.insert(*id, group_id);
-                    }
-                    claimed.extend(matched_ids);
-                }
-            }
-            ElementRule::ByTrunkPort => {
-                // Groups trunk ports (ports with tagged VLANs) into a "Trunk Ports" subcontainer.
-                for (parent_id, element_ids) in &elements_by_container {
-                    let matched_ids: Vec<Uuid> = element_ids
-                        .iter()
-                        .filter(|id| !claimed.contains(id))
-                        .filter(|id| match_data.get(id).is_some_and(|d| d.is_trunk_port))
-                        .copied()
-                        .collect();
-
-                    if matched_ids.is_empty() {
-                        continue;
-                    }
-
-                    let group_key = format!("{parent_id}:{rule_id}:trunk");
-                    let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
-
-                    new_containers.push(Node {
-                        id: group_id,
-                        node_type: NodeType::Container {
-                            container_type: ContainerType::TrunkPort,
-                            parent_container_id: Some(*parent_id),
-                            entity_id: None,
-                            icon: None,
-                            color: None,
-                            associated_service_definition: None,
-                            element_rule_id: Some(*rule_id),
-                            will_accept_edges: rule.will_accept_edges(),
-                        },
-                        position: Default::default(),
-                        size: Default::default(),
-                        header: Some("Trunk Ports".to_string()),
-                    });
-
-                    for id in &matched_ids {
-                        reassignments.insert(*id, group_id);
-                    }
-                    claimed.extend(matched_ids);
-                }
-            }
-            ElementRule::ByVLAN => {
-                // Groups access ports by native VLAN number into per-VLAN subcontainers.
-                for (parent_id, element_ids) in &elements_by_container {
-                    let unclaimed: Vec<Uuid> = element_ids
-                        .iter()
-                        .filter(|id| !claimed.contains(id))
-                        .copied()
-                        .collect();
-                    if unclaimed.is_empty() {
-                        continue;
-                    }
-
-                    // Group by vlan_number (u16) for consistent grouping
-                    let mut by_vlan: HashMap<u16, Vec<Uuid>> = HashMap::new();
-                    for id in &unclaimed {
-                        if let Some(vlan_number) = match_data.get(id).and_then(|d| d.vlan_number) {
-                            by_vlan.entry(vlan_number).or_default().push(*id);
-                        }
-                    }
-
-                    for (vlan_number, ids) in by_vlan {
-                        let group_key = format!("{parent_id}:{rule_id}:vlan:{vlan_number}");
-                        let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
-
-                        // Look up name from first element's match data
-                        let vlan_name = ids
-                            .first()
-                            .and_then(|id| match_data.get(id))
-                            .and_then(|d| d.vlan_name.as_deref());
-
-                        let header = match vlan_name {
-                            Some(name) => format!("VLAN {} ({})", vlan_number, name),
-                            None => format!("VLAN {}", vlan_number),
-                        };
-
-                        new_containers.push(Node {
-                            id: group_id,
-                            node_type: NodeType::Container {
-                                container_type: ContainerType::VLAN,
-                                parent_container_id: Some(*parent_id),
-                                entity_id: None,
-                                icon: None,
-                                color: None,
-                                associated_service_definition: None,
-                                element_rule_id: Some(*rule_id),
-                                will_accept_edges: rule.will_accept_edges(),
-                            },
-                            position: Default::default(),
-                            size: Default::default(),
-                            header: Some(header),
-                        });
-
-                        for id in &ids {
-                            reassignments.insert(*id, group_id);
-                        }
-                        claimed.extend(ids);
-                    }
-                }
-            }
-            ElementRule::ByPortOpStatus => {
-                // Groups ports by operational status into per-status subcontainers.
-                for (parent_id, element_ids) in &elements_by_container {
-                    let unclaimed: Vec<Uuid> = element_ids
-                        .iter()
-                        .filter(|id| !claimed.contains(id))
-                        .copied()
-                        .collect();
-                    if unclaimed.is_empty() {
-                        continue;
-                    }
-
-                    // Group by oper_status
-                    let mut by_status: HashMap<IfOperStatus, Vec<Uuid>> = HashMap::new();
-                    for id in &unclaimed {
-                        if let Some(status) = match_data.get(id).and_then(|d| d.oper_status) {
-                            by_status.entry(status).or_default().push(*id);
-                        }
-                    }
-
-                    for (status, ids) in by_status {
-                        let status_name = format!("{:?}", status);
-                        let group_key = format!("{parent_id}:{rule_id}:status:{}", status as i32);
-                        let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
-
-                        // Color per status for the filled circle icon
-                        let color = match status {
-                            IfOperStatus::Up => "Green",
-                            IfOperStatus::Down | IfOperStatus::LowerLayerDown => "Red",
-                            IfOperStatus::Testing => "Amber",
-                            IfOperStatus::Dormant => "Blue",
-                            IfOperStatus::Unknown => "Gray",
-                            IfOperStatus::NotPresent => "Gray",
-                        };
-
-                        new_containers.push(Node {
-                            id: group_id,
-                            node_type: NodeType::Container {
-                                container_type: ContainerType::PortOpStatus,
-                                parent_container_id: Some(*parent_id),
-                                entity_id: None,
-                                icon: None,
-                                color: Some(color.to_string()),
-                                associated_service_definition: None,
-                                element_rule_id: Some(*rule_id),
-                                will_accept_edges: rule.will_accept_edges(),
-                            },
-                            position: Default::default(),
-                            size: Default::default(),
-                            header: Some(status_name),
-                        });
-
-                        for id in &ids {
-                            reassignments.insert(*id, group_id);
-                        }
-                        claimed.extend(ids);
-                    }
-                }
-            }
-            ElementRule::ByTag { tag_ids, title } => {
-                for (parent_id, element_ids) in &elements_by_container {
-                    let matched_ids: HashSet<Uuid> = element_ids
-                        .iter()
-                        .filter(|id| !claimed.contains(id))
-                        .filter(|id| {
-                            match_data
-                                .get(id)
-                                .is_some_and(|d| tag_ids.iter().any(|t| d.tag_ids.contains(t)))
-                        })
-                        .copied()
-                        .collect();
-
-                    if matched_ids.is_empty() {
-                        continue;
-                    }
-
-                    let group_id = Uuid::new_v5(
-                        &Uuid::NAMESPACE_OID,
-                        format!("{parent_id}:{rule_id}").as_bytes(),
-                    );
-
-                    new_containers.push(Node {
-                        id: group_id,
-                        node_type: NodeType::Container {
-                            container_type: ContainerType::NestedTag,
-                            parent_container_id: Some(*parent_id),
-                            entity_id: None,
-                            icon: None,
-                            color: None,
-                            associated_service_definition: None,
-                            element_rule_id: Some(*rule_id),
-                            will_accept_edges: rule.will_accept_edges(),
-                        },
-                        position: Default::default(),
-                        size: Default::default(),
-                        header: title.clone(),
-                    });
-
-                    for id in &matched_ids {
-                        reassignments.insert(*id, group_id);
-                    }
-                    claimed.extend(matched_ids);
-                }
-            }
+            all_placements.insert(entity_id, decision);
         }
     }
 
-    // Apply reassignments
+    // Apply reassignments to node container_ids
     for node in nodes.iter_mut() {
         if let NodeType::Element {
             ref mut container_id,
@@ -605,7 +716,7 @@ pub fn apply_element_rules_with_titles(
 
     nodes.extend(new_containers);
 
-    ElementRuleResult { reassignments }
+    all_placements
 }
 
 #[cfg(test)]
@@ -654,7 +765,13 @@ mod tests {
         .into();
 
         let rules = vec![IdentifiedRule::new(ElementRule::ByStack)];
-        apply_element_rules(&mut nodes, &rules, |node| match_map.get(&node.id).cloned());
+        apply_element_rules(
+            &mut nodes,
+            &rules,
+            |node| match_map.get(&node.id).cloned(),
+            None,
+            None,
+        );
 
         // Both services should be in the same new container
         let svc1_container = nodes
@@ -697,7 +814,13 @@ mod tests {
         let match_map: HashMap<Uuid, ElementMatchData> = [(svc1, make_match_data(None))].into();
 
         let rules = vec![IdentifiedRule::new(ElementRule::ByStack)];
-        apply_element_rules(&mut nodes, &rules, |node| match_map.get(&node.id).cloned());
+        apply_element_rules(
+            &mut nodes,
+            &rules,
+            |node| match_map.get(&node.id).cloned(),
+            None,
+            None,
+        );
 
         // Should stay in original container
         let svc1_container = match &nodes[0].node_type {
@@ -730,7 +853,13 @@ mod tests {
         .into();
 
         let rules = vec![IdentifiedRule::new(ElementRule::ByStack)];
-        apply_element_rules(&mut nodes, &rules, |node| match_map.get(&node.id).cloned());
+        apply_element_rules(
+            &mut nodes,
+            &rules,
+            |node| match_map.get(&node.id).cloned(),
+            None,
+            None,
+        );
 
         let get_container = |id: Uuid| -> Uuid {
             nodes

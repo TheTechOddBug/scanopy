@@ -1,22 +1,33 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::shared::concepts::Concept;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use crate::server::shared::types::{Color, Icon};
 use crate::server::topology::types::base::TopologyRequestOptions;
+use crate::server::topology::types::nodes::Node;
 use crate::server::topology::types::views::TopologyView;
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumIter, IntoStaticStr};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-/// How a rule decides an entity should be represented in the topology.
-/// Used by element rules to declare that certain entities are "inlined"
-/// (represented by another node rather than having their own element).
+/// What a rule decides about an entity's representation in the topology.
+///
+/// Each element rule produces a `PlacementDecision` for every entity it acts on.
+/// The match on `ElementRule` is exhaustive — adding a new variant forces the
+/// developer to decide what placement decisions it produces.
 #[derive(Debug, Clone)]
 pub enum PlacementDecision {
-    /// Entity is represented by another node — no element created for it.
-    /// The `inline_group` field enables visual grouping in the frontend
-    /// (e.g., Docker containers on a VM host get a dotted border).
+    /// No-op: entity keeps its own element node in its current container.
+    Element,
+    /// Entity becomes a subcontainer node created by this rule.
+    /// The actual Node is in `RulePlacement::containers`; this just records the mapping.
+    BecomeSubcontainer { container_id: Uuid },
+    /// Element moved into a subcontainer created by this rule.
+    PlaceInContainer { container_id: Uuid },
+    /// Entity has no element — represented by another node for edge resolution.
+    /// `inline_group` provides visual grouping metadata for the target element's renderer.
     InlineOn {
         node_id: Uuid,
         inline_group: Option<InlineGroup>,
@@ -25,19 +36,29 @@ pub enum PlacementDecision {
 
 /// Visual grouping metadata for inlined entities.
 /// Entities sharing the same `group_id` are rendered together in the element card.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 pub struct InlineGroup {
     pub group_id: Uuid,
     pub role: InlineGroupRole,
 }
 
 /// Role of an inlined entity within its visual group.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 pub enum InlineGroupRole {
     /// Rendered as group title with icon (e.g., Docker runtime service)
     Header,
     /// Rendered as a service card within the group
     Member,
+}
+
+/// Complete output of one rule's placement computation.
+pub struct RulePlacement {
+    /// New subcontainer nodes created by this rule.
+    pub containers: Vec<Node>,
+    /// Per-entity placement decisions.
+    pub placements: HashMap<Uuid, PlacementDecision>,
+    /// Entity IDs claimed by this rule (first-match-wins).
+    pub claimed: HashSet<Uuid>,
 }
 
 pub trait GraphRule {

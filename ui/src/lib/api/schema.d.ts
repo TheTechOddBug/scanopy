@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-14T23:58:13.690760Z",
-             *       "id": "ff687ced-7c65-4e94-87af-26ef5a0710a9",
+             *       "created_at": "2026-04-16T14:30:49.536486Z",
+             *       "id": "77aa8126-9aa7-4f23-baf3-6c9da7902d81",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-14T23:58:13.690760Z"
+             *       "updated_at": "2026-04-16T14:30:49.536486Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-14T23:58:13.674681Z",
-             *               "id": "875d4262-30b6-4aab-b58b-88331a86cee3",
+             *               "created_at": "2026-04-16T14:30:49.519720Z",
+             *               "id": "0a84e258-63b1-41cb-b576-58237ccff13b",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-14T23:58:13.674681Z"
+             *               "updated_at": "2026-04-16T14:30:49.519720Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Zabbix Agent",
+             *           "service_definition": "Chromecast",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3537,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-14T23:58:13.686554Z",
-             *           "id": "a1d85f91-ece1-4fdd-844b-c4fe57812670",
+             *           "created_at": "2026-04-16T14:30:49.531949Z",
+             *           "id": "8faf382c-0137-4032-93c5-d15e925af70d",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-14T23:58:13.686554Z"
+             *           "updated_at": "2026-04-16T14:30:49.531949Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3553,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Zabbix Agent",
+             *       "service_definition": "Chromecast",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3904,14 +3904,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-14T23:58:13.674891Z",
-         *       "id": "515c27de-26f7-488d-8d71-15b52f93201d",
+         *       "created_at": "2026-04-16T14:30:49.519949Z",
+         *       "id": "f9a3b582-1b7a-4331-bad7-ffe65dc0d3a6",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-14T23:58:13.674891Z"
+         *       "updated_at": "2026-04-16T14:30:49.519949Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4096,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Zabbix Agent",
+         *           "service_definition": "Chromecast",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4955,14 +4955,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-14T23:58:13.674395Z",
-         *               "id": "aa9ec6bc-d988-4266-9b1c-d472450f8798",
+         *               "created_at": "2026-04-16T14:30:49.519408Z",
+         *               "id": "b6a49b11-89a0-43b5-98b0-d0f6e90f3579",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-14T23:58:13.674395Z"
+         *               "updated_at": "2026-04-16T14:30:49.519408Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4971,7 +4971,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Zabbix Agent",
+         *           "service_definition": "Chromecast",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5133,6 +5133,20 @@ export interface components {
          * @enum {string}
          */
         IfOperStatus: "Up" | "Down" | "Testing" | "Unknown" | "Dormant" | "NotPresent" | "LowerLayerDown";
+        /**
+         * @description Visual grouping metadata for inlined entities.
+         *     Entities sharing the same `group_id` are rendered together in the element card.
+         */
+        InlineGroup: {
+            /** Format: uuid */
+            group_id: string;
+            role: components["schemas"]["InlineGroupRole"];
+        };
+        /**
+         * @description Role of an inlined entity within its visual group.
+         * @enum {string}
+         */
+        InlineGroupRole: "Header" | "Member";
         Interface: components["schemas"]["InterfaceBase"] & {
             /** Format: date-time */
             readonly created_at: string;
@@ -5495,6 +5509,12 @@ export interface components {
             container_id?: string;
             /** Format: uuid */
             host_id: string;
+            /**
+             * @description Visual grouping metadata for services inlined on this element.
+             *     Populated by element rules (e.g., Docker containers on a VM host
+             *     get InlineGroups with Header/Member roles for dotted-border rendering).
+             */
+            inline_groups?: components["schemas"]["InlineGroup"][];
         } & {
             /** @enum {string} */
             node_type: "Element";
@@ -6107,14 +6127,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-14T23:58:13.674821Z",
-         *           "id": "fe02dbc2-e2bb-46cf-bde9-88b625dd70f4",
+         *           "created_at": "2026-04-16T14:30:49.519875Z",
+         *           "id": "d1300322-71be-4059-bd12-fbfd387331c7",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-14T23:58:13.674821Z"
+         *           "updated_at": "2026-04-16T14:30:49.519875Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6123,7 +6143,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Zabbix Agent",
+         *       "service_definition": "Chromecast",
          *       "source": {
          *         "type": "Manual"
          *       },

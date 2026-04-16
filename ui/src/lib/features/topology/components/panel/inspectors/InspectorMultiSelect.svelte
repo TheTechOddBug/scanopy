@@ -437,11 +437,33 @@
 		}
 	}));
 
+	// TanStack Form's `form.state.values` is not tracked by Svelte 5 $derived.
+	// Mirror it into a $state via form.store.subscribe (pattern from CreateDaemonModal).
+	let formValues = $state<DepFormValues>({
+		name: '',
+		dependency_type: DEFAULT_DEP_TYPE,
+		memberMode: 'Services',
+		picks: {},
+		bindings: {}
+	});
+	$effect(() => {
+		return form.store.subscribe(() => {
+			const v = form.state.values as DepFormValues;
+			formValues = {
+				name: v.name ?? '',
+				dependency_type: v.dependency_type ?? DEFAULT_DEP_TYPE,
+				memberMode: v.memberMode ?? 'Services',
+				picks: { ...(v.picks ?? {}) },
+				bindings: { ...(v.bindings ?? {}) }
+			};
+		});
+	});
+
 	let resolvedServices = $derived<ResolvedService[]>(
 		(() => {
 			if (!topology) return [] as ResolvedService[];
 			const out: ResolvedService[] = [];
-			const picksMap = (form.state.values.picks as Record<string, string> | undefined) ?? {};
+			const picksMap = formValues.picks;
 			for (const target of depTargets) {
 				if (target.kind === 'service') {
 					out.push({ serviceId: target.serviceId, ipAddressIdFilter: null });
@@ -461,42 +483,40 @@
 		})()
 	);
 
-	let allServicesHaveBindings = $derived.by(() => {
-		const bindingsMap = (form.state.values.bindings as Record<string, string> | undefined) ?? {};
-		return resolvedServices.length > 0 && resolvedServices.every((r) => !!bindingsMap[r.serviceId]);
-	});
+	let allServicesHaveBindings = $derived(
+		resolvedServices.length > 0 && resolvedServices.every((r) => !!formValues.bindings[r.serviceId])
+	);
 
 	// Keep the view-driven "bindings required" flag in sync with the form.
 	$effect(() => {
-		if (bindingsRequired && form.state.values.memberMode !== 'Bindings') {
+		if (bindingsRequired && formValues.memberMode !== 'Bindings') {
 			form.setFieldValue('memberMode', 'Bindings');
 		}
 	});
 
 	// Bubble dependency_type changes to the parent (tutorial checklist watches this).
 	$effect(() => {
-		const depType = form.state.values.dependency_type;
-		onDependencyTypeChange?.(depType);
+		onDependencyTypeChange?.(formValues.dependency_type);
 	});
 
 	let lastAutoName = $state('');
 	// Auto-generate dependency name when type or selection changes, unless the user edited it.
 	$effect(() => {
-		const depType = form.state.values.dependency_type;
-		const newName = generateDependencyName(depType, getNodeNames());
-		const current = form.state.values.name;
-		if ((current === '' || current === lastAutoName) && current !== newName) {
+		const newName = generateDependencyName(formValues.dependency_type, getNodeNames());
+		if (
+			(formValues.name === '' || formValues.name === lastAutoName) &&
+			formValues.name !== newName
+		) {
 			form.setFieldValue('name', newName);
 		}
 		lastAutoName = newName;
 	});
 
 	let canCreate = $derived.by(() => {
-		const v = form.state.values;
-		if (!v.name.trim()) return false;
+		if (!formValues.name.trim()) return false;
 		if (createDependencyMutation.isPending) return false;
 		if (resolvedServices.length < 2) return false;
-		if (v.memberMode === 'Bindings' && !allServicesHaveBindings) return false;
+		if (formValues.memberMode === 'Bindings' && !allServicesHaveBindings) return false;
 		return true;
 	});
 
@@ -545,7 +565,7 @@
 
 		const colorHelper = createColorHelper(dependencyColor);
 		const preview: Edge[] = [];
-		const depType = form.state.values.dependency_type;
+		const depType = formValues.dependency_type;
 
 		if (depType === 'RequestPath') {
 			for (let i = 0; i < nodes.length - 1; i++) {
@@ -605,7 +625,7 @@
 	$effect(() => {
 		if (showPreview) {
 			void dependencyColor;
-			void form.state.values.dependency_type;
+			void formValues.dependency_type;
 			void dependencyEdgeStyle;
 			void nodes;
 			updatePreviewEdges();

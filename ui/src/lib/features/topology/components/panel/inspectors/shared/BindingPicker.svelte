@@ -54,10 +54,21 @@
 	let backing = $derived(topology.services.find((s) => s.id === serviceId));
 	let host = $derived(backing ? topology.hosts.find((h) => h.id === backing!.host_id) : undefined);
 
+	// Mirror the bindings map — form.state.values isn't tracked by Svelte 5 $derived.
+	let bindingsMap = $state<Record<string, string>>({
+		...((form.state.values[fieldPrefix] ?? {}) as Record<string, string>)
+	});
+	$effect(() => {
+		return form.store.subscribe(() => {
+			bindingsMap = {
+				...((form.state.values[fieldPrefix] ?? {}) as Record<string, string>)
+			};
+		});
+	});
+
 	// A binding chosen by any other service in the same form is unavailable to this one.
 	let candidates = $derived.by(() => {
 		if (!backing) return [];
-		const bindingsMap = (form.state.values[fieldPrefix] ?? {}) as Record<string, string>;
 		return backing.bindings.filter((b) => {
 			if (flatIndex > 0 && b.type === 'IPAddress') return false;
 			if (ipAddressIdFilter != null) {
@@ -73,8 +84,7 @@
 	// Auto-resolve singleton: write the only candidate to the form, idempotent.
 	$effect(() => {
 		if (candidates.length !== 1) return;
-		const existing = form.state.values[fieldPrefix]?.[serviceId];
-		if (existing === candidates[0].id) return;
+		if (bindingsMap[serviceId] === candidates[0].id) return;
 		form.setFieldValue(`${fieldPrefix}.${serviceId}`, candidates[0].id);
 	});
 </script>

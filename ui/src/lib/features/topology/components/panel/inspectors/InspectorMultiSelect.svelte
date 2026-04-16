@@ -59,10 +59,10 @@
 		common_hub,
 		common_spokes,
 		tags_entityTags,
-		dependencies_calls,
+		common_calls,
+		common_serves,
 		dependencies_createDependency,
 		dependencies_dependencyName,
-		dependencies_serves,
 		dependencies_servicesOnly,
 		dependencies_withPorts,
 		topology_multiSelectPreviewEdge,
@@ -831,7 +831,7 @@
 							{:else if depType === 'HubAndSpoke' && targetIdx === 1}
 								<div class="flex flex-col items-center gap-0.5">
 									<ArrowDown class="text-secondary h-4 w-4" />
-									<span class="text-tertiary text-xs">{dependencies_serves()}</span>
+									<span class="text-tertiary text-xs">{common_serves()}</span>
 								</div>
 								<span class="text-tertiary mt-2 block text-xs font-semibold uppercase"
 									>{common_spokes()}</span
@@ -841,7 +841,7 @@
 							{#if depType === 'RequestPath' && targetIdx < depTargets.length - 1}
 								<div class="flex flex-col items-center gap-0.5">
 									<ArrowDown class="text-secondary h-4 w-4" />
-									<span class="text-tertiary text-xs">{dependencies_calls()}</span>
+									<span class="text-tertiary text-xs">{common_calls()}</span>
 								</div>
 							{/if}
 						{/each}

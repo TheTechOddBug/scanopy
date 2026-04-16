@@ -1,4 +1,5 @@
 import type { TopologyNode, TopologyEdge, Topology } from '../types/base';
+import type { TopologyParentIndex } from '../topology-parent-index';
 import type { EdgeHandles } from './elk-layout';
 import { computeElkLayout } from './elk-layout';
 
@@ -6,6 +7,7 @@ export interface LayoutInput {
 	nodes: TopologyNode[];
 	edges: TopologyEdge[];
 	topology: Topology;
+	parentIndex?: TopologyParentIndex;
 	collapsedContainers?: Set<string>;
 	expandedContainerSizes?: Map<string, { width: number; height: number }>;
 	elementNodeSizes?: Map<string, { x: number; y: number }>;

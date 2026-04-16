@@ -69,6 +69,7 @@ export async function executeLayout(
 			nodes: elkNodes,
 			edges: elevatedEdges,
 			topology: topology,
+			parentIndex: prep.parentIndex,
 			collapsedContainers: elkCollapsed,
 			expandedContainerSizes: prevExpandedSizes,
 			elementNodeSizes,

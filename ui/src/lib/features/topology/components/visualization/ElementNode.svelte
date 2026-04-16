@@ -318,8 +318,9 @@
 		})();
 	});
 
-	// Group services into bare vs containerized for dotted-border rendering
-	// (only relevant for Host elements where services include both types)
+	// Group services into bare vs containerized for dotted-border rendering.
+	// Uses inline_groups from the topology node (populated by element rules)
+	// instead of re-deriving from virtualization entity fields.
 	type ServiceList = ElementRenderData['services'];
 	type ServiceGroup = {
 		runtimeService: ServiceList[number] | null;
@@ -336,40 +337,65 @@
 				return { bare: services, containerized: [] };
 			}
 
-			// Group containerized services by their runtime service ID
-			const byRuntime = new Map<string, (typeof services)[number][]>();
-			const bareServices: typeof services = [];
-			const runtimeServiceIds = new Set<string>();
+			// Read inline_groups from the topology node data
+			const inlineGroups = ((data as Record<string, unknown>).inline_groups ?? []) as Array<{
+				group_id: string;
+				role: string;
+			}>;
 
-			for (const svc of services) {
-				const virt = svc.virtualization as
-					| { type: string; details?: { service_id?: string } }
-					| null
-					| undefined;
-				if (virt?.details?.service_id) {
-					const rtId = virt.details.service_id;
-					runtimeServiceIds.add(rtId);
-					const group = byRuntime.get(rtId);
-					if (group) group.push(svc);
-					else byRuntime.set(rtId, [svc]);
+			if (inlineGroups.length === 0) {
+				return { bare: services, containerized: [] };
+			}
+
+			// Build groups from inline_groups metadata
+			const groupMembers = new Map<string, ServiceList>();
+			const groupHeaders = new Map<string, ServiceList[number] | null>();
+			const memberServiceIds = new Set<string>();
+
+			for (const ig of inlineGroups) {
+				if (!groupMembers.has(ig.group_id)) {
+					groupMembers.set(ig.group_id, []);
+					groupHeaders.set(ig.group_id, null);
 				}
 			}
 
-			// Separate runtime services from bare services
-			for (const svc of services) {
-				if (runtimeServiceIds.has(svc.id)) continue; // runtime — handled in group
-				const virt = svc.virtualization as
-					| { type: string; details?: { service_id?: string } }
-					| null
-					| undefined;
-				if (virt?.details?.service_id) continue; // container — handled in group
-				bareServices.push(svc);
+			// Match services to their inline group by finding services whose ID
+			// appears in the group header/member declarations
+			for (const ig of inlineGroups) {
+				const svc = services.find((s) => s.id === ig.group_id && ig.role === 'Header');
+				if (svc) {
+					groupHeaders.set(ig.group_id, svc);
+					memberServiceIds.add(svc.id);
+				}
 			}
 
+			// Members: services whose virtualization.service_id matches a group_id
+			// (the group_id IS the runtime service ID from the rule)
+			for (const svc of services) {
+				for (const ig of inlineGroups) {
+					if (ig.role === 'Member') {
+						const virt = svc.virtualization as
+							| { type: string; details?: { service_id?: string } }
+							| null
+							| undefined;
+						if (virt?.details?.service_id === ig.group_id) {
+							groupMembers.get(ig.group_id)?.push(svc);
+							memberServiceIds.add(svc.id);
+						}
+					}
+				}
+			}
+
+			const bareServices = services.filter((s) => !memberServiceIds.has(s.id));
 			const groups: ServiceGroup[] = [];
-			for (const [rtId, containers] of byRuntime) {
-				const runtimeSvc = services.find((s) => s.id === rtId) ?? null;
-				groups.push({ runtimeService: runtimeSvc, containers, runtimeId: rtId });
+			for (const [groupId, containers] of groupMembers) {
+				if (containers.length > 0 || groupHeaders.get(groupId)) {
+					groups.push({
+						runtimeService: groupHeaders.get(groupId) ?? null,
+						containers,
+						runtimeId: groupId
+					});
+				}
 			}
 
 			return { bare: bareServices, containerized: groups };

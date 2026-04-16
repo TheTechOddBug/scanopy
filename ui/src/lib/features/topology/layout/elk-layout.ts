@@ -99,8 +99,11 @@ function buildElkGraph(
 
 	const collapsed = input.collapsedContainers ?? new Set<string>();
 
-	// Track parent relationships for nested containers
-	const parentContainerMap = new Map<string, string>();
+	// Track parent relationships for nested containers.
+	// Pre-seed from parentIndex if available; otherwise built during container loop below.
+	const parentContainerMap = input.parentIndex
+		? new Map(input.parentIndex.containerParent)
+		: new Map<string, string>();
 
 	// Determine if the current view benefits from layered child layout
 	// (crossing minimization for port-to-port edges)
@@ -193,29 +196,38 @@ function buildElkGraph(
 
 	// Subcontainer children sorted after elements are added (below)
 
-	// Build dual element→container mappings:
-	// - immediate: direct parent container (may be a subcontainer)
-	// - root: resolved through subcontainers to root-level container
-	const elementToImmediateContainer = new Map<string, string>();
-	const elementToRootContainer = new Map<string, string>();
-	for (const node of input.nodes) {
-		if (node.node_type === 'Element') {
-			const parentId = node.container_id;
-			if (typeof parentId === 'string' && containers.has(parentId)) {
-				elementToImmediateContainer.set(node.id, parentId);
-				let rootId = parentId;
-				while (parentContainerMap.has(rootId)) {
-					rootId = parentContainerMap.get(rootId)!;
+	// Build dual element→container mappings, using parentIndex when available.
+	const elementToImmediateContainer = input.parentIndex
+		? new Map([...input.parentIndex.elementToContainer].filter(([, cid]) => containers.has(cid)))
+		: new Map<string, string>();
+	const elementToRootContainer = input.parentIndex
+		? new Map(
+				[...input.parentIndex.elementToRootContainer].filter(([id]) =>
+					elementToImmediateContainer.has(id)
+				)
+			)
+		: new Map<string, string>();
+
+	if (!input.parentIndex) {
+		// Fallback: build from nodes if no parentIndex provided
+		for (const node of input.nodes) {
+			if (node.node_type === 'Element') {
+				const parentId = node.container_id;
+				if (typeof parentId === 'string' && containers.has(parentId)) {
+					elementToImmediateContainer.set(node.id, parentId);
+					let rootId = parentId;
+					while (parentContainerMap.has(rootId)) {
+						rootId = parentContainerMap.get(rootId)!;
+					}
+					elementToRootContainer.set(node.id, rootId);
 				}
-				elementToRootContainer.set(node.id, rootId);
 			}
 		}
 	}
 
-	// Build a full parent map from ALL topology nodes (not just visible) so we can
-	// resolve edge endpoints that reference elements hidden inside collapsed containers.
-	const fullParentMap = new Map<string, string>();
-	if (input.topology) {
+	// Full parent map from ALL topology nodes (for resolving edge endpoints in collapsed containers).
+	const fullParentMap = input.parentIndex ? input.parentIndex.parentMap : new Map<string, string>();
+	if (!input.parentIndex && input.topology) {
 		for (const n of input.topology.nodes) {
 			if (n.node_type === 'Element') {
 				const pid = (n as Record<string, unknown>).container_id as string | undefined;

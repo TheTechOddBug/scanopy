@@ -129,6 +129,20 @@ fn compute_virtualizer_placements(rule: &ElementRule, ctx: &PlacementContext) ->
                 continue;
             };
 
+            // Skip creating a subcontainer if the virtualizer runs on a VM —
+            // Phase 2 will handle these services with InlineOn instead.
+            if let Some(inline_ctx) = ctx.inline_ctx {
+                if let Some(virt_svc) = inline_ctx.service_lookup.get(&vid) {
+                    if inline_ctx
+                        .hosts
+                        .get(&virt_svc.base.host_id)
+                        .is_some_and(|h| h.base.virtualization.is_some())
+                    {
+                        continue;
+                    }
+                }
+            }
+
             let group_key = format!("{parent_id}:{}:{vid}", ctx.rule_id);
             let group_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, group_key.as_bytes());
 

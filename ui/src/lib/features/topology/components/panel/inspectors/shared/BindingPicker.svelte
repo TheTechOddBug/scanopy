@@ -56,61 +56,30 @@
 </script>
 
 <script lang="ts">
-	import { createForm } from '@tanstack/svelte-form';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
+	import type { AnyFieldApi } from '@tanstack/svelte-form';
 	import { topology_multiSelectNoBindings, common_bindings } from '$lib/paraglide/messages';
 
 	let {
+		form,
+		fieldPrefix = 'bindings',
 		topology,
 		services,
-		onChange,
 		disabled = false
 	}: {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		form: any;
+		/** Prefix for the form field path — fields live at `${fieldPrefix}.${serviceId}`. */
+		fieldPrefix?: string;
 		topology: Topology;
 		services: BindingPickerService[];
-		/** Emits the full map of serviceId → bindingId (null when not yet picked). */
-		onChange: (selections: Record<string, string | null>) => void;
 		disabled?: boolean;
 	} = $props();
-
-	let serviceOptions = $derived(
-		services.map((s) => ({
-			service: s,
-			options: buildBindingOptions(topology, s.serviceId, s.ipAddressIdFilter)
-		}))
-	);
-
-	function initialValues(): Record<string, string> {
-		const out: Record<string, string> = {};
-		for (const { service, options } of serviceOptions) {
-			out[service.serviceId] = options.length === 1 ? options[0].id : '';
-		}
-		return out;
-	}
-
-	const form = createForm(() => ({
-		defaultValues: initialValues(),
-		onSubmit: () => {}
-	}));
-
-	$effect(() => {
-		const keyList = services.map((s) => s.serviceId).join('|');
-		void keyList;
-		form.reset(initialValues());
-	});
-
-	$effect(() => {
-		const values = form.state.values;
-		const out: Record<string, string | null> = {};
-		for (const s of services) out[s.serviceId] = values[s.serviceId] || null;
-		onChange(out);
-	});
 </script>
 
 <div class="space-y-2">
-	{#each serviceOptions as entry (entry.service.serviceId)}
-		{@const service = entry.service}
-		{@const options = entry.options}
+	{#each services as service (service.serviceId)}
+		{@const options = buildBindingOptions(topology, service.serviceId, service.ipAddressIdFilter)}
 		<div class="card card-static space-y-1 p-2">
 			<div class="text-primary truncate text-xs font-medium">
 				{service.serviceName}
@@ -127,11 +96,11 @@
 					{options[0].label}
 				</div>
 			{:else}
-				<form.Field name={service.serviceId}>
-					{#snippet children(field)}
+				<form.Field name="{fieldPrefix}.{service.serviceId}">
+					{#snippet children(field: AnyFieldApi)}
 						<SelectInput
 							label=""
-							id="binding-{service.serviceId}"
+							id="binding-{fieldPrefix}-{service.serviceId}"
 							{field}
 							{disabled}
 							required

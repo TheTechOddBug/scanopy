@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { SvelteMap } from 'svelte/reactivity';
+	import { createForm } from '@tanstack/svelte-form';
+	import { submitForm } from '$lib/shared/components/forms/form-context';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import {
 		useUpdateDependencyMutation,
@@ -150,7 +151,6 @@
 	// ----- Upgrade Services → Bindings -----
 
 	let showUpgradeForm = $state(false);
-	const upgradeBindingSelections = new SvelteMap<string, string | null>();
 
 	let upgradePickerServices = $derived<BindingPickerService[]>(
 		(() => {
@@ -170,39 +170,52 @@
 		})()
 	);
 
-	let canSaveUpgrade = $derived(
-		upgradePickerServices.length > 0 &&
-			upgradePickerServices.every((s) => !!upgradeBindingSelections.get(s.serviceId))
-	);
+	// TanStack form for the upgrade flow; BindingPicker renders
+	// <form.Field name="bindings.<serviceId>"> children against this form.
+	const upgradeForm = createForm(() => ({
+		defaultValues: { bindings: {} as Record<string, string> },
+		onSubmit: async ({ value }) => {
+			if (!group) return;
+			const bindings = (value.bindings ?? {}) as Record<string, string>;
+			const bindingIds: string[] = [];
+			for (const s of upgradePickerServices) {
+				const id = bindings[s.serviceId];
+				if (!id) return;
+				bindingIds.push(id);
+			}
+			const updated: Dependency = {
+				...group,
+				members: { type: 'Bindings', binding_ids: bindingIds }
+			};
+			await new Promise<void>((resolve, reject) => {
+				updateDependencyMutation.mutate(updated, {
+					onSuccess: () => {
+						showUpgradeForm = false;
+						upgradeForm.reset({ bindings: {} });
+						resolve();
+					},
+					onError: (err) => reject(err)
+				});
+			});
+		}
+	}));
 
-	function handleUpgradeBindingSelections(next: Record<string, string | null>) {
-		upgradeBindingSelections.clear();
-		for (const [k, v] of Object.entries(next)) upgradeBindingSelections.set(k, v);
-	}
+	let canSaveUpgrade = $derived.by(() => {
+		const bindings = (upgradeForm.state.values.bindings ?? {}) as Record<string, string>;
+		return (
+			upgradePickerServices.length > 0 &&
+			upgradePickerServices.every((s) => !!bindings[s.serviceId])
+		);
+	});
 
 	function cancelUpgrade() {
 		showUpgradeForm = false;
-		upgradeBindingSelections.clear();
+		upgradeForm.reset({ bindings: {} });
 	}
 
-	function saveUpgrade() {
-		if (!group || !canSaveUpgrade) return;
-		const bindingIds: string[] = [];
-		for (const s of upgradePickerServices) {
-			const id = upgradeBindingSelections.get(s.serviceId);
-			if (!id) return;
-			bindingIds.push(id);
-		}
-		const updated: Dependency = {
-			...group,
-			members: { type: 'Bindings', binding_ids: bindingIds }
-		};
-		updateDependencyMutation.mutate(updated, {
-			onSuccess: () => {
-				showUpgradeForm = false;
-				upgradeBindingSelections.clear();
-			}
-		});
+	async function saveUpgrade() {
+		if (!canSaveUpgrade) return;
+		await submitForm(upgradeForm);
 	}
 
 	// Context for group display with description
@@ -283,9 +296,9 @@
 					<div class="card card-static space-y-2 p-3">
 						<span class="text-tertiary block text-xs">{dependencies_addBindingDetailsHelp()}</span>
 						<BindingPicker
+							form={upgradeForm}
 							{topology}
 							services={upgradePickerServices}
-							onChange={handleUpgradeBindingSelections}
 							disabled={isMutationPending}
 						/>
 						<div class="flex gap-2">

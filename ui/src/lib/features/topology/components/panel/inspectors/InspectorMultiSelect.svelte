@@ -375,20 +375,56 @@
 	// L3 (or any view marking Bindings required) forces the binding toggle on.
 	let bindingsRequired = $derived(inspectorConfig.dependency_creation === 'Bindings');
 
-	// Picks emitted by the child pickers — kept alongside the form (same pattern as
-	// DependencyEditModal), since the dynamic per-target / per-service shape doesn't
-	// fit TanStack Form's static defaultValues.
-	const pickedServicesByTarget = new SvelteMap<string, string[]>();
-	const bindingSelections = new SvelteMap<string, string | null>();
-
-	function handleTargetPicks(elementId: string, picks: string[]) {
-		pickedServicesByTarget.set(elementId, picks);
+	// Single TanStack form. `picks` and `bindings` are dynamic-key sub-objects —
+	// TargetServicePicker / BindingPicker render <form.Field name="picks.<elementId>.<serviceId>">
+	// and <form.Field name="bindings.<serviceId>">, matching the CredentialForm pattern
+	// (parent owns the form, children receive it as a prop and register dot-path fields).
+	interface DepFormValues {
+		name: string;
+		dependency_type: DependencyType;
+		wantBindings: boolean;
+		picks: Record<string, Record<string, boolean>>;
+		bindings: Record<string, string>;
 	}
 
-	function handleBindingSelections(next: Record<string, string | null>) {
-		bindingSelections.clear();
-		for (const [k, v] of Object.entries(next)) bindingSelections.set(k, v);
-	}
+	const form = createForm(() => ({
+		defaultValues: {
+			name: '',
+			dependency_type: DEFAULT_DEP_TYPE,
+			wantBindings: false,
+			picks: {} as Record<string, Record<string, boolean>>,
+			bindings: {} as Record<string, string>
+		} as DepFormValues,
+		onSubmit: async ({ value }) => {
+			if (!topology) return;
+			const v = value as DepFormValues;
+
+			const newDependency = createEmptyDependencyFormData(topology.network_id);
+			newDependency.name = v.name.trim();
+			newDependency.dependency_type = v.dependency_type;
+			newDependency.color = dependencyColor;
+			newDependency.edge_style = dependencyEdgeStyle;
+
+			if (v.wantBindings) {
+				const bindingIds: string[] = [];
+				for (const r of resolvedServices) {
+					const id = v.bindings?.[r.serviceId];
+					if (!id) return;
+					bindingIds.push(id);
+				}
+				newDependency.members = { type: 'Bindings', binding_ids: bindingIds };
+			} else {
+				newDependency.members = {
+					type: 'Services',
+					service_ids: resolvedServices.map((r) => r.serviceId)
+				};
+			}
+
+			const created = await createDependencyMutation.mutateAsync(newDependency);
+			previewEdges.set([]);
+			onGroupCreated?.(created.id);
+		}
+	}));
 
 	// The final list of services to include as dependency members, with optional IP scope.
 	interface ResolvedService {
@@ -404,6 +440,8 @@
 			if (!topology) return [] as ResolvedService[];
 			const seen = new Set<string>();
 			const out: ResolvedService[] = [];
+			const picksMap =
+				(form.state.values.picks as Record<string, Record<string, boolean>> | undefined) ?? {};
 			for (const target of depTargets) {
 				if (target.kind === 'service') {
 					if (seen.has(target.serviceId)) continue;
@@ -416,9 +454,9 @@
 						ipScopeLabel: ''
 					});
 				} else {
-					const picks = pickedServicesByTarget.get(target.elementId);
-					if (!picks) continue;
-					for (const serviceId of picks) {
+					const targetPicks = picksMap[target.elementId] ?? {};
+					for (const serviceId of target.candidateServiceIds) {
+						if (!targetPicks[serviceId]) continue;
 						if (seen.has(serviceId)) continue;
 						seen.add(serviceId);
 						const service = topology.services.find((s) => s.id === serviceId);
@@ -448,63 +486,43 @@
 		}))
 	);
 
-	let hasUnresolvedTargets = $derived(
-		depTargets.some(
-			(t) => t.kind !== 'service' && (pickedServicesByTarget.get(t.elementId)?.length ?? 0) === 0
-		)
-	);
+	let hasUnresolvedTargets = $derived.by(() => {
+		const picksMap =
+			(form.state.values.picks as Record<string, Record<string, boolean>> | undefined) ?? {};
+		return depTargets.some((t) => {
+			if (t.kind === 'service') return false;
+			const targetPicks = picksMap[t.elementId] ?? {};
+			return !Object.values(targetPicks).some(Boolean);
+		});
+	});
 
-	let allServicesHaveBindings = $derived(
-		resolvedServices.length > 0 &&
-			resolvedServices.every((r) => !!bindingSelections.get(r.serviceId))
-	);
-
-	// TanStack Form — static fields only (dynamic pickers stay outside, matching DEM).
-	interface DepFormValues {
-		name: string;
-		dependency_type: DependencyType;
-		wantBindings: boolean;
-	}
-	const form = createForm(() => ({
-		defaultValues: {
-			name: '',
-			dependency_type: DEFAULT_DEP_TYPE,
-			wantBindings: false
-		} as DepFormValues,
-		onSubmit: async ({ value }) => {
-			if (!topology) return;
-
-			const newDependency = createEmptyDependencyFormData(topology.network_id);
-			newDependency.name = value.name.trim();
-			newDependency.dependency_type = value.dependency_type;
-			newDependency.color = dependencyColor;
-			newDependency.edge_style = dependencyEdgeStyle;
-
-			if (value.wantBindings) {
-				const bindingIds: string[] = [];
-				for (const r of resolvedServices) {
-					const id = bindingSelections.get(r.serviceId);
-					if (!id) return;
-					bindingIds.push(id);
-				}
-				newDependency.members = { type: 'Bindings', binding_ids: bindingIds };
-			} else {
-				newDependency.members = {
-					type: 'Services',
-					service_ids: resolvedServices.map((r) => r.serviceId)
-				};
-			}
-
-			const created = await createDependencyMutation.mutateAsync(newDependency);
-			previewEdges.set([]);
-			onGroupCreated?.(created.id);
-		}
-	}));
+	let allServicesHaveBindings = $derived.by(() => {
+		const bindingsMap = (form.state.values.bindings as Record<string, string> | undefined) ?? {};
+		return resolvedServices.length > 0 && resolvedServices.every((r) => !!bindingsMap[r.serviceId]);
+	});
 
 	// Keep the view-driven "bindings required" flag in sync with the form.
 	$effect(() => {
 		if (bindingsRequired && form.state.values.wantBindings !== true) {
 			form.setFieldValue('wantBindings', true);
+		}
+	});
+
+	// Auto-select a target's candidate when it has exactly one service, once per target.
+	// Avoids the user having to check a single-candidate host picker manually.
+	const seededTargets = new Set<string>();
+	$effect(() => {
+		for (const target of depTargets) {
+			if (target.kind === 'service') continue;
+			if (seededTargets.has(target.elementId)) continue;
+			if (target.candidateServiceIds.length === 1) {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(form as any).setFieldValue(
+					`picks.${target.elementId}.${target.candidateServiceIds[0]}`,
+					true
+				);
+			}
+			seededTargets.add(target.elementId);
 		}
 	});
 
@@ -520,7 +538,7 @@
 		const depType = form.state.values.dependency_type;
 		const newName = generateDependencyName(depType, getNodeNames());
 		const current = form.state.values.name;
-		if (current === '' || current === lastAutoName) {
+		if ((current === '' || current === lastAutoName) && current !== newName) {
 			form.setFieldValue('name', newName);
 		}
 		lastAutoName = newName;
@@ -811,11 +829,7 @@
 					{#if topology}
 						{#each depTargets as target (target.elementId)}
 							{#if target.kind !== 'service'}
-								<TargetServicePicker
-									{topology}
-									{target}
-									onChange={(picks) => handleTargetPicks(target.elementId, picks)}
-								/>
+								<TargetServicePicker {form} {topology} {target} />
 							{/if}
 						{/each}
 					{/if}
@@ -841,11 +855,7 @@
 									<span class="text-secondary block text-xs font-medium"
 										>{dependencies_serviceBindings()}</span
 									>
-									<BindingPicker
-										{topology}
-										services={bindingPickerServices}
-										onChange={handleBindingSelections}
-									/>
+									<BindingPicker {form} {topology} services={bindingPickerServices} />
 								</div>
 							{/if}
 						</div>

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { createForm } from '@tanstack/svelte-form';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
+	import type { AnyFieldApi } from '@tanstack/svelte-form';
 	import type { DependencyTarget } from '../../../../resolvers';
 	import type { Topology } from '../../../../types/base';
 	import {
@@ -9,14 +9,14 @@
 	} from '$lib/paraglide/messages';
 
 	let {
+		form,
 		topology,
-		target,
-		onChange
+		target
 	}: {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		form: any;
 		topology: Topology;
 		target: Extract<DependencyTarget, { kind: 'host' | 'ipAddress' }>;
-		/** Called whenever the user toggles a checkbox with the full set of picked service IDs. */
-		onChange: (pickedServiceIds: string[]) => void;
 	} = $props();
 
 	let candidates = $derived(
@@ -24,24 +24,6 @@
 			.map((id) => topology.services.find((s) => s.id === id))
 			.filter((s): s is NonNullable<typeof s> => !!s)
 	);
-
-	// One mini TanStack form per picker keeps each checkbox backed by a real field
-	// (matching the shared `Checkbox` component's contract) while letting the parent
-	// InspectorMultiSelect stay in charge of the overall submit payload.
-	const form = createForm(() => ({
-		defaultValues: Object.fromEntries(
-			target.candidateServiceIds.map((id) => [id, target.candidateServiceIds.length === 1])
-		) as Record<string, boolean>,
-		onSubmit: () => {}
-	}));
-
-	$effect(() => {
-		const values = form.state.values;
-		const picks = Object.entries(values)
-			.filter(([, checked]) => checked)
-			.map(([id]) => id);
-		onChange(picks);
-	});
 
 	let heading = $derived(
 		target.kind === 'host'
@@ -58,16 +40,12 @@
 	{#if candidates.length === 0}
 		<div class="text-tertiary text-xs italic">—</div>
 	{:else}
-		<ul class="space-y-1">
-			{#each candidates as service (service.id)}
-				<li>
-					<form.Field name={service.id}>
-						{#snippet children(field)}
-							<Checkbox label={service.name} id="target-{target.elementId}-{service.id}" {field} />
-						{/snippet}
-					</form.Field>
-				</li>
-			{/each}
-		</ul>
+		{#each candidates as service (service.id)}
+			<form.Field name="picks.{target.elementId}.{service.id}">
+				{#snippet children(field: AnyFieldApi)}
+					<Checkbox label={service.name} id="target-{target.elementId}-{service.id}" {field} />
+				{/snippet}
+			</form.Field>
+		{/each}
 	{/if}
 </div>

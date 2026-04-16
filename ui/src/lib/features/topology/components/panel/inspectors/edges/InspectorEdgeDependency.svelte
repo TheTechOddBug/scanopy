@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap } from 'svelte/reactivity';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import {
 		useUpdateDependencyMutation,
@@ -14,12 +15,17 @@
 		type ServiceDisplayContext
 	} from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
-	import { ArrowDown, Trash2 } from 'lucide-svelte';
+	import { ArrowDown, Plus, Trash2 } from 'lucide-svelte';
 	import {
+		common_cancel,
 		common_delete,
 		common_deleting,
-		common_confirmDeleteName
+		common_confirmDeleteName,
+		common_save,
+		dependencies_addBindingDetails,
+		dependencies_addBindingDetailsHelp
 	} from '$lib/paraglide/messages';
+	import BindingPicker, { type BindingPickerService } from '../shared/BindingPicker.svelte';
 	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Dependency } from '$lib/features/dependencies/types/base';
@@ -141,6 +147,59 @@
 		compact: true
 	});
 
+	// ----- Upgrade Services → Bindings -----
+
+	let showUpgradeForm = $state(false);
+	const upgradeBindingSelections = new SvelteMap<string, string | null>();
+
+	let upgradePickerServices = $derived<BindingPickerService[]>(
+		(() => {
+			if (!topology || !group || group.members.type !== 'Services') return [];
+			const out: BindingPickerService[] = [];
+			for (const serviceId of group.members.service_ids) {
+				const service = topology.services.find((s) => s.id === serviceId);
+				if (!service) continue;
+				const host = topology.hosts.find((h) => h.id === service.host_id);
+				out.push({
+					serviceId,
+					serviceName: service.name,
+					hostName: host?.name ?? ''
+				});
+			}
+			return out;
+		})()
+	);
+
+	let canSaveUpgrade = $derived(
+		upgradePickerServices.length > 0 &&
+			upgradePickerServices.every((s) => !!upgradeBindingSelections.get(s.serviceId))
+	);
+
+	function cancelUpgrade() {
+		showUpgradeForm = false;
+		upgradeBindingSelections.clear();
+	}
+
+	function saveUpgrade() {
+		if (!group || !canSaveUpgrade) return;
+		const bindingIds: string[] = [];
+		for (const s of upgradePickerServices) {
+			const id = upgradeBindingSelections.get(s.serviceId);
+			if (!id) return;
+			bindingIds.push(id);
+		}
+		const updated: Dependency = {
+			...group,
+			members: { type: 'Bindings', binding_ids: bindingIds }
+		};
+		updateDependencyMutation.mutate(updated, {
+			onSuccess: () => {
+				showUpgradeForm = false;
+				upgradeBindingSelections.clear();
+			}
+		});
+	}
+
 	// Context for group display with description
 	let groupContext = $derived({
 		compact: true,
@@ -204,6 +263,47 @@
 					</div>
 				{/if}
 			{/each}
+
+			{#if !isReadonly && editState.isEditable && topology}
+				{#if !showUpgradeForm}
+					<button
+						type="button"
+						class="btn-secondary flex w-full items-center justify-center gap-2 text-xs"
+						onclick={() => (showUpgradeForm = true)}
+					>
+						<Plus class="h-4 w-4" />
+						{dependencies_addBindingDetails()}
+					</button>
+				{:else}
+					<div class="card card-static space-y-2 p-3">
+						<span class="text-tertiary block text-xs">{dependencies_addBindingDetailsHelp()}</span>
+						<BindingPicker
+							{topology}
+							services={upgradePickerServices}
+							selections={upgradeBindingSelections}
+							disabled={isMutationPending}
+						/>
+						<div class="flex gap-2">
+							<button
+								type="button"
+								class="btn-secondary flex-1 text-xs"
+								onclick={cancelUpgrade}
+								disabled={isMutationPending}
+							>
+								{common_cancel()}
+							</button>
+							<button
+								type="button"
+								class="btn-primary flex-1 text-xs"
+								onclick={saveUpgrade}
+								disabled={!canSaveUpgrade || isMutationPending}
+							>
+								{common_save()}
+							</button>
+						</div>
+					</div>
+				{/if}
+			{/if}
 		{/if}
 
 		{#if !isReadonly}

@@ -160,6 +160,132 @@ function resolveContainerTags(nodeId: string, node: TopologyNode, topology: Topo
 	return [];
 }
 
+// Dependency creation targets — one per selected node that can become a dep member.
+// Dependencies are a Services/Bindings concept; L2 Interface elements and non-Host
+// containers (Subnet, Application) are filtered out at resolution time.
+export type DependencyTarget =
+	| { kind: 'service'; serviceId: string; elementId: string; label: string; hostName: string }
+	| {
+			kind: 'host';
+			hostId: string;
+			candidateServiceIds: string[];
+			elementId: string;
+			label: string;
+	  }
+	| {
+			kind: 'ipAddress';
+			hostId: string;
+			ipAddressId: string;
+			candidateServiceIds: string[];
+			elementId: string;
+			label: string;
+			hostName: string;
+	  };
+
+/**
+ * Resolve selected topology nodes into dependency targets without fanning out.
+ * A host container / host element → a single `host` target the user must disambiguate.
+ * An IP address element → a single `ipAddress` target scoped to services at that IP.
+ * A service element → a direct `service` target.
+ * Interfaces, subnet containers, application containers, and unknowns are dropped.
+ */
+export function resolveDependencyTargets(
+	selectedNodes: { id: string; data: unknown }[],
+	topology: Topology
+): DependencyTarget[] {
+	const targets: DependencyTarget[] = [];
+	const seen = new Set<string>();
+
+	for (const node of selectedNodes) {
+		const data = node.data as TopologyNode | undefined;
+		if (!data) continue;
+
+		if (data.node_type === 'Container') {
+			const containerType =
+				'container_type' in data ? (data.container_type as string | undefined) : undefined;
+			if (containerType !== 'Host') continue;
+			const entityId = 'entity_id' in data ? (data.entity_id as string | undefined) : undefined;
+			if (!entityId) continue;
+			const host = topology.hosts.find((h) => h.id === entityId);
+			if (!host) continue;
+			const key = `host:${entityId}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const candidateServiceIds = topology.services
+				.filter((s) => s.host_id === entityId)
+				.map((s) => s.id);
+			targets.push({
+				kind: 'host',
+				hostId: entityId,
+				candidateServiceIds,
+				elementId: node.id,
+				label: host.name
+			});
+			continue;
+		}
+
+		if (data.node_type !== 'Element') continue;
+		const elementType = data.element_type;
+
+		if (elementType === 'Service') {
+			const key = `service:${node.id}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const service = topology.services.find((s) => s.id === node.id);
+			if (!service) continue;
+			const host = topology.hosts.find((h) => h.id === service.host_id);
+			targets.push({
+				kind: 'service',
+				serviceId: node.id,
+				elementId: node.id,
+				label: service.name,
+				hostName: host?.name ?? ''
+			});
+		} else if (elementType === 'Host') {
+			const hostId = 'host_id' in data ? (data.host_id as string | undefined) : undefined;
+			if (!hostId) continue;
+			const host = topology.hosts.find((h) => h.id === hostId);
+			if (!host) continue;
+			const key = `host:${hostId}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const candidateServiceIds = topology.services
+				.filter((s) => s.host_id === hostId)
+				.map((s) => s.id);
+			targets.push({
+				kind: 'host',
+				hostId,
+				candidateServiceIds,
+				elementId: node.id,
+				label: host.name
+			});
+		} else if (elementType === 'IPAddress') {
+			const resolved = resolveElementNode(node.id, data, topology);
+			if (!resolved.hostId || !resolved.ipAddressId) continue;
+			const key = `ip:${resolved.hostId}:${resolved.ipAddressId}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const candidateServiceIds = resolved.services.map((s) => s.id);
+			const ipLabel = resolved.ipAddress
+				? (resolved.ipAddress.name ? `${resolved.ipAddress.name}: ` : '') +
+					resolved.ipAddress.ip_address
+				: resolved.ipAddressId;
+			targets.push({
+				kind: 'ipAddress',
+				hostId: resolved.hostId,
+				ipAddressId: resolved.ipAddressId,
+				candidateServiceIds,
+				elementId: node.id,
+				label: ipLabel,
+				hostName: resolved.host?.name ?? ''
+			});
+		}
+		// Interface elements: not valid dep targets (L2 uses PhysicalLink edges instead) — skip.
+	}
+
+	return targets;
+}
+
 // Selection context for multi-select operations
 export interface NodeSelectionIds {
 	hostIds: string[];

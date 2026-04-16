@@ -14,7 +14,11 @@
 	} from '../../../queries';
 	import type { Topology } from '../../../types/base';
 	import type { TopologyNode } from '../../../types/base';
-	import { resolveElementNode, getNodeSelectionIds } from '../../../resolvers';
+	import {
+		getNodeSelectionIds,
+		resolveDependencyTargets,
+		type DependencyTarget
+	} from '../../../resolvers';
 	import type { DependencyType, EdgeStyle } from '$lib/features/dependencies/types/base';
 	import { generateDependencyName } from '$lib/features/dependencies/utils';
 	import { getTopologyEditState } from '../../../state';
@@ -33,7 +37,8 @@
 	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import { dependencyTypes, concepts, views } from '$lib/shared/stores/metadata';
 	import { getInspectorConfig } from './view-config';
-	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import BindingPicker, { type BindingPickerService } from './shared/BindingPicker.svelte';
+	import TargetServicePicker from './shared/TargetServicePicker.svelte';
 	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
 	import type { Node, Edge } from '@xyflow/svelte';
 	import type { Color } from '$lib/shared/utils/styling';
@@ -41,8 +46,6 @@
 	import { browser } from '$app/environment';
 	import {
 		appWizard_selectedCount,
-		topology_multiSelectNoBindings,
-		topology_multiSelectPickBinding,
 		topology_multiSelectCreateGroupRebuildWarning,
 		topology_multiSelectLockedHint,
 		topology_multiSelectStaleHint,
@@ -52,6 +55,9 @@
 		tags_entityTags,
 		dependencies_createDependency,
 		dependencies_serviceBindings,
+		dependencies_serviceBindingsInfo,
+		dependencies_addBindingDetails,
+		dependencies_addBindingDetailsHelp,
 		topology_multiSelectPreviewEdge,
 		topology_focusSelection,
 		tags_crossGroupSelectionHint,
@@ -59,8 +65,7 @@
 		tags_inheritedOverrideHint,
 		inspector_createGroupingRuleFromTag,
 		topology_tutorialDone,
-		appWizard_applicationTags,
-		dependencies_serviceBindingsInfo
+		appWizard_applicationTags
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -93,7 +98,7 @@
 		nodes = value;
 	});
 
-	// Collect host and service IDs from all selected nodes via the resolver
+	// Bulk-tag selection uses the legacy fan-out resolver (tagging a host = tagging its services)
 	let selectionIds = $derived.by(() => {
 		if (!topology) return { hostIds: [] as string[], serviceIds: [] as string[] };
 		const hostSet = new SvelteSet<string>();
@@ -352,107 +357,148 @@
 		tags: []
 	});
 
-	// Binding disambiguation per selected interface
-	interface IPAddressBindingChoice {
-		ipAddressId: string;
-		ipAddressName: string;
+	// ----- Element-aware dependency creation -----
+
+	// Resolve selected nodes to dependency targets (service / host / ipAddress).
+	// Each non-service target requires the user to pick its services.
+	let depTargets = $derived<DependencyTarget[]>(
+		topology ? resolveDependencyTargets(nodes, topology) : []
+	);
+
+	// Picked service IDs per ambiguous target (keyed by target.elementId).
+	// Hosts: empty until user picks. IP addresses: auto-select if exactly one candidate.
+	const pickedServicesByTarget = new SvelteMap<string, SvelteSet<string>>();
+
+	$effect(() => {
+		const valid = new Set(depTargets.filter((t) => t.kind !== 'service').map((t) => t.elementId));
+		for (const key of pickedServicesByTarget.keys()) {
+			if (!valid.has(key)) pickedServicesByTarget.delete(key);
+		}
+		for (const target of depTargets) {
+			if (target.kind === 'service') continue;
+			if (!pickedServicesByTarget.has(target.elementId)) {
+				const seed = new SvelteSet<string>();
+				if (target.candidateServiceIds.length === 1) {
+					seed.add(target.candidateServiceIds[0]);
+				}
+				pickedServicesByTarget.set(target.elementId, seed);
+			}
+		}
+	});
+
+	// The final list of services to include as dependency members, with optional IP scope
+	// (used to filter candidate bindings when the user adds binding details).
+	interface ResolvedService {
+		serviceId: string;
+		serviceName: string;
 		hostName: string;
-		bindings: { id: string; label: string }[];
+		ipAddressIdFilter: string | null;
+		ipScopeLabel: string;
 	}
 
-	let ipAddressBindingChoices = $derived.by(() => {
-		if (!topology) return [];
-		const choices: IPAddressBindingChoice[] = [];
-		for (const node of nodes) {
-			const resolved = resolveElementNode(node.id, node.data as TopologyNode, topology);
-			if (!resolved.ipAddressId) continue;
-
-			const ipAddress = resolved.ipAddress;
-			const host = resolved.host;
-			if (!host) continue;
-
-			// Find bindings on this specific interface
-			const interfaceBindings: { id: string; label: string }[] = [];
-			const hostServices = topology.services.filter((s) => s.host_id === host.id);
-			for (const service of hostServices) {
-				for (const binding of service.bindings) {
-					// Only include bindings for this interface (or null = all interfaces)
-					if (binding.ip_address_id === resolved.ipAddressId || binding.ip_address_id === null) {
-						const portInfo =
-							binding.type === 'Port' && binding.port_id
-								? (() => {
-										const port = topology.ports.find((p) => p.id === binding.port_id);
-										return port ? `:${port.number}/${port.protocol}` : '';
-									})()
-								: '';
-						interfaceBindings.push({
-							id: binding.id,
-							label: `${service.name}${portInfo}`
+	let resolvedServices = $derived<ResolvedService[]>(
+		(() => {
+			if (!topology) return [] as ResolvedService[];
+			const seen = new Set<string>();
+			const out: ResolvedService[] = [];
+			for (const target of depTargets) {
+				if (target.kind === 'service') {
+					if (seen.has(target.serviceId)) continue;
+					seen.add(target.serviceId);
+					out.push({
+						serviceId: target.serviceId,
+						serviceName: target.label,
+						hostName: target.hostName,
+						ipAddressIdFilter: null,
+						ipScopeLabel: ''
+					});
+				} else {
+					const picks = pickedServicesByTarget.get(target.elementId);
+					if (!picks) continue;
+					for (const serviceId of picks) {
+						if (seen.has(serviceId)) continue;
+						seen.add(serviceId);
+						const service = topology.services.find((s) => s.id === serviceId);
+						if (!service) continue;
+						const host = topology.hosts.find((h) => h.id === service.host_id);
+						out.push({
+							serviceId,
+							serviceName: service.name,
+							hostName: host?.name ?? '',
+							ipAddressIdFilter: target.kind === 'ipAddress' ? target.ipAddressId : null,
+							ipScopeLabel: target.kind === 'ipAddress' ? target.label : ''
 						});
 					}
 				}
 			}
+			return out;
+		})()
+	);
 
-			const ipAddressName = ipAddress
-				? (ipAddress.name ? ipAddress.name + ': ' : '') + ipAddress.ip_address
-				: resolved.ipAddressId;
-
-			choices.push({
-				ipAddressId: resolved.ipAddressId,
-				ipAddressName: ipAddressName,
-				hostName: host.name,
-				bindings: interfaceBindings
-			});
-		}
-		return choices;
+	// L3 (or any view marking Bindings required) forces the binding toggle on.
+	let bindingsRequired = $derived(inspectorConfig.dependency_creation === 'Bindings');
+	let wantBindings = $state(false);
+	$effect(() => {
+		if (bindingsRequired) wantBindings = true;
 	});
 
-	// Binding selections keyed by interface ID
+	// Per-service binding picks, keyed by serviceId, shared with the BindingPicker child.
 	const bindingSelections = new SvelteMap<string, string | null>();
 
-	function initBindingSelections() {
-		bindingSelections.clear();
-		for (const choice of ipAddressBindingChoices) {
-			bindingSelections.set(
-				choice.ipAddressId,
-				choice.bindings.length === 1 ? choice.bindings[0].id : null
-			);
-		}
-	}
+	let bindingPickerServices = $derived<BindingPickerService[]>(
+		resolvedServices.map((r) => ({
+			serviceId: r.serviceId,
+			serviceName: r.serviceName,
+			hostName: r.hostName,
+			ipAddressIdFilter: r.ipAddressIdFilter,
+			ipScopeLabel: r.ipScopeLabel
+		}))
+	);
 
-	// Initialize binding selections reactively when choices change
-	$effect(() => {
-		void ipAddressBindingChoices;
-		initBindingSelections();
+	let allServicesHaveBindings = $derived(
+		resolvedServices.length > 0 &&
+			resolvedServices.every((r) => !!bindingSelections.get(r.serviceId))
+	);
+
+	// The pending targets that the user still needs to resolve (hosts/IPs with no picks).
+	let hasUnresolvedTargets = $derived(
+		depTargets.some(
+			(t) => t.kind !== 'service' && (pickedServicesByTarget.get(t.elementId)?.size ?? 0) === 0
+		)
+	);
+
+	let canCreate = $derived.by(() => {
+		if (!dependencyName.trim()) return false;
+		if (createDependencyMutation.isPending) return false;
+		if (resolvedServices.length < 2) return false;
+		if (hasUnresolvedTargets) return false;
+		if (wantBindings && !allServicesHaveBindings) return false;
+		return true;
 	});
 
-	let isServicesMode = $derived(inspectorConfig.dependency_creation === 'Services');
-
 	async function confirmGroupCreation() {
-		if (!topology || !dependencyName.trim()) return;
+		if (!topology || !canCreate) return;
 
 		const newDependency = createEmptyDependencyFormData(topology.network_id);
 		newDependency.name = dependencyName.trim();
 		newDependency.dependency_type = groupType;
-
-		if (isServicesMode) {
-			// Application view: use service IDs directly from selected nodes
-			if (selectedServiceIds.length < 2) return;
-			newDependency.members = { type: 'Services', service_ids: [...selectedServiceIds] };
-		} else {
-			// L3 view: use binding IDs from disambiguation
-			const bindingIds: string[] = [];
-			for (const bindingId of bindingSelections.values()) {
-				if (bindingId) {
-					bindingIds.push(bindingId);
-				}
-			}
-			if (bindingIds.length < 2) return;
-			newDependency.members = { type: 'Bindings', binding_ids: bindingIds };
-		}
-
 		newDependency.color = dependencyColor;
 		newDependency.edge_style = dependencyEdgeStyle;
+
+		if (wantBindings) {
+			const bindingIds: string[] = [];
+			for (const r of resolvedServices) {
+				const bindingId = bindingSelections.get(r.serviceId);
+				if (!bindingId) return; // guarded by canCreate; safety bail
+				bindingIds.push(bindingId);
+			}
+			newDependency.members = { type: 'Bindings', binding_ids: bindingIds };
+		} else {
+			newDependency.members = {
+				type: 'Services',
+				service_ids: resolvedServices.map((r) => r.serviceId)
+			};
+		}
 
 		const created = await createDependencyMutation.mutateAsync(newDependency);
 		previewEdges.set([]);
@@ -722,47 +768,47 @@
 						onEdgeStyleChange={(s) => (dependencyEdgeStyle = s)}
 					/>
 
-					<!-- Binding selection (L3 only — not shown in Services mode) -->
-					{#if !isServicesMode}
+					<!-- Service disambiguation for host/IP targets -->
+					{#if topology}
+						{#each depTargets as target (target.elementId)}
+							{#if target.kind !== 'service'}
+								{@const picks = pickedServicesByTarget.get(target.elementId)}
+								{#if picks}
+									<TargetServicePicker {topology} {target} selectedServiceIds={picks} />
+								{/if}
+							{/if}
+						{/each}
+					{/if}
+
+					<!-- Add binding details toggle + per-service binding picker -->
+					{#if !isTutorial}
 						<div class="space-y-2">
-							<span class="text-secondary block text-sm font-medium"
-								>{dependencies_serviceBindings()}</span
-							>
-							<span class="text-tertiary block text-xs">{dependencies_serviceBindingsInfo()}</span>
-							{#each ipAddressBindingChoices as choice (choice.ipAddressId)}
-								<div class="card card-static space-y-1 p-2">
-									<div class="text-primary truncate text-xs font-medium">
-										{choice.hostName}
-									</div>
-									<div class="text-tertiary truncate text-[10px]">
-										{choice.ipAddressName}
-									</div>
-									{#if choice.bindings.length === 0}
-										<div class="text-tertiary text-xs italic">
-											{topology_multiSelectNoBindings()}
-										</div>
-									{:else if choice.bindings.length === 1}
-										<div class="text-secondary text-xs">
-											{choice.bindings[0].label}
-										</div>
-									{:else}
-										<select
-											class="h-auto min-h-6 w-full rounded px-1 text-xs"
-											style="border: 1px solid var(--color-border-input); background: var(--color-bg-input); color: var(--color-text-primary)"
-											value={bindingSelections.get(choice.ipAddressId) ?? ''}
-											onchange={(e) => {
-												const target = e.target as HTMLSelectElement;
-												bindingSelections.set(choice.ipAddressId, target.value || null);
-											}}
-										>
-											<option value="">{topology_multiSelectPickBinding()}</option>
-											{#each choice.bindings as binding (binding.id)}
-												<option value={binding.id}>{binding.label}</option>
-											{/each}
-										</select>
-									{/if}
+							<label class="flex cursor-pointer items-center gap-2 text-xs">
+								<input
+									type="checkbox"
+									checked={wantBindings}
+									disabled={bindingsRequired}
+									onchange={(e) => (wantBindings = (e.target as HTMLInputElement).checked)}
+								/>
+								<span class="text-secondary font-medium">{dependencies_addBindingDetails()}</span>
+							</label>
+							<span class="text-tertiary block text-xs">
+								{bindingsRequired
+									? dependencies_serviceBindingsInfo()
+									: dependencies_addBindingDetailsHelp()}
+							</span>
+							{#if wantBindings && topology && resolvedServices.length > 0}
+								<div class="space-y-2">
+									<span class="text-secondary block text-xs font-medium"
+										>{dependencies_serviceBindings()}</span
+									>
+									<BindingPicker
+										{topology}
+										services={bindingPickerServices}
+										selections={bindingSelections}
+									/>
 								</div>
-							{/each}
+							{/if}
 						</div>
 					{/if}
 
@@ -779,9 +825,7 @@
 							<button
 								class="btn-primary w-full text-xs"
 								onclick={confirmGroupCreation}
-								disabled={!dependencyName.trim() ||
-									createDependencyMutation.isPending ||
-									(isServicesMode ? selectedServiceIds.length < 2 : false)}
+								disabled={!canCreate}
 							>
 								{dependencies_createDependency()}
 							</button>

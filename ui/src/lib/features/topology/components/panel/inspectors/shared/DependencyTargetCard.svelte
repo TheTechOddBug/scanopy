@@ -112,9 +112,12 @@
 
 <div class="card card-static p-2 text-sm">
 	<div class="flex items-start gap-2">
-		<div class="min-w-0 flex-1 space-y-2">
+		<!-- Content column clips overflowing tags/text at the card's inner edge
+		     and fades the last 1rem so a too-long tag label or binding string
+		     blends into the card background instead of crossing its border. -->
+		<div class="dep-card-content min-w-0 flex-1 space-y-2 overflow-hidden">
 			<!-- Line 1: Host {host} -->
-			<div class="flex min-w-0 items-center gap-1.5">
+			<div class="flex items-center gap-1.5">
 				<span class="text-tertiary flex-shrink-0">{common_host()}</span>
 				{#if host}
 					<EntityTag
@@ -122,13 +125,12 @@
 						label={host.name}
 						icon={entities.getIconComponent('Host')}
 						color={entities.getColorHelper('Host').color}
-						truncate={true}
 					/>
 				{/if}
 			</div>
 
 			<!-- Line 2: running {service} (tag or picker) -->
-			<div class="flex min-w-0 items-center gap-1.5">
+			<div class="flex items-center gap-1.5">
 				<span class="text-tertiary flex-shrink-0">running</span>
 				{#if hasPicker}
 					<form.Field name="picks.{target.elementId}">
@@ -148,7 +150,6 @@
 						label={resolvedService.name}
 						icon={serviceIcon(resolvedService.service_definition)}
 						color={serviceIconColor(resolvedService.service_definition)}
-						truncate={true}
 					/>
 				{:else}
 					<span class="text-tertiary text-xs italic">—</span>
@@ -157,7 +158,7 @@
 
 			<!-- Line 3 (Bindings mode): at {binding} (tag or picker) -->
 			{#if memberMode === 'Bindings' && resolvedServiceId}
-				<div class="flex min-w-0 items-center gap-1.5">
+				<div class="flex items-center gap-1.5">
 					<span class="text-tertiary flex-shrink-0">{common_at()}</span>
 					<BindingPicker
 						{form}
@@ -183,3 +184,10 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	.dep-card-content {
+		-webkit-mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
+		mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
+	}
+</style>

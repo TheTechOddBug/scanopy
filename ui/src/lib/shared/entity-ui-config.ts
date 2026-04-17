@@ -68,6 +68,7 @@ export const entityUIConfig: Record<EntityDiscriminants, EntityUIConfig | null> 
 		parentIdField: 'host_id',
 		modalTab: 'interfaces'
 	},
+	Vlan: null,
 	Port: { tabId: 'hosts', parentType: 'Host', parentIdField: 'host_id', modalTab: 'ports' },
 	Binding: {
 		tabId: 'hosts',

@@ -288,7 +288,7 @@ export function resolveDependencyTargets(
 }
 
 // Resolve the taggable entity behind an element node. Walks the element_type's
-// parent_entity chain (per entity metadata) until an is_taggable entity is reached.
+// parent_taggable_entity chain (per entity metadata) until a taggable entity is reached.
 // Returns null for containers, unknown elements, or chains with no taggable ancestor.
 export interface TagTarget {
 	entityType: 'Host' | 'Service';
@@ -309,7 +309,7 @@ export function resolveTagTarget(nodeId: string, node: TopologyNode): TagTarget 
 			if (type === 'Service') return { entityType: 'Service', entityId: nodeId };
 			return null;
 		}
-		type = meta.parent_entity;
+		type = meta.parent_taggable_entity;
 	}
 	return null;
 }
@@ -414,6 +414,58 @@ export function getContainerContents(
 	}
 
 	return { hostIds, serviceIds, interfaceIds, elementNodeIds, subcontainerIds };
+}
+
+/**
+ * Service entity IDs that are *rendered inside* element nodes in a container
+ * tree but don't have their own element-node entry in `topology.nodes`.
+ * Examples:
+ *   - L3: services rendered inside IP-address elements (bound services)
+ *   - Workloads: services rendered inside Host elements (InlineOn'd by
+ *     element rules — node removed, shown via host_id filter in the renderer)
+ *
+ * Walks the same element nodes the renderer resolves, using the same
+ * host_id/binding relationships. Services that ARE element nodes themselves
+ * are skipped — counted there, not here.
+ */
+export function resolveInlineServiceIds(
+	elementNodeIds: Set<string>,
+	topology: Topology
+): Set<string> {
+	const out = new Set<string>();
+
+	const elementServiceIds = new Set<string>();
+	for (const id of elementNodeIds) {
+		const node = topology.nodes.find((n) => n.id === id);
+		if (node?.node_type === 'Element' && node.element_type === 'Service') {
+			elementServiceIds.add(id);
+		}
+	}
+
+	for (const id of elementNodeIds) {
+		const node = topology.nodes.find((n) => n.id === id);
+		if (!node || node.node_type !== 'Element') continue;
+		const hostId = (node as { host_id?: string }).host_id;
+
+		if (node.element_type === 'IPAddress') {
+			const ipAddressId = (node as { ip_address_id?: string }).ip_address_id;
+			const matching = topology.services.filter(
+				(s) =>
+					s.host_id === hostId &&
+					s.bindings.some((b) => b.ip_address_id === ipAddressId || b.ip_address_id === null)
+			);
+			for (const s of matching) {
+				if (!elementServiceIds.has(s.id)) out.add(s.id);
+			}
+		} else if (node.element_type === 'Host') {
+			const matching = topology.services.filter((s) => s.host_id === hostId);
+			for (const s of matching) {
+				if (!elementServiceIds.has(s.id)) out.add(s.id);
+			}
+		}
+	}
+
+	return out;
 }
 
 // Entity→Node index — canonical resolver for mapping entity IDs to topology node IDs

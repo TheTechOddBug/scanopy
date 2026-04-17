@@ -11,9 +11,9 @@
 		common_invalidPassword,
 		common_loading,
 		common_password,
+		common_viewTopology,
 		shares_passwordPlaceholder,
-		shares_passwordRequired,
-		shares_viewTopology
+		shares_passwordRequired
 	} from '$lib/paraglide/messages';
 
 	interface Props {
@@ -26,7 +26,7 @@
 	let { isOpen = true, title, onSubmit, submitLabel }: Props = $props();
 
 	let displayTitle = $derived(title ?? shares_passwordRequired());
-	let displaySubmitLabel = $derived(submitLabel ?? shares_viewTopology());
+	let displaySubmitLabel = $derived(submitLabel ?? common_viewTopology());
 
 	let loading = $state(false);
 	let serverError = $state('');

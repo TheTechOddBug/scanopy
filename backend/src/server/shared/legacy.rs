@@ -1,10 +1,10 @@
-/// Legacy daemon response transformations.
-/// Legacy cleanup: remove this entire module once minimum_supported >= 0.16.0
+//! Legacy daemon response transformations.
+//!
+//! Cleanup: remove this entire module once minimum_supported >= 0.16.0.
 
-/// Rewrite response JSON for pre-0.16.0 daemons to use old entity/field names.
+/// Rewrite response JSON for pre-0.16.0 daemons to use old entity/field names:
 /// - BindingType "IPAddress" → "Interface", "ip_address_id" → "interface_id"
 /// - HostResponse field "ip_addresses" → "interfaces", "interfaces" → "if_entries"
-/// Legacy cleanup: remove once minimum_supported >= 0.16.0
 pub fn rewrite_response_for_legacy_daemon(value: &mut serde_json::Value) {
     match value {
         serde_json::Value::Object(map) => {
@@ -27,10 +27,10 @@ pub fn rewrite_response_for_legacy_daemon(value: &mut serde_json::Value) {
             }
 
             // Rewrite ip_address_id → interface_id in bindings (IPAddress and Port variants)
-            if map.contains_key("type") {
-                if let Some(val) = map.remove("ip_address_id") {
-                    map.insert("interface_id".to_string(), val);
-                }
+            if map.contains_key("type")
+                && let Some(val) = map.remove("ip_address_id")
+            {
+                map.insert("interface_id".to_string(), val);
             }
 
             // Recurse into all values

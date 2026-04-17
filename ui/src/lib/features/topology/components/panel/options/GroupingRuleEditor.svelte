@@ -34,11 +34,14 @@
 		selectedTopologyId,
 		autoRebuild
 	} from '../../../queries';
-	import { serviceCategories, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { components } from '$lib/api/schema';
 	type ServiceCategory = components['schemas']['ServiceCategory'];
+	type Entity = components['schemas']['EntityDiscriminants'];
 	import { useTagsQuery } from '$lib/features/tags/queries';
-	import { COLOR_MAP, type Color } from '$lib/shared/utils/styling';
+	import { entities } from '$lib/shared/stores/metadata';
+	import { formatEntityLabel, formatEntityLabelTitle } from '$lib/features/topology/labels';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { type Color } from '$lib/shared/utils/styling';
 	interface RuleTypeMetadata {
 		id: string;
 		name: string | null;
@@ -71,6 +74,7 @@
 		topology_hideDisabledRules,
 		topology_showAllToReorder,
 		topology_noHiddenRules,
+		topology_byTagRuleDescription,
 		topology_infraRuleDescription,
 		topology_infraRuleNote
 	} from '$lib/paraglide/messages';
@@ -115,7 +119,6 @@
 	// collapses. The next edit toggle flushes stale pending state.
 	let editingElementId = $state<string | null>(null);
 	let editingView = $state<string | null>(null);
-	let activeEditingId = $derived(editingView === currentView ? editingElementId : null);
 
 	// Show/hide disabled (non-applicable) element rules
 	let hideDisabledElementRules = $state(false);
@@ -203,19 +206,40 @@
 	};
 
 	let currentView = $derived($activeView);
+	let activeEditingId = $derived(editingView === currentView ? editingElementId : null);
 
 	let viewMeta = $derived(viewsJson.find((p) => p.id === currentView));
-	let elementGroupingLabel = $derived.by(() => {
-		const raw =
-			((viewMeta?.metadata as Record<string, unknown>)?.element_label_singular as string) ??
-			'element';
-		return raw
-			.split(' ')
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-			.join(' ');
+
+	// Resolve each element entity to its nearest taggable ancestor (or itself
+	// if taggable), deduped — drives both the ByTag rule description and the
+	// "{entity} Grouping" heading.
+	let viewTaggableEntities = $derived.by((): Entity[] => {
+		const elementEntities =
+			(
+				(viewMeta?.metadata as Record<string, unknown>)?.element_config as
+					| { element_entities?: Entity[] }
+					| undefined
+			)?.element_entities ?? [];
+		const resolved = new SvelteSet<Entity>();
+		for (const e of elementEntities) {
+			const meta = entities.getMetadata(e);
+			if (meta?.is_taggable) {
+				resolved.add(e);
+			} else if (meta?.parent_taggable_entity) {
+				resolved.add(meta.parent_taggable_entity as Entity);
+			}
+		}
+		return [...resolved];
 	});
-	let elementGroupingLabelPlural = $derived(
-		((viewMeta?.metadata as Record<string, unknown>)?.element_label as string) ?? 'elements'
+
+	let elementGroupingLabel = $derived(formatEntityLabelTitle(viewTaggableEntities));
+	let elementGroupingLabelPlural = $derived(formatEntityLabel(viewTaggableEntities));
+
+	let byTagRuleDescription = $derived(
+		topology_byTagRuleDescription({
+			view: viewMeta?.name ?? currentView,
+			entities: formatEntityLabel(viewTaggableEntities)
+		})
 	);
 
 	let filteredContainerRuleTypes = $derived(
@@ -468,15 +492,16 @@
 
 	function handleTagToggle(index: number, tagId: string) {
 		const item = elementRules[index];
-		if ('ByTag' in item.rule) {
-			const current = item.rule.ByTag.tag_ids;
+		if (typeof item.rule === 'object' && 'ByTag' in item.rule) {
+			const byTag = item.rule.ByTag;
+			const current = byTag.tag_ids ?? [];
 			const idx = current.indexOf(tagId);
 			const newTagIds = idx === -1 ? [...current, tagId] : current.filter((id) => id !== tagId);
 			bufferElementEdit((rules) => {
 				const newRules = [...rules];
 				newRules[index] = {
 					...item,
-					rule: { ByTag: { ...item.rule.ByTag, tag_ids: newTagIds } }
+					rule: { ByTag: { ...byTag, tag_ids: newTagIds } }
 				};
 				return newRules;
 			});
@@ -485,8 +510,9 @@
 
 	function toggleCategory(index: number, category: ServiceCategory) {
 		const item = elementRules[index];
-		if ('ByServiceCategory' in item.rule) {
-			const current = item.rule.ByServiceCategory.categories;
+		if (typeof item.rule === 'object' && 'ByServiceCategory' in item.rule) {
+			const byCat = item.rule.ByServiceCategory;
+			const current = byCat.categories;
 			const idx = current.indexOf(category);
 			const newCategories: ServiceCategory[] =
 				idx === -1 ? [...current, category] : current.filter((c) => c !== category);
@@ -495,7 +521,7 @@
 				newRules[index] = {
 					...item,
 					rule: {
-						ByServiceCategory: { ...item.rule.ByServiceCategory, categories: newCategories }
+						ByServiceCategory: { ...byCat, categories: newCategories }
 					}
 				};
 				return newRules;
@@ -595,7 +621,9 @@
 			label={getElementRuleLabel(item)}
 			description={item.id === getInfrastructureRuleId()
 				? topology_infraRuleDescription()
-				: (elementRuleMeta[getElementRuleType(item.rule)]?.description ?? undefined)}
+				: getElementRuleType(item.rule) === 'ByTag'
+					? byTagRuleDescription
+					: (elementRuleMeta[getElementRuleType(item.rule)]?.description ?? undefined)}
 			disabled={!isElementRuleApplicable(item)}
 			locked={isElementRuleLocked(item)}
 			disabledTooltip={getElementRuleDisabledTooltip(item)}
@@ -605,9 +633,12 @@
 		{@const realIndex = visibleToRealIndexMap[index]}
 		{#if item.id === activeEditingId && typeof item.rule !== 'string'}
 			{@const rule = item.rule}
-			<!-- eslint-disable-next-line svelte/no-static-element-interactions -->
+			<!-- Click/keydown stopPropagation keeps edits local to this
+			     expanded row (prevents parent list from re-selecting). -->
 			<div
+				role="presentation"
 				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => e.stopPropagation()}
 				class="mt-2 w-full space-y-3 border-t border-gray-200 pt-2 dark:border-gray-700"
 			>
 				{#if item.id === getInfrastructureRuleId()}

@@ -6,7 +6,6 @@ use crate::server::bindings::r#impl::base::Binding;
 use crate::server::config::AppState;
 use crate::server::networks::r#impl::{Network, NetworkBase};
 use crate::server::organizations::r#impl::base::Organization;
-use crate::server::topology::types::base::Topology;
 use crate::server::shared::events::types::{OnboardingEvent, OnboardingOperation};
 use crate::server::shared::handlers::traits::{CrudHandlers, update_handler};
 use crate::server::shared::services::traits::CrudService;
@@ -15,6 +14,7 @@ use crate::server::shared::storage::traits::{Entity, Storable, Storage};
 use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::ApiResult;
 use crate::server::shared::types::api::{ApiError, ApiErrorResponse, EmptyApiResponse};
+use crate::server::topology::types::base::Topology;
 use crate::server::users::r#impl::base::{User, UserBase};
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use anyhow::anyhow;
@@ -24,8 +24,8 @@ use axum::extract::State;
 use chrono::Utc;
 use email_address::EmailAddress;
 use serde::Deserialize;
-use strum::IntoEnumIterator;
 use std::sync::Arc;
+use strum::IntoEnumIterator;
 use tower_sessions::Session;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -404,7 +404,7 @@ pub async fn populate_demo_data(
     reset_organization_data(&state, &id, entity.clone()).await?;
 
     org.base.onboarding = OnboardingOperation::iter().collect();
-    
+
     state
         .services
         .organization_service
@@ -773,8 +773,6 @@ async fn reset_organization_data(
             organization_id,
         ))
         .await?;
-
-
 
     // 3. Delete non-owner users
     let user_filter = StorableFilter::<User>::new_from_org_id(organization_id);

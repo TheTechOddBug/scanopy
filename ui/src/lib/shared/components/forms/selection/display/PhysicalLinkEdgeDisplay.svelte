@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import type { Topology, TopologyEdge } from '$lib/features/topology/types/base';
 

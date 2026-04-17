@@ -4,8 +4,6 @@ import type { LayoutState, PrepareResult, XY } from './types';
 import { LayoutGraph } from '../layout/layout-graph';
 import { ElkLayoutEngine } from '../layout/engine';
 import { computeForceLayout, type ForceNode, type ForceLink } from '../layout/force-layout';
-import { computeOptimalHandles } from '../layout/elk-layout';
-import type { EdgeHandles } from '../layout/elk-layout';
 import { collapsedContainers, collapseLevel, inferCurrentLevel } from '../collapse';
 import { containerTypes } from '$lib/shared/stores/metadata';
 
@@ -94,8 +92,7 @@ export async function executeLayout(
 		state.layoutGraph.applyElkResult(
 			elkResult.nodePositions,
 			elkResult.containerSizes,
-			elkResult.elementNodeSizes,
-			elkResult.edgeHandles
+			elkResult.elementNodeSizes
 		);
 
 		// When collapse was deferred, apply it AFTER ELK result
@@ -240,27 +237,11 @@ function executeForceLayout(
 
 	const forceResult = computeForceLayout(forceNodes, forceLinks);
 
-	// Compute edge handles for force-layout edges
-	const forceEdgeHandles = new Map<string, EdgeHandles>();
-	const forceNodeSizes = new Map(forceNodes.map((n) => [n.id, { w: n.width, h: n.height }]));
-	for (const edge of elevatedEdges) {
-		const srcPos = forceResult.nodePositions.get(edge.source as string);
-		const tgtPos = forceResult.nodePositions.get(edge.target as string);
-		const srcSize = forceNodeSizes.get(edge.source as string);
-		const tgtSize = forceNodeSizes.get(edge.target as string);
-		if (srcPos && tgtPos && srcSize && tgtSize) {
-			forceEdgeHandles.set(
-				`${edge.source}->${edge.target}`,
-				computeOptimalHandles(srcPos, srcSize, tgtPos, tgtSize)
-			);
-		}
-	}
-
 	state.sessionStructureKey = structureKey;
 	state.sessionBaseKey = baseKey;
 	state.layoutGraph = LayoutGraph.fromTopology(layoutNodes);
 	state.layoutGraph.syncCollapseState(collapsed);
-	state.layoutGraph.applyForceResult(forceResult.nodePositions, forceEdgeHandles, elementNodeSizes);
+	state.layoutGraph.applyForceResult(forceResult.nodePositions, elementNodeSizes);
 
 	// Recompute visible nodes after force layout rebuilds the graph
 	return state.layoutGraph.getVisibleNodes(layoutNodes);

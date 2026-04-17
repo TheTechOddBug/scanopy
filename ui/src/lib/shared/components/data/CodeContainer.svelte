@@ -41,7 +41,7 @@
 		window.location.hostname === '127.0.0.1';
 
 	let shouldPreventSelect = $derived(
-		preventSelect && !isLocalhost && $configQuery.data && isCloud($configQuery.data)
+		preventSelect && !isLocalhost && configQuery.data && isCloud(configQuery.data)
 	);
 
 	async function copyJson() {

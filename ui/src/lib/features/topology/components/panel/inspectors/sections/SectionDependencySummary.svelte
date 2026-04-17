@@ -1,10 +1,11 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
 	import type { Topology } from '$lib/features/topology/types/base';
-	import { getContainerContents } from '$lib/features/topology/resolvers';
+	import { getContainerContents, resolveInlineServiceIds } from '$lib/features/topology/resolvers';
+	import { containerTypes } from '$lib/shared/stores/metadata';
 	import {
 		inspector_dependencySummary,
-		inspector_crossBoundaryDeps,
+		inspector_crossContainerDeps,
 		inspector_noDependencies
 	} from '$lib/paraglide/messages';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
@@ -18,15 +19,27 @@
 		topology: Topology;
 	} = $props();
 
-	// Find all element nodes in this container (including subcontainers)
-	let descendantNodeIds = $derived.by(() => {
-		return getContainerContents(node.id, topology.nodes).elementNodeIds;
+	// Container-type-aware label: "Cross-Application Dependencies" / "Cross-Host Dependencies" / etc.
+	let containerTypeName = $derived.by((): string => {
+		const ct = (node.data as { container_type?: string } | undefined)?.container_type;
+		if (!ct) return '';
+		return containerTypes.getName(ct) || ct;
+	});
+
+	// Find all element and inline entities in this container (including subcontainers).
+	// Inline services (rendered inside host elements in Workloads, or IP-address
+	// elements in L3) must count as "inside" for the cross-boundary check — without
+	// this union, dependencies involving inlined services look mis-classified.
+	let descendantEntityIds = $derived.by(() => {
+		const c = getContainerContents(node.id, topology.nodes);
+		const inlineServices = resolveInlineServiceIds(c.elementNodeIds, topology);
+		return new Set<string>([...c.elementNodeIds, ...inlineServices]);
 	});
 
 	// Find dependencies that cross this container boundary
 	// (have members both inside and outside)
 	let crossBoundaryDeps = $derived.by(() => {
-		const childSet = descendantNodeIds;
+		const childSet = descendantEntityIds;
 		return topology.dependencies.filter((d) => {
 			const members = d.members;
 			let memberServiceIds: string[] = [];
@@ -54,7 +67,7 @@
 	{:else}
 		<div>
 			<span class="text-tertiary mb-1 block text-xs font-medium uppercase">
-				{inspector_crossBoundaryDeps()}
+				{inspector_crossContainerDeps({ containerType: containerTypeName })}
 			</span>
 			<div class="space-y-1">
 				{#each crossBoundaryDeps as dep (dep.id)}

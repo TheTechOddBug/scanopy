@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Scanopy API",
-    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.15.5\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.15.5\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nEndpoints are prefixed with `/api/v1/`. The API version is an integer (`api_version: 1`) returned in every response, versioned independently from the application. Check `GET /api/version` for current versions.\n\n**While Scanopy is pre-v1.0 (current: 0.15.5)**, the API should be considered unstable. Breaking changes may be introduced in any release without incrementing the API version. We recommend pinning to a specific Scanopy release if you depend on API stability, and reviewing the [changelog](/changelog) before upgrading. After Scanopy reaches v1.0, breaking API changes will only occur with an API version increment.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
+    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.16.0\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.16.0\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nEndpoints are prefixed with `/api/v1/`. The API version is an integer (`api_version: 1`) returned in every response, versioned independently from the application. Check `GET /api/version` for current versions.\n\n**While Scanopy is pre-v1.0 (current: 0.16.0)**, the API should be considered unstable. Breaking changes may be introduced in any release without incrementing the API version. We recommend pinning to a specific Scanopy release if you depend on API stability, and reviewing the [changelog](/changelog) before upgrading. After Scanopy reaches v1.0, breaking API changes will only occur with an API version increment.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
     "license": {
       "name": "Dual (AGPL3.0, Commercial License Available)"
     },
@@ -13036,12 +13036,12 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.15.5"
+            "example": "0.16.0"
           }
         },
         "example": {
           "api_version": 1,
-          "server_version": "0.15.5"
+          "server_version": "0.16.0"
         }
       },
       "ApiResponse": {
@@ -13115,14 +13115,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-14T23:58:13.690760Z",
-              "id": "ff687ced-7c65-4e94-87af-26ef5a0710a9",
+              "created_at": "2026-04-17T16:32:49.063378Z",
+              "id": "5acb63f9-250d-46f2-a65c-45867bf6b261",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-14T23:58:13.690760Z"
+              "updated_at": "2026-04-17T16:32:49.063378Z"
             }
           },
           "error": {
@@ -14021,14 +14021,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-14T23:58:13.674681Z",
-                      "id": "875d4262-30b6-4aab-b58b-88331a86cee3",
+                      "created_at": "2026-04-17T16:32:49.045938Z",
+                      "id": "f6486502-c8d7-489c-a00a-207bc7131f48",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-14T23:58:13.674681Z"
+                      "updated_at": "2026-04-17T16:32:49.045938Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -14037,7 +14037,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Zabbix Agent",
+                  "service_definition": "GitLab",
                   "source": {
                     "type": "Manual"
                   },
@@ -14760,14 +14760,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-14T23:58:13.686554Z",
-                  "id": "a1d85f91-ece1-4fdd-844b-c4fe57812670",
+                  "created_at": "2026-04-17T16:32:49.058689Z",
+                  "id": "6d96f3e1-bcc0-4ccb-a9b7-74ec2779474a",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-14T23:58:13.686554Z"
+                  "updated_at": "2026-04-17T16:32:49.058689Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14776,7 +14776,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Zabbix Agent",
+              "service_definition": "GitLab",
               "source": {
                 "type": "Manual"
               },
@@ -16141,14 +16141,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-14T23:58:13.674891Z",
-          "id": "515c27de-26f7-488d-8d71-15b52f93201d",
+          "created_at": "2026-04-17T16:32:49.046429Z",
+          "id": "773b9e54-f09d-45f2-9504-a9f929e6c5b5",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-14T23:58:13.674891Z"
+          "updated_at": "2026-04-17T16:32:49.046429Z"
         }
       },
       "BindingBase": {
@@ -16678,7 +16678,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Zabbix Agent",
+              "service_definition": "GitLab",
               "tags": [],
               "virtualization": null
             }
@@ -18253,7 +18253,7 @@
           {
             "type": "object",
             "required": [
-              "vm_service_id",
+              "hypervisor_service_id",
               "edge_type"
             ],
             "properties": {
@@ -18263,7 +18263,7 @@
                   "Hypervisor"
                 ]
               },
-              "vm_service_id": {
+              "hypervisor_service_id": {
                 "type": "string",
                 "format": "uuid"
               }
@@ -18273,14 +18273,10 @@
             "type": "object",
             "required": [
               "host_id",
-              "containerizing_service_id",
+              "service_id",
               "edge_type"
             ],
             "properties": {
-              "containerizing_service_id": {
-                "type": "string",
-                "format": "uuid"
-              },
               "edge_type": {
                 "type": "string",
                 "enum": [
@@ -18290,6 +18286,10 @@
               "host_id": {
                 "type": "string",
                 "format": "uuid"
+              },
+              "service_id": {
+                "type": "string",
+                "format": "uuid"
               }
             }
           },
@@ -18297,8 +18297,8 @@
             "type": "object",
             "required": [
               "dependency_id",
-              "source_binding_id",
-              "target_binding_id",
+              "source_id",
+              "target_id",
               "edge_type"
             ],
             "properties": {
@@ -18312,11 +18312,11 @@
                   "RequestPath"
                 ]
               },
-              "source_binding_id": {
+              "source_id": {
                 "type": "string",
                 "format": "uuid"
               },
-              "target_binding_id": {
+              "target_id": {
                 "type": "string",
                 "format": "uuid"
               }
@@ -18326,8 +18326,8 @@
             "type": "object",
             "required": [
               "dependency_id",
-              "source_binding_id",
-              "target_binding_id",
+              "source_id",
+              "target_id",
               "edge_type"
             ],
             "properties": {
@@ -18341,11 +18341,11 @@
                   "HubAndSpoke"
                 ]
               },
-              "source_binding_id": {
+              "source_id": {
                 "type": "string",
                 "format": "uuid"
               },
-              "target_binding_id": {
+              "target_id": {
                 "type": "string",
                 "format": "uuid"
               }
@@ -19196,14 +19196,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-14T23:58:13.674395Z",
-                  "id": "aa9ec6bc-d988-4266-9b1c-d472450f8798",
+                  "created_at": "2026-04-17T16:32:49.045380Z",
+                  "id": "7ca16e26-60cf-46d9-bcd1-403639d6f90d",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-14T23:58:13.674395Z"
+                  "updated_at": "2026-04-17T16:32:49.045380Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -19212,7 +19212,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Zabbix Agent",
+              "service_definition": "GitLab",
               "source": {
                 "type": "Manual"
               },
@@ -19582,6 +19582,38 @@
           "Dormant",
           "NotPresent",
           "LowerLayerDown"
+        ]
+      },
+      "InlineGroup": {
+        "type": "object",
+        "description": "Visual grouping metadata for inlined entities.\nEntities sharing the same `group_id` are rendered together in the element card.",
+        "required": [
+          "entity_id",
+          "group_id",
+          "role"
+        ],
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The inlined entity's ID (e.g., service ID)."
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Shared by all members of the visual group."
+          },
+          "role": {
+            "$ref": "#/components/schemas/InlineGroupRole"
+          }
+        }
+      },
+      "InlineGroupRole": {
+        "type": "string",
+        "description": "Role of an inlined entity within its visual group.",
+        "enum": [
+          "Header",
+          "Member"
         ]
       },
       "Interface": {
@@ -20672,6 +20704,13 @@
                   "host_id": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "inline_groups": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/InlineGroup"
+                    },
+                    "description": "Visual grouping metadata for services inlined on this element.\nPopulated by element rules (e.g., Docker containers on a VM host\nget InlineGroups with Header/Member roles for dotted-border rendering)."
                   }
                 }
               },
@@ -20970,7 +21009,7 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.15.5"
+            "example": "0.16.0"
           }
         },
         "example": {
@@ -20981,7 +21020,7 @@
             "offset": 0,
             "total_count": 142
           },
-          "server_version": "0.15.5"
+          "server_version": "0.16.0"
         }
       },
       "PaginatedApiResponse_Credential": {
@@ -21400,14 +21439,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-14T23:58:13.665166Z",
-                        "id": "678db8e7-33f3-443c-94d2-9f2f84363b67",
+                        "created_at": "2026-04-17T16:32:49.035509Z",
+                        "id": "55c980f3-c38b-48eb-8706-9546de5a7c61",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-14T23:58:13.665166Z"
+                        "updated_at": "2026-04-17T16:32:49.035509Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -21416,7 +21455,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Zabbix Agent",
+                    "service_definition": "GitLab",
                     "source": {
                       "type": "Manual"
                     },
@@ -21493,14 +21532,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-14T23:58:13.685441Z",
-                    "id": "4a30fa7f-e4a7-4f02-8617-7b167115f570",
+                    "created_at": "2026-04-17T16:32:49.057318Z",
+                    "id": "7923a86a-9180-437b-9abe-416d713cfd0a",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-14T23:58:13.685441Z"
+                    "updated_at": "2026-04-17T16:32:49.057318Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -21509,7 +21548,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Zabbix Agent",
+                "service_definition": "GitLab",
                 "source": {
                   "type": "Manual"
                 },
@@ -22747,14 +22786,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-14T23:58:13.674821Z",
-              "id": "fe02dbc2-e2bb-46cf-bde9-88b625dd70f4",
+              "created_at": "2026-04-17T16:32:49.046217Z",
+              "id": "0e336d9e-59f5-4822-9a63-9fa2a629f638",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-14T23:58:13.674821Z"
+              "updated_at": "2026-04-17T16:32:49.046217Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -22763,7 +22802,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Zabbix Agent",
+          "service_definition": "GitLab",
           "source": {
             "type": "Manual"
           },

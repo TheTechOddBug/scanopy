@@ -5,7 +5,7 @@
 	import type { Topology } from '$lib/features/topology/types/base';
 	import type { TopologyEditState } from '$lib/features/topology/state';
 	import type { ElementRenderContext } from '$lib/features/topology/resolvers';
-	import { common_virtualizer } from '$lib/paraglide/messages';
+	import { common_hypervisor } from '$lib/paraglide/messages';
 
 	/* eslint-disable @typescript-eslint/no-unused-vars -- component contract props */
 	let {
@@ -49,7 +49,7 @@
 {#if virtualizerHost}
 	<div>
 		<span class="text-secondary mb-2 block text-sm font-medium">
-			{common_virtualizer()}
+			{common_hypervisor()}
 		</span>
 		<div class="card card-static">
 			<EntityDisplayWrapper

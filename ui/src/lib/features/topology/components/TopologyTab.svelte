@@ -35,9 +35,11 @@
 		type TopologyView
 	} from '../queries';
 	import { makeGraphRule } from '../types/grouping';
+	import type { ContainerGraphRule } from '../types/grouping';
 	import type { Topology } from '../types/base';
 	import TopologyModal from './TopologyModal.svelte';
 	import { newNodeIds, updateTagFilter } from '../interactions';
+	import { clearSelection } from '../selection';
 	import { getTopologyState } from '../state';
 	import StateBadge from './StateBadge.svelte';
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
@@ -161,7 +163,7 @@
 	// Update tag filter stores when topology or options change (always-mounted, unlike OptionsContent)
 	$effect(() => {
 		updateTagFilter(
-			currentTopology,
+			currentTopology ?? undefined,
 			$topologyOptions.local.tag_filter,
 			$activeView,
 			(($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>)[
@@ -423,7 +425,7 @@
 	function handleTopologyChange(value: string) {
 		pushTopologyParams(value, get(activeView));
 		selectedTopologyId.set(value);
-		selectedNodes.set([]);
+		clearSelection();
 	}
 
 	// Handle view selection (user-initiated)
@@ -431,6 +433,7 @@
 		const view = value as TopologyView;
 		pushTopologyParams(get(selectedTopologyId), view);
 		activeView.set(view);
+		clearSelection();
 		// Dismiss view switcher hint on first view change
 		showViewSwitcherHint.set(false);
 	}
@@ -531,8 +534,8 @@
 		wizardOpen = false;
 		const tagIds = appTags.map((t) => t.id);
 		updateTopologyOptions((current) => {
-			const allRules = (current.request.container_rules ?? {}) as Record<string, unknown[]>;
-			const appRules = (allRules['Application'] ?? []) as { rule: unknown }[];
+			const allRules = current.request.container_rules ?? {};
+			const appRules: ContainerGraphRule[] = allRules['Application'] ?? [];
 			return {
 				...current,
 				request: {
@@ -545,7 +548,7 @@
 									typeof r.rule === 'string' ||
 									!('ByApplication' in (r.rule as Record<string, unknown>))
 							),
-							makeGraphRule({ ByApplication: { tag_ids: tagIds } })
+							makeGraphRule({ ByApplication: { tag_ids: tagIds } }) as ContainerGraphRule
 						]
 					}
 				}

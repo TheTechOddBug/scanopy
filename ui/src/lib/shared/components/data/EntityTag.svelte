@@ -91,6 +91,7 @@
 	     Cursor is inherited from the parent (e.g. pointer when wrapped in a button). -->
 	<div
 		bind:this={triggerEl}
+		role="presentation"
 		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full"
 		onmouseenter={handleMouseEnter}
 		onmouseleave={handleMouseLeave}

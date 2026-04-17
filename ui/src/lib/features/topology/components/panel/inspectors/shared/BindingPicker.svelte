@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap } from 'svelte/reactivity';
 	import EntityTag from '$lib/shared/components/data/EntityTag.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';
 	import { entities } from '$lib/shared/stores/metadata';
@@ -66,6 +67,8 @@
 	let host = $derived(backing ? topology.hosts.find((h) => h.id === backing!.host_id) : undefined);
 
 	// Mirror the bindings map — form.state.values is not tracked by Svelte 5 $derived.
+	// Seeded from the form's current value; effect below keeps it in sync.
+	// svelte-ignore state_referenced_locally
 	let bindingsMap = $state<Record<string, string>>({
 		...((form.state.values[fieldPrefix] ?? {}) as Record<string, string>)
 	});
@@ -91,7 +94,7 @@
 		if (!backing) return [];
 		// Group bindings by ip_address_id; skip bindings with null ip_address_id (all-IPs)
 		// here — they don't identify a specific instance of the caller.
-		const byIp = new Map<string, { ipOnly?: Binding; firstPort?: Binding }>();
+		const byIp = new SvelteMap<string, { ipOnly?: Binding; firstPort?: Binding }>();
 		for (const b of backing.bindings) {
 			if (!b.ip_address_id) continue;
 			if (ipAddressIdFilter != null && b.ip_address_id !== ipAddressIdFilter) continue;

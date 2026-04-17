@@ -23,7 +23,7 @@
 
 import { getContext } from 'svelte';
 import type { Writable } from 'svelte/store';
-import { useTopologiesQuery, selectedTopologyId } from './queries';
+import { useTopologiesQuery } from './queries';
 import type { Topology } from './types/base';
 
 interface TopologyFromContext {

@@ -28,13 +28,13 @@
 		daemons_fixValidationErrorsBody,
 		daemons_installCommandDescription,
 		common_firstDiscoveryEmailHint,
+		common_viewTopology,
 		daemons_troubleshoot_waitingTitle,
 		daemons_troubleshoot_waitingDesc,
 		daemons_troubleshoot_troubleTitle,
 		daemons_troubleshoot_troubleTitleServerPoll,
 		daemons_troubleshoot_connectedTitle,
 		daemons_troubleshoot_connectedDesc,
-		daemons_troubleshoot_viewDiscovery,
 		daemons_troubleshoot_testingConnection,
 		daemons_troubleshoot_reachablePolling,
 		daemons_troubleshoot_connectionTestFailed,
@@ -298,7 +298,7 @@
 					</p>
 				</div>
 				<button type="button" class="btn-primary" onclick={() => onViewDiscovery?.()}>
-					{daemons_troubleshoot_viewDiscovery()}
+					{common_viewTopology()}
 				</button>
 				{#if hasEmail && isFirstDaemon}
 					<p class="text-secondary text-sm">

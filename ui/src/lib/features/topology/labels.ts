@@ -1,0 +1,164 @@
+import type { Node } from '@xyflow/svelte';
+import type { components } from '$lib/api/schema';
+import type { Topology, TopologyNode } from './types/base';
+import { entities, views } from '$lib/shared/stores/metadata';
+import { lowercasePreservingAcronyms } from '$lib/shared/utils/formatting';
+import { tags_entityTags, tags_noCommonTagsHint } from '$lib/paraglide/messages';
+import { getContainerContents, resolveInlineServiceIds } from './resolvers';
+
+type Entity = components['schemas']['EntityDiscriminants'];
+
+/** "service" / "host" / "IP address" — lowercase prose form (preserves acronyms). */
+function singular(entity: Entity): string {
+	const raw =
+		entities.getMetadata(entity)?.entity_name_singular ?? entities.getName(entity) ?? entity;
+	return lowercasePreservingAcronyms(raw);
+}
+
+/** "services" / "hosts" / "IP addresses". */
+function plural(entity: Entity): string {
+	const raw =
+		entities.getMetadata(entity)?.entity_name_plural ?? entities.getName(entity) ?? entity;
+	return lowercasePreservingAcronyms(raw);
+}
+
+/** Title-case singular (as emitted by backend, e.g. "Host", "IP Address"). */
+function singularTitle(entity: Entity): string {
+	return entities.getMetadata(entity)?.entity_name_singular ?? entities.getName(entity) ?? entity;
+}
+
+/** Title-case plural (as emitted by backend, e.g. "Hosts", "IP Addresses"). */
+function pluralTitle(entity: Entity): string {
+	return entities.getMetadata(entity)?.entity_name_plural ?? entities.getName(entity) ?? entity;
+}
+
+/** Oxford comma join: ["a","b"]→"a and b", ["a","b","c"]→"a, b, and c". */
+function joinList(items: string[]): string {
+	if (items.length === 0) return '';
+	if (items.length === 1) return items[0];
+	if (items.length === 2) return `${items[0]} and ${items[1]}`;
+	return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+}
+
+/** Lowercase entity list label. Single-entity views can pass count to pick singular form. */
+export function formatEntityLabel(entityTypes: Entity[], count?: number): string {
+	if (entityTypes.length === 1) {
+		return count === 1 ? singular(entityTypes[0]) : plural(entityTypes[0]);
+	}
+	return joinList(entityTypes.map(plural));
+}
+
+/** Title-case entity list label for headings: "Services", "Hosts and Services", "IP Addresses". */
+export function formatEntityLabelTitle(entityTypes: Entity[], count?: number): string {
+	if (entityTypes.length === 1) {
+		return count === 1 ? singularTitle(entityTypes[0]) : pluralTitle(entityTypes[0]);
+	}
+	return joinList(entityTypes.map(pluralTitle));
+}
+
+/** "1 service, 2 hosts" — per-type counts. */
+export function formatEntityCounts(counts: Map<Entity, number>): string {
+	const parts: string[] = [];
+	for (const [entity, n] of counts) {
+		parts.push(`${n} ${n === 1 ? singular(entity) : plural(entity)}`);
+	}
+	return joinList(parts);
+}
+
+/** Tally selected nodes by element entity type. Skips containers (node_type === 'Container'). */
+export function tallySelection(nodes: Node[]): Map<Entity, number> {
+	const counts = new Map<Entity, number>();
+	for (const node of nodes) {
+		const data = node.data as { element_type?: Entity; node_type?: string } | undefined;
+		const entity = data?.element_type;
+		if (!entity) continue;
+		counts.set(entity, (counts.get(entity) ?? 0) + 1);
+	}
+	return counts;
+}
+
+/** Tally an iterable of element-carrying topology nodes by entity type. */
+function tallyByEntityType(nodes: Iterable<TopologyNode>): Map<Entity, number> {
+	const counts = new Map<Entity, number>();
+	for (const n of nodes) {
+		if (n.node_type !== 'Element') continue;
+		const entity = (n as { element_type?: Entity }).element_type;
+		if (!entity) continue;
+		counts.set(entity, (counts.get(entity) ?? 0) + 1);
+	}
+	return counts;
+}
+
+/** Per-entity-type tally of all element nodes nested under `containerId`
+ *  (direct + subcontainer children), plus services rendered inside those
+ *  elements via inline relationships (L3 services bound to IP elements;
+ *  Workloads services on host elements). Delegates traversal to
+ *  `getContainerContents` and entity-relationship resolution to
+ *  `resolveInlineServiceIds`. */
+export function tallyContainerElements(
+	containerId: string,
+	topology: Topology
+): Map<Entity, number> {
+	const { elementNodeIds } = getContainerContents(containerId, topology.nodes);
+	const counts = tallyByEntityType(topology.nodes.filter((n) => elementNodeIds.has(n.id)));
+	const inlineServices = resolveInlineServiceIds(elementNodeIds, topology);
+	if (inlineServices.size > 0) {
+		counts.set('Service', (counts.get('Service') ?? 0) + inlineServices.size);
+	}
+	return counts;
+}
+
+/** Per-entity-type tally of element nodes whose immediate `container_id`
+ *  equals `containerId` (i.e. not in any subcontainer), plus services
+ *  inlined on those elements. Used for the "ungrouped" summary on
+ *  collapsed-root containers. */
+export function tallyDirectElements(containerId: string, topology: Topology): Map<Entity, number> {
+	const directElementIds = new Set<string>(
+		topology.nodes
+			.filter(
+				(n) =>
+					n.node_type === 'Element' &&
+					((n as { container_id?: string }).container_id === containerId ||
+						(n as { subnet_id?: string }).subnet_id === containerId)
+			)
+			.map((n) => n.id)
+	);
+	const counts = tallyByEntityType(topology.nodes.filter((n) => directElementIds.has(n.id)));
+	const inlineServices = resolveInlineServiceIds(directElementIds, topology);
+	if (inlineServices.size > 0) {
+		counts.set('Service', (counts.get('Service') ?? 0) + inlineServices.size);
+	}
+	return counts;
+}
+
+/** Read a view's collective noun (e.g. Workloads → "workload"). Singular. */
+export function getViewCollectiveNoun(viewId: string | null): string | undefined {
+	if (!viewId) return undefined;
+	return (
+		views.getMetadata(viewId) as { element_config?: { collective_noun?: string } } | undefined
+	)?.element_config?.collective_noun;
+}
+
+/** Format an element summary string. When the view defines a collective
+ *  noun, emits "{total} {collective_noun}s — {per-entity breakdown}".
+ *  Otherwise emits the per-entity breakdown alone (e.g. "12 IP addresses,
+ *  8 services"). */
+export function formatElementSummary(counts: Map<Entity, number>, viewId: string | null): string {
+	const breakdown = formatEntityCounts(counts);
+	const collective = getViewCollectiveNoun(viewId);
+	if (!collective) return breakdown;
+
+	const total = [...counts.values()].reduce((s, n) => s + n, 0);
+	const collectivePart = `${total} ${total === 1 ? collective : collective + 's'}`;
+	return breakdown ? `${collectivePart} — ${breakdown}` : collectivePart;
+}
+
+/** "Common {entity} tags" header — takes typed Entity, renders i18n with lowercase plural. */
+export function commonTagsHeader(entity: Entity): string {
+	return tags_entityTags({ entity: plural(entity) });
+}
+
+/** "Selected {entity} have no tags in common. …" hint for empty common-tags picker. */
+export function noCommonTagsHintText(entity: Entity): string {
+	return tags_noCommonTagsHint({ entity: plural(entity) });
+}

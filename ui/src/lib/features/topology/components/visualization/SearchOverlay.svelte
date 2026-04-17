@@ -25,7 +25,7 @@
 	const topo = useTopology();
 	const topoStore = topo.fromContext ? topo.store : null;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
 	let query = $state('');
@@ -70,7 +70,7 @@
 
 	// Reactively update search filter when query or view changes
 	$effect(() => {
-		updateSearchFilter(topology, query, currentView);
+		updateSearchFilter(topology ?? undefined, query, currentView);
 	});
 
 	// Recompute navigable IDs when matches or collapse state change

@@ -1,6 +1,6 @@
 import type { ElkNode, ElkExtendedEdge } from 'elkjs';
 import type { TopologyNode } from '../types/base';
-import { isDisabledEdge, affectsLayout } from './edge-classification';
+import { affectsLayout } from './edge-classification';
 import {
 	containerTypes,
 	getIrrelevantServiceCategories,
@@ -914,11 +914,9 @@ function buildElkGraph(
 }
 
 /**
- * Compute optimal handle sides based on relative position of source and target.
- * Biases toward vertical handles (Top/Bottom) since containers are typically
- * stacked vertically — horizontal handles cause edges to cross through
- * adjacent elements. Only uses Left/Right when the edge is very horizontal
- * (target at nearly the same vertical level).
+ * Compute optimal handle sides by picking the pair that minimizes the
+ * straight-line distance between the two handle anchor points. Considers all
+ * 4×4 pairs; ties resolved by iteration order (Top, Right, Bottom, Left).
  */
 export function computeOptimalHandles(
 	srcPos: { x: number; y: number },
@@ -926,33 +924,41 @@ export function computeOptimalHandles(
 	tgtPos: { x: number; y: number },
 	tgtSize: { w: number; h: number }
 ): EdgeHandles {
-	const srcCx = srcPos.x + srcSize.w / 2;
-	const srcCy = srcPos.y + srcSize.h / 2;
-	const tgtCx = tgtPos.x + tgtSize.w / 2;
-	const tgtCy = tgtPos.y + tgtSize.h / 2;
-
-	const dx = tgtCx - srcCx;
-	const dy = tgtCy - srcCy;
-
-	// Bias toward vertical handles: use horizontal only when |dx| > 2.5 * |dy|
-	// (roughly 68° from vertical). This ensures edges to containers that are
-	// below-and-to-the-side use Bottom/Top handles, routing cleanly downward
-	// instead of horizontally through adjacent elements.
-	const useVertical = Math.abs(dy) * 2.5 >= Math.abs(dx);
-
-	if (useVertical) {
-		if (dy >= 0) {
-			return { sourceHandle: 'Bottom', targetHandle: 'Top' };
-		} else {
-			return { sourceHandle: 'Top', targetHandle: 'Bottom' };
+	const SIDES: HandleSide[] = ['Top', 'Right', 'Bottom', 'Left'];
+	const anchor = (
+		pos: { x: number; y: number },
+		size: { w: number; h: number },
+		side: HandleSide
+	): { x: number; y: number } => {
+		const cx = pos.x + size.w / 2;
+		const cy = pos.y + size.h / 2;
+		switch (side) {
+			case 'Top':
+				return { x: cx, y: pos.y };
+			case 'Bottom':
+				return { x: cx, y: pos.y + size.h };
+			case 'Left':
+				return { x: pos.x, y: cy };
+			case 'Right':
+				return { x: pos.x + size.w, y: cy };
 		}
-	} else {
-		if (dx >= 0) {
-			return { sourceHandle: 'Right', targetHandle: 'Left' };
-		} else {
-			return { sourceHandle: 'Left', targetHandle: 'Right' };
+	};
+	let best: EdgeHandles = { sourceHandle: 'Bottom', targetHandle: 'Top' };
+	let bestDistSq = Infinity;
+	for (const sourceHandle of SIDES) {
+		const sp = anchor(srcPos, srcSize, sourceHandle);
+		for (const targetHandle of SIDES) {
+			const tp = anchor(tgtPos, tgtSize, targetHandle);
+			const dx = tp.x - sp.x;
+			const dy = tp.y - sp.y;
+			const distSq = dx * dx + dy * dy;
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				best = { sourceHandle, targetHandle };
+			}
 		}
 	}
+	return best;
 }
 
 /** Recompute y-coordinates for a column of nodes based on actual heights. */
@@ -1009,49 +1015,6 @@ function mapElkResults(
 		processChildren(layoutResult.children, 0, 0);
 	}
 
-	// Compute optimal edge handles using absolute positions
-	const edgeHandles = new Map<string, EdgeHandles>();
-	const nodeSizes = new Map<string, { w: number; h: number }>();
-	for (const node of input.nodes) {
-		// Use ELK-computed size for containers, frontend-computed size for elements
-		const elkSize = containerSizes.get(node.id);
-		const elementSize = input.elementNodeSizes?.get(node.id);
-		nodeSizes.set(node.id, {
-			w: elkSize?.width ?? elementSize?.x ?? node.size.x,
-			h: elkSize?.height ?? elementSize?.y ?? node.size.y
-		});
-	}
-
-	// Only compute handles for edges that will actually be rendered (not hidden or disabled)
-	const hiddenEdgeSet = new Set(input.hiddenEdgeTypes ?? []);
-	const renderedEdges = input.edges.filter(
-		(e) => !hiddenEdgeSet.has(e.edge_type) && !isDisabledEdge(e)
-	);
-
-	for (const edge of renderedEdges) {
-		const srcPos = absolutePositions.get(edge.source);
-		const tgtPos = absolutePositions.get(edge.target);
-		const srcSize = nodeSizes.get(edge.source);
-		const tgtSize = nodeSizes.get(edge.target);
-		if (srcPos && tgtPos && srcSize && tgtSize) {
-			if (input.topology?.options?.request?.view === 'L2Physical') {
-				// RIGHT direction: cross-container edges are horizontal.
-				// Use Right/Left handles based on which node is further right.
-				const srcCx = srcPos.x + srcSize.w / 2;
-				const tgtCx = tgtPos.x + tgtSize.w / 2;
-				edgeHandles.set(`${edge.source}->${edge.target}`, {
-					sourceHandle: srcCx < tgtCx ? 'Right' : 'Left',
-					targetHandle: srcCx < tgtCx ? 'Left' : 'Right'
-				});
-			} else {
-				edgeHandles.set(
-					`${edge.source}->${edge.target}`,
-					computeOptimalHandles(srcPos, srcSize, tgtPos, tgtSize)
-				);
-			}
-		}
-	}
-
 	// Snap container positions to the 25px grid so they align with SvelteFlow's snapGrid.
 	// Only snap containers — element positions are relative to their parent and snapping
 	// them independently would break the inter-node spacing ELK computed.
@@ -1068,8 +1031,7 @@ function mapElkResults(
 	return {
 		nodePositions,
 		containerSizes,
-		elementNodeSizes: input.elementNodeSizes ?? new Map(),
-		edgeHandles
+		elementNodeSizes: input.elementNodeSizes ?? new Map()
 	};
 }
 
@@ -1213,8 +1175,7 @@ export function applyLocalSizeAdjustment(
 	return {
 		nodePositions,
 		containerSizes,
-		elementNodeSizes: leafNodeSizes,
-		edgeHandles: cachedResult.edgeHandles
+		elementNodeSizes: leafNodeSizes
 	};
 }
 
@@ -1302,8 +1263,7 @@ export function applySubgroupCollapseAdjustment(
 	return {
 		nodePositions,
 		containerSizes,
-		elementNodeSizes: cachedResult.elementNodeSizes,
-		edgeHandles: cachedResult.edgeHandles
+		elementNodeSizes: cachedResult.elementNodeSizes
 	};
 }
 
@@ -1402,7 +1362,7 @@ function repackDisconnectedContainers(
 	const nodePositions = new Map(result.nodePositions);
 	let x = connRight + SPACING;
 	let y = connTop;
-	let shelfBottom = connBottom;
+	const shelfBottom = connBottom;
 	let maxColumnWidth = 0;
 
 	for (const id of disconnectedIds) {
@@ -1435,8 +1395,7 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
 		return {
 			nodePositions: new Map(),
 			containerSizes: new Map(),
-			elementNodeSizes: new Map(),
-			edgeHandles: new Map()
+			elementNodeSizes: new Map()
 		};
 	}
 

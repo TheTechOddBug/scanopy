@@ -9,7 +9,7 @@ import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-qu
 import { queryClient, queryKeys } from '$lib/api/query-client';
 import { apiClient } from '$lib/api/client';
 import type { Topology, TopologyEdge, TopologyOptions } from './types/base';
-import type { ContainerGraphRule, ElementGraphRule } from './types/grouping';
+import type { ContainerGraphRule, ElementGraphRule, ElementRule } from './types/grouping';
 import { makeGraphRule } from './types/grouping';
 import type { ContainerRule } from './types/grouping';
 import _containerRuleTypes from '$lib/data/container-rule-types.json';
@@ -142,7 +142,7 @@ function defaultRequestOptions(): components['schemas']['TopologyRequestOptions'
 			} else if (r.id === 'ByTag') {
 				elementRules.push(makeGraphRule({ ByTag: { tag_ids: [], title: null } }));
 			} else {
-				elementRules.push(makeGraphRule(r.id as string));
+				elementRules.push(makeGraphRule(r.id as ElementRule));
 			}
 		}
 	}
@@ -564,6 +564,13 @@ export const selectedNodes = writable<Node[]>([]);
  *  button; cleared on Update or Cancel. */
 export const editingDependencyId = writable<string | null>(null);
 export const previewEdges = writable<Edge[]>([]);
+
+/** Source of truth for real (non-preview) edges. Written by the topology
+ *  rebuild pipeline in `BaseTopologyViewer`. Consumed by the merge effect
+ *  that derives the xyflow `edges` store (also in BaseTopologyViewer) and
+ *  by the dependency editor (for looking up real-edge handles when building
+ *  preview edges for the same source/target pair). */
+export const baseFlowEdges = writable<Edge[]>([]);
 export const autoRebuild = writable<boolean>(loadAutoRebuildFromStorage());
 export const activeView = writable<TopologyView>('L3Logical');
 

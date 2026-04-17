@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Snippet, Component } from 'svelte';
+	import type { Snippet } from 'svelte';
+	import type { IconComponent } from '$lib/shared/utils/types';
 
 	let {
 		variant = 'warning',
@@ -8,7 +9,7 @@
 		actions
 	}: {
 		variant: 'info' | 'warning' | 'danger';
-		icon: Component;
+		icon: IconComponent;
 		children: Snippet;
 		actions?: Snippet;
 	} = $props();

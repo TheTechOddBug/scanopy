@@ -5,7 +5,6 @@ import type { EdgeHandles } from '../layout/elk-layout';
 import { computeOptimalHandles } from '../layout/elk-layout';
 import type { SelectionStores } from '../selection';
 import type { AggregatedEdge } from '../collapse';
-import { resolveCollapsedAncestor } from '../collapse';
 import type { LayoutGraph } from '../layout/layout-graph';
 import { edgeTypes } from '$lib/shared/stores/metadata';
 import { getEdgeDisplayState, searchHiddenNodeIds, tagHiddenNodeIds } from '../interactions';
@@ -84,13 +83,10 @@ export interface BuildFlowEdgesParams {
 	elevatedEdges: TopologyEdge[];
 	collapsed: Set<string>;
 	elementToContainer: Map<string, string>;
-	/** Full parent map (element+container → parent) for ancestor resolution */
-	parentMap: Map<string, string>;
 	aggregatedEdges: AggregatedEdge[];
 	hiddenEdgeTypes: string[];
 	layoutNodes: import('../types/base').TopologyNode[];
 	topology: Topology;
-	edgeHandles: Map<string, EdgeHandles>;
 	layoutGraph: LayoutGraph | null;
 	bundleEnabled: boolean;
 	currentExpandedBundles: Set<string>;
@@ -107,16 +103,27 @@ export function buildFlowEdges(params: BuildFlowEdgesParams): BuildFlowEdgesResu
 		elevatedEdges,
 		collapsed,
 		elementToContainer,
-		parentMap,
 		aggregatedEdges,
 		hiddenEdgeTypes,
 		layoutNodes,
-		edgeHandles: edgeHandlesMap,
+		topology,
 		layoutGraph,
 		bundleEnabled,
 		currentExpandedBundles,
 		selectionStores
 	} = params;
+
+	// Compute edge handles against final post-layout positions. Running it
+	// here (rather than inside the layout engines) ensures handles always
+	// match the coordinates xyflow will render, after snap / collapse / any
+	// other final adjustments. Handle selection is purely cosmetic — no
+	// layout algorithm consumes it — so deferring is safe.
+	const edgeHandlesMap = computeHandlesFromLayout(
+		elevatedEdges,
+		aggregatedEdges,
+		layoutGraph,
+		topology
+	);
 
 	let baseEdges: TopologyEdge[];
 	const extraFlowEdges: Edge[] = [];
@@ -137,26 +144,7 @@ export function buildFlowEdges(params: BuildFlowEdgesParams): BuildFlowEdgesResu
 			const agg = aggregatedEdges[index];
 			originalsMap.set(agg.id, agg.originalEdges);
 			const edgeKey = `${agg.source}->${agg.target}`;
-			let handles = edgeHandlesMap.get(edgeKey);
-
-			// Derive handles from original element-level edges' cached handles
-			if (!handles && agg.originalEdges.length > 0) {
-				handles = deriveAggregatedHandles(agg, collapsed, parentMap, edgeHandlesMap);
-			}
-
-			// Fall back to position-based computation if no original handles found
-			if (!handles && layoutGraph) {
-				const srcPos = layoutGraph.getAbsolutePosition(agg.source);
-				const tgtPos = layoutGraph.getAbsolutePosition(agg.target);
-				const srcSize = layoutGraph.getContainerSize(agg.source);
-				const tgtSize = layoutGraph.getContainerSize(agg.target);
-				if (srcPos && tgtPos && srcSize && tgtSize) {
-					handles = computeOptimalHandles(srcPos, { w: srcSize.width, h: srcSize.height }, tgtPos, {
-						w: tgtSize.width,
-						h: tgtSize.height
-					});
-				}
-			}
+			const handles = edgeHandlesMap.get(edgeKey);
 
 			const aggFlowEdge: Edge = {
 				id: agg.id,
@@ -298,46 +286,55 @@ export function buildFlowEdges(params: BuildFlowEdgesParams): BuildFlowEdgesResu
 }
 
 /**
- * Derive handles for an aggregated edge from its original element-level edges.
- * Resolves each original edge's source to its collapsed ancestor to determine alignment.
+ * Compute edge handles against final post-layout positions from LayoutGraph.
+ * Runs over both elementary (elevated) edges and aggregated collapse edges.
+ * The L2Physical view uses a simple left/right rule; all others use the
+ * generic `computeOptimalHandles` picker.
  */
-function deriveAggregatedHandles(
-	agg: AggregatedEdge,
-	collapsed: Set<string>,
-	parentMap: Map<string, string>,
-	edgeHandlesMap: Map<string, EdgeHandles>
-): EdgeHandles | undefined {
-	const handleCounts = new Map<string, number>();
-	for (const origEdge of agg.originalEdges) {
-		const origKey = `${origEdge.source}->${origEdge.target}`;
-		const origHandles =
-			edgeHandlesMap.get(origKey) ?? edgeHandlesMap.get(`${origEdge.target}->${origEdge.source}`);
-		if (origHandles) {
-			const resolvedSrc = resolveCollapsedAncestor(origEdge.source as string, collapsed, parentMap);
-			const srcSide = resolvedSrc ?? (origEdge.source as string);
-			const aligned = srcSide === agg.source;
-			const srcH = aligned ? origHandles.sourceHandle : origHandles.targetHandle;
-			const tgtH = aligned ? origHandles.targetHandle : origHandles.sourceHandle;
-			const combo = `${srcH}|${tgtH}`;
-			handleCounts.set(combo, (handleCounts.get(combo) ?? 0) + 1);
-		}
-	}
+function computeHandlesFromLayout(
+	elevatedEdges: TopologyEdge[],
+	aggregatedEdges: AggregatedEdge[],
+	layoutGraph: LayoutGraph | null,
+	topology: Topology
+): Map<string, EdgeHandles> {
+	const out = new Map<string, EdgeHandles>();
+	if (!layoutGraph) return out;
 
-	if (handleCounts.size > 0) {
-		let bestCombo = '';
-		let bestCount = 0;
-		for (const [combo, count] of handleCounts) {
-			if (count > bestCount) {
-				bestCombo = combo;
-				bestCount = count;
-			}
-		}
-		const [srcH, tgtH] = bestCombo.split('|');
-		return {
-			sourceHandle: srcH as 'Top' | 'Bottom' | 'Left' | 'Right',
-			targetHandle: tgtH as 'Top' | 'Bottom' | 'Left' | 'Right'
-		};
-	}
+	const viewId = topology.options?.request?.view as string | undefined;
 
-	return undefined;
+	const sizeFor = (id: string): { w: number; h: number } | undefined => {
+		const c = layoutGraph.getContainerSize(id);
+		if (c) return { w: c.width, h: c.height };
+		const e = layoutGraph.getElementSize(id);
+		if (e) return { w: e.x, h: e.y };
+		return undefined;
+	};
+
+	const pick = (src: string, tgt: string): EdgeHandles | undefined => {
+		const srcPos = layoutGraph.getAbsolutePosition(src);
+		const tgtPos = layoutGraph.getAbsolutePosition(tgt);
+		const srcSize = sizeFor(src);
+		const tgtSize = sizeFor(tgt);
+		if (!srcPos || !tgtPos || !srcSize || !tgtSize) return undefined;
+
+		if (viewId === 'L2Physical') {
+			const srcCx = srcPos.x + srcSize.w / 2;
+			const tgtCx = tgtPos.x + tgtSize.w / 2;
+			return {
+				sourceHandle: srcCx < tgtCx ? 'Right' : 'Left',
+				targetHandle: srcCx < tgtCx ? 'Left' : 'Right'
+			};
+		}
+		return computeOptimalHandles(srcPos, srcSize, tgtPos, tgtSize);
+	};
+
+	for (const edge of elevatedEdges) {
+		const h = pick(edge.source as string, edge.target as string);
+		if (h) out.set(`${edge.source}->${edge.target}`, h);
+	}
+	for (const agg of aggregatedEdges) {
+		const h = pick(agg.source, agg.target);
+		if (h) out.set(`${agg.source}->${agg.target}`, h);
+	}
+	return out;
 }

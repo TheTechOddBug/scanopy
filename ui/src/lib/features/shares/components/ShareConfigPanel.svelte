@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { required, max } from '$lib/shared/components/forms/validators';
 	import type { Share } from '../types/base';
+	import type { components } from '$lib/api/schema';
+	type TopologyView = components['schemas']['TopologyView'];
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
@@ -114,8 +116,10 @@
 		iconColor: views.getColorHelper(v.id).icon
 	}));
 
-	// Enabled views state — null means all views (empty list in the UI)
-	let enabledViewIds: string[] = $state(share.enabled_views ? [...share.enabled_views] : []);
+	// Enabled views state — null means all views (empty list in the UI).
+	// Seeded once from the prop; user edits override it until save.
+	// svelte-ignore state_referenced_locally
+	let enabledViewIds: TopologyView[] = $state(share.enabled_views ? [...share.enabled_views] : []);
 
 	// Items currently in the list (preserves order)
 	let enabledViewItems = $derived(
@@ -126,11 +130,11 @@
 
 	// Options not yet added (available for the dropdown)
 	let availableViewOptions = $derived(
-		allViewOptions.filter((v) => !enabledViewIds.includes(v.value))
+		allViewOptions.filter((v) => !enabledViewIds.includes(v.value as TopologyView))
 	);
 
 	function handleAddView(viewId: string) {
-		enabledViewIds = [...enabledViewIds, viewId];
+		enabledViewIds = [...enabledViewIds, viewId as TopologyView];
 		syncEnabledViews();
 	}
 

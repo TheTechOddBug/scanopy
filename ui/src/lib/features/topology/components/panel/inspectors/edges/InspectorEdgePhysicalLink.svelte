@@ -18,7 +18,7 @@
 	const topo = useTopology();
 	const topoStore = topo.fromContext ? topo.store : null;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
 	// Derive Interface and Host data

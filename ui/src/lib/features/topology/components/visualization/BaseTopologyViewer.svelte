@@ -23,17 +23,17 @@
 	import { pushError } from '$lib/shared/stores/feedback';
 	import {
 		previewEdges,
+		baseFlowEdges,
 		selectedNodes,
 		selectedEdge as selectedEdgeStore,
 		selectedNode as selectedNodeStore,
 		topologyOptions,
 		optionsPanelExpanded,
+		editingDependencyId,
 		OPTIONS_PANEL_FITVIEW_PADDING_PX,
 		MINIMAP_WIDTH_PX,
 		MINIMAP_HEIGHT_PX,
 		MINIMAP_OFFSET_PX,
-		MINIMAP_FITVIEW_BOTTOM_PX,
-		MINIMAP_FITVIEW_LEFT_PX,
 		aggregatedEdgeOriginals,
 		getInfrastructureRuleId
 	} from '../../queries';
@@ -111,17 +111,23 @@
 		sidebarCollapsed?: boolean;
 	} = $props();
 
-	// Create a context store for the topology so child nodes can access it
+	// Create a context store for the topology so child nodes can access it.
+	// The effect below keeps the store in sync with the prop across updates;
+	// the initial read of `topology` here is just seeding the store.
+	// svelte-ignore state_referenced_locally
 	const topologyContext = svelteWritable<Topology>(topology);
 	setContext('topology', topologyContext);
 	$effect(() => {
 		topologyContext.set(topology);
 	});
 
-	// Resolve selection stores from context (share/embed) or fall back to global stores
+	// Resolve selection stores from context (share/embed) or fall back to global stores.
+	// We pass the store *reference* through, not its value, so $/get() don't apply.
+	/* eslint-disable svelte/require-store-reactive-access */
 	const selNodeStore = getContext<Writable<Node | null>>('selectedNode') ?? selectedNodeStore;
 	const selEdgeStore = getContext<Writable<Edge | null>>('selectedEdge') ?? selectedEdgeStore;
 	const selNodesStore = getContext<Writable<Node[]>>('selectedNodes') ?? selectedNodes;
+	/* eslint-enable svelte/require-store-reactive-access */
 	const selectionStores: SelectionStores = {
 		selectedNode: selNodeStore,
 		selectedEdge: selEdgeStore,
@@ -153,8 +159,9 @@
 		if (!hasPanel && !minimapVisible) return 0.2;
 
 		const BASE_PAD = 0.2;
-		let extraBottom: number | string = BASE_PAD;
-		let extraLeft: number | string = BASE_PAD;
+		type Pad = number | `${number}px` | `${number}%`;
+		let extraBottom: Pad = BASE_PAD;
+		let extraLeft: Pad = BASE_PAD;
 
 		if (minimapVisible && containerElement) {
 			const cw = containerElement.clientWidth;
@@ -362,23 +369,23 @@
 		const tagHidden = $tagHiddenNodeIds;
 
 		if (topology && (topology.edges || topology.nodes)) {
-			const currentEdges = get(edges);
+			const currentBaseEdges = get(baseFlowEdges);
 			const currentNodes = get(nodes);
 			const opts = get(topologyOptions);
 
 			updateConnectedNodes(
 				curSelectedNode,
 				curSelectedEdge,
-				currentEdges,
+				currentBaseEdges,
 				currentNodes,
 				queryClient,
 				topology,
 				multiSelected,
 				opts.local.hide_edge_types ?? []
 			);
-			edges.set(
+			baseFlowEdges.set(
 				computeEdgeDisplayUpdates(
-					currentEdges,
+					currentBaseEdges,
 					curSelectedNode,
 					curSelectedEdge,
 					searchHidden,
@@ -391,7 +398,7 @@
 	// Add edges when nodes are ready
 	$effect(() => {
 		if (nodesInitialized.current && pendingEdges.length > 0) {
-			edges.set(pendingEdges);
+			baseFlowEdges.set(pendingEdges);
 			pendingEdges = [];
 		}
 	});
@@ -449,7 +456,7 @@
 						}
 					},
 					setNodes: (n) => nodes.set(n),
-					setEdges: (e) => edges.set(e),
+					setEdges: (e) => baseFlowEdges.set(e),
 					buildMeasureNodes: () => {
 						const measureNodes = makeNodes(false);
 						// Preserve current positions during measurement — DOM
@@ -509,8 +516,9 @@
 			needsElk
 		);
 
-		// Build final nodes and edges
-		layoutState.edgeHandles = layoutState.layoutGraph?.edgeHandles ?? new Map();
+		// Build final nodes and edges. Edge handles are computed inside
+		// buildFlowEdges against final post-layout positions (from layoutGraph)
+		// rather than being precomputed by the layout engines.
 		const needsLayout = needsElk || portsChanged || prep.collapseChanged;
 		const allNodes = makeNodes(needsLayout);
 
@@ -518,12 +526,10 @@
 			elevatedEdges: prep.elevatedEdges,
 			collapsed,
 			elementToContainer: prep.elementToContainer,
-			parentMap: prep.parentIndex.parentMap,
 			aggregatedEdges: prep.aggregatedEdges,
 			hiddenEdgeTypes: prep.hiddenEdgeTypes,
 			layoutNodes: prep.layoutNodes,
 			topology,
-			edgeHandles: layoutState.edgeHandles,
 			layoutGraph: layoutState.layoutGraph,
 			bundleEnabled: $topologyOptions.local.bundle_edges ?? false,
 			currentExpandedBundles: get(expandedBundles),
@@ -540,7 +546,7 @@
 			const previousNodeIds = new Set(get(nodes).map((n) => n.id));
 			const phase1Nodes = allNodes.filter((n) => previousNodeIds.has(n.id));
 			nodes.set(phase1Nodes);
-			edges.set(flowEdges);
+			baseFlowEdges.set(flowEdges);
 
 			const fullNodes = [...allNodes];
 			const fullEdges = [...flowEdges];
@@ -559,22 +565,22 @@
 							: n
 					);
 					nodes.set(fadingNodes);
-					edges.set(fullEdges);
+					baseFlowEdges.set(fullEdges);
 					// Next frame: set opacity back to trigger fade
 					requestAnimationFrame(() => {
 						nodes.set(fullNodes);
-						edges.set(fullEdges);
+						baseFlowEdges.set(fullEdges);
 					});
 				} else {
 					nodes.set(fullNodes);
-					edges.set(fullEdges);
+					baseFlowEdges.set(fullEdges);
 				}
 			}, 350);
 		} else if (!isMeasuring) {
 			nodes.set(allNodes);
-			edges.set(flowEdges);
+			baseFlowEdges.set(flowEdges);
 		} else {
-			edges.set([]);
+			baseFlowEdges.set([]);
 			nodes.set(allNodes);
 			pendingEdges = flowEdges;
 			await tick();
@@ -583,7 +589,7 @@
 				return;
 			}
 			if (pendingEdges.length > 0) {
-				edges.set(pendingEdges);
+				baseFlowEdges.set(pendingEdges);
 				pendingEdges = [];
 			}
 			await tick();
@@ -676,9 +682,9 @@
 	}
 
 	function syncEdgeDisplayState() {
-		edges.set(
+		baseFlowEdges.set(
 			computeEdgeDisplayUpdates(
-				get(edges),
+				get(baseFlowEdges),
 				get(selectionStores.selectedNode),
 				get(selectionStores.selectedEdge),
 				get(searchHiddenNodeIds),
@@ -777,12 +783,14 @@
 
 	function handleStepCollapse() {
 		if (editMode) return;
+		clearSelection(selectionStores);
 		stepCollapse(topology.nodes, containerTypes, getInfrastructureRuleId());
 		setTimeout(() => fitView({ padding: getFitViewPadding(), duration: 300 }), 100);
 	}
 
 	function handleStepExpand() {
 		if (editMode) return;
+		clearSelection(selectionStores);
 		const { autoCollapseIds } = stepExpand(
 			topology.nodes,
 			containerTypes,
@@ -799,20 +807,49 @@
 		handleStepCollapse();
 	}
 
-	// Merge preview edges into the edge store when they change
+	// Derive the xyflow `edges` store from three reactive sources:
+	//   - baseFlowEdges: the real edges produced by the rebuild pipeline
+	//   - previewEdges:  preview edges from the dependency editor
+	//   - editingDependencyId: when set, hide the real edge for that dep
+	// This is the ONLY writer of `edges`. Exits and rebuilds are symmetric:
+	// clearing editingDependencyId naturally restores the filtered real edge.
+	//
+	// Svelte's `$baseFlowEdges` auto-subscribe hits a compiler bug here, so
+	// bridge the store into a $state and depend on that in the merge effect.
+	let currentBaseFlowEdges = $state<Edge[]>([]);
 	$effect(() => {
+		return baseFlowEdges.subscribe((v) => {
+			currentBaseFlowEdges = v;
+		});
+	});
+	$effect(() => {
+		const base = currentBaseFlowEdges;
 		const preview = $previewEdges;
-		if (preview.length > 0) {
-			const currentEdges = get(edges);
-			const realEdges = currentEdges.filter((e) => !e.id.startsWith('preview-'));
-			edges.set([...realEdges, ...preview]);
-		} else {
-			const currentEdges = get(edges);
-			const hasPreview = currentEdges.some((e) => e.id.startsWith('preview-'));
-			if (hasPreview) {
-				edges.set(currentEdges.filter((e) => !e.id.startsWith('preview-')));
-			}
-		}
+		const editingId = $editingDependencyId;
+		const aggregatedOriginals = $aggregatedEdgeOriginals;
+
+		// Hide any edge whose underlying dependency is being edited. An edge may
+		// directly carry `data.dependency_id` (plain dep edge), be a bundled
+		// representative with `data.bundleEdges` (an array of originals), or be
+		// an aggregated collapse edge whose originals live in the
+		// `aggregatedEdgeOriginals` store (keyed by edge.id).
+		const matchesEditingDep = (e: Edge): boolean => {
+			const data = e.data as
+				| {
+						dependency_id?: string;
+						bundleEdges?: Array<{ dependency_id?: string }>;
+				  }
+				| undefined;
+			if (data?.dependency_id === editingId) return true;
+			if (data?.bundleEdges?.some((o) => o.dependency_id === editingId)) return true;
+			const originals = aggregatedOriginals.get(e.id);
+			if (originals?.some((o) => (o as { dependency_id?: string }).dependency_id === editingId))
+				return true;
+			return false;
+		};
+
+		const visibleReal = editingId ? base.filter((e) => !matchesEditingDep(e)) : base;
+		edges.set([...visibleReal, ...preview]);
 	});
 </script>
 

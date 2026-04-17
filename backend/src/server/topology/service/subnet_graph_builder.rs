@@ -12,7 +12,9 @@ use crate::server::{
         service::{
             anchor_planner::ChildAnchorPlanner,
             context::TopologyContext,
-            element_rules::{ElementMatchData, apply_element_rules},
+            element_rules::{
+                ElementMatchData, TaggableLookups, apply_element_rules, resolve_element_tag_ids,
+            },
         },
         types::{
             edges::Edge,
@@ -280,6 +282,12 @@ impl SubnetGraphBuilder {
         let grouping = GroupingConfig::from_request_options(&ctx.options.request);
         let children_by_id: HashMap<Uuid, &SubnetChildData> =
             children.iter().map(|c| (c.id, c)).collect();
+        let host_lookup: HashMap<Uuid, &Host> = ctx.hosts.iter().map(|h| (h.id, h)).collect();
+        let tag_lookups = TaggableLookups {
+            hosts: Some(&host_lookup),
+            services: None,
+            subnets: None,
+        };
 
         let _ = apply_element_rules(
             child_nodes,
@@ -292,20 +300,11 @@ impl SubnetGraphBuilder {
                     .filter(|s| s.base.host_id == child.host_id)
                     .map(|s| s.base.service_definition.category())
                     .collect();
-                let mut tag_ids: HashSet<Uuid> = ctx
-                    .hosts
-                    .iter()
-                    .find(|h| h.id == child.host_id)
-                    .map(|h| h.base.tags.iter().copied().collect())
-                    .unwrap_or_default();
-                // Inherit service tags so ByTag rules match via host→interface
-                for service in ctx
-                    .services
-                    .iter()
-                    .filter(|s| s.base.host_id == child.host_id)
-                {
-                    tag_ids.extend(service.base.tags.iter().copied());
-                }
+                let tag_ids = resolve_element_tag_ids(
+                    EntityDiscriminants::IPAddress,
+                    child.host_id,
+                    &tag_lookups,
+                );
                 // Resolve compose_project only for elements inside Docker subnets.
                 // LAN ip_addresses shouldn't be grouped by stack.
                 let is_docker_subnet = ctx
@@ -773,8 +772,12 @@ mod tests {
     }
 
     #[test]
-    fn test_bytag_inherits_service_tags_in_l3() {
-        // Tag assigned to SERVICE only, not to the host
+    fn test_bytag_does_not_match_on_service_tags_in_l3() {
+        // Regression: ByTag rules in L3 used to match IPAddress elements via
+        // service-tag inheritance (all service tags on the IP's host were unioned
+        // into the element's tag_ids). That conflated service tags with host tags.
+        // Now the element resolves only its taggable ancestor (Host), so a tag
+        // applied only to a service on the host should NOT match.
         let tag = make_tag("ServiceTag");
         let host = make_host("host-no-tags", vec![]); // Host has NO tags
         let svc = make_service_with_tags(host.id, Box::new(ReverseProxyServiceDef), vec![tag.id]);
@@ -812,33 +815,17 @@ mod tests {
         let planner = SubnetGraphBuilder::new();
         planner.create_nested_group_containers(subnet_id, &children, &ctx, &mut child_nodes);
 
-        // Should create a NestedTag container via service tag inheritance
-        let tag_group = child_nodes
-            .iter()
-            .find(|n| {
-                matches!(
-                    n.node_type,
-                    NodeType::Container {
-                        container_type: ContainerType::NestedTag,
-                        ..
-                    }
-                )
-            })
-            .expect("Should create NestedTag from service tag inheritance");
-
-        // The interface element should be grouped under the tag container
-        let element = child_nodes.iter().find(|n| n.id == child_id).unwrap();
-        if let NodeType::Element { container_id, .. } = &element.node_type {
-            assert_eq!(
-                *container_id, tag_group.id,
-                "IP address should be grouped by service tag inheritance"
-            );
-        }
-
-        assert_eq!(
-            tag_group.header.as_deref(),
-            Some("ServiceTagGroup"),
-            "Tag group should have custom title"
+        // No NestedTag container should be created — the rule's tag is on the
+        // service, not the host, so the IP address does not match.
+        assert!(
+            !child_nodes.iter().any(|n| matches!(
+                n.node_type,
+                NodeType::Container {
+                    container_type: ContainerType::NestedTag,
+                    ..
+                }
+            )),
+            "ByTag should not match service-only tags via inheritance"
         );
     }
 }

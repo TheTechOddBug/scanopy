@@ -127,14 +127,17 @@
 
 	{#if nativeVlan}
 		<InfoRow label={hosts_interfaces_nativeVlan()}>
-			<Tag label="VLAN {nativeVlan.vlan_number} ({nativeVlan.name})" color={entities.getColorHelper('Vlan').color} />
+			<Tag
+				label="VLAN {nativeVlan.vlan_number} ({nativeVlan.name})"
+				color={entities.getColorHelper('Vlan').color}
+			/>
 		</InfoRow>
 	{/if}
 
 	{#if taggedVlans.length > 0}
 		<InfoRow label={hosts_interfaces_taggedVlans()}>
 			<div class="flex flex-wrap gap-1">
-				{#each taggedVlans as vlan}
+				{#each taggedVlans as vlan (vlan.id)}
 					<Tag label="VLAN {vlan.vlan_number}" color={entities.getColorHelper('Vlan').color} />
 				{/each}
 			</div>

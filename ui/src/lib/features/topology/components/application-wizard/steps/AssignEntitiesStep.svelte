@@ -28,12 +28,12 @@
 		networkId: string;
 	} = $props();
 
-	const hostsQuery = useHostsQuery({ limit: 0, network_id: networkId });
-	const servicesQuery = useServicesQuery({
+	const hostsQuery = useHostsQuery(() => ({ limit: 0, network_id: networkId }));
+	const servicesQuery = useServicesQuery(() => ({
 		limit: 0,
 		network_id: networkId,
 		exclude_categories: ['OpenPorts']
-	});
+	}));
 	const bulkAddTagMutation = useBulkAddTagMutation();
 
 	let allServices = $derived(servicesQuery.data?.items ?? []);
@@ -168,7 +168,9 @@
 	{#if selectedHosts.length > 0}
 		<div class="card card-static flex flex-wrap items-center gap-2 border-t px-4 py-3 shadow-lg">
 			<span class="text-secondary whitespace-nowrap text-sm font-medium">
-				{appWizard_selectedCount({ count: String(selectedHosts.length) })}
+				{appWizard_selectedCount({
+					summary: `${selectedHosts.length} ${selectedHosts.length === 1 ? 'host' : 'hosts'}`
+				})}
 			</span>
 			<span class="text-tertiary whitespace-nowrap text-sm">{appWizard_bulkAssign()}</span>
 			{#each appTags as tag (tag.id)}

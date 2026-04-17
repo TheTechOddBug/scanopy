@@ -34,10 +34,12 @@
 	} = $props();
 
 	// Mirror form state — form.state.values isn't tracked by Svelte 5 $derived.
+	// Seeded from the form's current value; effect below keeps it in sync.
 	interface MirroredValues {
 		memberMode: 'Services' | 'Bindings';
 		picks: Record<string, string>;
 	}
+	// svelte-ignore state_referenced_locally
 	let formValues = $state<MirroredValues>({
 		memberMode: form.state.values.memberMode ?? 'Services',
 		picks: { ...(form.state.values.picks ?? {}) }

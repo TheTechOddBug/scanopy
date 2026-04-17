@@ -276,7 +276,7 @@
 	});
 </script>
 
-<div class="flex min-w-0 flex-wrap items-center gap-1 overflow-hidden">
+<div class="flex min-w-0 flex-wrap items-center gap-1">
 	<!-- Selected tags -->
 	{#each selectedTagIds.filter((id) => getTag(id)) as tagId (tagId)}
 		{@const tag = getTag(tagId)}

@@ -614,8 +614,7 @@ async fn create_host_discovery(
     Json(request): Json<DiscoveryHostRequest>,
 ) -> ApiResult<impl IntoResponse> {
     // Legacy cleanup: remove once minimum_supported >= 0.16.0
-    let is_legacy_daemon =
-        pre_interface_to_ip_address_rename(auth.entity.daemon_version());
+    let is_legacy_daemon = pre_interface_to_ip_address_rename(auth.entity.daemon_version());
 
     // Get daemon network_id from entity
     let daemon_network_id = auth

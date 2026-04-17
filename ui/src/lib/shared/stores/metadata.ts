@@ -382,8 +382,10 @@ export const dependencyTypes = createTypeMetadataHelpers<
 	DependencyTypeMetadata
 >('dependency_types');
 interface EntityTypeMetadata {
-	parent_entity?: string;
+	parent_taggable_entity?: string;
 	is_taggable?: boolean;
+	entity_name_singular?: string;
+	entity_name_plural?: string;
 }
 export const entities = createTypeMetadataHelpers<'entities', EntityTypeMetadata>('entities');
 export const ports = createTypeMetadataHelpers<'ports', PortTypeMetadata>('ports');
@@ -414,8 +416,6 @@ export const serviceCategories = createTypeMetadataHelpers<
 	'service_categories',
 	ServiceCategoryMetadata
 >('service_categories');
-
-type ServiceCategory = components['schemas']['ServiceCategory'];
 
 /**
  * Get service categories that are NOT application-relevant for the given use case.

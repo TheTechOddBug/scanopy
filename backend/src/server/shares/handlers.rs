@@ -296,7 +296,16 @@ async fn get_public_share_metadata(
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
         .ok_or_else(|| ApiError::entity_not_found::<Topology>(share.base.topology_id))?;
 
-    let enabled_views = topology.resolve_available_views(&share.base.enabled_views);
+    // Compute view-support from raw entity tables so availability doesn't
+    // flap based on which view the main app last rebuilt under.
+    let support = state
+        .services
+        .topology_service
+        .get_view_support(topology.base.network_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+    let enabled_views = topology.resolve_available_views(&share.base.enabled_views, &support);
 
     Ok(Json(ApiResponse::success(PublicShareMetadata::new(
         &share,
@@ -428,8 +437,16 @@ async fn get_share_topology(
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
         .ok_or_else(|| ApiError::entity_not_found::<Topology>(share.base.topology_id))?;
 
-    // Resolve available views based on share config + data availability
-    let enabled_views = topology.resolve_available_views(&share.base.enabled_views);
+    // Resolve available views based on share config + data availability.
+    // Support flags come from raw entity tables — independent of whichever
+    // view the topology was last rebuilt under.
+    let support = state
+        .services
+        .topology_service
+        .get_view_support(topology.base.network_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+    let enabled_views = topology.resolve_available_views(&share.base.enabled_views, &support);
 
     // Validate requested view is available
     if !enabled_views.contains(&body.view) {

@@ -43,9 +43,6 @@
 					<span class="text-primary font-mono">
 						{port ? `${port.number}/${port.protocol.toLowerCase()}` : binding.port_id}
 					</span>
-					{#if port?.description}
-						<span class="text-tertiary truncate">{port.description}</span>
-					{/if}
 				</div>
 			{/each}
 		</div>

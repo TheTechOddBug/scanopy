@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { SvelteFlow, SvelteFlowProvider, Background, BackgroundVariant } from '@xyflow/svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { writable } from 'svelte/store';
 	import { setContext } from 'svelte';
 	import '@xyflow/svelte/dist/style.css';
@@ -69,7 +70,7 @@
 
 	function handleNodeClick({ node }: { node: Node; event: MouseEvent | TouchEvent }) {
 		if (clickedNodeIds.has(node.id)) return;
-		const updated = new Set(clickedNodeIds);
+		const updated = new SvelteSet(clickedNodeIds);
 		updated.add(node.id);
 		clickedNodeIds = updated;
 
@@ -141,7 +142,7 @@
 			<!-- Checklist below the canvas -->
 			<div class="flex-shrink-0 p-4">
 				<div class="mb-2 flex items-center gap-0.5">
-					{#each selectionDots as filled}
+					{#each selectionDots as filled, i (i)}
 						<span
 							class="inline-block h-1.5 w-1.5 rounded-full {filled
 								? 'bg-green-400'
@@ -167,8 +168,8 @@
 						label={topology_tutorialStep3()}
 					>
 						{#snippet labelExtra()}
-							<svelte:component this={RequestPathIcon} class="h-3.5 w-3.5" />
-							<svelte:component this={HubAndSpokeIcon} class="h-3.5 w-3.5" />
+							<RequestPathIcon class="h-3.5 w-3.5" />
+							<HubAndSpokeIcon class="h-3.5 w-3.5" />
 						{/snippet}
 					</ChecklistItem>
 					<ChecklistItem checked={false} disabled={!step3Done} label={topology_tutorialStep4()} />

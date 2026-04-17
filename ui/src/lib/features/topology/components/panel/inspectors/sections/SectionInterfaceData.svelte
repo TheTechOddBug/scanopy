@@ -53,29 +53,21 @@
 		return topology.interfaces.find((e) => e.id === iface!.neighbor!.id) ?? null;
 	});
 
+	type VlanShape = { id: string; vlan_number: number; name: string };
+
 	let nativeVlan = $derived.by(() => {
 		if (!iface?.native_vlan_id || !('vlans' in topology)) return null;
-		const vlans = (topology as any).vlans as Array<{
-			id: string;
-			vlan_number: number;
-			name: string;
-		}>;
+		const vlans = (topology as Topology & { vlans?: VlanShape[] }).vlans;
 		return vlans?.find((v) => v.id === iface!.native_vlan_id) ?? null;
 	});
 
 	let taggedVlans = $derived.by(() => {
 		if (!iface?.vlan_ids?.length || !('vlans' in topology)) return [];
-		const vlans = (topology as any).vlans as Array<{
-			id: string;
-			vlan_number: number;
-			name: string;
-		}>;
+		const vlans = (topology as Topology & { vlans?: VlanShape[] }).vlans;
 		if (!vlans) return [];
-		return iface!.vlan_ids!.map((id) => vlans.find((v) => v.id === id)).filter(Boolean) as Array<{
-			id: string;
-			vlan_number: number;
-			name: string;
-		}>;
+		return iface!
+			.vlan_ids!.map((id) => vlans.find((v) => v.id === id))
+			.filter(Boolean) as VlanShape[];
 	});
 </script>
 

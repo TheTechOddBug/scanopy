@@ -2,7 +2,7 @@
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import type { TopologyEdge } from '$lib/features/topology/types/base';
 	import { useTopology, selectedTopologyId } from '$lib/features/topology/context';
-	import { edgeTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { topology_connectionsCount, common_dependenciesLabel } from '$lib/paraglide/messages';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { SameHostEdgeDisplay } from '$lib/shared/components/forms/selection/display/SameHostEdgeDisplay.svelte';
@@ -16,14 +16,13 @@
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import type { Dependency } from '$lib/features/dependencies/types/base';
-	import type { Service } from '$lib/features/services/types/base';
 
 	let { edges }: { edges: TopologyEdge[] } = $props();
 
 	const topo = useTopology();
 	const topoStore = topo.fromContext ? topo.store : null;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
 	// Group edges by type
@@ -43,11 +42,11 @@
 
 	// Reactive dependency resolution — re-evaluates when topology loads
 	let dependencyEdgeGroups = $derived.by(() => {
-		if (!topology) return new Map<string, Dependency[]>();
-		const result = new Map<string, Dependency[]>();
+		if (!topology) return new SvelteMap<string, Dependency[]>();
+		const result = new SvelteMap<string, Dependency[]>();
 		for (const [edgeType, typeEdges] of edgesByType) {
 			if (edgeType !== 'HubAndSpoke' && edgeType !== 'RequestPath') continue;
-			const seen = new Set<string>();
+			const seen = new SvelteSet<string>();
 			const deps: Dependency[] = [];
 			for (const edge of typeEdges) {
 				if (!('dependency_id' in edge)) continue;
@@ -68,7 +67,7 @@
 		if (!typeEdges || !topology) return null;
 
 		// Group by service_id
-		const byContainerizer = new Map<string, TopologyEdge[]>();
+		const byContainerizer = new SvelteMap<string, TopologyEdge[]>();
 		for (const edge of typeEdges) {
 			if (!('service_id' in edge)) continue;
 			const id = edge.service_id as string;
@@ -90,7 +89,10 @@
 			return { mode: 'single' as const, containerizer, containerized };
 		} else {
 			// Multiple Docker services — show summary per host
-			const hosts = new Map<string, { host: (typeof topology.hosts)[0]; containerCount: number }>();
+			const hosts = new SvelteMap<
+				string,
+				{ host: (typeof topology.hosts)[0]; containerCount: number }
+			>();
 			for (const [containerizingId] of byContainerizer) {
 				const service = topology.services.find((s) => s.id === containerizingId);
 				if (!service) continue;
@@ -260,7 +262,11 @@
 				{#each typeEdges as edge (edge.id)}
 					<div class="card card-static">
 						{#if displayComponent}
-							<EntityDisplayWrapper item={edge} context={{ topology }} {displayComponent} />
+							<EntityDisplayWrapper
+								item={edge}
+								context={{ topology: topology ?? undefined }}
+								{displayComponent}
+							/>
 						{:else}
 							<div class="px-2 py-1">
 								<span class="text-secondary text-sm">{typeName}</span>

@@ -44,7 +44,12 @@
 	let isMsp = $derived(useCase === 'msp');
 
 	let suggestions = $derived(getSuggestions(useCase));
-	let existingNames = $derived(new Set(appTags.map((t) => t.name.toLowerCase())));
+	let allTags = $derived(tagsQuery.data ?? []);
+	let nonAppTags = $derived(allTags.filter((t) => !t.is_application));
+	// Exclude suggestions whose name collides with ANY existing tag — creating one
+	// would violate the name-unique constraint, whether the existing tag is an app
+	// tag or not.
+	let existingNames = $derived(new Set(allTags.map((t) => t.name.toLowerCase())));
 	let availableSuggestions = $derived(
 		suggestions.filter((s) => !existingNames.has(s.toLowerCase()))
 	);
@@ -54,9 +59,6 @@
 		const idx = suggestions.indexOf(name);
 		return AVAILABLE_COLORS[(idx >= 0 ? idx : 0) % AVAILABLE_COLORS.length];
 	}
-
-	let allTags = $derived(tagsQuery.data ?? []);
-	let nonAppTags = $derived(allTags.filter((t) => !t.is_application));
 
 	let isCreating = $state(false);
 	let isConverting = $state(false);
@@ -179,8 +181,7 @@
 	<!-- Footnote / empty state -->
 	<p class="text-tertiary text-center text-sm italic">
 		{#if appTags.length === 0}
-			{appWizard_noGroupsYet()}
-			{' '}
+			{appWizard_noGroupsYet()}&nbsp;
 		{/if}
 		{appWizard_membershipFootnote()}
 	</p>

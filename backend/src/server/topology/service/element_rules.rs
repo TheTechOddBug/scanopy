@@ -6,6 +6,7 @@ use crate::server::{
     interfaces::r#impl::base::IfOperStatus,
     services::r#impl::{base::Service, categories::ServiceCategory},
     shared::entities::EntityDiscriminants,
+    subnets::r#impl::base::Subnet,
     topology::types::{
         grouping::{
             ElementRule, GraphRule, IdentifiedRule, InlineGroup, InlineGroupRole,
@@ -14,6 +15,64 @@ use crate::server::{
         nodes::{ContainerType, Node, NodeType},
     },
 };
+
+/// Lookup maps for taggable entities. Pass whatever is relevant at the call site;
+/// a missing lookup for an ancestor type just yields an empty tag set.
+pub struct TaggableLookups<'a> {
+    pub hosts: Option<&'a HashMap<Uuid, &'a Host>>,
+    pub services: Option<&'a HashMap<Uuid, &'a Service>>,
+    pub subnets: Option<&'a HashMap<Uuid, &'a Subnet>>,
+}
+
+impl<'a> TaggableLookups<'a> {
+    pub fn empty() -> Self {
+        Self {
+            hosts: None,
+            services: None,
+            subnets: None,
+        }
+    }
+}
+
+/// Resolve the tag_ids that a ByTag element rule should match against for the
+/// given element. For taggable elements (Host, Service, Subnet) the ancestor is
+/// the element itself, so `taggable_ancestor_id` equals the element's id. For
+/// non-taggable elements (IPAddress, Interface, Port) the caller passes the
+/// structural owner id (e.g. a node's `host_id`), and the function walks
+/// `parent_taggable_entity` once to reach the taggable ancestor. Returns an
+/// empty set if the required lookup was not provided or the entity isn't found.
+pub fn resolve_element_tag_ids(
+    element_entity: EntityDiscriminants,
+    taggable_ancestor_id: Uuid,
+    lookups: &TaggableLookups<'_>,
+) -> HashSet<Uuid> {
+    let ancestor = if element_entity.is_taggable() {
+        element_entity
+    } else {
+        match element_entity.parent_taggable_entity() {
+            Some(t) => t,
+            None => return HashSet::new(),
+        }
+    };
+    match ancestor {
+        EntityDiscriminants::Host => lookups
+            .hosts
+            .and_then(|m| m.get(&taggable_ancestor_id))
+            .map(|h| h.base.tags.iter().copied().collect())
+            .unwrap_or_default(),
+        EntityDiscriminants::Service => lookups
+            .services
+            .and_then(|m| m.get(&taggable_ancestor_id))
+            .map(|s| s.base.tags.iter().copied().collect())
+            .unwrap_or_default(),
+        EntityDiscriminants::Subnet => lookups
+            .subnets
+            .and_then(|m| m.get(&taggable_ancestor_id))
+            .map(|s| s.base.tags.iter().copied().collect())
+            .unwrap_or_default(),
+        _ => HashSet::new(),
+    }
+}
 
 /// Data resolved from an element node for matching against element rules.
 #[derive(Clone)]
@@ -131,16 +190,14 @@ fn compute_virtualizer_placements(rule: &ElementRule, ctx: &PlacementContext) ->
 
             // Skip creating a subcontainer if the virtualizer runs on a VM —
             // Phase 2 will handle these services with InlineOn instead.
-            if let Some(inline_ctx) = ctx.inline_ctx {
-                if let Some(virt_svc) = inline_ctx.service_lookup.get(&vid) {
-                    if inline_ctx
-                        .hosts
-                        .get(&virt_svc.base.host_id)
-                        .is_some_and(|h| h.base.virtualization.is_some())
-                    {
-                        continue;
-                    }
-                }
+            if let Some(inline_ctx) = ctx.inline_ctx
+                && let Some(virt_svc) = inline_ctx.service_lookup.get(&vid)
+                && inline_ctx
+                    .hosts
+                    .get(&virt_svc.base.host_id)
+                    .is_some_and(|h| h.base.virtualization.is_some())
+            {
+                continue;
             }
 
             let group_key = format!("{parent_id}:{}:{vid}", ctx.rule_id);

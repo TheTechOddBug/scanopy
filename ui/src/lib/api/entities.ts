@@ -19,6 +19,7 @@ export const entityToExportPath: Record<EntityDiscriminants, string | null> = {
 	Subnet: 'subnets',
 	IPAddress: 'ip-addresses',
 	Interface: 'interfaces',
+	Vlan: 'vlans',
 	Port: 'ports',
 	Binding: 'bindings',
 	Dependency: 'dependencies',

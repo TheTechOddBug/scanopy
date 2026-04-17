@@ -3,7 +3,10 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
-    element_rules::{ElementMatchData, InlineContext, apply_element_rules},
+    element_rules::{
+        ElementMatchData, InlineContext, TaggableLookups, apply_element_rules,
+        resolve_element_tag_ids,
+    },
     view::ViewBuilder,
 };
 use crate::server::{
@@ -251,6 +254,11 @@ impl ViewBuilder for WorkloadsBuilder {
         // decisions for all entities via exhaustive ElementRule matching.
 
         let virtualizer_titles = Self::build_virtualizer_titles(ctx);
+        let tag_lookups = TaggableLookups {
+            hosts: Some(&host_lookup),
+            services: Some(&service_lookup),
+            subnets: None,
+        };
 
         let placements = apply_element_rules(
             &mut nodes,
@@ -266,7 +274,8 @@ impl ViewBuilder for WorkloadsBuilder {
                         .virtualization
                         .as_ref()
                         .and_then(|v| v.service_id());
-                    let tag_ids: HashSet<Uuid> = host.base.tags.iter().copied().collect();
+                    let tag_ids =
+                        resolve_element_tag_ids(EntityDiscriminants::Host, node.id, &tag_lookups);
                     Some(ElementMatchData {
                         categories: HashSet::new(),
                         tag_ids,
@@ -290,7 +299,11 @@ impl ViewBuilder for WorkloadsBuilder {
                         .virtualization
                         .as_ref()
                         .and_then(|v| v.service_id());
-                    let tag_ids: HashSet<Uuid> = svc.base.tags.iter().copied().collect();
+                    let tag_ids = resolve_element_tag_ids(
+                        EntityDiscriminants::Service,
+                        node.id,
+                        &tag_lookups,
+                    );
                     let categories = [svc.base.service_definition.category()]
                         .into_iter()
                         .collect();
@@ -322,7 +335,7 @@ impl ViewBuilder for WorkloadsBuilder {
         nodes.retain(|n| !inlined_ids.contains(&n.id));
 
         // Attach InlineGroup metadata to target element nodes
-        for (_, decision) in &placements {
+        for decision in placements.values() {
             if let PlacementDecision::InlineOn {
                 node_id,
                 inline_group: Some(group),

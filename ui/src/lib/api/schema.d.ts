@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-16T15:30:09.969074Z",
-             *       "id": "ad19c92b-1d37-466a-b5c9-f4f09bf05de8",
+             *       "created_at": "2026-04-17T16:32:49.063378Z",
+             *       "id": "5acb63f9-250d-46f2-a65c-45867bf6b261",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-16T15:30:09.969074Z"
+             *       "updated_at": "2026-04-17T16:32:49.063378Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-16T15:30:09.952303Z",
-             *               "id": "5f993cf0-9225-4d33-aa7b-3557d619cb48",
+             *               "created_at": "2026-04-17T16:32:49.045938Z",
+             *               "id": "f6486502-c8d7-489c-a00a-207bc7131f48",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-16T15:30:09.952303Z"
+             *               "updated_at": "2026-04-17T16:32:49.045938Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Eero Gateway",
+             *           "service_definition": "GitLab",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3537,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-16T15:30:09.964421Z",
-             *           "id": "892ee5e0-a17a-4b37-b241-9cbd59b07b76",
+             *           "created_at": "2026-04-17T16:32:49.058689Z",
+             *           "id": "6d96f3e1-bcc0-4ccb-a9b7-74ec2779474a",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-16T15:30:09.964421Z"
+             *           "updated_at": "2026-04-17T16:32:49.058689Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3553,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Eero Gateway",
+             *       "service_definition": "GitLab",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3904,14 +3904,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-16T15:30:09.952669Z",
-         *       "id": "ebcde390-f2f7-4a18-aee3-bae97dbd148b",
+         *       "created_at": "2026-04-17T16:32:49.046429Z",
+         *       "id": "773b9e54-f09d-45f2-9504-a9f929e6c5b5",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-16T15:30:09.952669Z"
+         *       "updated_at": "2026-04-17T16:32:49.046429Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4096,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Eero Gateway",
+         *           "service_definition": "GitLab",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4955,14 +4955,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-16T15:30:09.951803Z",
-         *               "id": "6f4abe02-4789-4561-a26b-d66d497a814f",
+         *               "created_at": "2026-04-17T16:32:49.045380Z",
+         *               "id": "7ca16e26-60cf-46d9-bcd1-403639d6f90d",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-16T15:30:09.951803Z"
+         *               "updated_at": "2026-04-17T16:32:49.045380Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4971,7 +4971,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Eero Gateway",
+         *           "service_definition": "GitLab",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6135,14 +6135,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-16T15:30:09.952549Z",
-         *           "id": "35a1d119-8425-4623-8d72-1faf3fb3561c",
+         *           "created_at": "2026-04-17T16:32:49.046217Z",
+         *           "id": "0e336d9e-59f5-4822-9a63-9fa2a629f638",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-16T15:30:09.952549Z"
+         *           "updated_at": "2026-04-17T16:32:49.046217Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6151,7 +6151,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Eero Gateway",
+         *       "service_definition": "GitLab",
          *       "source": {
          *         "type": "Manual"
          *       },

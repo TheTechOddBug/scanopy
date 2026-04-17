@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteURL } from 'svelte/reactivity';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import EmailVerificationBanner from '$lib/shared/components/feedback/EmailVerificationBanner.svelte';
@@ -12,8 +13,7 @@
 	import {
 		topologySSEManager,
 		selectedTopologyId,
-		activeView,
-		pushTopologyParams
+		activeView
 	} from '$lib/features/topology/queries';
 	import { get } from 'svelte/store';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
@@ -91,7 +91,7 @@
 				tabEffectInitialized = true;
 				return;
 			}
-			const url = new URL(window.location.href);
+			const url = new SvelteURL(window.location.href);
 			if (activeTab === 'topology') {
 				// Set topology params when entering the topology tab
 				const topoId = get(selectedTopologyId);

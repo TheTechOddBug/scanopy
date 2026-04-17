@@ -26,11 +26,11 @@ export type BindingInput = components['schemas']['BindingInput'];
 export type IfAdminStatus = components['schemas']['IfAdminStatus'];
 export type IfOperStatus = components['schemas']['IfOperStatus'];
 
-// Credential assignment for a host, optionally limited to specific interfaces
+// Credential assignment for a host, optionally limited to specific IP addresses
 export interface CredentialAssignment {
 	credential_id: string;
-	/** Interface IDs to limit this credential to. null = all host interfaces. */
-	interface_ids: string[] | null;
+	/** IP address IDs to limit this credential to. null = all host IP addresses. */
+	ip_address_ids: string[] | null;
 }
 
 // Form state type for creating/editing hosts

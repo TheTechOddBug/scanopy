@@ -49,6 +49,42 @@ impl HasId for TopologyView {
 }
 
 // ---------------------------------------------------------------------------
+// TopologyViewSupport — per-view data-availability flags
+// ---------------------------------------------------------------------------
+
+/// Per-view data-availability flags, computed from raw entity tables at
+/// share-read time. Decoupled from the persisted topology graph because
+/// that graph is view-specific — rebuilt under one view doesn't contain
+/// the other views' nodes/edges.
+///
+/// Add a field per view-specific data requirement. Views that always
+/// have the data they need (L3Logical / Workloads today) don't get a
+/// field — `TopologyView::is_supported` just returns `true` for them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TopologyViewSupport {
+    /// L2Physical requires interface-level neighbor discovery (LLDP/CDP).
+    pub l2_physical: bool,
+    /// Application requires at least one application-flagged tag to be
+    /// assigned to an entity in the topology's network.
+    pub application: bool,
+}
+
+impl TopologyView {
+    /// Whether a topology with the given support flags has enough data to
+    /// render this view. Exhaustive by design — adding a new `TopologyView`
+    /// variant will fail compilation here until its eligibility rule is
+    /// declared.
+    pub fn is_supported(&self, support: &TopologyViewSupport) -> bool {
+        match self {
+            Self::L3Logical => true,
+            Self::L2Physical => support.l2_physical,
+            Self::Workloads => true,
+            Self::Application => support.application,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // ViewElementConfig — defines how a view structures its elements
 // ---------------------------------------------------------------------------
 
@@ -62,6 +98,12 @@ pub struct ViewElementConfig {
     pub element_entities: Vec<EntityDiscriminants>,
     /// Entities shown inside element nodes (e.g. Services displayed as cards)
     pub inline_entities: Vec<EntityDiscriminants>,
+    /// Single noun spanning all element entities. Used in summaries when the
+    /// per-entity breakdown would be confusing (e.g. mixed Host+Service in
+    /// Workloads, where everything is conceptually a "workload"). Singular;
+    /// the UI pluralizes as needed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collective_noun: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -182,8 +224,6 @@ impl TypeMetadataProvider for TopologyView {
 
         serde_json::json!({
             "element_config": self.element_config(),
-            "element_label": self.element_label(),
-            "element_label_singular": self.element_label_singular(),
             "edge_view_configs": edge_view_configs,
             "inspector_config": self.inspector_config()
         })
@@ -202,42 +242,26 @@ impl TopologyView {
                 container_entity: Some(EntityDiscriminants::Subnet),
                 element_entities: vec![EntityDiscriminants::IPAddress],
                 inline_entities: vec![EntityDiscriminants::Service],
+                collective_noun: None,
             },
             Self::L2Physical => ViewElementConfig {
                 container_entity: Some(EntityDiscriminants::Host),
                 element_entities: vec![EntityDiscriminants::Interface],
                 inline_entities: vec![],
+                collective_noun: None,
             },
             Self::Workloads => ViewElementConfig {
                 container_entity: Some(EntityDiscriminants::Host),
                 element_entities: vec![EntityDiscriminants::Service, EntityDiscriminants::Host],
                 inline_entities: vec![],
+                collective_noun: Some("workload".to_string()),
             },
             Self::Application => ViewElementConfig {
                 container_entity: None,
                 element_entities: vec![EntityDiscriminants::Service],
                 inline_entities: vec![],
+                collective_noun: None,
             },
-        }
-    }
-
-    /// Human-friendly plural label for element nodes (e.g. "host IP addresses")
-    pub fn element_label(&self) -> &'static str {
-        match self {
-            Self::L2Physical => "interfaces",
-            Self::L3Logical => "host IP addresses",
-            Self::Workloads => "workloads",
-            Self::Application => "services",
-        }
-    }
-
-    /// Human-friendly singular label for element nodes (e.g. "host IP address")
-    pub fn element_label_singular(&self) -> &'static str {
-        match self {
-            Self::L2Physical => "interface",
-            Self::L3Logical => "host IP address",
-            Self::Workloads => "workload",
-            Self::Application => "service",
         }
     }
 

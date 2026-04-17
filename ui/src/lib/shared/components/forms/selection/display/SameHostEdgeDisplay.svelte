@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import type { Topology, TopologyEdge } from '$lib/features/topology/types/base';
 
@@ -11,8 +11,8 @@
 		},
 		getDescription: (edge, context) => {
 			if (!context?.topology) return '';
-			const sourceIf = context.topology.interfaces.find((i) => i.id === edge.source);
-			const targetIf = context.topology.interfaces.find((i) => i.id === edge.target);
+			const sourceIf = context.topology.ip_addresses.find((i) => i.id === edge.source);
+			const targetIf = context.topology.ip_addresses.find((i) => i.id === edge.target);
 			const parts: string[] = [];
 			if (sourceIf?.ip_address) parts.push(sourceIf.ip_address);
 			if (targetIf?.ip_address) parts.push(targetIf.ip_address);

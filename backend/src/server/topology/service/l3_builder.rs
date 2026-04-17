@@ -96,9 +96,9 @@ mod tests {
     }
 
     #[test]
-    fn test_l3_bytag_service_tag_inheritance() {
-        // Full L3Builder test: tag on service only, not host
-        // IP address should inherit service tags for ByTag matching
+    fn test_l3_bytag_ignores_service_tags() {
+        // Regression: L3Builder used to match IPAddress elements on service
+        // tags via inheritance. Now only the host's own tags count.
         let network_id = Uuid::new_v4();
         let subnet_id = Uuid::new_v4();
         let host_id = Uuid::new_v4();
@@ -198,32 +198,18 @@ mod tests {
         let builder = L3Builder;
         let (nodes, _edges) = builder.build(&ctx, &grouping);
 
-        // Should have a NestedTag container
-        let tag_container = nodes
-            .iter()
-            .find(|n| {
-                matches!(
-                    n.node_type,
-                    NodeType::Container {
-                        container_type: ContainerType::NestedTag,
-                        ..
-                    }
-                )
-            })
-            .expect("Should create NestedTag container from service tag inheritance");
-
-        // The interface element should be inside the tag container
-        let element = nodes
-            .iter()
-            .find(|n| n.id == ip_address_id)
-            .expect("IP address element should exist");
-        if let NodeType::Element { container_id, .. } = &element.node_type {
-            assert_eq!(
-                *container_id, tag_container.id,
-                "IP address should be grouped under NestedTag via service tag inheritance"
-            );
-        } else {
-            panic!("Expected Element node type");
-        }
+        // ByTag on a tag applied only to a service (not the host) should NOT
+        // create a NestedTag container — IP addresses resolve their tag target
+        // to the owning Host, and the host has no tags.
+        assert!(
+            !nodes.iter().any(|n| matches!(
+                n.node_type,
+                NodeType::Container {
+                    container_type: ContainerType::NestedTag,
+                    ..
+                }
+            )),
+            "ByTag should not match IP addresses on service-only tags"
+        );
     }
 }

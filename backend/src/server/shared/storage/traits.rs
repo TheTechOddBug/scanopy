@@ -154,9 +154,9 @@ pub trait Entity: Storable {
     fn set_updated_at(&mut self, time: DateTime<Utc>);
 
     /// Whether this entity type supports tagging.
-    /// Default implementation delegates to is_entity_taggable().
+    /// Default implementation delegates to `EntityDiscriminants::is_taggable`.
     fn is_taggable() -> bool {
-        crate::server::shared::entities::is_entity_taggable(Self::entity_type())
+        Self::entity_type().is_taggable()
     }
 
     /// Get the tags field from the entity for validation.

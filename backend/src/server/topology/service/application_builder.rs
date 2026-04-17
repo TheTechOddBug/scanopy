@@ -3,7 +3,9 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
-    element_rules::{ElementMatchData, apply_element_rules},
+    element_rules::{
+        ElementMatchData, TaggableLookups, apply_element_rules, resolve_element_tag_ids,
+    },
     view::ViewBuilder,
 };
 use crate::server::{
@@ -86,157 +88,111 @@ impl ViewBuilder for ApplicationBuilder {
         // service_id → node exists (for edge creation)
         let mut service_node_ids: HashMap<Uuid, bool> = HashMap::new();
 
-        if grouping.has_application_rule() && !app_tags.is_empty() {
-            // Group by application tag with host inheritance
-            let mut services_by_tag: HashMap<
-                Uuid,
-                Vec<&crate::server::services::r#impl::base::Service>,
-            > = HashMap::new();
-            let mut ungrouped_services: Vec<&crate::server::services::r#impl::base::Service> =
-                Vec::new();
+        // ApplicationBuilder is only invoked when view==Application (see view.rs),
+        // in which case the ByApplication container rule is always present and
+        // can't be removed. Group all services by their application tag (or into
+        // the "Ungrouped" container if none match).
+        let mut services_by_tag: HashMap<
+            Uuid,
+            Vec<&crate::server::services::r#impl::base::Service>,
+        > = HashMap::new();
+        let mut ungrouped_services: Vec<&crate::server::services::r#impl::base::Service> =
+            Vec::new();
 
-            for service in &eligible_services {
-                match Self::find_app_tag(service, ctx.hosts, &app_tags) {
-                    Some(tag) => {
-                        services_by_tag.entry(tag.id).or_default().push(service);
-                    }
-                    None => {
-                        ungrouped_services.push(service);
-                    }
+        for service in &eligible_services {
+            match Self::find_app_tag(service, ctx.hosts, &app_tags) {
+                Some(tag) => {
+                    services_by_tag.entry(tag.id).or_default().push(service);
+                }
+                None => {
+                    ungrouped_services.push(service);
                 }
             }
+        }
 
-            // Create containers for each app tag
-            for (tag_id, services) in &services_by_tag {
-                let container_id = container_id_for_tag(tag_id);
-                let tag = app_tags[tag_id];
+        // Create containers for each app tag
+        for (tag_id, services) in &services_by_tag {
+            let container_id = container_id_for_tag(tag_id);
+            let tag = app_tags[tag_id];
 
-                nodes.push(Node {
-                    id: container_id,
-                    node_type: NodeType::Container {
-                        container_type: ContainerType::Application,
-                        parent_container_id: None,
-                        entity_id: Some(*tag_id),
-                        icon: Some(Concept::Application.icon().to_string()),
-                        color: Some(tag.base.color.to_string()),
-                        associated_service_definition: None,
-                        element_rule_id: None,
-                        will_accept_edges: false,
-                    },
-                    position: Default::default(),
-                    size: Default::default(),
-                    header: Some(tag.base.name.clone()),
-                });
+            nodes.push(Node {
+                id: container_id,
+                node_type: NodeType::Container {
+                    container_type: ContainerType::Application,
+                    parent_container_id: None,
+                    entity_id: Some(*tag_id),
+                    icon: Some(Concept::Application.icon().to_string()),
+                    color: Some(tag.base.color.to_string()),
+                    associated_service_definition: None,
+                    element_rule_id: None,
+                    will_accept_edges: false,
+                },
+                position: Default::default(),
+                size: Default::default(),
+                header: Some(tag.base.name.clone()),
+            });
 
-                for service in services {
-                    let mut node = Node::element(
-                        service.id,
-                        container_id,
-                        service.base.host_id,
-                        ElementEntityType::Service {},
-                    );
-                    node.header = Some(service.base.name.clone());
-                    nodes.push(node);
-                    service_node_ids.insert(service.id, true);
-                }
-            }
-
-            // Create "Ungrouped" container if needed
-            if !ungrouped_services.is_empty() {
-                nodes.push(Node {
-                    id: UNGROUPED_CONTAINER_ID,
-                    node_type: NodeType::Container {
-                        container_type: ContainerType::Application,
-                        parent_container_id: None,
-                        entity_id: None,
-                        icon: Some(Concept::Application.icon().to_string()),
-                        color: Some(Concept::Application.color().to_string()),
-                        associated_service_definition: None,
-                        element_rule_id: None,
-                        will_accept_edges: false,
-                    },
-                    position: Default::default(),
-                    size: Default::default(),
-                    header: Some("Ungrouped".to_string()),
-                });
-
-                for service in &ungrouped_services {
-                    let mut node = Node::element(
-                        service.id,
-                        UNGROUPED_CONTAINER_ID,
-                        service.base.host_id,
-                        ElementEntityType::Service {},
-                    );
-                    node.header = Some(service.base.name.clone());
-                    nodes.push(node);
-                    service_node_ids.insert(service.id, true);
-                }
-            }
-        } else {
-            // Fallback: group by service category (no app tags exist)
-            let mut services_by_category: HashMap<
-                ServiceCategory,
-                Vec<&crate::server::services::r#impl::base::Service>,
-            > = HashMap::new();
-            for service in &eligible_services {
-                let category = service.base.service_definition.category();
-                services_by_category
-                    .entry(category)
-                    .or_default()
-                    .push(service);
-            }
-
-            for (category, services) in &services_by_category {
-                let container_id = Uuid::new_v5(
-                    &TOPOLOGY_CONTAINER_NAMESPACE,
-                    format!("app-category:{category}").as_bytes(),
+            for service in services {
+                let mut node = Node::element(
+                    service.id,
+                    container_id,
+                    service.base.host_id,
+                    ElementEntityType::Service {},
                 );
+                node.header = Some(service.base.name.clone());
+                nodes.push(node);
+                service_node_ids.insert(service.id, true);
+            }
+        }
 
-                nodes.push(Node {
-                    id: container_id,
-                    node_type: NodeType::Container {
-                        container_type: ContainerType::ServiceCategory,
-                        parent_container_id: None,
-                        entity_id: None,
-                        icon: Some(category.icon().to_string()),
-                        color: Some(category.color().to_string()),
-                        associated_service_definition: None,
-                        element_rule_id: None,
-                        will_accept_edges: false,
-                    },
-                    position: Default::default(),
-                    size: Default::default(),
-                    header: Some(format!("{}", category)),
-                });
+        // Create "Ungrouped" container if needed
+        if !ungrouped_services.is_empty() {
+            nodes.push(Node {
+                id: UNGROUPED_CONTAINER_ID,
+                node_type: NodeType::Container {
+                    container_type: ContainerType::Application,
+                    parent_container_id: None,
+                    entity_id: None,
+                    icon: Some(Concept::Application.icon().to_string()),
+                    color: Some(Concept::Application.color().to_string()),
+                    associated_service_definition: None,
+                    element_rule_id: None,
+                    will_accept_edges: false,
+                },
+                position: Default::default(),
+                size: Default::default(),
+                header: Some("Ungrouped".to_string()),
+            });
 
-                for service in services {
-                    let mut node = Node::element(
-                        service.id,
-                        container_id,
-                        service.base.host_id,
-                        ElementEntityType::Service {},
-                    );
-                    node.header = Some(service.base.name.clone());
-                    nodes.push(node);
-                    service_node_ids.insert(service.id, true);
-                }
+            for service in &ungrouped_services {
+                let mut node = Node::element(
+                    service.id,
+                    UNGROUPED_CONTAINER_ID,
+                    service.base.host_id,
+                    ElementEntityType::Service {},
+                );
+                node.header = Some(service.base.name.clone());
+                nodes.push(node);
+                service_node_ids.insert(service.id, true);
             }
         }
 
         // Apply element rules (ByServiceCategory, ByTag) to create nested subcontainers
         let service_lookup: HashMap<Uuid, &crate::server::services::r#impl::base::Service> =
             eligible_services.iter().map(|s| (s.id, *s)).collect();
+        let tag_lookups = TaggableLookups {
+            hosts: None,
+            services: Some(&service_lookup),
+            subnets: None,
+        };
         let _ = apply_element_rules(
             &mut nodes,
             &grouping.element_rules,
             |node| {
                 let service = service_lookup.get(&node.id)?;
                 let categories = HashSet::from([service.base.service_definition.category()]);
-                let mut tag_ids: HashSet<Uuid> = service.base.tags.iter().copied().collect();
-                // Inherit host tags for ByTag matching
-                if let Some(host) = ctx.hosts.iter().find(|h| h.id == service.base.host_id) {
-                    tag_ids.extend(host.base.tags.iter().copied());
-                }
+                let tag_ids =
+                    resolve_element_tag_ids(EntityDiscriminants::Service, service.id, &tag_lookups);
                 let compose_project = service.base.virtualization.as_ref().and_then(|v| match v {
                     ServiceVirtualization::Docker(dv) => dv.compose_project.clone(),
                 });
@@ -493,7 +449,7 @@ mod tests {
     }
 
     #[test]
-    fn test_creates_category_containers() {
+    fn test_services_without_app_tags_go_to_ungrouped() {
         let host_id = Uuid::new_v4();
         let binding = make_binding(Uuid::nil());
         let svc = make_service(
@@ -525,13 +481,13 @@ mod tests {
             &GroupingConfig::from_request_options(&options.request),
         );
 
-        // Should have one container (Database) + one element (PostgreSQL)
+        // Should have one "Ungrouped" container + one element
         let containers: Vec<&Node> = nodes
             .iter()
             .filter(|n| matches!(n.node_type, NodeType::Container { .. }))
             .collect();
         assert_eq!(containers.len(), 1);
-        assert_eq!(containers[0].header.as_deref(), Some("Database"));
+        assert_eq!(containers[0].header.as_deref(), Some("Ungrouped"));
 
         let elements: Vec<&Node> = nodes
             .iter()
@@ -617,7 +573,8 @@ mod tests {
             &GroupingConfig::from_request_options(&options.request),
         );
 
-        // 3 service category containers + 3 elements; subcontainer count varies with default rules
+        // No app tags applied — all services land in the single "Ungrouped" container.
+        // Subcontainer count varies with default element rules (e.g. ByServiceCategory).
         let element_count = nodes
             .iter()
             .filter(|n| matches!(n.node_type, NodeType::Element { .. }))
@@ -628,8 +585,8 @@ mod tests {
             .count();
         assert_eq!(element_count, 3, "Should have 3 service elements");
         assert!(
-            container_count >= 3,
-            "Should have at least 3 containers, got {}",
+            container_count >= 1,
+            "Should have at least 1 container (Ungrouped), got {}",
             container_count
         );
 
@@ -905,11 +862,12 @@ mod tests {
     }
 
     #[test]
-    fn test_element_rules_with_host_inherited_tags() {
-        // Scenario from tester: 2 hosts with different app tags,
-        // both hosts also have a shared non-app tag used in ByTag rule.
-        // Tags are on the HOST, not on the services — tests host tag inheritance.
-        // Also includes default ByServiceCategory rule (matches DNS/ReverseProxy).
+    fn test_bytag_rule_does_not_inherit_host_tags() {
+        // Regression: ByTag element rules in the Application view used to match
+        // services via host-tag inheritance, causing services to be grouped under
+        // tags applied only to their host. Host-tag inheritance is reserved for
+        // the top-level ByApplication grouping (see find_app_tag). Element rules
+        // should match on the service's own tags, symmetric with WorkloadsBuilder.
         let monitoring_tag_id = Uuid::new_v4();
         let app_tag_a_id = Uuid::new_v4();
         let app_tag_b_id = Uuid::new_v4();
@@ -1013,8 +971,9 @@ mod tests {
             &GroupingConfig::from_request_options(&options.request),
         );
 
-        // Neither service is DNS/ReverseProxy, so ByServiceCategory creates nothing.
-        // ByTag should create 2 NestedTag subcontainers (one per AppGroup).
+        // Services don't have monitoring_tag_id; only hosts do. ByTag rule
+        // should produce no NestedTag subcontainers — host-tag inheritance
+        // does not apply to element rules.
         let nested_tags: Vec<&Node> = nodes
             .iter()
             .filter(|n| {
@@ -1029,24 +988,28 @@ mod tests {
             .collect();
         assert_eq!(
             nested_tags.len(),
-            2,
-            "Should have 2 NestedTag subcontainers (one per AppGroup)"
+            0,
+            "ByTag should not match services by inherited host tags"
         );
 
-        // Both services should be in NestedTag subcontainers
-        let elements: Vec<&Node> = nodes
+        // Services should still be grouped into Application containers by their host's app tag
+        // (via find_app_tag, which is the intended host→service inheritance for ByApplication).
+        let app_containers: Vec<&Node> = nodes
             .iter()
-            .filter(|n| matches!(n.node_type, NodeType::Element { .. }))
+            .filter(|n| {
+                matches!(
+                    n.node_type,
+                    NodeType::Container {
+                        container_type: ContainerType::Application,
+                        ..
+                    }
+                )
+            })
             .collect();
-        for element in &elements {
-            if let NodeType::Element { container_id, .. } = &element.node_type {
-                assert!(
-                    nested_tags.iter().any(|n| n.id == *container_id),
-                    "Service {} should be in a NestedTag, but container_id is {}",
-                    element.header.as_deref().unwrap_or("?"),
-                    container_id
-                );
-            }
-        }
+        assert_eq!(
+            app_containers.len(),
+            2,
+            "Should have one Application container per app tag"
+        );
     }
 }

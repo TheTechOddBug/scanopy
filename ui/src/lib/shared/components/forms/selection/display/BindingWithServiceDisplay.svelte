@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Binding, Service } from '$lib/features/services/types/base';
-	import type { IPAddress } from '$lib/features/hosts/types/base';
+	import type { Host, IPAddress, Port } from '$lib/features/hosts/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { ALL_IP_ADDRESSES } from '$lib/features/hosts/types/base';
 
@@ -15,9 +15,9 @@
 		compact?: boolean;
 	}
 
-	// Helper to format interface for display
+	// Helper to format IP address for display
 	function formatInterfaceForBinding(
-		iface: Interface | typeof ALL_IP_ADDRESSES,
+		iface: IPAddress | typeof ALL_IP_ADDRESSES,
 		isContainerSubnet: (subnetId: string) => boolean
 	): string {
 		if (iface.id == null) return iface.name;

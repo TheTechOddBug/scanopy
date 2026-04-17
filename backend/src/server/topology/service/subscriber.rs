@@ -85,7 +85,17 @@ impl EventSubscriber for TopologyService {
                             .and_then(|v| serde_json::from_value::<bool>(v.clone()).ok())
                             .unwrap_or(false);
                         if trigger_stale {
-                            stale_org_ids.insert(org_id);
+                            // For Tag events, the trait fires true for every Tag change.
+                            // Narrow to only tags that actually affect a topology.
+                            let should_mark = match &entity_event.entity_type {
+                                Entity::Tag(tag) => {
+                                    self.tag_affects_any_topology(tag.id, org_id).await
+                                }
+                                _ => true,
+                            };
+                            if should_mark {
+                                stale_org_ids.insert(org_id);
+                            }
                         }
                     }
                     continue;

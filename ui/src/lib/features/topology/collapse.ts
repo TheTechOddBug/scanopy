@@ -297,10 +297,6 @@ export function stepCollapse(
 	const current = get(collapseLevel);
 	const newLevel = Math.max(current - 1, 1) as CollapseLevel;
 	const collapsed = computeCollapsedForLevel(newLevel, allNodes, containerTypesStore, infraRuleId);
-	const containers = allNodes.filter((n) => n.node_type === 'Container');
-	const infraMatches = infraRuleId
-		? containers.filter((n) => (n as Record<string, unknown>).element_rule_id === infraRuleId)
-		: [];
 	collapsedContainers.set(collapsed);
 	collapseLevel.set(newLevel);
 	return { newLevel };

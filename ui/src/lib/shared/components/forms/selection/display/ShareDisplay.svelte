@@ -21,7 +21,7 @@
 		getTags: (share: Share) => {
 			const tags: TagProps[] = [];
 			if (!share.is_enabled) {
-				tags.push({ label: common_disabled(), color: 'rgb(239, 68, 68)' });
+				tags.push({ label: common_disabled(), color: 'Red' });
 			}
 			return tags;
 		},

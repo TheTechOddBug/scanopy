@@ -3,7 +3,7 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Service } from '../types/base';
-	import type { Host, Interface, Port } from '$lib/features/hosts/types/base';
+	import type { Host, IPAddress, Port } from '$lib/features/hosts/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { formatIPAddress } from '$lib/features/hosts/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
@@ -62,7 +62,7 @@
 	let groupedPortBindings = $derived(
 		(() => {
 			const portBindings = service.bindings.filter((b) => b.type === 'Port');
-			const grouped = new SvelteMap<string | null, { iface: Interface | null; ports: Port[] }>();
+			const grouped = new SvelteMap<string | null, { iface: IPAddress | null; ports: Port[] }>();
 
 			for (const binding of portBindings) {
 				const port = portsData.find((p) => p.id === binding.port_id);
@@ -100,7 +100,7 @@
 
 			return ipAddressBindingIds
 				.map((id) => ipAddressesData.find((i) => i.id === id))
-				.filter((i): i is Interface => i !== undefined);
+				.filter((i): i is IPAddress => i !== undefined);
 		})()
 	);
 
@@ -128,7 +128,7 @@
 			},
 			{
 				label: common_ipAddressBindings(),
-				value: ifaces.map((iface: Interface) => ({
+				value: ifaces.map((iface: IPAddress) => ({
 					id: iface.id,
 					label: formatIPAddress(iface, isContainerSubnetFn),
 					color: entities.getColorHelper('IPAddress').color,

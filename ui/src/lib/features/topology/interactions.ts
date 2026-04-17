@@ -191,11 +191,11 @@ export function updateTagFilter(
 
 	const config = getViewElementConfig(view);
 
-	// Determine filter roles from element config and parent_entity relationships
+	// Determine filter roles from element config and parent_taggable_entity relationships
 	const hostIsContainer = config.container_entity === 'Host';
 	const hostIsElement = config.element_entities.includes('Host');
 	const hostIsParent = config.element_entities.some(
-		(e) => entities.getMetadata(e)?.parent_entity === 'Host'
+		(e) => entities.getMetadata(e)?.parent_taggable_entity === 'Host'
 	);
 	const hostIsRelevant = hostIsContainer || hostIsElement || hostIsParent;
 	const serviceIsElement = config.element_entities.includes('Service');
@@ -771,9 +771,9 @@ function resolveEntityToNodes(
 		}
 	}
 
-	// 3. Parent propagation: entity type is parent_entity of an element entity
+	// 3. Parent propagation: entity type is parent_taggable_entity of an element entity
 	const isParent = config.element_entities.some(
-		(e) => entities.getMetadata(e)?.parent_entity === entityType
+		(e) => entities.getMetadata(e)?.parent_taggable_entity === entityType
 	);
 	if (
 		isParent &&

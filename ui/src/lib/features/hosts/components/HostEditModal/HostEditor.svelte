@@ -161,7 +161,7 @@
 				const promises = [
 					onUpdate({
 						host: hostPrimitive,
-						interfaces: formData.ip_addresses,
+						ip_addresses: formData.ip_addresses,
 						ports: formData.ports,
 						services: formData.services
 					})
@@ -172,7 +172,7 @@
 					promises.push(
 						onUpdate({
 							host: updatedHost,
-							interfaces: null,
+							ip_addresses: null,
 							ports: null,
 							services: null
 						})

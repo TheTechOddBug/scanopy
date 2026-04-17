@@ -1,5 +1,4 @@
 import type { LayoutGraph } from '../layout/layout-graph';
-import type { EdgeHandles } from '../layout/elk-layout';
 import type { Topology, TopologyNode, TopologyEdge } from '../types/base';
 import type { SelectionStores } from '../selection';
 import type { Node, Edge } from '@xyflow/svelte';
@@ -26,7 +25,6 @@ export interface LayoutState {
 	prevExpandedPortIds: Set<string>;
 	lastRenderedTopoKey: string;
 	lastRenderedView: string;
-	edgeHandles: Map<string, EdgeHandles>;
 	layoutGeneration: number;
 }
 
@@ -88,7 +86,6 @@ export function createInitialState(): LayoutState {
 		prevExpandedPortIds: new Set(),
 		lastRenderedTopoKey: '',
 		lastRenderedView: '',
-		edgeHandles: new Map(),
 		layoutGeneration: 0
 	};
 }

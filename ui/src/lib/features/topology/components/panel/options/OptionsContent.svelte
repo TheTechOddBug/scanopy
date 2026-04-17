@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		topologyOptions,
 		updateTopologyOptions,
@@ -11,7 +12,7 @@
 	import { getTopologyEditState, getOptionDisabledTooltip } from '../../../state';
 	import { edgeTypes, views, serviceCategories, entities } from '$lib/shared/stores/metadata';
 	import { activeView } from '../../../queries';
-	import { type Color, COLOR_MAP } from '$lib/shared/utils/styling';
+	import { type Color } from '$lib/shared/utils/styling';
 	import viewsJson from '$lib/data/views.json';
 	import TagFilterGroup from './TagFilterGroup.svelte';
 	import OptionToggle from './OptionToggle.svelte';
@@ -83,16 +84,16 @@
 	let elementConfig = $derived(viewMetaObj?.element_config);
 	let filterableEntities = $derived.by(() => {
 		const config = elementConfig;
-		if (!config) return new Set<string>();
-		const set = new Set(
+		if (!config) return new SvelteSet<string>();
+		const set = new SvelteSet(
 			[config.container_entity, ...config.element_entities, ...config.inline_entities].filter(
 				Boolean
 			)
 		);
-		// Expand element's parent entity when the view has containers and the parent isn't already the container
+		// Expand element's parent taggable entity when the view has containers and the parent isn't already the container
 		if (config.container_entity) {
 			for (const elementEntity of config.element_entities) {
-				const parentEntity = entities.getMetadata(elementEntity)?.parent_entity;
+				const parentEntity = entities.getMetadata(elementEntity)?.parent_taggable_entity;
 				if (parentEntity && parentEntity !== config.container_entity) {
 					set.add(parentEntity);
 				}
@@ -157,11 +158,11 @@
 	function toggleServiceCategory(category: string) {
 		const view = $activeView;
 		updateTopologyOptions((opts) => {
-			const allHidden = (opts.request.hide_service_categories ?? {}) as Record<string, string[]>;
+			const allHidden = opts.request.hide_service_categories ?? {};
 			const hidden = allHidden[view] ?? [];
-			const idx = hidden.indexOf(category);
-			const newHidden =
-				idx !== -1 ? hidden.filter((c: string) => c !== category) : [...hidden, category];
+			const cat = category as (typeof hidden)[number];
+			const idx = hidden.indexOf(cat);
+			const newHidden = idx !== -1 ? hidden.filter((c) => c !== cat) : [...hidden, cat];
 
 			return {
 				...opts,
@@ -242,7 +243,7 @@
 	// Determine which edge types are dependency edges from metadata
 	let dependencyEdgeTypeIds = $derived.by(() => {
 		if (!topology?.edges) return [] as string[];
-		const seen = new Set<string>();
+		const seen = new SvelteSet<string>();
 		const depTypes: string[] = [];
 		for (const edge of topology.edges) {
 			const et = edge.edge_type;
@@ -414,6 +415,21 @@
 			/>
 		</div>
 
+		{#if showSubnetFilter}
+			<div class="space-y-1.5">
+				<div class="text-secondary text-xs font-semibold uppercase tracking-wide">
+					{common_subnets()}
+				</div>
+				<TagFilterGroup
+					tags={subnetTags}
+					hiddenTagIds={$topologyOptions.local.tag_filter?.hidden_subnet_tag_ids ?? []}
+					onToggle={toggleSubnetTag}
+					entityType="subnet"
+					hasUntagged={hasUntaggedSubnets}
+				/>
+			</div>
+		{/if}
+
 		{#if showHostFilter}
 			<div class="space-y-1.5">
 				<div class="text-secondary text-xs font-semibold uppercase tracking-wide">
@@ -453,21 +469,6 @@
 						label={common_byCategory()}
 					/>
 				{/if}
-			</div>
-		{/if}
-
-		{#if showSubnetFilter}
-			<div class="space-y-1.5">
-				<div class="text-secondary text-xs font-semibold uppercase tracking-wide">
-					{common_subnets()}
-				</div>
-				<TagFilterGroup
-					tags={subnetTags}
-					hiddenTagIds={$topologyOptions.local.tag_filter?.hidden_subnet_tag_ids ?? []}
-					onToggle={toggleSubnetTag}
-					entityType="subnet"
-					hasUntagged={hasUntaggedSubnets}
-				/>
 			</div>
 		{/if}
 	</div>

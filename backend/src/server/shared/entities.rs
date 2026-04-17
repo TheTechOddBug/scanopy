@@ -21,9 +21,12 @@ use crate::server::{
     hosts::r#impl::base::Host,
     networks::r#impl::Network,
     organizations::r#impl::base::Organization,
-    shared::types::{
-        Color, Icon,
-        metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    shared::{
+        storage::traits::Entity as EntityTrait,
+        types::{
+            Color, Icon,
+            metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+        },
     },
     user_api_keys::r#impl::base::UserApiKey,
     users::r#impl::base::User,
@@ -32,24 +35,6 @@ use crate::server::{
 // Trait use to determine whether a given property change on an entity should trigger a rebuild of topology
 pub trait ChangeTriggersTopologyStaleness<T> {
     fn triggers_staleness(&self, _other: Option<T>) -> bool;
-}
-
-/// Single source of truth for which entity types support tagging.
-/// Used by the Entity trait's default is_taggable() implementation and tag handlers.
-pub fn is_entity_taggable(entity_type: EntityDiscriminants) -> bool {
-    matches!(
-        entity_type,
-        EntityDiscriminants::Host
-            | EntityDiscriminants::Service
-            | EntityDiscriminants::Subnet
-            | EntityDiscriminants::Dependency
-            | EntityDiscriminants::Network
-            | EntityDiscriminants::Discovery
-            | EntityDiscriminants::Daemon
-            | EntityDiscriminants::DaemonApiKey
-            | EntityDiscriminants::UserApiKey
-            | EntityDiscriminants::Credential
-    )
 }
 
 #[derive(
@@ -110,15 +95,159 @@ impl HasId for EntityDiscriminants {
     }
 }
 
+impl Entity {
+    /// Title-case singular/plural names sourced from each concrete type's
+    /// `Entity::ENTITY_NAME_SINGULAR` / `ENTITY_NAME_PLURAL` const. Single
+    /// match for all variants; both names in one tuple to avoid duplicating
+    /// the enumeration.
+    pub fn entity_names(&self) -> (&'static str, &'static str) {
+        match self {
+            Entity::Organization(_) => (
+                <Organization as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Organization as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Invite(_) => (
+                <Invite as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Invite as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Share(_) => (
+                <Share as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Share as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Network(_) => (
+                <Network as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Network as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::DaemonApiKey(_) => (
+                <DaemonApiKey as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <DaemonApiKey as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::UserApiKey(_) => (
+                <UserApiKey as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <UserApiKey as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::User(_) => (
+                <User as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <User as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Tag(_) => (
+                <Tag as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Tag as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Discovery(_) => (
+                <Discovery as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Discovery as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Daemon(_) => (
+                <Daemon as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Daemon as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Host(_) => (
+                <Host as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Host as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Service(_) => (
+                <Service as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Service as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Port(_) => (
+                <Port as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Port as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Binding(_) => (
+                <Binding as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Binding as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::IPAddress(_) => (
+                <IPAddress as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <IPAddress as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Interface(_) => (
+                <Interface as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Interface as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Credential(_) => (
+                <Credential as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Credential as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Subnet(_) => (
+                <Subnet as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Subnet as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Vlan(_) => (
+                <Vlan as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Vlan as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Dependency(_) => (
+                <Dependency as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Dependency as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Topology(_) => (
+                <Topology as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Topology as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Unknown => ("Entity", "Entities"),
+        }
+    }
+}
+
 impl EntityDiscriminants {
-    /// The parent entity type that owns instances of this entity.
-    pub fn parent_entity(&self) -> Option<EntityDiscriminants> {
+    /// Title-case singular name, e.g. "Host", "IP Address". Delegates to
+    /// `Entity::entity_names` via the existing `From<EntityDiscriminants> for Entity`.
+    pub fn entity_name_singular(&self) -> &'static str {
+        Entity::from(*self).entity_names().0
+    }
+
+    /// Title-case plural name, e.g. "Hosts", "IP Addresses".
+    pub fn entity_name_plural(&self) -> &'static str {
+        Entity::from(*self).entity_names().1
+    }
+}
+
+impl EntityDiscriminants {
+    /// Whether this entity type supports being tagged directly.
+    /// Exhaustive match — adding a new variant forces a decision.
+    pub fn is_taggable(&self) -> bool {
+        match self {
+            EntityDiscriminants::Host
+            | EntityDiscriminants::Service
+            | EntityDiscriminants::Subnet
+            | EntityDiscriminants::Dependency
+            | EntityDiscriminants::Network
+            | EntityDiscriminants::Discovery
+            | EntityDiscriminants::Daemon
+            | EntityDiscriminants::DaemonApiKey
+            | EntityDiscriminants::UserApiKey
+            | EntityDiscriminants::Credential => true,
+            EntityDiscriminants::Organization
+            | EntityDiscriminants::Invite
+            | EntityDiscriminants::Share
+            | EntityDiscriminants::User
+            | EntityDiscriminants::Tag
+            | EntityDiscriminants::Port
+            | EntityDiscriminants::Binding
+            | EntityDiscriminants::IPAddress
+            | EntityDiscriminants::Interface
+            | EntityDiscriminants::Vlan
+            | EntityDiscriminants::Topology
+            | EntityDiscriminants::Unknown => false,
+        }
+    }
+
+    /// The nearest taggable ancestor of this entity — used to resolve which
+    /// entity's tags apply when a non-taggable entity is involved in tag-based
+    /// rules, filters, or selections (e.g. IP addresses/interfaces/ports
+    /// resolve to their owning Host).
+    ///
+    /// Returns `None` when the entity is itself taggable (see `is_taggable`)
+    /// or when no taggable ancestor exists.
+    pub fn parent_taggable_entity(&self) -> Option<EntityDiscriminants> {
         match self {
             EntityDiscriminants::Interface => Some(EntityDiscriminants::Host),
             EntityDiscriminants::IPAddress => Some(EntityDiscriminants::Host),
-            EntityDiscriminants::Service => Some(EntityDiscriminants::Host),
             EntityDiscriminants::Port => Some(EntityDiscriminants::Host),
-            EntityDiscriminants::Binding
+            EntityDiscriminants::Service
+            | EntityDiscriminants::Binding
             | EntityDiscriminants::Organization
             | EntityDiscriminants::Network
             | EntityDiscriminants::User
@@ -208,12 +337,23 @@ impl TypeMetadataProvider for EntityDiscriminants {
 
     fn metadata(&self) -> serde_json::Value {
         let mut m = serde_json::Map::new();
-        if let Some(parent) = self.parent_entity() {
-            m.insert("parent_entity".to_string(), serde_json::json!(parent));
+        if let Some(parent) = self.parent_taggable_entity() {
+            m.insert(
+                "parent_taggable_entity".to_string(),
+                serde_json::json!(parent),
+            );
         }
         m.insert(
             "is_taggable".to_string(),
-            serde_json::json!(is_entity_taggable(*self)),
+            serde_json::json!(self.is_taggable()),
+        );
+        m.insert(
+            "entity_name_singular".to_string(),
+            serde_json::json!(self.entity_name_singular()),
+        );
+        m.insert(
+            "entity_name_plural".to_string(),
+            serde_json::json!(self.entity_name_plural()),
         );
         serde_json::Value::Object(m)
     }

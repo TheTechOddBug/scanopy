@@ -3,7 +3,7 @@
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import IPAddressConfigPanel from './IPAddressConfigPanel.svelte';
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
-	import { type HostFormData, type Interface } from '$lib/features/hosts/types/base';
+	import { type HostFormData, type IPAddress } from '$lib/features/hosts/types/base';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
 	import { IPAddressDisplay } from '$lib/shared/components/forms/selection/display/IPAddressDisplay.svelte';
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
@@ -57,8 +57,8 @@
 		return currentServices.filter((service) =>
 			service.bindings.some(
 				(b) =>
-					(b.type === 'Interface' && b.interface_id === interfaceId) ||
-					(b.type === 'Port' && b.interface_id === interfaceId)
+					(b.type === 'IPAddress' && b.ip_address_id === interfaceId) ||
+					(b.type === 'Port' && b.ip_address_id === interfaceId)
 			)
 		);
 	}
@@ -69,8 +69,8 @@
 			...service,
 			bindings: service.bindings.filter(
 				(b) =>
-					!(b.type === 'Interface' && b.interface_id === interfaceId) &&
-					!(b.type === 'Port' && b.interface_id === interfaceId)
+					!(b.type === 'IPAddress' && b.ip_address_id === interfaceId) &&
+					!(b.type === 'Port' && b.ip_address_id === interfaceId)
 			)
 		}));
 		onServicesChange(updatedServices);
@@ -92,7 +92,7 @@
 		if (!subnet) return;
 
 		if (subnet.cidr == '0.0.0.0/0') {
-			const newInterface: Interface = {
+			const newInterface: IPAddress = {
 				id: uuidv4(), // Temp ID for form - store will detect as new since it's not in interfaces store
 				host_id: formData.id,
 				network_id: formData.network_id,
@@ -107,7 +107,7 @@
 			formData.ip_addresses = [...interfaces, newInterface];
 			form.setFieldValue('ip_addresses', formData.ip_addresses);
 		} else {
-			const newInterface: Interface = {
+			const newInterface: IPAddress = {
 				id: uuidv4(), // Temp ID for form - store will detect as new since it's not in interfaces store
 				host_id: formData.id,
 				network_id: formData.network_id,
@@ -161,7 +161,7 @@
 		affectedServiceNames = [];
 	}
 
-	function handleInterfaceChange(updatedInterface: Interface, index: number) {
+	function handleInterfaceChange(updatedInterface: IPAddress, index: number) {
 		// Update formData.ip_addresses for real-time sync with list display and bindings
 		// Note: Don't call form.setFieldValue here - the form field already updated
 		// form state via field.handleChange. We only need to sync formData for display.

@@ -10,16 +10,18 @@
 	} from '@xyflow/svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Color, ColorStyle } from '$lib/shared/utils/styling';
-	import { serviceDefinitions, containerTypes, views } from '$lib/shared/stores/metadata';
-	import { activeView, getInfrastructureRuleId } from '../../queries';
+	import { serviceDefinitions, containerTypes } from '$lib/shared/stores/metadata';
+	import { getInfrastructureRuleId } from '../../queries';
+	import { formatElementSummary, tallyContainerElements, tallyDirectElements } from '../../labels';
 	import {
 		useUpdateNodeResizeMutation,
 		topologyOptions,
+		activeView,
 		selectedNode as globalSelectedNode,
 		selectedEdge as globalSelectedEdge
 	} from '../../queries';
 	import { useTopology, selectedTopologyId } from '../../context';
-	import type { TopologyNode, Topology } from '../../types/base';
+	import type { TopologyNode } from '../../types/base';
 	import { resolveContainerNode } from '../../resolvers';
 	import { type Writable, get } from 'svelte/store';
 	import { getContext } from 'svelte';
@@ -83,17 +85,10 @@
 
 	let { id, data, selected, width, height }: NodeProps = $props();
 
-	$effect(() => {
-		const ct = (data as Record<string, unknown>)?.container_type as string | undefined;
-		const isSub = ct && containerTypes.getMetadata(ct).is_subcontainer;
-		if (isSub) {
-		}
-	});
-
 	const topo = useTopology();
 	const topoStore = topo.fromContext ? topo.store : null;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 	const updateNodeResizeMutation = useUpdateNodeResizeMutation();
 
@@ -142,12 +137,11 @@
 	);
 	let containerTags = $derived(resolved?.tags ?? []);
 
-	let currentView = $state(get(activeView));
-	activeView.subscribe((v) => (currentView = v));
-
-	let elementLabel = $derived(
-		(views.getMetadata(currentView) as { element_label?: string } | undefined)?.element_label ??
-			'hosts'
+	let childSummary = $derived(
+		topology ? formatElementSummary(tallyContainerElements(id, topology), $activeView) : ''
+	);
+	let ungroupedSummary = $derived(
+		topology ? formatElementSummary(tallyDirectElements(id, topology), $activeView) : ''
 	);
 
 	let isCollapsed = $derived(collapsedNodes.has(id));
@@ -294,11 +288,15 @@
 
 				const infraId = getInfrastructureRuleId();
 				const isInfra = !!(infraId && ruleId === infraId);
+				const subgroupSummary = topology
+					? formatElementSummary(tallyContainerElements(summary.groupId, topology), $activeView)
+					: '';
 				return {
 					logoComponent: groupLogoComponent,
 					headerText: sHeader,
 					labels: isInfra ? [] : labels,
 					childCount: summary.childCount,
+					childSummary: subgroupSummary,
 					countOnly: isInfra
 				};
 			});
@@ -381,7 +379,7 @@
 			{colorHelper}
 			{groupLabels}
 			{childCount}
-			{elementLabel}
+			{childSummary}
 			onToggleCollapse={handleChevronClick}
 		/>
 	{/if}
@@ -399,7 +397,7 @@
 			{colorHelper}
 			{groupLabels}
 			{childCount}
-			{elementLabel}
+			{childSummary}
 			onToggleCollapse={handleChevronClick}
 		/>
 	{/if}
@@ -418,7 +416,7 @@
 				{colorHelper}
 				{groupLabels}
 				{childCount}
-				{elementLabel}
+				{childSummary}
 				countOnly={isInfraRule}
 				onToggleCollapse={handleChevronClick}
 				{searchMatchCount}
@@ -436,7 +434,8 @@
 				{colorHelper}
 				{groupLabels}
 				{childCount}
-				{elementLabel}
+				{childSummary}
+				{ungroupedSummary}
 				onToggleCollapse={handleChevronClick}
 				subgroupSummaries={resolvedSubgroups}
 				tagHoverRingStyle={[tagHoverRingStyle, searchHighlightRingStyle].filter(Boolean).join(' ')}

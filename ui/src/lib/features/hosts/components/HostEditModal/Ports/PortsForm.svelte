@@ -6,6 +6,7 @@
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import { PortDisplay } from '$lib/shared/components/forms/selection/display/PortDisplay.svelte';
 	import type { Service } from '$lib/features/services/types/base';
+	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import ListConfigEditor from '$lib/shared/components/forms/selection/ListConfigEditor.svelte';
 	import PortConfigPanel from './PortConfigPanel.svelte';
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
@@ -42,6 +43,13 @@
 		onServicesChange = () => {},
 		targetEntityId = $bindable(null)
 	}: Props = $props();
+
+	const subnetsQuery = useSubnetsQuery();
+	let subnetsData = $derived(subnetsQuery.data ?? []);
+	let isContainerSubnetFn = $derived((subnetId: string) => {
+		const subnet = subnetsData.find((s) => s.id === subnetId);
+		return subnet ? isContainerSubnet(subnet) : false;
+	});
 
 	// Confirmation dialog state
 	let showDeleteConfirmation = $state(false);
@@ -173,7 +181,11 @@
 				{items}
 				optionDisplayComponent={PortTypeDisplay}
 				itemDisplayComponent={PortDisplay}
-				getItemContext={() => ({ currentServices, ip_addresses: formData.ip_addresses })}
+				getItemContext={() => ({
+					currentServices,
+					ip_addresses: formData.ip_addresses,
+					isContainerSubnet: isContainerSubnetFn
+				})}
 				onCreateNew={handleCreateNewPort}
 				onAdd={handleAddPort}
 				onRemove={handleRemovePort}

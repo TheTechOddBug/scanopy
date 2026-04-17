@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { HostFormData, Interface } from '$lib/features/hosts/types/base';
+	import type { HostFormData, IPAddress } from '$lib/features/hosts/types/base';
 	import type { Network } from '$lib/features/networks/types';
 	import type { Credential } from '$lib/features/credentials/types/base';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
@@ -92,13 +92,13 @@
 		return (formData.credential_assignments ?? [])[index] ?? null;
 	}
 
-	// Resolve interface_ids for a credential assignment into Interface objects
-	function getScopedInterfaces(index: number): Interface[] {
+	// Resolve ip_address_ids for a credential assignment into IPAddress objects
+	function getScopedInterfaces(index: number): IPAddress[] {
 		const assignment = getAssignmentForIndex(index);
-		if (!assignment || assignment.interface_ids === null) return [];
-		return assignment.interface_ids
+		if (!assignment || assignment.ip_address_ids === null) return [];
+		return assignment.ip_address_ids
 			.map((id) => formData.ip_addresses.find((i) => i.id === id))
-			.filter((i): i is Interface => i != null);
+			.filter((i): i is IPAddress => i != null);
 	}
 
 	function getInterfaceContext(): IPAddressDisplayContext {
@@ -108,17 +108,17 @@
 	function addInterfaceToScope(credentialIndex: number, interfaceId: string) {
 		const assignments = [...(formData.credential_assignments ?? [])];
 		if (!assignments[credentialIndex]) return;
-		const current = assignments[credentialIndex].interface_ids;
+		const current = assignments[credentialIndex].ip_address_ids;
 		if (current === null) {
 			// First add: switch from "all" to explicit list with just this interface
 			assignments[credentialIndex] = {
 				...assignments[credentialIndex],
-				interface_ids: [interfaceId]
+				ip_address_ids: [interfaceId]
 			};
 		} else if (!current.includes(interfaceId)) {
 			assignments[credentialIndex] = {
 				...assignments[credentialIndex],
-				interface_ids: [...current, interfaceId]
+				ip_address_ids: [...current, interfaceId]
 			};
 		}
 		formData.credential_assignments = assignments;
@@ -127,13 +127,13 @@
 	function removeInterfaceFromScope(credentialIndex: number, interfaceIndex: number) {
 		const assignments = [...(formData.credential_assignments ?? [])];
 		if (!assignments[credentialIndex]) return;
-		const current = assignments[credentialIndex].interface_ids;
+		const current = assignments[credentialIndex].ip_address_ids;
 		if (current === null) return;
 		const updated = current.filter((_, i) => i !== interfaceIndex);
 		assignments[credentialIndex] = {
 			...assignments[credentialIndex],
 			// Revert to null (all interfaces) when list empties
-			interface_ids: updated.length === 0 ? null : updated
+			ip_address_ids: updated.length === 0 ? null : updated
 		};
 		formData.credential_assignments = assignments;
 	}
@@ -183,7 +183,7 @@
 						if (!current.some((a) => a.credential_id === id)) {
 							formData.credential_assignments = [
 								...current,
-								{ credential_id: id, interface_ids: null }
+								{ credential_id: id, ip_address_ids: null }
 							];
 						}
 					}}
@@ -200,9 +200,9 @@
 				<div class="space-y-4">
 					<ConfigHeader title={selectedItem.name} subtitle={hosts_credentialScopeSubtitle()} />
 					<ListManager
-						label="Interface Scope"
-						emptyMessage="All interfaces (default)"
-						placeholder="Select an interface to restrict scope"
+						label="IP address Scope"
+						emptyMessage="All IP addresses (default)"
+						placeholder="Select an IP address to restrict scope"
 						allowReorder={false}
 						options={formData.ip_addresses}
 						items={getScopedInterfaces(selectedIndex)}

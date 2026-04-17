@@ -1,6 +1,6 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::{Admin, Authorized, Member, Viewer};
-use crate::server::shared::entities::{EntityDiscriminants, is_entity_taggable};
+use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::events::types::{
     EntityEvent, EntityOperation, OnboardingEvent, OnboardingOperation,
 };
@@ -392,20 +392,6 @@ async fn emit_tag_change_events(
     }
 }
 
-/// Returns true if the tag with the given ID is an application tag.
-/// Returns false if the tag can't be found.
-async fn is_application_tag(state: &AppState, tag_id: Uuid) -> bool {
-    state
-        .services
-        .tag_service
-        .get_by_id(&tag_id)
-        .await
-        .ok()
-        .flatten()
-        .map(|t| t.base.is_application)
-        .unwrap_or(false)
-}
-
 /// Request body for bulk tag operations
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct BulkTagRequest {
@@ -462,7 +448,7 @@ pub async fn bulk_add_tag(
     Json(request): Json<BulkTagRequest>,
 ) -> ApiResult<Json<ApiResponse<BulkTagResponse>>> {
     // Validate entity type is taggable
-    if !is_entity_taggable(request.entity_type) {
+    if !request.entity_type.is_taggable() {
         return Err(ApiError::bad_request(&format!(
             "Entity type {:?} does not support tagging",
             request.entity_type
@@ -485,7 +471,11 @@ pub async fn bulk_add_tag(
         .await?;
 
     if affected_count > 0 {
-        let trigger_stale = is_application_tag(&state, request.tag_id).await;
+        let trigger_stale = state
+            .services
+            .topology_service
+            .tag_affects_any_topology(request.tag_id, organization_id)
+            .await;
         emit_tag_change_events(
             &state,
             &auth.entity,
@@ -526,12 +516,16 @@ pub async fn bulk_remove_tag(
     Json(request): Json<BulkTagRequest>,
 ) -> ApiResult<Json<ApiResponse<BulkTagResponse>>> {
     // Validate entity type is taggable
-    if !is_entity_taggable(request.entity_type) {
+    if !request.entity_type.is_taggable() {
         return Err(ApiError::bad_request(&format!(
             "Entity type {:?} does not support tagging",
             request.entity_type
         )));
     }
+
+    let organization_id = auth
+        .organization_id()
+        .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
 
     let affected_count = state
         .services
@@ -540,7 +534,11 @@ pub async fn bulk_remove_tag(
         .await?;
 
     if affected_count > 0 {
-        let trigger_stale = is_application_tag(&state, request.tag_id).await;
+        let trigger_stale = state
+            .services
+            .topology_service
+            .tag_affects_any_topology(request.tag_id, organization_id)
+            .await;
         emit_tag_change_events(
             &state,
             &auth.entity,
@@ -582,7 +580,7 @@ pub async fn set_entity_tags(
     Json(request): Json<SetTagsRequest>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     // Validate entity type is taggable
-    if !is_entity_taggable(request.entity_type) {
+    if !request.entity_type.is_taggable() {
         return Err(ApiError::bad_request(&format!(
             "Entity type {:?} does not support tagging",
             request.entity_type
@@ -615,10 +613,15 @@ pub async fn set_entity_tags(
         )
         .await?;
 
-    // Trigger stale only if an app tag was actually added or removed.
+    // Trigger stale only if a topology-affecting tag was actually added or removed.
     let mut trigger_stale = false;
     for tag_id in prior_tag_ids.symmetric_difference(&new_tag_ids) {
-        if is_application_tag(&state, *tag_id).await {
+        if state
+            .services
+            .topology_service
+            .tag_affects_any_topology(*tag_id, organization_id)
+            .await
+        {
             trigger_stale = true;
             break;
         }

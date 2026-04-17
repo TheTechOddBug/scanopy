@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Interface } from '$lib/features/hosts/types/base';
+	import type { IPAddress } from '$lib/features/hosts/types/base';
 	import { untrack } from 'svelte';
 	import {
 		ipAddressFormat,
@@ -17,9 +17,9 @@
 	} from '$lib/paraglide/messages';
 
 	interface Props {
-		iface: Interface;
+		iface: IPAddress;
 		subnet: Subnet;
-		onChange?: (updatedIface: Interface) => void;
+		onChange?: (updatedIface: IPAddress) => void;
 	}
 
 	let { iface, subnet, onChange = () => {} }: Props = $props();
@@ -33,12 +33,12 @@
 	let nameError = $state<string | undefined>(undefined);
 
 	// Track current interface ID to reset when interface changes
-	let currentInterfaceId = $state(untrack(() => iface.id));
+	let currentIPAddressId = $state(untrack(() => iface.id));
 
 	// Reset fields when interface changes
 	$effect(() => {
-		if (iface.id !== currentInterfaceId) {
-			currentInterfaceId = iface.id;
+		if (iface.id !== currentIPAddressId) {
+			currentIPAddressId = iface.id;
 			ipAddress = iface.ip_address || '';
 			name = iface.name || '';
 			ipError = undefined;
@@ -62,7 +62,7 @@
 	}
 
 	function triggerOnChange() {
-		const updatedIface: Interface = {
+		const updatedIface: IPAddress = {
 			...iface,
 			ip_address: ipAddress,
 			name: name

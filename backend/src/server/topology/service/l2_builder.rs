@@ -3,7 +3,9 @@ use uuid::Uuid;
 
 use super::{
     context::TopologyContext,
-    element_rules::{ElementMatchData, apply_element_rules},
+    element_rules::{
+        ElementMatchData, TaggableLookups, apply_element_rules, resolve_element_tag_ids,
+    },
     view::ViewBuilder,
 };
 use crate::server::{
@@ -170,13 +172,21 @@ impl ViewBuilder for L2Builder {
             Uuid,
             &crate::server::interfaces::r#impl::base::Interface,
         > = ctx.interfaces.iter().map(|e| (e.id, e)).collect();
+        let tag_lookups = TaggableLookups {
+            hosts: Some(&host_lookup),
+            services: None,
+            subnets: None,
+        };
         let _ = apply_element_rules(
             &mut nodes,
             &grouping.element_rules,
             |node| {
                 if let NodeType::Element { host_id, .. } = &node.node_type {
-                    let host = host_lookup.get(host_id)?;
-                    let tag_ids: HashSet<Uuid> = host.base.tags.iter().copied().collect();
+                    let tag_ids = resolve_element_tag_ids(
+                        EntityDiscriminants::Interface,
+                        *host_id,
+                        &tag_lookups,
+                    );
                     let interface = if_entry_lookup.get(&node.id);
                     let native_vlan_id = interface.and_then(|e| e.base.native_vlan_id);
                     let resolved_vlan = native_vlan_id.and_then(|vid| ctx.get_vlan_by_id(vid));

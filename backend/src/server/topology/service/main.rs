@@ -12,7 +12,10 @@ use crate::server::{
     bindings::{r#impl::base::Binding, service::BindingService},
     dependencies::{r#impl::base::Dependency, service::DependencyService},
     hosts::{r#impl::base::Host, service::HostService},
-    interfaces::{r#impl::base::Interface, service::InterfaceService},
+    interfaces::{
+        r#impl::base::{Interface, Neighbor},
+        service::InterfaceService,
+    },
     ip_addresses::{r#impl::base::IPAddress, service::IPAddressService},
     ports::{r#impl::base::Port, service::PortService},
     services::{r#impl::base::Service, service::ServiceService},
@@ -37,7 +40,7 @@ use crate::server::{
             edges::{Edge, EdgeHandle},
             grouping::{ElementRule, GroupingConfig, IdentifiedRule},
             nodes::Node,
-            views::TopologyView,
+            views::{TopologyView, TopologyViewSupport},
         },
     },
     vlans::{r#impl::base::Vlan, service::VlanService},
@@ -189,6 +192,51 @@ pub struct BuildGraphParams<'a> {
 }
 
 impl TopologyService {
+    /// Returns true if changes to this tag should mark topologies stale.
+    /// Fires for either: application tags, or tags referenced by any ByTag
+    /// element rule in any topology in the given org.
+    pub async fn tag_affects_any_topology(&self, tag_id: Uuid, org_id: Uuid) -> bool {
+        let is_app = self
+            .tag_service
+            .get_by_id(&tag_id)
+            .await
+            .ok()
+            .flatten()
+            .map(|t| t.base.is_application)
+            .unwrap_or(false);
+        if is_app {
+            return true;
+        }
+        let Ok(networks) = self
+            .network_service
+            .get_all(
+                StorableFilter::<crate::server::networks::r#impl::Network>::new_from_org_id(
+                    &org_id,
+                ),
+            )
+            .await
+        else {
+            return false;
+        };
+        let network_ids: Vec<Uuid> = networks.iter().map(|n| n.id).collect();
+        if network_ids.is_empty() {
+            return false;
+        }
+        let Ok(topologies) = self
+            .get_all(StorableFilter::<Topology>::new_from_network_ids(
+                &network_ids,
+            ))
+            .await
+        else {
+            return false;
+        };
+        topologies.iter().any(|t| {
+            t.base.options.request.element_rules.iter().any(|r| {
+                matches!(&r.rule, ElementRule::ByTag { tag_ids, .. } if tag_ids.contains(&tag_id))
+            })
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         host_service: Arc<HostService>,
@@ -358,6 +406,69 @@ impl TopologyService {
     pub async fn get_vlans(&self, network_id: Uuid) -> Result<Vec<Vlan>, Error> {
         let filter = StorableFilter::<Vlan>::new_from_uuid_column("network_id", &network_id);
         self.vlan_service.storage().get_all(filter).await
+    }
+
+    /// Compute per-view data-support flags for a network's topology by
+    /// querying raw entity tables — independent of whatever the topology
+    /// was last rebuilt under. Used by the share handlers to decide which
+    /// views to expose; previously this was read from the persisted
+    /// `topology.base.edges` / `entity_tags` snapshot, which flips based
+    /// on the most recently rendered view.
+    pub async fn get_view_support(&self, network_id: Uuid) -> Result<TopologyViewSupport, Error> {
+        // L2 physical support: any interface in this network has an LLDP/CDP
+        // neighbor pointing at another interface. The `neighbor` field on
+        // Interface is raw discovery data — unchanged by topology rebuilds.
+        let interfaces = self
+            .interface_service
+            .get_all(StorableFilter::<Interface>::new_from_network_ids(&[
+                network_id,
+            ]))
+            .await?;
+        let l2_physical = interfaces
+            .iter()
+            .any(|i| matches!(i.base.neighbor, Some(Neighbor::Interface(_))));
+
+        // Application support: any application-flagged tag is assigned to any
+        // host / service / subnet in this network.
+        let hosts = self
+            .host_service
+            .get_all(StorableFilter::<Host>::new_from_network_ids(&[network_id]).hidden_is(false))
+            .await?;
+        let services = self.get_service_data(network_id).await?;
+        let subnets = self
+            .subnet_service
+            .get_all(StorableFilter::<Subnet>::new_from_network_ids(&[
+                network_id,
+            ]))
+            .await?;
+
+        let mut tag_ids: Vec<Uuid> = Vec::new();
+        for h in &hosts {
+            tag_ids.extend(&h.base.tags);
+        }
+        for s in &services {
+            tag_ids.extend(&s.base.tags);
+        }
+        for s in &subnets {
+            tag_ids.extend(&s.base.tags);
+        }
+        tag_ids.sort();
+        tag_ids.dedup();
+
+        let application = if tag_ids.is_empty() {
+            false
+        } else {
+            self.tag_service
+                .get_all(StorableFilter::<Tag>::new_from_entity_ids(&tag_ids))
+                .await?
+                .iter()
+                .any(|t| t.base.is_application)
+        };
+
+        Ok(TopologyViewSupport {
+            l2_physical,
+            application,
+        })
     }
 
     /// Rebuild a topology: fetch entities from DB, compute nodes/edges, persist.

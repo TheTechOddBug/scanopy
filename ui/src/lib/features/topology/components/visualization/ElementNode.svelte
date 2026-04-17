@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import { concepts, entities, serviceDefinitions, views } from '$lib/shared/stores/metadata';
 	import {
@@ -9,7 +10,7 @@
 		activeView
 	} from '../../queries';
 	import { useTopology, selectedTopologyId } from '../../context';
-	import type { TopologyNode, ElementRenderData, Topology } from '../../types/base';
+	import type { TopologyNode, ElementRenderData } from '../../types/base';
 	import { resolveElementNode } from '../../resolvers';
 	import { type Writable, get } from 'svelte/store';
 	import { formatPort } from '$lib/shared/utils/formatting';
@@ -92,7 +93,7 @@
 	const topo = useTopology();
 	const topoStore = topo.fromContext ? topo.store : null;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
 	// Try to get selection from context (for share/embed pages), fallback to global store
@@ -109,7 +110,6 @@
 	let host = $derived(resolved?.host);
 	let servicesForHost = $derived(resolved?.services ?? []);
 	let ipAddress = $derived(resolved?.ipAddress ?? null);
-	let snmpInterface = $derived(resolved?.snmpInterface ?? null);
 
 	let effectiveWidth = $derived(width ? width : 0);
 
@@ -350,9 +350,9 @@
 			}
 
 			// Build groups from inline_groups — generic matching by entity_id, no domain logic
-			const groupMembers = new Map<string, ServiceList>();
-			const groupHeaders = new Map<string, ServiceList[number] | null>();
-			const memberServiceIds = new Set<string>();
+			const groupMembers = new SvelteMap<string, ServiceList>();
+			const groupHeaders = new SvelteMap<string, ServiceList[number] | null>();
+			const memberServiceIds = new SvelteSet<string>();
 
 			for (const ig of inlineGroups) {
 				if (!groupMembers.has(ig.group_id)) {

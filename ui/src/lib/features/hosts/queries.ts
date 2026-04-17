@@ -18,6 +18,7 @@ import type {
 	HostResponse,
 	HostFormData,
 	IPAddress,
+	AllIPAddresses,
 	Interface,
 	Port,
 	CreateHostWithServicesRequest,
@@ -705,7 +706,7 @@ export function getHostByIdFromCache(
  */
 export function getHostFromIPAddressIdFromCache(
 	queryClient: ReturnType<typeof useQueryClient>,
-	ipAddressId: string
+	interfaceId: string
 ): Host | null {
 	const interfaces = queryClient.getQueryData<Interface[]>(queryKeys.interfaces.all) ?? [];
 	const iface = interfaces.find((i) => i.id === interfaceId);

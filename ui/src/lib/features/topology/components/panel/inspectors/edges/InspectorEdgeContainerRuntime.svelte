@@ -16,7 +16,7 @@
 	const topoStore = topo.fromContext ? topo.store : null;
 	let isReadonly = topo.isReadonly;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
 	// Unified edit state

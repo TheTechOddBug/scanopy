@@ -36,7 +36,6 @@ use crate::server::daemons::r#impl::base::{Daemon, DaemonBase};
 use crate::server::daemons::r#impl::version::{
     DaemonVersionPolicy, pre_interface_to_ip_address_rename, supports_unified_discovery,
 };
-use crate::server::shared::legacy::rewrite_response_for_legacy_daemon;
 use crate::server::discovery::r#impl::base::{Discovery, DiscoveryBase};
 use crate::server::discovery::r#impl::scan_settings::ScanSettings;
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback, RunType};
@@ -52,6 +51,7 @@ use crate::server::shared::events::types::{
     BillingEvent, BillingOperation, EntityEvent, EntityOperation, OnboardingEvent,
     OnboardingOperation,
 };
+use crate::server::shared::legacy::rewrite_response_for_legacy_daemon;
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;

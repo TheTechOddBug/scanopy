@@ -6,6 +6,7 @@
 	import {
 		selectedNodes,
 		previewEdges,
+		baseFlowEdges,
 		autoRebuild,
 		useRebuildTopologyMutation,
 		activeView,
@@ -39,7 +40,13 @@
 	import type { Dependency } from '$lib/features/dependencies/types/base';
 	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import { computeOptimalHandles } from '../../../layout/elk-layout';
-	import { dependencyTypes, concepts, views, entities } from '$lib/shared/stores/metadata';
+	import { dependencyTypes, concepts } from '$lib/shared/stores/metadata';
+	import {
+		commonTagsHeader,
+		formatEntityCounts,
+		noCommonTagsHintText,
+		tallySelection
+	} from '$lib/features/topology/labels';
 	import { getInspectorConfig } from './view-config';
 	import DependencyTargetCard from './shared/DependencyTargetCard.svelte';
 	import SegmentedControl from '$lib/shared/components/forms/SegmentedControl.svelte';
@@ -59,10 +66,8 @@
 		topology_multiSelectReadOnlyHint,
 		topology_multiSelectGroupName,
 		common_clearSelection,
-		common_services,
 		common_hub,
 		common_spokes,
-		tags_entityTags,
 		common_makesRequestTo,
 		common_serves,
 		common_cancel,
@@ -71,7 +76,9 @@
 		dependencies_dependencyName,
 		dependencies_editDependency,
 		dependencies_servicesOnly,
+		dependencies_servicesOnlyL3Hint,
 		dependencies_withPorts,
+		dependencies_withPortsL3Hint,
 		topology_multiSelectPreviewEdge,
 		topology_focusSelection,
 		tags_crossGroupSelectionHint,
@@ -108,7 +115,7 @@
 
 	let isEditMode = $derived(editingDependency !== null);
 
-	const { fitView } = useSvelteFlow();
+	const { fitView, getInternalNode } = useSvelteFlow();
 	const PREVIEW_STORAGE_KEY = 'scanopy_topology_group_preview';
 
 	const bulkAddTagMutation = useBulkAddTagMutation();
@@ -143,15 +150,10 @@
 
 	// View-driven config
 	let inspectorConfig = $derived(getInspectorConfig($activeView));
-	let viewMeta = $derived(views.getMetadata($activeView) as Record<string, unknown> | null);
-	let elementLabel = $derived.by(() => {
-		const count = nodes.length;
-		if (count === 1) return (viewMeta?.element_label_singular as string) ?? 'element';
-		return (viewMeta?.element_label as string) ?? 'elements';
-	});
+	let selectionSummary = $derived(formatEntityCounts(tallySelection(nodes)));
 
 	// Group selected nodes by their resolved taggable entity type. Each group drives
-	// its own tag picker. IPAddress/Interface elements resolve to Host via parent_entity;
+	// its own tag picker. IPAddress/Interface elements resolve to Host via parent_taggable_entity;
 	// Service/Host elements resolve to themselves.
 	interface TagGroup {
 		entityType: 'Host' | 'Service';
@@ -163,7 +165,7 @@
 
 	let tagGroups = $derived.by((): TagGroup[] => {
 		if (!topology) return [];
-		const byType = new Map<'Host' | 'Service', Set<string>>();
+		const byType = new SvelteMap<'Host' | 'Service', SvelteSet<string>>();
 		for (const node of nodes) {
 			const data = node.data as TopologyNode | undefined;
 			if (!data) continue;
@@ -171,7 +173,7 @@
 			if (!target) continue;
 			let set = byType.get(target.entityType);
 			if (!set) {
-				set = new Set();
+				set = new SvelteSet();
 				byType.set(target.entityType, set);
 			}
 			set.add(target.entityId);
@@ -188,7 +190,7 @@
 				entityIds: idArr,
 				entities: entityList,
 				commonTags: computeCommonTags(entityList),
-				label: tags_entityTags({ entity: entities.getName(entityType) })
+				label: commonTagsHeader(entityType)
 			});
 		}
 		return groups;
@@ -378,11 +380,19 @@
 	);
 
 	function createGroupingRuleFromTags(tagIds: string[]) {
+		const names = tagIds
+			.map(
+				(id) =>
+					topoEntityTags.find((t) => t.id === id)?.name ??
+					topology?.entity_tags?.find((t) => t.id === id)?.name
+			)
+			.filter((n): n is string => !!n);
+		const title = names.length > 0 ? names.join(', ') : null;
 		updateSharedElementRules((current) => [
 			...current,
 			{
 				id: crypto.randomUUID(),
-				rule: { ByTag: { tag_ids: tagIds, title: null } }
+				rule: { ByTag: { tag_ids: tagIds, title } }
 			}
 		]);
 		recentlyAddedTagIds = [];
@@ -397,13 +407,15 @@
 		return nodes.map((n) => (n.data as TopologyNode)?.header ?? '').filter(Boolean);
 	}
 
-	// Edge styling lives outside the TanStack form (same pattern as DependencyEditModal):
-	// EdgeStyleForm manages it via bindable callbacks. Seeded from editingDependency
-	// in edit mode, otherwise a random palette pick.
+	// Edge styling lives outside the TanStack form: EdgeStyleForm manages it via
+	// bindable callbacks. Seeded from editingDependency in edit mode (snapshot at
+	// open), otherwise a random palette pick.
+	// svelte-ignore state_referenced_locally
 	let dependencyColor: Color = $state(
 		editingDependency?.color ??
 			AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)]
 	);
+	// svelte-ignore state_referenced_locally
 	let dependencyEdgeStyle: EdgeStyle = $state(editingDependency?.edge_style ?? 'Bezier');
 	let edgeStyleCollapsed = $state(true);
 
@@ -449,7 +461,7 @@
 		id: '',
 		name: '',
 		description: '',
-		members: [],
+		members: { type: 'Services' as const, service_ids: [] as string[] },
 		created_at: '',
 		updated_at: '',
 		dependency_type: DEFAULT_DEP_TYPE,
@@ -722,17 +734,14 @@
 		onDone?.();
 	}
 
-	// Get absolute position for a node (accounting for parent offset)
+	// Absolute position from xyflow's own rendered state — accounts for
+	// every level of nesting, zoom/pan, and user drag. Fall back to the
+	// raw node position only if the node isn't mounted yet (e.g. first
+	// render before xyflow has measured it).
 	function getAbsolutePosition(node: Node): { x: number; y: number } {
-		if (node.parentId && topology) {
-			const parent = topology.nodes.find((n) => n.id === node.parentId);
-			if (parent) {
-				return {
-					x: parent.position.x + node.position.x,
-					y: parent.position.y + node.position.y
-				};
-			}
-		}
+		const internal = getInternalNode(node.id);
+		const abs = internal?.internals.positionAbsolute;
+		if (abs) return { x: abs.x, y: abs.y };
 		return { x: node.position.x, y: node.position.y };
 	}
 
@@ -746,6 +755,23 @@
 	}
 
 	function handlesFor(source: Node, target: Node): { sourceHandle: string; targetHandle: string } {
+		// Prefer handles from the currently-rendered real edge for this pair
+		// (if one exists). That keeps the preview visually identical to the
+		// edge it's replacing during an edit, and stays consistent with the
+		// build-flow-edges handle-picker. Falls back to computing against
+		// xyflow live positions for pairs that have no real edge (new deps
+		// or newly-rearranged hub-spoke orderings).
+		// Read from the source-of-truth store so we get the real edge's handles
+		// even when the merge effect has filtered it out of the rendered `edges`
+		// store during the edit.
+		const currentEdges = get(baseFlowEdges);
+		const matching = currentEdges.find((e) => e.source === source.id && e.target === target.id);
+		if (matching?.sourceHandle && matching?.targetHandle) {
+			return {
+				sourceHandle: matching.sourceHandle,
+				targetHandle: matching.targetHandle
+			};
+		}
 		return computeOptimalHandles(
 			getAbsolutePosition(source),
 			nodeSize(source),
@@ -832,7 +858,7 @@
 	<!-- Header with count, focus, and clear -->
 	<div class="flex items-center justify-between">
 		<span class="text-secondary text-sm font-medium">
-			{appWizard_selectedCount({ count: nodes.length, label: elementLabel })}
+			{appWizard_selectedCount({ summary: selectionSummary })}
 		</span>
 		<div class="flex items-center gap-1">
 			{#if !isTutorial}
@@ -857,12 +883,18 @@
 		{#if !isTutorial}
 			<!-- Tags sections — one per resolved taggable entity type in the selection -->
 			{#each tagGroups as group (group.entityType)}
+				{@const nonAppCommon = group.commonTags.filter((id) => !appTagSet.has(id))}
 				<div class="space-y-2">
 					<span class="text-secondary block text-sm font-medium">{group.label}</span>
 					<div class="card card-static space-y-2 p-2">
+						{#if nonAppCommon.length === 0 && group.entities.length > 1}
+							<p class="text-tertiary text-xs italic">
+								{noCommonTagsHintText(group.entityType)}
+							</p>
+						{/if}
 						<div class="flex items-center gap-1.5">
 							<TagPickerInline
-								selectedTagIds={group.commonTags.filter((id) => !appTagSet.has(id))}
+								selectedTagIds={nonAppCommon}
 								onAdd={(tagId) => handleAddTagForGroup(group, tagId)}
 								onRemove={(tagId) => handleRemoveTagForGroup(group, tagId)}
 								availableTags={nonAppTags}
@@ -1017,6 +1049,13 @@
 								size="sm"
 								fullWidth={true}
 							/>
+							{#if $activeView !== 'L3Logical'}
+								<p class="text-tertiary mt-1 text-xs">
+									{field.state.value === 'Bindings'
+										? dependencies_withPortsL3Hint()
+										: dependencies_servicesOnlyL3Hint()}
+								</p>
+							{/if}
 						{/snippet}
 					</form.Field>
 				{/if}
@@ -1028,7 +1067,6 @@
 				{#if topology && depTargets.length > 0}
 					{@const depType = formValues.dependency_type}
 					<div class="space-y-2">
-						<span class="text-secondary block text-sm font-medium">{common_services()}</span>
 						{#each depTargets as target, targetIdx (target.elementId)}
 							{@const flatIndex = depTargets
 								.slice(0, targetIdx)
@@ -1051,7 +1089,7 @@
 								{topology}
 								{target}
 								{flatIndex}
-								onRemove={() => removeTarget(target)}
+								onRemove={depTargets.length > 2 ? () => removeTarget(target) : undefined}
 							/>
 							{#if depType === 'RequestPath' && targetIdx < depTargets.length - 1}
 								<div class="flex flex-col items-center gap-0.5">

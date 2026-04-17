@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { edgeTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Topology, TopologyEdge } from '$lib/features/topology/types/base';
 
@@ -23,9 +23,7 @@
 		},
 		getDescription: (edge, context) => {
 			if (!context?.topology || !('service_id' in edge)) return '';
-			const containerizer = context.topology.services.find(
-				(s) => s.id === edge.service_id
-			);
+			const containerizer = context.topology.services.find((s) => s.id === edge.service_id);
 			const host =
 				'host_id' in edge ? context.topology.hosts.find((h) => h.id === edge.host_id) : null;
 			const parts: string[] = [];
@@ -37,9 +35,7 @@
 		getIconColor: () => edgeTypes.getColorHelper('ContainerRuntime').icon,
 		getTags: (edge, context) => {
 			if (!context?.topology || !('service_id' in edge)) return [];
-			const containerizer = context.topology.services.find(
-				(s) => s.id === edge.service_id
-			);
+			const containerizer = context.topology.services.find((s) => s.id === edge.service_id);
 			if (!containerizer) return [];
 			const defName = serviceDefinitions.getName(containerizer.service_definition);
 			return defName

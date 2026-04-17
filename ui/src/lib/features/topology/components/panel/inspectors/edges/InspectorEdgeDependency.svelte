@@ -21,7 +21,6 @@
 		common_confirmDeleteName,
 		common_edit
 	} from '$lib/paraglide/messages';
-	import EdgeStyleForm from '$lib/features/dependencies/components/DependencyEditModal/EdgeStyleForm.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Dependency } from '$lib/features/dependencies/types/base';
 	import {
@@ -33,7 +32,6 @@
 	import { useTopology, selectedTopologyId } from '$lib/features/topology/context';
 	import { getTopologyEditState } from '$lib/features/topology/state';
 	import { clearSelection } from '$lib/features/topology/selection';
-	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 
 	import type { components } from '$lib/api/schema';
@@ -57,7 +55,7 @@
 	const topoStore = topo.fromContext ? topo.store : null;
 	let isReadonly = topo.isReadonly;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
 	let editState = $derived(getTopologyEditState(topology, $autoRebuild, isReadonly));
@@ -216,6 +214,18 @@
 			</button>
 		{/if}
 
+		{#if !isReadonly}
+			<button
+				type="button"
+				disabled={isDeleting}
+				onclick={handleDelete}
+				class="btn-danger flex w-full items-center justify-center gap-2 text-xs"
+			>
+				<Trash2 class="h-4 w-4" />
+				{isDeleting ? common_deleting() : common_delete()}
+			</button>
+		{/if}
+
 		<span class="text-secondary mb-2 block text-sm font-medium">Services</span>
 		{#if group.members.type === 'Bindings'}
 			{#each group.members.binding_ids as bindingId (bindingId)}
@@ -254,20 +264,6 @@
 					</div>
 				{/if}
 			{/each}
-		{/if}
-
-		{#if !isReadonly}
-			<div class="pt-2">
-				<button
-					type="button"
-					disabled={isDeleting}
-					onclick={handleDelete}
-					class="btn-danger flex w-full items-center justify-center gap-2"
-				>
-					<Trash2 class="h-4 w-4" />
-					{isDeleting ? common_deleting() : common_delete()}
-				</button>
-			</div>
 		{/if}
 	{/if}
 </div>

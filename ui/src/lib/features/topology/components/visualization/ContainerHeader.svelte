@@ -15,6 +15,8 @@
 		headerText: string;
 		labels: Array<{ label: string; color: Color }>;
 		childCount: number;
+		/** Pre-formatted entity-count summary, e.g. "5 services" or "3 services, 2 hosts". */
+		childSummary: string;
 		hideCount?: boolean;
 		countOnly?: boolean;
 	};
@@ -29,7 +31,8 @@
 		colorHelper,
 		groupLabels = [],
 		childCount = 0,
-		elementLabel = 'hosts',
+		childSummary = '',
+		ungroupedSummary = '',
 		onToggleCollapse,
 		variant,
 		subgroupSummaries = [],
@@ -48,7 +51,10 @@
 		colorHelper: ColorStyle;
 		groupLabels: Array<{ label: string; color: Color }>;
 		childCount: number;
-		elementLabel: string;
+		/** Pre-formatted entity-count summary for the container's children, e.g. "5 services, 2 hosts". */
+		childSummary: string;
+		/** Pre-formatted summary for the ungrouped remainder (collapsed-root variant). */
+		ungroupedSummary?: string;
 		onToggleCollapse: (event: MouseEvent | KeyboardEvent) => void;
 		variant: 'external' | 'inline' | 'collapsed-sub' | 'collapsed-root';
 		subgroupSummaries?: SubgroupRow[];
@@ -67,7 +73,10 @@
 	const MORE_WIDTH = 50;
 	let inlineContainerEl: HTMLDivElement | undefined = $state(undefined);
 	let inlineMeasureEl: HTMLDivElement | undefined = $state(undefined);
-	let visibleLabelCount = $state(groupLabels.length);
+	// Derived from the label count by default; `calculateVisibleLabels`
+	// reassigns this to a smaller value when measured width forces truncation.
+	// Reassignment is reset on the next groupLabels change.
+	let visibleLabelCount = $derived(groupLabels.length);
 
 	function calculateVisibleLabels() {
 		if (!inlineContainerEl || !inlineMeasureEl || groupLabels.length === 0) {
@@ -267,7 +276,7 @@
 				{#if countOnly}
 					({childCount})
 				{:else}
-					({topology_elementCount({ count: childCount, label: elementLabel })})
+					({topology_elementCount({ summary: childSummary })})
 				{/if}
 			</span>
 		{/if}
@@ -280,17 +289,19 @@
 	>
 		<div class="flex min-w-fit flex-col items-center gap-2 whitespace-nowrap px-6 py-4">
 			<span class="text-secondary text-base font-medium underline">
-				{topology_elementCount({ count: childCount, label: elementLabel })}
+				{topology_elementCount({ summary: childSummary })}
 			</span>
 			{#if searchMatchCount > 0}
-				<span class="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-xs text-blue-400">
+				<span
+					class="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-xs text-blue-400"
+				>
 					<Search class="h-3 w-3" />
 					{topology_searchContainerMatches({ count: String(searchMatchCount) })}
 				</span>
 			{/if}
 			{#if ungroupedCount > 0 && subgroupSummaries.length > 0}
 				<span class="text-tertiary text-xs">
-					{topology_ungroupedCount({ count: ungroupedCount, label: elementLabel })}
+					{topology_ungroupedCount({ summary: ungroupedSummary })}
 				</span>
 			{/if}
 			{#each subgroupSummaries as summary, i (i)}
@@ -318,10 +329,7 @@
 							{#if summary.countOnly}
 								({summary.childCount})
 							{:else}
-								({topology_elementCount({
-									count: summary.childCount,
-									label: elementLabel
-								})})
+								({topology_elementCount({ summary: summary.childSummary })})
 							{/if}
 						</span>
 					{/if}

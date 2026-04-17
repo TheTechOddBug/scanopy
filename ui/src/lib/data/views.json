@@ -46,8 +46,6 @@
         ],
         "inline_entities": []
       },
-      "element_label": "interfaces",
-      "element_label_singular": "interface",
       "inspector_config": {
         "container_sections": [
           "Identity",
@@ -135,8 +133,6 @@
           "Service"
         ]
       },
-      "element_label": "host IP addresses",
-      "element_label_singular": "host IP address",
       "inspector_config": {
         "container_sections": [
           "SubnetDetail",
@@ -201,6 +197,7 @@
         }
       },
       "element_config": {
+        "collective_noun": "workload",
         "container_entity": "Host",
         "element_entities": [
           "Service",
@@ -208,8 +205,6 @@
         ],
         "inline_entities": []
       },
-      "element_label": "workloads",
-      "element_label_singular": "workload",
       "inspector_config": {
         "container_sections": [
           "Identity",
@@ -280,8 +275,6 @@
         ],
         "inline_entities": []
       },
-      "element_label": "services",
-      "element_label_singular": "service",
       "inspector_config": {
         "container_sections": [
           "Identity",

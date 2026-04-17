@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { type Node, type Edge, type Connection } from '@xyflow/svelte';
-	import { get } from 'svelte/store';
 	import {
 		selectedEdge,
 		selectedNode,

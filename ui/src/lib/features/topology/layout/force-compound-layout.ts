@@ -18,7 +18,6 @@ import {
 } from 'd3-force';
 
 import type { LayoutInput, LayoutResult, LayoutEngine } from './engine';
-import type { EdgeHandles } from './elk-layout';
 import { forceRectCollide } from './force-layout';
 
 // Layout constants
@@ -43,7 +42,6 @@ export class ForceCompoundLayoutEngine implements LayoutEngine {
 		const nodePositions = new Map<string, { x: number; y: number }>();
 		const containerSizes = new Map<string, { width: number; height: number }>();
 		const elementNodeSizes = new Map<string, { x: number; y: number }>();
-		const edgeHandles = new Map<string, EdgeHandles>();
 
 		// Separate containers and elements
 		const containers = input.nodes.filter((n) => n.node_type === 'Container');
@@ -106,7 +104,7 @@ export class ForceCompoundLayoutEngine implements LayoutEngine {
 
 		// Phase 1: Inter-host force layout
 		if (containers.length === 0) {
-			return { nodePositions, containerSizes, elementNodeSizes, edgeHandles };
+			return { nodePositions, containerSizes, elementNodeSizes };
 		}
 
 		// Deduplicate edges to one per container pair
@@ -224,29 +222,7 @@ export class ForceCompoundLayoutEngine implements LayoutEngine {
 			}
 		}
 
-		// Compute edge handles
-		for (const edge of input.edges) {
-			const sourcePos = nodePositions.get(edge.source);
-			const targetPos = nodePositions.get(edge.target);
-			if (sourcePos && targetPos) {
-				const dx = targetPos.x - sourcePos.x;
-				const dy = targetPos.y - sourcePos.y;
-				// Bias vertical for typical layouts
-				if (Math.abs(dx) > Math.abs(dy) * 2.5) {
-					edgeHandles.set(edge.id, {
-						sourceHandle: dx > 0 ? 'Right' : 'Left',
-						targetHandle: dx > 0 ? 'Left' : 'Right'
-					});
-				} else {
-					edgeHandles.set(edge.id, {
-						sourceHandle: dy > 0 ? 'Bottom' : 'Top',
-						targetHandle: dy > 0 ? 'Top' : 'Bottom'
-					});
-				}
-			}
-		}
-
-		return { nodePositions, containerSizes, elementNodeSizes, edgeHandles };
+		return { nodePositions, containerSizes, elementNodeSizes };
 	}
 
 	private findContainerForElement(

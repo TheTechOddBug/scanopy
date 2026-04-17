@@ -78,18 +78,14 @@
 		return ifEntryId ? (topology.interfaces.find((e) => e.id === ifEntryId) ?? null) : null;
 	});
 
-	// For Host containers: show the host
+	// For Host containers: resolve via entity_id on the container node
 	let thisHost = $derived.by(() => {
 		if (containerContext?.containerType !== 'Host') return null;
-		// Find a child Port element to get the host_id
-		const childElement = topology.nodes.find(
-			(n) => n.node_type === 'Element' && n.container_id === node.id
-		);
-		if (childElement && 'host_id' in childElement) {
-			return topology.hosts.find((h) => h.id === childElement.host_id) ?? null;
+		const entityId = (node.data as Record<string, unknown>)?.entity_id as string | undefined;
+		if (entityId) {
+			return topology.hosts.find((h) => h.id === entityId) ?? null;
 		}
-		// Fallback: match by name
-		return topology.hosts.find((h) => h.name === containerContext?.title) ?? null;
+		return null;
 	});
 	let hostDisplayContext = $derived({
 		showEntityTagPicker: !editState.isReadonly,

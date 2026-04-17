@@ -1,5 +1,18 @@
 import type { Port } from '$lib/features/hosts/types/base';
 
+/**
+ * Lowercase a string while preserving runs of 2+ consecutive uppercase letters
+ * as acronyms. Examples:
+ *   "Host"           → "host"
+ *   "IP Address"     → "IP address"
+ *   "IP Addresses"   → "IP addresses"
+ *   "Daemon API Key" → "daemon API key"
+ *   "VLAN"           → "VLAN"
+ */
+export function lowercasePreservingAcronyms(s: string): string {
+	return s.replace(/(\p{Lu}{2,})|./gu, (m, acronym) => (acronym ? acronym : m.toLowerCase()));
+}
+
 export const uuidv4Sentinel: string = '00000000-0000-0000-0000-000000000000';
 
 export const utcTimeZoneSentinel: string = '1970-01-01T00:00:00Z';

@@ -332,7 +332,7 @@
 		const updatedHost = { ...host, hidden: !host.hidden };
 		await updateHostMutation.mutateAsync({
 			host: updatedHost,
-			interfaces: null,
+			ip_addresses: null,
 			ports: null,
 			services: null
 		});

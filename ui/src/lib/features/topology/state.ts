@@ -102,7 +102,7 @@ export interface TopologyEditState {
 }
 
 export function getTopologyEditState(
-	topology: Topology | undefined,
+	topology: Topology | null | undefined,
 	autoRebuild: boolean,
 	isReadonly: boolean
 ): TopologyEditState {

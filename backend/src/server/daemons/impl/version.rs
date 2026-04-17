@@ -41,7 +41,7 @@ pub fn supports_unified_discovery(version: Option<&Version>) -> bool {
 pub fn pre_interface_to_ip_address_rename(version: Option<&str>) -> bool {
     version
         .and_then(|v| Version::parse(v).ok())
-        .map_or(true, |v| v < Version::new(0, 16, 0))
+        .is_none_or(|v| v < Version::new(0, 16, 0))
 }
 
 impl DaemonVersionPolicy {

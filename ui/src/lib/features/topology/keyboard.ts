@@ -1,4 +1,4 @@
-import { get, type Writable } from 'svelte/store';
+import { get } from 'svelte/store';
 import type { Node } from '@xyflow/svelte';
 import { searchOpen, clearSearch } from './interactions';
 import { clearSelection, type SelectionStores } from './selection';

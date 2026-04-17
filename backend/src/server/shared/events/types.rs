@@ -8,8 +8,8 @@ use crate::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use strum::EnumIter;
 use std::{fmt::Display, net::IpAddr};
+use strum::EnumIter;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
@@ -466,7 +466,16 @@ impl BillingOperation {
 }
 
 #[derive(
-    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, strum::Display, utoipa::ToSchema, EnumIter
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Hash,
+    strum::Display,
+    utoipa::ToSchema,
+    EnumIter,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum OnboardingOperation {

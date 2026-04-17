@@ -7,7 +7,6 @@
  */
 
 import type { TopologyNode } from '../types/base';
-import type { EdgeHandles } from './elk-layout';
 import { containerTypes } from '$lib/shared/stores/metadata';
 
 const CHILD_SPACING = 30;
@@ -153,7 +152,6 @@ export class LayoutContainer {
 export class LayoutGraph {
 	containers = new Map<string, LayoutContainer>();
 	elements = new Map<string, LayoutElement>();
-	edgeHandles = new Map<string, EdgeHandles>();
 
 	/** Build graph from topology nodes */
 	static fromTopology(nodes: TopologyNode[]): LayoutGraph {
@@ -205,8 +203,7 @@ export class LayoutGraph {
 	applyElkResult(
 		nodePositions: Map<string, { x: number; y: number }>,
 		containerSizes: Map<string, { width: number; height: number }>,
-		elementNodeSizes: Map<string, { x: number; y: number }>,
-		edgeHandles: Map<string, EdgeHandles>
+		elementNodeSizes: Map<string, { x: number; y: number }>
 	): void {
 		for (const [id, pos] of nodePositions) {
 			const container = this.containers.get(id);
@@ -227,17 +224,6 @@ export class LayoutGraph {
 				const size = elementNodeSizes.get(id);
 				if (size) element.size = { ...size };
 			}
-		}
-		this.edgeHandles = new Map(edgeHandles);
-
-		// Summary: count containers by state
-		let expandedCount = 0;
-		let collapsedCount = 0;
-		let zeroExpandedCount = 0;
-		for (const c of this.containers.values()) {
-			if (c.collapsed) collapsedCount++;
-			else expandedCount++;
-			if (c.expandedSize.width === 0) zeroExpandedCount++;
 		}
 	}
 
@@ -526,7 +512,6 @@ export class LayoutGraph {
 	/** Apply positions from force layout (collapsed containers only) */
 	applyForceResult(
 		nodePositions: Map<string, { x: number; y: number }>,
-		edgeHandles: Map<string, EdgeHandles>,
 		measuredSizes?: Map<string, { x: number; y: number }>
 	): void {
 		for (const [id, pos] of nodePositions) {
@@ -539,6 +524,5 @@ export class LayoutGraph {
 				}
 			}
 		}
-		this.edgeHandles = new Map(edgeHandles);
 	}
 }

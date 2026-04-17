@@ -122,22 +122,22 @@ function makeTopology(
 			edges,
 			subnets,
 			hosts: [],
+			ip_addresses: [],
 			interfaces: [],
 			services: [],
 			dependencies: [],
 			entity_tags: [],
 			ports: [],
 			bindings: [],
-			interfaces: [],
 			tags: [],
 			removed_hosts: [],
+			removed_ip_addresses: [],
 			removed_interfaces: [],
 			removed_services: [],
 			removed_subnets: [],
 			removed_dependencies: [],
 			removed_ports: [],
 			removed_bindings: [],
-			removed_if_entries: [],
 			options: {
 				local: {
 					left_zone_title: '', // Deprecated field, kept for generated type compat
@@ -155,7 +155,7 @@ function makeTopology(
 					element_rules: []
 				}
 			}
-		} as ElkLayoutInput['topology']
+		} as unknown as ElkLayoutInput['topology']
 	};
 }
 
@@ -597,7 +597,7 @@ describe('computeElkLayout', () => {
 					will_target_container: true,
 					show_directionality: false
 				}
-			} as TopologyEdge
+			} as unknown as TopologyEdge
 		];
 
 		const subnets = [
@@ -684,7 +684,7 @@ describe('computeElkLayout', () => {
 					will_target_container: true,
 					show_directionality: false
 				}
-			} as TopologyEdge
+			} as unknown as TopologyEdge
 		];
 
 		const subnets = [
@@ -741,7 +741,7 @@ describe('computeElkLayout', () => {
 					will_target_container: true,
 					show_directionality: false
 				}
-			} as TopologyEdge
+			} as unknown as TopologyEdge
 		];
 
 		const subnets = [
@@ -800,7 +800,7 @@ describe('computeElkLayout', () => {
 					will_target_container: true,
 					show_directionality: false
 				}
-			} as TopologyEdge
+			} as unknown as TopologyEdge
 		];
 
 		// Run edge elevation (same as prepare.ts pipeline)

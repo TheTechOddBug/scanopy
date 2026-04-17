@@ -60,11 +60,13 @@ pub struct Tag {
 }
 
 impl ChangeTriggersTopologyStaleness<Tag> for Tag {
-    fn triggers_staleness(&self, other: Option<Tag>) -> bool {
-        match other {
-            Some(prev) => self.base.is_application || prev.base.is_application,
-            None => self.base.is_application,
-        }
+    /// Always returns true — the actual determination of whether a Tag change
+    /// should mark a topology stale lives downstream in the topology subscriber,
+    /// which has the cross-service access needed to check if the tag is an
+    /// application tag or is referenced by a ByTag element rule.
+    /// See `TopologyService::tag_affects_any_topology`.
+    fn triggers_staleness(&self, _other: Option<Tag>) -> bool {
+        true
     }
 }
 

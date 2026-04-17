@@ -34,7 +34,7 @@
 	const topo = useTopology();
 	const topoStore = topo.fromContext ? topo.store : null;
 	let topology = $derived(
-		topoStore ? $topoStore : topo.query.data?.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
 	const nodes = $derived(topology?.nodes ?? []);
@@ -44,7 +44,6 @@
 	// Bundle detection
 	const anyEdgeData = $derived(data as Record<string, unknown> | undefined);
 	let isBundle = $derived(!!anyEdgeData?.isBundle);
-	let bundleId = $derived((anyEdgeData?.bundleId as string) ?? '');
 	let bundleStrokeWidth = $derived((anyEdgeData?.bundleStrokeWidth as number) ?? 2);
 	let bundleIsOverlay = $derived(!!anyEdgeData?.bundleIsOverlay);
 	let hasFanOffset = $derived(anyEdgeData?.bundleFanTotal != null);

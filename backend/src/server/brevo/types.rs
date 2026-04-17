@@ -152,8 +152,10 @@ pub struct CompanyAttributes {
     pub scanopy_checkout_completed_date: Option<String>,
     pub scanopy_second_network_date: Option<String>,
     pub scanopy_first_tag_date: Option<String>,
-    pub scanopy_first_group_date: Option<String>,
+    pub scanopy_first_dependency_date: Option<String>,
+    pub scanopy_first_application_group_tag_date: Option<String>,
     pub scanopy_first_api_key_date: Option<String>,
+    pub scanopy_first_credential_date: Option<String>,
     pub scanopy_first_snmp_credential_date: Option<String>,
     pub scanopy_first_invite_sent_date: Option<String>,
     pub scanopy_first_invite_accepted_date: Option<String>,
@@ -282,13 +284,23 @@ impl CompanyAttributes {
         self
     }
 
-    pub fn with_first_group_date(mut self, date: DateTime<Utc>) -> Self {
-        self.scanopy_first_group_date = Some(date.to_rfc3339());
+    pub fn with_first_dependency_date(mut self, date: DateTime<Utc>) -> Self {
+        self.scanopy_first_dependency_date = Some(date.to_rfc3339());
+        self
+    }
+
+    pub fn with_first_application_group_tag_date(mut self, date: DateTime<Utc>) -> Self {
+        self.scanopy_first_application_group_tag_date = Some(date.to_rfc3339());
         self
     }
 
     pub fn with_first_api_key_date(mut self, date: DateTime<Utc>) -> Self {
         self.scanopy_first_api_key_date = Some(date.to_rfc3339());
+        self
+    }
+
+    pub fn with_first_credential_date(mut self, date: DateTime<Utc>) -> Self {
+        self.scanopy_first_credential_date = Some(date.to_rfc3339());
         self
     }
 
@@ -383,12 +395,27 @@ impl CompanyAttributes {
         if let Some(v) = &self.scanopy_first_tag_date {
             attrs.insert("scanopy_first_tag_date".to_string(), serde_json::json!(v));
         }
-        if let Some(v) = &self.scanopy_first_group_date {
-            attrs.insert("scanopy_first_group_date".to_string(), serde_json::json!(v));
+        if let Some(v) = &self.scanopy_first_dependency_date {
+            attrs.insert(
+                "scanopy_first_dependency_date".to_string(),
+                serde_json::json!(v),
+            );
+        }
+        if let Some(v) = &self.scanopy_first_application_group_tag_date {
+            attrs.insert(
+                "scanopy_first_application_group_tag_date".to_string(),
+                serde_json::json!(v),
+            );
         }
         if let Some(v) = &self.scanopy_first_api_key_date {
             attrs.insert(
                 "scanopy_first_api_key_date".to_string(),
+                serde_json::json!(v),
+            );
+        }
+        if let Some(v) = &self.scanopy_first_credential_date {
+            attrs.insert(
+                "scanopy_first_credential_date".to_string(),
                 serde_json::json!(v),
             );
         }
@@ -543,6 +570,17 @@ pub struct CreateDealResponse {
 pub struct EventIdentifiers {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email_id: Option<String>,
+}
+
+/// POST /contacts/doubleOptinConfirmation - create DOI contact
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateDoiContactRequest {
+    pub email: String,
+    pub include_list_ids: Vec<i64>,
+    pub template_id: i64,
+    pub redirection_url: String,
+    pub attributes: HashMap<String, serde_json::Value>,
 }
 
 /// POST /contacts/lists/{listId}/contacts/add

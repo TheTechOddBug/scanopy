@@ -8,35 +8,160 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { queryClient, queryKeys } from '$lib/api/query-client';
 import { apiClient } from '$lib/api/client';
-import type { Topology, TopologyOptions } from './types/base';
+import type { Topology, TopologyEdge, TopologyOptions } from './types/base';
+import type { ContainerGraphRule, ElementGraphRule, ElementRule } from './types/grouping';
+import { makeGraphRule } from './types/grouping';
+import type { ContainerRule } from './types/grouping';
+import _containerRuleTypes from '$lib/data/container-rule-types.json';
+import _elementRuleTypes from '$lib/data/element-rule-types.json';
 import type { Organization } from '$lib/features/organizations/types';
 import { uuidv4Sentinel, utcTimeZoneSentinel } from '$lib/shared/utils/formatting';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
-import { writable, get } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
+import { UNTAGGED_SENTINEL } from './interactions';
+import { getDefaultHiddenEdgeTypes } from './layout/edge-classification';
+import type { components } from '$lib/api/schema';
+import viewsJson from '$lib/data/views.json';
+import { getIrrelevantServiceCategories } from '$lib/shared/stores/metadata';
+import { common_infrastructure } from '$lib/paraglide/messages';
 
-// Default options for new topologies
-export const defaultTopologyOptions: TopologyOptions = {
-	local: {
-		left_zone_title: 'Infrastructure',
-		hide_edge_types: ['HostVirtualization'],
+export type TopologyView = components['schemas']['TopologyView'];
+
+/** Strip UI-only sentinel values from options before sending to the API */
+export function sanitizeOptionsForApi(options: TopologyOptions): TopologyOptions {
+	const tf = options.local?.tag_filter;
+	const isSentinel = (id: string) => id === UNTAGGED_SENTINEL;
+	return {
+		...options,
+		local: {
+			...options.local,
+			tag_filter: {
+				hidden_host_tag_ids: (tf?.hidden_host_tag_ids ?? []).filter((id) => !isSentinel(id)),
+				hidden_service_tag_ids: (tf?.hidden_service_tag_ids ?? []).filter((id) => !isSentinel(id)),
+				hidden_subnet_tag_ids: (tf?.hidden_subnet_tag_ids ?? []).filter((id) => !isSentinel(id))
+			}
+		}
+	};
+}
+
+type ServiceCategory = components['schemas']['ServiceCategory'];
+type TopologyLocalOptions = components['schemas']['TopologyLocalOptions'];
+
+/** Get the org's use case from the query cache, defaulting to 'other' */
+export function getOrgUseCase(): string {
+	const org = queryClient.getQueryData<Organization>(queryKeys.organizations.current());
+	return org?.use_case ?? 'other';
+}
+
+/**
+ * Get categories that are irrelevant for the org's use case (for grouping into
+ * the "Infrastructure Services" ByServiceCategory element rule).
+ */
+function getIrrelevantCategories(useCase: string): ServiceCategory[] {
+	return [...getIrrelevantServiceCategories(useCase)] as ServiceCategory[];
+}
+
+/**
+ * Find the infrastructure rule ID from the current topology options
+ * by looking for the ByServiceCategory rule with is_infra_rule: true.
+ * Derives the ID on each call — no stale state possible.
+ */
+export function getInfrastructureRuleId(): string | null {
+	const opts = get(topologyOptionsStore);
+	for (const rule of opts.request.element_rules ?? []) {
+		if (
+			typeof rule.rule === 'object' &&
+			'ByServiceCategory' in rule.rule &&
+			rule.rule.ByServiceCategory.is_infra_rule
+		) {
+			return rule.id;
+		}
+	}
+	return null;
+}
+
+const ALL_VIEWS: TopologyView[] = viewsJson.map((p) => p.id as TopologyView);
+
+/** Default local options for a given view (UI-only, not sent to backend as rules) */
+function getDefaultLocalOptions(view: TopologyView): TopologyLocalOptions {
+	return {
+		hide_edge_types: getDefaultHiddenEdgeTypes(view),
 		no_fade_edges: false,
-		hide_resize_handles: false,
+		bundle_edges: true,
 		tag_filter: {
 			hidden_host_tag_ids: [],
 			hidden_service_tag_ids: [],
 			hidden_subnet_tag_ids: []
 		},
 		show_minimap: true
-	},
-	request: {
-		group_docker_bridges_by_host: true,
-		hide_ports: false,
-		hide_vm_title_on_docker_container: false,
-		show_gateway_in_left_zone: true,
-		left_zone_service_categories: ['DNS', 'ReverseProxy'],
-		hide_service_categories: ['OpenPorts']
+	};
+}
+
+/** Build default per-view local options */
+function initDefaultLocalOptions(): Record<TopologyView, TopologyLocalOptions> {
+	return Object.fromEntries(ALL_VIEWS.map((p) => [p, getDefaultLocalOptions(p)])) as Record<
+		TopologyView,
+		TopologyLocalOptions
+	>;
+}
+
+/**
+ * Default request options matching the backend's TopologyRequestOptions::default().
+ * Container rules and hidden categories are per-view HashMaps.
+ * Element rules are shared cross-view.
+ */
+function defaultRequestOptions(): components['schemas']['TopologyRequestOptions'] {
+	// Build container rules per view from fixture metadata
+	const containerRules: Record<string, ContainerGraphRule[]> = {};
+	for (const p of ALL_VIEWS) {
+		containerRules[p] = _containerRuleTypes
+			.filter((r) => (r.metadata as { views?: string[] })?.views?.includes(p))
+			.map((r) => {
+				if (r.id === 'ByApplication') {
+					return makeGraphRule({ ByApplication: { tag_ids: [] } } as ContainerRule);
+				}
+				return makeGraphRule(r.id as ContainerRule);
+			});
 	}
-};
+
+	// Element rules: one of each type (shared cross-view)
+	const seen = new Set<string>();
+	const elementRules: ElementGraphRule[] = [];
+	for (const r of _elementRuleTypes) {
+		if (!seen.has(r.id)) {
+			seen.add(r.id);
+			if (r.id === 'ByServiceCategory') {
+				const rule = makeGraphRule({
+					ByServiceCategory: {
+						categories: getIrrelevantCategories(getOrgUseCase()),
+						title: common_infrastructure(),
+						is_infra_rule: true
+					}
+				});
+				elementRules.push(rule);
+			} else if (r.id === 'ByTag') {
+				elementRules.push(makeGraphRule({ ByTag: { tag_ids: [], title: null } }));
+			} else {
+				elementRules.push(makeGraphRule(r.id as ElementRule));
+			}
+		}
+	}
+
+	// Hidden categories: OpenPorts for all views (use-case-aware filtering
+	// is handled by the ByServiceCategory element rule instead)
+	const hideServiceCategories: Record<string, ServiceCategory[]> = {};
+	for (const p of ALL_VIEWS) {
+		hideServiceCategories[p] = ['OpenPorts'];
+	}
+
+	return {
+		hide_ports: false,
+		hide_service_categories: hideServiceCategories,
+		container_rules: containerRules,
+		element_rules: elementRules,
+		view: 'L3Logical'
+	};
+}
 
 /**
  * Query hook for fetching all topologies
@@ -155,7 +280,7 @@ export function useRefreshTopologyMutation() {
 				params: { path: { id: topology.id } },
 				body: {
 					network_id: topology.network_id,
-					options: get(topologyOptions),
+					options: buildOptionsForApi(),
 					nodes: [],
 					edges: []
 				}
@@ -180,7 +305,7 @@ export function useRebuildTopologyMutation() {
 				params: { path: { id: topology.id } },
 				body: {
 					network_id: topology.network_id,
-					options: get(topologyOptions),
+					options: buildOptionsForApi(),
 					nodes: topology.nodes,
 					edges: topology.edges
 				}
@@ -387,26 +512,29 @@ export function createEmptyTopologyFormData(networkId: string): Topology {
 		network_id: networkId,
 		edges: [],
 		nodes: [],
-		options: structuredClone(defaultTopologyOptions),
+		options: {
+			local: getDefaultLocalOptions('L3Logical'),
+			request: defaultRequestOptions()
+		},
 		hosts: [],
-		interfaces: [],
+		ip_addresses: [],
 		services: [],
 		subnets: [],
-		groups: [],
+		dependencies: [],
 		ports: [],
 		bindings: [],
 		is_stale: false,
 		last_refreshed: utcTimeZoneSentinel,
 		is_locked: false,
-		removed_groups: [],
+		removed_dependencies: [],
 		removed_hosts: [],
-		removed_interfaces: [],
+		removed_ip_addresses: [],
 		removed_services: [],
 		removed_subnets: [],
 		removed_bindings: [],
 		removed_ports: [],
-		if_entries: [],
-		removed_if_entries: [],
+		interfaces: [],
+		removed_interfaces: [],
 		locked_at: null,
 		locked_by: null,
 		parent_id: null,
@@ -421,9 +549,7 @@ export function createEmptyTopologyFormData(networkId: string): Topology {
 
 import { browser } from '$app/environment';
 import { type Edge, type Node } from '@xyflow/svelte';
-import deepmerge from 'deepmerge';
 
-const OPTIONS_STORAGE_KEY = 'scanopy_topology_options';
 const EXPANDED_STORAGE_KEY = 'scanopy_topology_options_expanded_state';
 const AUTO_REBUILD_STORAGE_KEY = 'scanopy_topology_auto_rebuild';
 const PREFERRED_NETWORK_KEY = 'scanopy_preferred_network_id';
@@ -433,10 +559,250 @@ export const selectedTopologyId = writable<string | null>(null);
 export const selectedNode = writable<Node | null>(null);
 export const selectedEdge = writable<Edge | null>(null);
 export const selectedNodes = writable<Node[]>([]);
+/** When set, the multi-select inspector renders as an editor for the dependency
+ *  with this ID instead of a create form. Set by the dep edge inspector's Edit
+ *  button; cleared on Update or Cancel. */
+export const editingDependencyId = writable<string | null>(null);
 export const previewEdges = writable<Edge[]>([]);
+
+/** Source of truth for real (non-preview) edges. Written by the topology
+ *  rebuild pipeline in `BaseTopologyViewer`. Consumed by the merge effect
+ *  that derives the xyflow `edges` store (also in BaseTopologyViewer) and
+ *  by the dependency editor (for looking up real-edge handles when building
+ *  preview edges for the same source/target pair). */
+export const baseFlowEdges = writable<Edge[]>([]);
 export const autoRebuild = writable<boolean>(loadAutoRebuildFromStorage());
-export const topologyOptions = writable<TopologyOptions>(loadOptionsFromStorage());
+export const activeView = writable<TopologyView>('L3Logical');
+
+// Tutorial / hint flags (set by nudges, consumed by topology components)
+export const showViewSwitcherHint = writable(false);
+export const showDependencyTutorial = writable(false);
+
+// ============================================================================
+// URL Param Sync
+// ============================================================================
+
+const VALID_VIEWS: Set<string> = new Set(viewsJson.map((v) => v.id));
+
+/** Read topology ID and view from current URL search params. */
+export function getTopologyParamsFromUrl(): {
+	topologyId: string | null;
+	view: TopologyView | null;
+} {
+	if (!browser) return { topologyId: null, view: null };
+	const params = new URLSearchParams(window.location.search);
+	const topologyId = params.get('topologyId');
+	const viewParam = params.get('view');
+	const view = viewParam && VALID_VIEWS.has(viewParam) ? (viewParam as TopologyView) : null;
+	return { topologyId, view };
+}
+
+/** Update URL search params to reflect current topology state. Uses replaceState (no history entry). */
+function syncTopologyParamsToUrl(topologyId: string | null, view: TopologyView): void {
+	if (!browser) return;
+	const url = new URL(window.location.href);
+	if (topologyId) {
+		url.searchParams.set('topologyId', topologyId);
+	} else {
+		url.searchParams.delete('topologyId');
+	}
+	url.searchParams.set('view', view);
+	window.history.replaceState(window.history.state, '', url.toString());
+}
+
+/** Push a new history entry with updated topology params. For user-initiated changes. */
+export function pushTopologyParams(topologyId: string | null, view: TopologyView): void {
+	if (!browser) return;
+	const url = new URL(window.location.href);
+	if (topologyId) {
+		url.searchParams.set('topologyId', topologyId);
+	} else {
+		url.searchParams.delete('topologyId');
+	}
+	url.searchParams.set('view', view);
+	window.history.pushState({}, '', url.toString());
+}
+
+// Single source of truth for topology options.
+// request: backend state (container_rules/hide_service_categories are per-view HashMaps)
+// perViewLocal: UI-only local options per view
+const topologyOptionsStore = writable<{
+	request: components['schemas']['TopologyRequestOptions'];
+	perViewLocal: Record<TopologyView, TopologyLocalOptions>;
+}>({
+	request: defaultRequestOptions(),
+	perViewLocal: initDefaultLocalOptions()
+});
+
+// Derived: element rules from the single store (for GroupingRuleEditor)
+export const sharedElementRules = derived(topologyOptionsStore, ($store) => {
+	return ($store.request.element_rules ?? []) as ElementGraphRule[];
+});
+
+// Public derived store: projects the active view's slice of topology options
+export const topologyOptions = derived([topologyOptionsStore, activeView], ([$store, $view]) => ({
+	local: $store.perViewLocal[$view],
+	request: {
+		...$store.request,
+		view: $view
+	}
+}));
+
+// Helper to update the active view's local options or request scalars
+export function updateTopologyOptions(
+	updater: (current: TopologyOptions) => TopologyOptions
+): void {
+	const view = get(activeView);
+	topologyOptionsStore.update((store) => {
+		const currentOpts: TopologyOptions = {
+			local: store.perViewLocal[view],
+			request: { ...store.request, view: view }
+		};
+		const updated = updater(currentOpts);
+		return {
+			request: { ...updated.request },
+			perViewLocal: {
+				...store.perViewLocal,
+				[view]: updated.local
+			}
+		};
+	});
+}
+
+// Update shared element rules (cross-view)
+export function updateSharedElementRules(
+	updater: (current: ElementGraphRule[]) => ElementGraphRule[]
+): void {
+	topologyOptionsStore.update((store) => ({
+		...store,
+		request: {
+			...store.request,
+			element_rules: updater((store.request.element_rules ?? []) as ElementGraphRule[])
+		}
+	}));
+}
+
+/**
+ * Build options for API requests. Reads directly from the source store —
+ * container_rules and hide_service_categories are already per-view HashMaps.
+ */
+function buildOptionsForApi(): TopologyOptions {
+	const store = get(topologyOptionsStore);
+	const view = get(activeView);
+	return sanitizeOptionsForApi({
+		local: store.perViewLocal[view],
+		request: {
+			...store.request,
+			view: view
+		}
+	});
+}
+
+/**
+ * Hydrate stores from a topology's backend-stored options.
+ * Called on initial topology selection and SSE updates.
+ * SSE updates preserve the user's view and local options for other views.
+ */
+let hydrating = false;
+/**
+ * @param useDefaultLocal If true, ignore the topology's stored local options and use
+ *   view-appropriate defaults. Used by share/embed views where the viewer has no
+ *   stored preferences and the creator's local options shouldn't leak through.
+ */
+export function hydrateStoresFromTopology(
+	topology: Topology,
+	isInitial = true,
+	useDefaultLocal = false
+): void {
+	hydrating = true;
+	try {
+		const opts = topology.options;
+		const storedView = opts.request.view as TopologyView;
+
+		// Only set view on initial load — not on SSE updates, which would
+		// revert the user's view switch mid-flight
+		if (isInitial) {
+			activeView.set(storedView);
+		}
+
+		if (isInitial) {
+			const request = { ...opts.request };
+
+			// Auto-populate infra rule categories if empty (new topology or migration).
+			// Only targets is_infra_rule rules with no categories — preserves user edits.
+			const elementRules = [...(request.element_rules ?? [])];
+			for (let i = 0; i < elementRules.length; i++) {
+				const rule = elementRules[i].rule;
+				if (
+					typeof rule === 'object' &&
+					'ByServiceCategory' in rule &&
+					rule.ByServiceCategory.is_infra_rule &&
+					(!rule.ByServiceCategory.categories || rule.ByServiceCategory.categories.length === 0)
+				) {
+					const useCase = getOrgUseCase();
+					elementRules[i] = {
+						...elementRules[i],
+						rule: {
+							ByServiceCategory: {
+								...rule.ByServiceCategory,
+								categories: getIrrelevantCategories(useCase),
+								title: common_infrastructure()
+							}
+						}
+					};
+					break;
+				}
+			}
+			request.element_rules = elementRules;
+
+			// Full hydration: use backend request options + default local options.
+			// When useDefaultLocal is true (share/embed), always use view defaults —
+			// the viewer has no stored preferences and the creator's shouldn't leak.
+			topologyOptionsStore.set({
+				request,
+				perViewLocal: {
+					...initDefaultLocalOptions(),
+					...(useDefaultLocal ? {} : { [storedView]: opts.local })
+				}
+			});
+		} else {
+			// SSE update or topology switch: update request options, preserve
+			// all client-side local options. Local options (hide_edge_types,
+			// bundle_edges, etc.) are client-side state — the server returns
+			// whatever was last sent, which may be stale.
+			topologyOptionsStore.update((current) => ({
+				request: opts.request,
+				perViewLocal: current.perViewLocal
+			}));
+		}
+	} finally {
+		hydrating = false;
+	}
+}
+
 export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage());
+
+/** Expanded options panel width in px (Tailwind w-80 = 320). Used by the panel and panel-aware fitView. */
+export const OPTIONS_PANEL_WIDTH_PX = 320;
+
+/** Left offset of the options panel (Tailwind left-4 = 16px). */
+export const OPTIONS_PANEL_LEFT_OFFSET_PX = 16;
+
+/** Total left padding for fitView when panel is open: panel width + offset + gap. */
+export const OPTIONS_PANEL_FITVIEW_PADDING_PX =
+	OPTIONS_PANEL_WIDTH_PX + OPTIONS_PANEL_LEFT_OFFSET_PX + 16;
+
+/** Minimap dimensions. Used by MiniMap component and minimap-aware fitView. */
+export const MINIMAP_WIDTH_PX = 200;
+export const MINIMAP_HEIGHT_PX = 150;
+export const MINIMAP_OFFSET_PX = 5;
+
+/** Total bottom-left padding for fitView when minimap is visible. */
+export const MINIMAP_FITVIEW_BOTTOM_PX = MINIMAP_HEIGHT_PX + MINIMAP_OFFSET_PX + 16;
+export const MINIMAP_FITVIEW_LEFT_PX = MINIMAP_WIDTH_PX + MINIMAP_OFFSET_PX + 16;
+
+/** Lookup map from aggregated edge ID to its original edges. Populated by BaseTopologyViewer during collapse. */
+export const aggregatedEdgeOriginals = writable<Map<string, TopologyEdge[]>>(new Map());
 
 /**
  * Set a preferred network to select when topology loads.
@@ -461,9 +827,11 @@ export function consumePreferredNetwork(): string | null {
 }
 
 export function resetTopologyOptions(): void {
-	topologyOptions.set(structuredClone(defaultTopologyOptions));
+	topologyOptionsStore.set({
+		request: defaultRequestOptions(),
+		perViewLocal: initDefaultLocalOptions()
+	});
 	if (browser) {
-		localStorage.removeItem(OPTIONS_STORAGE_KEY);
 		localStorage.removeItem(EXPANDED_STORAGE_KEY);
 	}
 }
@@ -476,36 +844,8 @@ export function hasConflicts(topology: Topology): boolean {
 		topology.removed_bindings.length > 0 ||
 		topology.removed_ports.length > 0 ||
 		topology.removed_interfaces.length > 0 ||
-		topology.removed_groups.length > 0
+		topology.removed_dependencies.length > 0
 	);
-}
-
-// localStorage helpers
-function loadOptionsFromStorage(): TopologyOptions {
-	if (!browser) return defaultTopologyOptions;
-
-	try {
-		const stored = localStorage.getItem(OPTIONS_STORAGE_KEY);
-		if (stored) {
-			const parsed = JSON.parse(stored);
-			return deepmerge(defaultTopologyOptions, parsed, {
-				arrayMerge: (_, sourceArray) => sourceArray
-			});
-		}
-	} catch (error) {
-		console.warn('Failed to load topology options from localStorage:', error);
-	}
-	return defaultTopologyOptions;
-}
-
-function saveOptionsToStorage(options: TopologyOptions): void {
-	if (!browser) return;
-
-	try {
-		localStorage.setItem(OPTIONS_STORAGE_KEY, JSON.stringify(options));
-	} catch (error) {
-		console.error('Failed to save topology options to localStorage:', error);
-	}
 }
 
 function loadExpandedFromStorage(): boolean {
@@ -556,39 +896,41 @@ function saveAutoRebuildToStorage(value: boolean): void {
 	}
 }
 
-// Set up subscriptions for localStorage persistence
+// Set up subscriptions for rebuild triggers and UI pref persistence
 let optionsInitialized = false;
 let expandedInitialized = false;
 let autoRebuildInitialized = false;
+let viewInitialized = false;
 
 if (browser) {
-	let optionsRebuildTimeout: ReturnType<typeof setTimeout>;
-	topologyOptions.subscribe((options) => {
-		if (optionsInitialized) {
-			saveOptionsToStorage(options);
+	let rebuildTimeout: ReturnType<typeof setTimeout>;
 
-			// Trigger a rebuild when request options change (replaces the old
-			// debounced PUT that was lost in the TanStack migration)
-			clearTimeout(optionsRebuildTimeout);
-			optionsRebuildTimeout = setTimeout(() => {
-				if (!get(autoRebuild)) return;
-				const topologyId = get(selectedTopologyId);
-				if (!topologyId) return;
+	function triggerRebuild(debounceMs = 500, force = false): void {
+		clearTimeout(rebuildTimeout);
+		rebuildTimeout = setTimeout(() => {
+			if (!force && !get(autoRebuild)) return;
+			const topologyId = get(selectedTopologyId);
+			if (!topologyId) return;
 
-				const topologies = queryClient.getQueryData<Topology[]>(queryKeys.topology.all);
-				const topology = topologies?.find((t) => t.id === topologyId);
-				if (!topology) return;
+			const topologies = queryClient.getQueryData<Topology[]>(queryKeys.topology.all);
+			const topology = topologies?.find((t) => t.id === topologyId);
+			if (!topology) return;
 
-				apiClient.POST('/api/v1/topology/{id}/rebuild', {
-					params: { path: { id: topologyId } },
-					body: {
-						network_id: topology.network_id,
-						options: options,
-						nodes: topology.nodes,
-						edges: topology.edges
-					}
-				});
-			}, 500);
+			apiClient.POST('/api/v1/topology/{id}/rebuild', {
+				params: { path: { id: topologyId } },
+				body: {
+					network_id: topology.network_id,
+					options: buildOptionsForApi(),
+					nodes: topology.nodes,
+					edges: topology.edges
+				}
+			});
+		}, debounceMs);
+	}
+
+	topologyOptionsStore.subscribe(() => {
+		if (optionsInitialized && !hydrating) {
+			triggerRebuild();
 		}
 		optionsInitialized = true;
 	});
@@ -606,6 +948,27 @@ if (browser) {
 		}
 		autoRebuildInitialized = true;
 	});
+
+	activeView.subscribe(() => {
+		if (viewInitialized && !hydrating) {
+			triggerRebuild(0, true);
+		}
+		viewInitialized = true;
+	});
+
+	// Sync stores → URL (replaceState, no history entry)
+	// User-initiated changes use pushTopologyParams from TopologyTab instead.
+	selectedTopologyId.subscribe((id) => {
+		if (id !== null) {
+			syncTopologyParamsToUrl(id, get(activeView));
+		}
+	});
+	activeView.subscribe((view) => {
+		const id = get(selectedTopologyId);
+		if (id !== null) {
+			syncTopologyParamsToUrl(id, view);
+		}
+	});
 }
 
 // ============================================================================
@@ -615,6 +978,7 @@ if (browser) {
 class TopologySSEManager extends BaseSSEManager<Topology> {
 	private stalenessTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 	private readonly DEBOUNCE_MS = 300;
+	private readonly REBUILD_DEBOUNCE_MS = 2000;
 
 	protected createConfig(): SSEConfig<Topology> {
 		return {
@@ -626,20 +990,28 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 					return;
 				}
 
-				// For stale updates with autoRebuild enabled, trigger an actual rebuild
+				// For stale updates with autoRebuild enabled, trigger a debounced rebuild
 				if (get(autoRebuild)) {
 					const currentId = get(selectedTopologyId);
 					if (currentId === update.id && !update.is_locked) {
-						// Trigger rebuild via API with minimal payload
-						apiClient.POST('/api/v1/topology/{id}/rebuild', {
-							params: { path: { id: update.id } },
-							body: {
-								network_id: update.network_id,
-								options: get(topologyOptions),
-								nodes: update.nodes,
-								edges: update.edges
-							}
-						});
+						const timerKey = `rebuild:${update.id}`;
+						const existingTimer = this.stalenessTimers.get(timerKey);
+						if (existingTimer) {
+							clearTimeout(existingTimer);
+						}
+						const timer = setTimeout(() => {
+							apiClient.POST('/api/v1/topology/{id}/rebuild', {
+								params: { path: { id: update.id } },
+								body: {
+									network_id: update.network_id,
+									options: buildOptionsForApi(),
+									nodes: update.nodes,
+									edges: update.edges
+								}
+							});
+							this.stalenessTimers.delete(timerKey);
+						}, this.REBUILD_DEBOUNCE_MS);
+						this.stalenessTimers.set(timerKey, timer);
 					}
 					return;
 				}
@@ -652,7 +1024,7 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 
 				const timer = setTimeout(() => {
 					this.applyPartialUpdate(update.id, {
-						removed_groups: update.removed_groups,
+						removed_dependencies: update.removed_dependencies,
 						removed_hosts: update.removed_hosts,
 						removed_services: update.removed_services,
 						removed_subnets: update.removed_subnets,
@@ -679,6 +1051,12 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 			if (!old) return [update];
 			return old.map((topo) => (topo.id === update.id ? update : topo));
 		});
+
+		// Hydrate stores from the updated topology if it's the selected one.
+		// Not initial — don't reset view on SSE updates.
+		if (update.id === get(selectedTopologyId)) {
+			hydrateStoresFromTopology(update, false);
+		}
 
 		// Invalidate org cache until FirstTopologyRebuild milestone appears
 		const org = queryClient.getQueryData<Organization>(queryKeys.organizations.current());

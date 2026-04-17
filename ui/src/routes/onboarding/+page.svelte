@@ -16,13 +16,14 @@
 		useOnboardingStateQuery
 	} from '$lib/features/auth/queries';
 	import { fetchOrganization } from '$lib/features/organizations/queries';
-	import { navigate, navigateWithModal } from '$lib/shared/utils/navigation';
+	import { navigate } from '$lib/shared/utils/navigation';
 	import { resolve } from '$app/paths';
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { trackEvent } from '$lib/shared/utils/analytics';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { auth_emailAlreadyInUse } from '$lib/paraglide/messages';
 	import { useConfigQuery, isCloud } from '$lib/shared/stores/config-query';
+	import { setLastLoginMethod } from '$lib/features/auth/components/LoginModal.svelte';
 
 	// Show OIDC error from redirect if present
 	onMount(() => {
@@ -110,7 +111,7 @@
 
 	// Helper to validate use case
 	function isValidUseCase(useCase: string): useCase is UseCase {
-		return ['homelab', 'company', 'msp'].includes(useCase);
+		return ['homelab', 'internal_it', 'msp'].includes(useCase);
 	}
 
 	// Helper to validate step
@@ -193,6 +194,7 @@
 				...data,
 				marketing_opt_in: subscribed
 			});
+			setLastLoginMethod('email');
 
 			// Before clearing onboarding store, get state for tracking
 			const state = onboardingStore.getState();
@@ -208,13 +210,9 @@
 			// Clear onboarding store
 			onboardingStore.reset();
 
-			// Cloud: billing modal auto-opens via needsPlanSelection; its onClose chains to daemon-prompt
-			// Non-Cloud: navigate with daemon-prompt modal param directly
-			if (onboardingConfigData && isCloud(onboardingConfigData)) {
-				await navigate();
-			} else {
-				await navigateWithModal('daemon-prompt');
-			}
+			// Navigate to main app — daemon prompt auto-opens via +page.svelte
+			// for new orgs without daemons (both cloud and non-cloud)
+			await navigate();
 		} catch {
 			// Error handled by mutation
 		}
@@ -280,7 +278,7 @@
 	{/if}
 
 	<!-- Content container -->
-	<div class="flex flex-1 items-center justify-center">
+	<div class="flex flex-1 items-center justify-center pt-8 sm:pt-0">
 		<div class="relative z-10 w-full">
 			{#if currentStep === 'use_case'}
 				<!-- Use Case Selection Step -->

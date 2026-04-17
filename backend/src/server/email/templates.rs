@@ -321,7 +321,7 @@ pub const DISCOVERY_GUIDE_FREE_BODY: &str = r#"                    <!-- Main Con
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Great news — your daemon <strong>{daemon_name}</strong> just registered on <strong>{network_name}</strong>. Scanopy is now running an initial discovery to map out your network.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Here's what happens next:</p>
                             <ul style="margin: 0 0 20px 0; padding-left: 20px; font-size: 16px; line-height: 28px; color: #4a4a4a;">
-                                <li><strong>Self-report:</strong> The daemon host's own services and interfaces are mapped automatically.</li>
+                                <li><strong>Self-report:</strong> The daemon host's own services and ip_addresses are mapped automatically.</li>
                                 <li><strong>Network scan:</strong> Scanopy scans your local subnets for other hosts, ports, and services.</li>
                                 <li><strong>Topology:</strong> Once discovery finishes, your interactive topology map will be ready.</li>
                                 <li><strong>Docker discovery:</strong> If your daemon has access to the Docker socket, it'll also discover all your containers — images, ports, networks, and labels — automatically.</li>
@@ -348,7 +348,7 @@ pub const DISCOVERY_GUIDE_PAID_BODY: &str = r#"                    <!-- Main Con
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Great news — your daemon <strong>{daemon_name}</strong> just registered on <strong>{network_name}</strong>. Scanopy is now running an initial discovery to map out your network.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Here's what happens next:</p>
                             <ul style="margin: 0 0 20px 0; padding-left: 20px; font-size: 16px; line-height: 28px; color: #4a4a4a;">
-                                <li><strong>Self-report:</strong> The daemon host's own services and interfaces are mapped automatically.</li>
+                                <li><strong>Self-report:</strong> The daemon host's own services and ip_addresses are mapped automatically.</li>
                                 <li><strong>Network scan:</strong> Scanopy scans your local subnets for other hosts, ports, and services.</li>
                                 <li><strong>Topology:</strong> Once discovery finishes, your interactive topology map will be ready.</li>
                                 <li><strong>Scheduled discovery:</strong> Your plan includes daily scheduled discovery — your network documentation stays up to date automatically.</li>
@@ -372,7 +372,7 @@ pub const TOPOLOGY_READY_BODY: &str = r#"                    <!-- Main Content -
                         <td style="padding: 0 40px 20px 40px;">
                             <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Your Topology is Ready!</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi {first_name},</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your first network discovery on <strong>{network_name}</strong> has completed. Scanopy found <strong>{host_count} hosts</strong> and <strong>{service_count} services</strong>.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your first discovery on <strong>{network_name}</strong> has completed. Scanopy found <strong>{host_count} hosts</strong> and <strong>{service_count} services</strong>.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your interactive topology map is now available — open Scanopy to explore your network visually.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;"><strong>Quick tips:</strong> Drag nodes to rearrange your layout, click any host to inspect its services and details, and use the export button to save your map.</p>
                         </td>
@@ -489,7 +489,7 @@ pub const DAEMON_STANDBY_BODY: &str = r#"                    <!-- Main Content -
                     <!-- CTA Button -->
                     <tr>
                         <td align="center" style="padding: 0 40px 30px 40px;">
-                            <a href="{base_url}/#discovery-scheduled" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Queue Discovery</a>
+                            <a href="{base_url}/#discovery-scans" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Queue Discovery</a>
                         </td>
                     </tr>
 "#;
@@ -613,6 +613,33 @@ pub const EMAIL_VERIFICATION_BODY: &str = r#"                    <!-- Main Conte
                     <tr>
                         <td style="padding: 0 40px 30px 40px; border-top: 1px solid #e5e7eb;">
                             <p style="margin: 20px 0 0 0; font-size: 14px; line-height: 20px; color: #6b7280;">This verification link will expire in 24 hours. If you didn't create a Scanopy account, you can safely ignore this email.</p>
+                        </td>
+                    </tr>
+"#;
+
+// ============================================================================
+// Install Command Email Templates
+// ============================================================================
+
+pub const INSTALL_COMMAND_TITLE: &str = "Your Scanopy Daemon Install Command";
+
+pub const INSTALL_COMMAND_BODY: &str = r#"                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 0 40px 20px 40px;">
+                            <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Install Command</h1>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Here's the daemon install command you requested. Run it on your {os} machine to set up your Scanopy daemon.</p>
+                            <div style="margin: 0 0 20px 0; padding: 16px; background-color: #1e293b; border-radius: 6px; overflow-x: auto;">
+                                <pre style="margin: 0; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13px; line-height: 20px; color: #e2e8f0; white-space: pre-wrap; word-break: break-all;">{install_command}</pre>
+                            </div>
+                            <p style="margin: 0 0 10px 0; font-size: 14px; line-height: 20px; color: #6b7280;">Copy and paste this command into your terminal. The daemon will download, install, and start automatically.</p>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Open Scanopy</a>
                         </td>
                     </tr>
 "#;

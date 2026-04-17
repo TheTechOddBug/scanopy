@@ -46,10 +46,11 @@ pub enum SubnetType {
     IpVlan,
     Management,
     Storage,
+    Loopback,
 
-    Unknown,
     #[default]
-    None,
+    #[serde(alias = "None")]
+    Unknown,
 }
 
 impl FromStr for SubnetType {
@@ -71,15 +72,28 @@ impl FromStr for SubnetType {
             "IpVlan" => Ok(SubnetType::IpVlan),
             "Management" => Ok(SubnetType::Management),
             "Storage" => Ok(SubnetType::Storage),
-            "Unknown" => Ok(SubnetType::Unknown),
-            "None" => Ok(SubnetType::None),
+            "Loopback" => Ok(SubnetType::Loopback),
+            "Unknown" | "None" => Ok(SubnetType::Unknown),
             _ => Err(anyhow::anyhow!("Unknown SubnetType: {}", s)),
         }
     }
 }
 
 impl SubnetType {
+    /// Whether this subnet type represents a Docker/container network
+    pub fn is_docker_network(&self) -> bool {
+        matches!(
+            self,
+            SubnetType::DockerBridge | SubnetType::MacVlan | SubnetType::IpVlan
+        )
+    }
+
     pub fn from_interface_name(interface_name: &str) -> Self {
+        // Loopback ip_addresses (lo on Linux, lo0 on macOS)
+        if Self::match_interface_names(&["lo"], interface_name) {
+            return SubnetType::Loopback;
+        }
+
         // Docker containers
         if Self::match_interface_names(&["docker", "br-", "docker"], interface_name) {
             return SubnetType::DockerBridge;
@@ -91,7 +105,7 @@ impl SubnetType {
             return SubnetType::VpnTunnel;
         }
 
-        // WiFi interfaces
+        // WiFi ip_addresses
         if Self::match_interface_names(&["wlan", "wifi", "wl"], interface_name) {
             return SubnetType::WiFi;
         }
@@ -111,7 +125,7 @@ impl SubnetType {
             return SubnetType::Dmz;
         }
 
-        // Management interfaces
+        // Management ip_addresses
         if Self::match_interface_names(&["mgmt", "ipmi", "bmc"], interface_name) {
             return SubnetType::Management;
         }
@@ -121,17 +135,17 @@ impl SubnetType {
             return SubnetType::Storage;
         }
 
-        // MacVLAN interfaces
+        // MacVLAN ip_addresses
         if Self::match_interface_names(&["macvlan", "mvlan"], interface_name) {
             return SubnetType::MacVlan;
         }
 
-        // ipvlan interfaces
+        // ipvlan ip_addresses
         if Self::match_interface_names(&["ipvlan"], interface_name) {
             return SubnetType::IpVlan;
         }
 
-        // Standard LAN interfaces (catch-all for ethernet and Linux bridges)
+        // Standard LAN ip_addresses (catch-all for ethernet and Linux bridges)
         // Note: "br" (e.g., br0) is a Linux bridge, commonly used on Unraid/Proxmox for LAN
         // This is distinct from "br-" which is Docker's bridge naming convention
         if Self::match_interface_names(&["eth", "en", "eno", "enp", "ens", "br"], interface_name) {
@@ -171,8 +185,27 @@ impl SubnetType {
         matches!(self, SubnetType::DockerBridge)
     }
 
+    pub fn is_loopback(&self) -> bool {
+        matches!(self, SubnetType::Loopback)
+    }
+
     pub fn is_vlan_network(&self) -> bool {
         matches!(self, SubnetType::MacVlan | SubnetType::IpVlan)
+    }
+
+    pub fn exclude_from_topology(&self) -> bool {
+        matches!(self, SubnetType::Loopback)
+    }
+
+    pub fn hide_from_subnet_list(&self) -> bool {
+        matches!(
+            self,
+            SubnetType::Loopback | SubnetType::Internet | SubnetType::Remote
+        )
+    }
+
+    pub fn show_label(&self) -> bool {
+        !matches!(self, SubnetType::Unknown | SubnetType::Loopback)
     }
 }
 
@@ -198,13 +231,13 @@ impl EntityMetadataProvider for SubnetType {
             SubnetType::WiFi => Color::Teal,
 
             SubnetType::Management => Color::Gray,
-            SubnetType::DockerBridge => Concept::Virtualization.color(),
-            SubnetType::MacVlan => Concept::Virtualization.color(),
-            SubnetType::IpVlan => Concept::Virtualization.color(),
+            SubnetType::DockerBridge => Concept::Containerization.color(),
+            SubnetType::MacVlan => Concept::Containerization.color(),
+            SubnetType::IpVlan => Concept::Containerization.color(),
             SubnetType::Storage => Concept::Storage.color(),
+            SubnetType::Loopback => Color::Gray,
 
             SubnetType::Unknown => Color::Gray,
-            SubnetType::None => Color::Gray,
         }
     }
     fn icon(&self) -> Icon {
@@ -226,9 +259,9 @@ impl EntityMetadataProvider for SubnetType {
             SubnetType::MacVlan => Icon::Network,
             SubnetType::IpVlan => Icon::Network,
             SubnetType::Storage => Concept::Storage.icon(),
+            SubnetType::Loopback => Icon::Network,
 
             SubnetType::Unknown => EntityDiscriminants::Subnet.icon(),
-            SubnetType::None => EntityDiscriminants::Subnet.icon(),
         }
     }
 }
@@ -253,9 +286,9 @@ impl TypeMetadataProvider for SubnetType {
             SubnetType::MacVlan => "MacVLAN",
             SubnetType::IpVlan => "IpVLAN",
             SubnetType::Storage => "Storage",
+            SubnetType::Loopback => "Loopback",
 
             SubnetType::Unknown => "Unknown",
-            SubnetType::None => "No Subnet",
         }
     }
 
@@ -278,16 +311,19 @@ impl TypeMetadataProvider for SubnetType {
             SubnetType::MacVlan => "MacVLAN network",
             SubnetType::IpVlan => "IpVLAN network",
             SubnetType::Storage => "Storage network",
+            SubnetType::Loopback => "Host-local loopback, excluded from topology and scans",
 
             SubnetType::Unknown => "Unknown network type",
-            SubnetType::None => "No Subnet",
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
         let network_scan_discovery_eligible = !matches!(
             &self,
-            SubnetType::Remote | SubnetType::Internet | SubnetType::DockerBridge
+            SubnetType::Remote
+                | SubnetType::Internet
+                | SubnetType::DockerBridge
+                | SubnetType::Loopback
         );
 
         let is_for_containers = matches!(
@@ -295,12 +331,13 @@ impl TypeMetadataProvider for SubnetType {
             SubnetType::DockerBridge | SubnetType::MacVlan | SubnetType::IpVlan
         );
 
-        let show_label = !matches!(self, SubnetType::Unknown | SubnetType::None);
+        let show_label = !matches!(self, SubnetType::Unknown | SubnetType::Loopback);
 
         serde_json::json!({
             "network_scan_discovery_eligible": network_scan_discovery_eligible,
             "is_for_containers": is_for_containers,
-            "show_label": show_label
+            "show_label": show_label,
+            "hide_from_subnet_list": self.hide_from_subnet_list()
         })
     }
 }

@@ -19,7 +19,7 @@
 		<button
 			type="button"
 			onclick={() => onchange(option.value)}
-			class="rounded-full px-3 py-1.5 text-sm font-medium transition-all {selected === option.value
+			class="rounded-full px-2.5 py-1 text-sm font-medium transition-all {selected === option.value
 				? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white'
 				: 'text-tertiary hover:text-secondary'}"
 		>

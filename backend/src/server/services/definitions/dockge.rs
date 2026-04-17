@@ -15,7 +15,7 @@ impl ServiceDefinition for Dockge {
         "Docker compose stack management UI"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Orchestrator
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

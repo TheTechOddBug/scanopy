@@ -16,6 +16,7 @@ export interface EntityDisplayComponent<T, C> {
 	getTags?(item: T, context: C): TagProps[];
 	getCategory?(item: T, context: C): string | null;
 	getDisabled?(item: T, context: C): boolean;
+	getDisabledReason?(item: T, context: C): string | null;
 
 	// Inline tag picker support
 	getTagPickerProps?(
@@ -26,6 +27,7 @@ export interface EntityDisplayComponent<T, C> {
 		entityId: string;
 		entityType: EntityDiscriminants;
 		availableTags?: import('$lib/features/tags/types/base').Tag[];
+		allowCreate?: boolean;
 	} | null;
 
 	// Inline editing support

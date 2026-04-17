@@ -1,6 +1,6 @@
 use crate::server::bindings::r#impl::base::Binding;
 use crate::server::discovery::r#impl::types::DiscoveryType;
-use crate::server::interfaces::r#impl::base::Interface;
+use crate::server::ip_addresses::r#impl::base::IPAddress;
 use crate::server::ports::r#impl::base::{Port, PortType};
 use crate::server::services::definitions::ServiceDefinitionRegistry;
 use crate::server::services::r#impl::definitions::ServiceDefinitionExt;
@@ -105,10 +105,14 @@ pub struct DiscoverySessionServiceMatchParams<'a> {
 #[derive(Debug, Clone)]
 pub struct ServiceMatchBaselineParams<'a> {
     pub subnet: &'a Subnet,
-    pub interface: &'a Interface,
+    pub ip_address: &'a IPAddress,
     pub all_ports: &'a Vec<PortType>,
     pub endpoint_responses: &'a Vec<EndpointResponse>,
     pub virtualization: &'a Option<ServiceVirtualization>,
+    pub client_responses: &'a std::collections::HashMap<
+        crate::server::services::r#impl::patterns::ClientProbe,
+        Vec<PortType>,
+    >,
 }
 
 #[derive(Debug, Clone)]
@@ -137,7 +141,7 @@ impl PartialEq for Service {
         }
 
         // For non-generic services: same host + definition = same service
-        // Handles: Plex discovered on multiple interfaces (different port UUIDs)
+        // Handles: Plex discovered on multiple ip_addresses (different port UUIDs)
         if !ServiceDefinitionExt::is_generic(&self.base.service_definition) {
             return true;
         }
@@ -285,11 +289,11 @@ impl Service {
         self.base.bindings.iter().find(|b| b.id() == id)
     }
 
-    pub fn to_bound_interface_ids(&self) -> Vec<Option<Uuid>> {
+    pub fn to_bound_ip_address_ids(&self) -> Vec<Option<Uuid>> {
         self.base
             .bindings
             .iter()
-            .map(|i| i.interface_id())
+            .map(|i| i.ip_address_id())
             .collect()
     }
 
@@ -358,7 +362,7 @@ impl Service {
         } = params.clone();
 
         let ServiceMatchBaselineParams {
-            interface,
+            ip_address,
             virtualization,
             ..
         } = baseline_params;
@@ -370,9 +374,9 @@ impl Service {
         } = service_params;
 
         if let Ok(mut result) = service_definition.discovery_pattern().matches(&params) {
-            tracing::info!(
+            tracing::debug!(
                 service = %service_definition.name(),
-                host_ip = %interface.base.ip_address,
+                host_ip = %ip_address.base.ip_address,
                 network_id = %network_id,
                 daemon_id = %daemon_id,
                 discovery_type = ?discovery_type,
@@ -418,10 +422,10 @@ impl Service {
             let bindings: Vec<Binding> = if !result.ports.is_empty() {
                 ports
                     .iter()
-                    .map(|p| Binding::new_port_serviceless(p.id, Some(interface.id)))
+                    .map(|p| Binding::new_port_serviceless(p.id, Some(ip_address.id)))
                     .collect()
             } else {
-                vec![Binding::new_interface_serviceless(interface.id)]
+                vec![Binding::new_ip_address_serviceless(ip_address.id)]
             };
 
             let service = Service::new(ServiceBase {
@@ -443,7 +447,7 @@ impl Service {
         } else {
             tracing::trace!(
                 service = %service_definition.name(),
-                host_ip = %interface.base.ip_address,
+                host_ip = %ip_address.base.ip_address,
                 "Service pattern did not match"
             );
             None
@@ -466,5 +470,242 @@ impl Positioned for Service {
 
     fn entity_name() -> &'static str {
         "service"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::bindings::r#impl::base::Binding;
+    use crate::server::services::definitions::ServiceDefinitionRegistry;
+    use crate::server::services::r#impl::virtualization::{
+        DockerVirtualization, ServiceVirtualization,
+    };
+    use crate::server::shared::types::entities::EntitySource;
+    use uuid::Uuid;
+
+    fn make_service(
+        host_id: Uuid,
+        network_id: Uuid,
+        definition_id: &str,
+        virtualization: Option<ServiceVirtualization>,
+        port_ids: Vec<Uuid>,
+        ip_address_id: Option<Uuid>,
+    ) -> Service {
+        let service_def = ServiceDefinitionRegistry::find_by_id(definition_id)
+            .unwrap_or_else(|| ServiceDefinitionRegistry::all_service_definitions()[0].clone());
+
+        let bindings = port_ids
+            .into_iter()
+            .map(|pid| Binding::new_port_serviceless(pid, ip_address_id))
+            .collect();
+
+        Service::new(ServiceBase {
+            name: service_def.name().to_string(),
+            host_id,
+            bindings,
+            network_id,
+            service_definition: service_def,
+            virtualization,
+            source: EntitySource::System,
+            tags: Vec::new(),
+            position: 0,
+        })
+    }
+
+    fn docker_virt(container_name: &str) -> Option<ServiceVirtualization> {
+        Some(ServiceVirtualization::Docker(DockerVirtualization {
+            container_name: Some(container_name.to_string()),
+            container_id: Some(Uuid::new_v4().to_string()),
+            service_id: Uuid::new_v4(),
+            compose_project: None,
+        }))
+    }
+
+    #[test]
+    fn non_generic_same_definition_matches_regardless_of_virtualization() {
+        // Network scan creates Scanopy Server without virtualization
+        // Docker scan creates Scanopy Server WITH virtualization
+        // They should be equal (same host + same non-generic definition)
+        let host_id = Uuid::new_v4();
+        let network_id = Uuid::new_v4();
+        let port_id = Uuid::new_v4();
+        let iface_id = Uuid::new_v4();
+
+        let network_svc = make_service(
+            host_id,
+            network_id,
+            "Scanopy Server",
+            None,
+            vec![port_id],
+            Some(iface_id),
+        );
+        let docker_svc = make_service(
+            host_id,
+            network_id,
+            "Scanopy Server",
+            docker_virt("scanopy-server-1"),
+            vec![port_id],
+            Some(iface_id),
+        );
+
+        assert_eq!(
+            network_svc, docker_svc,
+            "Non-generic services with same definition on same host should match for upsert"
+        );
+    }
+
+    #[test]
+    fn non_generic_same_definition_matches_with_different_ports() {
+        // Network scan finds Scanopy Server on host port 60072
+        // Docker scan finds same service but bound to Docker bridge port (different UUID)
+        // Should still match — non-generic services match on definition alone
+        let host_id = Uuid::new_v4();
+        let network_id = Uuid::new_v4();
+
+        let network_svc = make_service(
+            host_id,
+            network_id,
+            "Scanopy Server",
+            None,
+            vec![Uuid::new_v4()],
+            Some(Uuid::new_v4()),
+        );
+        let docker_svc = make_service(
+            host_id,
+            network_id,
+            "Scanopy Server",
+            docker_virt("scanopy-server-1"),
+            vec![Uuid::new_v4()],
+            Some(Uuid::new_v4()),
+        );
+
+        assert_eq!(
+            network_svc, docker_svc,
+            "Non-generic services should match even with different port/ip_address UUIDs"
+        );
+    }
+
+    #[test]
+    fn different_definitions_do_not_match() {
+        let host_id = Uuid::new_v4();
+        let network_id = Uuid::new_v4();
+        let port_id = Uuid::new_v4();
+
+        let svc_a = make_service(
+            host_id,
+            network_id,
+            "Scanopy Server",
+            None,
+            vec![port_id],
+            None,
+        );
+        let svc_b = make_service(host_id, network_id, "Portainer", None, vec![port_id], None);
+
+        assert_ne!(
+            svc_a, svc_b,
+            "Different service definitions should not match even with shared ports"
+        );
+    }
+
+    #[test]
+    fn generic_docker_containers_match_by_container_id() {
+        // Two Docker Container services with the same container_id should match
+        let host_id = Uuid::new_v4();
+        let network_id = Uuid::new_v4();
+        let container_id = Uuid::new_v4().to_string();
+
+        let svc_a = make_service(
+            host_id,
+            network_id,
+            "Docker Container",
+            Some(ServiceVirtualization::Docker(DockerVirtualization {
+                container_name: Some("my-container".to_string()),
+                container_id: Some(container_id.clone()),
+                service_id: Uuid::new_v4(),
+                compose_project: None,
+            })),
+            vec![],
+            None,
+        );
+        let svc_b = make_service(
+            host_id,
+            network_id,
+            "Docker Container",
+            Some(ServiceVirtualization::Docker(DockerVirtualization {
+                container_name: Some("my-container".to_string()),
+                container_id: Some(container_id),
+                service_id: Uuid::new_v4(),
+                compose_project: None,
+            })),
+            vec![],
+            None,
+        );
+
+        assert_eq!(
+            svc_a, svc_b,
+            "Generic Docker Container services with same container_id should match"
+        );
+    }
+
+    #[test]
+    fn generic_containerized_vs_non_containerized_matches_on_shared_ports() {
+        // Docker Container (with virtualization) vs bare service (no virtualization)
+        // Should match if they share port bindings (Case 2A)
+        let host_id = Uuid::new_v4();
+        let network_id = Uuid::new_v4();
+        let shared_port = Uuid::new_v4();
+
+        let bare_svc = make_service(
+            host_id,
+            network_id,
+            "Docker Container",
+            None,
+            vec![shared_port],
+            None,
+        );
+        let docker_svc = make_service(
+            host_id,
+            network_id,
+            "Docker Container",
+            docker_virt("my-container"),
+            vec![shared_port],
+            None,
+        );
+
+        assert_eq!(
+            bare_svc, docker_svc,
+            "Generic services with one containerized should match on shared ports"
+        );
+    }
+
+    #[test]
+    fn generic_containerized_vs_non_containerized_no_shared_ports_no_match() {
+        // Docker Container (with virtualization) vs bare service (no virtualization)
+        // Different ports → should NOT match (Case 2B)
+        let host_id = Uuid::new_v4();
+        let network_id = Uuid::new_v4();
+
+        let bare_svc = make_service(
+            host_id,
+            network_id,
+            "Docker Container",
+            None,
+            vec![Uuid::new_v4()],
+            None,
+        );
+        let docker_svc = make_service(
+            host_id,
+            network_id,
+            "Docker Container",
+            docker_virt("my-container"),
+            vec![Uuid::new_v4()],
+            None,
+        );
+
+        assert_ne!(
+            bare_svc, docker_svc,
+            "Generic services without shared ports should not match"
+        );
     }
 }

@@ -1,0 +1,151 @@
+[
+  {
+    "id": "ByServiceCategory",
+    "name": "Service category",
+    "description": "Group elements by service category",
+    "category": null,
+    "icon": "layers",
+    "color": "Purple",
+    "metadata": {
+      "allow_multiple": true,
+      "is_configurable": true,
+      "is_removable": true,
+      "is_reorderable": true,
+      "views": [
+        "Application",
+        "Workloads"
+      ],
+      "will_accept_edges": false
+    }
+  },
+  {
+    "id": "ByTag",
+    "name": "Tag",
+    "description": "Group elements by tag",
+    "category": null,
+    "icon": "tag",
+    "color": "Orange",
+    "metadata": {
+      "allow_multiple": true,
+      "is_configurable": true,
+      "is_removable": true,
+      "is_reorderable": true,
+      "views": [
+        "L3Logical",
+        "L2Physical",
+        "Workloads",
+        "Application"
+      ],
+      "will_accept_edges": false
+    }
+  },
+  {
+    "id": "ByHypervisor",
+    "name": "Hypervisor",
+    "description": "Group VMs by hypervisor",
+    "category": null,
+    "icon": "monitor-cog",
+    "color": "Amber",
+    "metadata": {
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": true,
+      "views": [
+        "Workloads"
+      ],
+      "will_accept_edges": true
+    }
+  },
+  {
+    "id": "ByContainerRuntime",
+    "name": "Container Runtime",
+    "description": "Group containers by runtime",
+    "category": null,
+    "icon": "box",
+    "color": "Blue",
+    "metadata": {
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": true,
+      "views": [
+        "Workloads"
+      ],
+      "will_accept_edges": true
+    }
+  },
+  {
+    "id": "ByStack",
+    "name": "Docker Stack",
+    "description": "Group by Docker Compose project",
+    "category": null,
+    "icon": "box",
+    "color": "Blue",
+    "metadata": {
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": true,
+      "views": [
+        "L3Logical",
+        "Application"
+      ],
+      "will_accept_edges": true
+    }
+  },
+  {
+    "id": "ByTrunkPort",
+    "name": "Trunk Ports",
+    "description": "Group trunk ports (ports carrying multiple VLANs)",
+    "category": null,
+    "icon": "network",
+    "color": "Amber",
+    "metadata": {
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": false,
+      "views": [
+        "L2Physical"
+      ],
+      "will_accept_edges": false
+    }
+  },
+  {
+    "id": "ByVLAN",
+    "name": "VLAN",
+    "description": "Group access ports by native VLAN ID",
+    "category": null,
+    "icon": "network",
+    "color": "Teal",
+    "metadata": {
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": false,
+      "views": [
+        "L2Physical"
+      ],
+      "will_accept_edges": false
+    }
+  },
+  {
+    "id": "ByPortOpStatus",
+    "name": "Port Status",
+    "description": "Group ports by operational status",
+    "category": null,
+    "icon": "circle",
+    "color": "Gray",
+    "metadata": {
+      "allow_multiple": false,
+      "is_configurable": false,
+      "is_removable": false,
+      "is_reorderable": false,
+      "views": [
+        "L2Physical"
+      ],
+      "will_accept_edges": false
+    }
+  }
+]

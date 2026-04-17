@@ -15,6 +15,12 @@
 		pill = false,
 		title = '',
 		removable = false,
+		isShiny = false,
+		nativeTooltip = false,
+		faded = false,
+		onclick = undefined,
+		onmouseenter = undefined,
+		onmouseleave = undefined,
 		onRemove
 	}: {
 		icon?: IconComponent | null;
@@ -26,8 +32,19 @@
 		pill?: boolean;
 		title?: string;
 		removable?: boolean;
+		isShiny?: boolean;
+		nativeTooltip?: boolean;
+		faded?: boolean;
+		onclick?: ((e: MouseEvent) => void) | undefined;
+		onmouseenter?: ((e: MouseEvent) => void) | undefined;
+		onmouseleave?: ((e: MouseEvent) => void) | undefined;
 		onRemove?: () => void;
 	} = $props();
+
+	let interactive = $derived(!!href || !!onclick);
+	let fadedClasses = $derived(
+		faded ? 'opacity-50 grayscale hover:opacity-75 hover:grayscale-[50%] dark:opacity-40' : ''
+	);
 
 	let isUnknown = $derived(!label || !color);
 	let colorHelper = $derived(color ? createColorHelper(color) : null);
@@ -42,15 +59,12 @@
 		class="inline-flex items-center gap-1 {pill
 			? 'rounded-full'
 			: 'rounded'} px-2 py-0.5 text-xs font-medium
-		{isUnknown
-			? unknownClasses
-			: disabled
-				? 'text-tertiary bg-gray-700/30'
-				: `${bgColor} ${textColor}`}"
+		{isUnknown ? unknownClasses : disabled ? 'text-tertiary bg-gray-700/30' : `${bgColor} ${textColor}`}
+		{isShiny ? 'tag-shiny' : ''}"
 	>
 		{#if icon}
 			{@const Icon = icon}
-			<Icon size={16} class={textColor} />
+			<Icon size={16} class="{textColor} flex-shrink-0" />
 		{/if}
 
 		<span class="truncate">{label ?? common_unknown()}</span>
@@ -76,18 +90,83 @@
 		target="_blank"
 		rel="noopener noreferrer"
 		use:tooltip
-		data-tooltip={title || null}
-		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-90 dark:hover:brightness-125"
+		data-tooltip={nativeTooltip ? null : title || null}
+		title={nativeTooltip ? title || undefined : undefined}
+		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-90 dark:hover:brightness-125 {fadedClasses}"
 		onclick={(e) => e.stopPropagation()}
 	>
 		{@render content()}
 	</a>
+{:else if interactive}
+	<button
+		type="button"
+		use:tooltip
+		data-tooltip={nativeTooltip ? null : title || null}
+		title={nativeTooltip ? title || undefined : undefined}
+		class="inline-flex flex-shrink-0 cursor-pointer appearance-none items-center gap-1 whitespace-nowrap rounded brightness-100 transition-all hover:brightness-90 dark:hover:brightness-125 {fadedClasses}"
+		{onclick}
+		{onmouseenter}
+		{onmouseleave}
+		{disabled}
+	>
+		{@render content()}
+	</button>
 {:else}
 	<div
 		use:tooltip
-		data-tooltip={title || null}
-		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded"
+		data-tooltip={nativeTooltip ? null : title || null}
+		title={nativeTooltip ? title || undefined : undefined}
+		class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded {fadedClasses}"
 	>
 		{@render content()}
 	</div>
 {/if}
+
+<style>
+	:global(.tag-shiny) {
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.tag-shiny)::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			120deg,
+			transparent 0%,
+			transparent 30%,
+			rgba(255, 255, 255, 0.08) 45%,
+			rgba(255, 255, 255, 0.12) 50%,
+			rgba(255, 255, 255, 0.08) 55%,
+			transparent 70%,
+			transparent 100%
+		);
+		transform: translateX(-100%);
+		pointer-events: none;
+	}
+
+	:global(.tag-shiny:hover)::after {
+		animation: tag-sheen-hover 0.6s ease-out forwards;
+	}
+
+	@keyframes tag-sheen {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(100%);
+		}
+	}
+
+	@keyframes tag-sheen-hover {
+		from {
+			transform: translateX(-100%);
+			opacity: 0.4;
+		}
+		to {
+			transform: translateX(100%);
+			opacity: 0.4;
+		}
+	}
+</style>

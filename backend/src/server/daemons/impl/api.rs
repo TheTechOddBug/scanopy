@@ -5,6 +5,7 @@ use crate::{
         DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate,
     },
     server::{
+        credentials::r#impl::mapping::{CredentialMapping, CredentialQueryPayload},
         daemons::r#impl::{
             base::{Daemon, DaemonBase, DaemonMode},
             version::{DaemonVersionStatus, DeprecationSeverity, DeprecationWarning},
@@ -57,6 +58,9 @@ pub struct DaemonRegistrationRequest {
     /// Daemon software version (optional for backwards compat with old daemons)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    /// Credential IDs to assign to daemon's host during registration.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub credential_ids: Vec<Uuid>,
 }
 
 /// Daemon registration response from server to daemon
@@ -74,6 +78,12 @@ pub struct DaemonRegistrationResponse {
 pub struct DaemonDiscoveryRequest {
     pub session_id: Uuid,
     pub discovery_type: DiscoveryType,
+    /// Generic credential mappings for unified discovery. Old daemons ignore this field.
+    #[serde(default)]
+    pub credential_mappings: Vec<CredentialMapping<CredentialQueryPayload>>,
+    /// The discovery configuration this session belongs to. Old daemons ignore this field.
+    #[serde(default)]
+    pub discovery_id: Uuid,
 }
 
 impl DaemonDiscoveryRequest {
@@ -81,7 +91,18 @@ impl DaemonDiscoveryRequest {
     pub fn with_exposed_snmp(&self) -> serde_json::Value {
         serde_json::json!({
             "session_id": self.session_id,
-            "discovery_type": self.discovery_type.with_exposed_snmp()
+            "discovery_type": self.discovery_type.with_exposed_snmp(),
+        })
+    }
+
+    /// Serialize with all credentials exposed for daemon transmission.
+    /// Used for unified discovery — credentials are in credential_mappings.
+    pub fn with_exposed_credentials(&self) -> serde_json::Value {
+        serde_json::json!({
+            "session_id": self.session_id,
+            "discovery_type": self.discovery_type,
+            "credential_mappings": self.credential_mappings,
+            "discovery_id": self.discovery_id,
         })
     }
 }
@@ -91,6 +112,8 @@ impl From<DiscoveryUpdatePayload> for DaemonDiscoveryRequest {
         Self {
             session_id: payload.session_id,
             discovery_type: payload.discovery_type,
+            credential_mappings: vec![],
+            discovery_id: payload.discovery_id.unwrap_or_default(),
         }
     }
 }
@@ -117,6 +140,10 @@ pub struct DiscoveryUpdatePayload {
     pub hosts_discovered: Option<u32>,
     #[serde(default)]
     pub estimated_remaining_secs: Option<u32>,
+    /// The discovery configuration this session belongs to.
+    /// Always enriched server-side; daemons do not send this field.
+    #[serde(default)]
+    pub discovery_id: Option<Uuid>,
 }
 
 impl DiscoveryUpdatePayload {
@@ -125,6 +152,7 @@ impl DiscoveryUpdatePayload {
         daemon_id: Uuid,
         network_id: Uuid,
         discovery_type: DiscoveryType,
+        discovery_id: Option<Uuid>,
     ) -> Self {
         Self {
             session_id,
@@ -138,6 +166,7 @@ impl DiscoveryUpdatePayload {
             finished_at: None,
             hosts_discovered: None,
             estimated_remaining_secs: None,
+            discovery_id,
         }
     }
 
@@ -158,6 +187,7 @@ impl DiscoveryUpdatePayload {
             finished_at: update.finished_at,
             hosts_discovered: None,
             estimated_remaining_secs: None,
+            discovery_id: Some(info.discovery_id),
         }
     }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { topologyOptions } from '$lib/features/topology/queries';
+	import { topologyOptions, updateTopologyOptions } from '$lib/features/topology/queries';
 	import { tooltip } from '$lib/shared/actions/tooltip';
 
 	let {
@@ -26,15 +26,16 @@
 
 	function toggle() {
 		if (disabled) return;
-		topologyOptions.update((opts) => {
+		updateTopologyOptions((opts) => {
+			const updated = structuredClone(opts);
 			if (path === 'local') {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(opts.local as any)[optionKey] = !checked;
+				(updated.local as any)[optionKey] = !checked;
 			} else {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(opts.request as any)[optionKey] = !checked;
+				(updated.request as any)[optionKey] = !checked;
 			}
-			return opts;
+			return updated;
 		});
 	}
 </script>

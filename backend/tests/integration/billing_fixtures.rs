@@ -4,8 +4,8 @@
 use scanopy::server::billing::plans::get_website_fixture_plans;
 use scanopy::server::billing::types::base::BillingPlan;
 use scanopy::server::billing::types::features::Feature;
+use scanopy::server::dependencies::r#impl::types::DependencyType;
 use scanopy::server::discovery::r#impl::types::DiscoveryType;
-use scanopy::server::groups::r#impl::types::GroupType;
 use scanopy::server::ports::r#impl::base::PortType;
 use scanopy::server::services::definitions::ServiceDefinitionRegistry;
 use scanopy::server::shared::concepts::Concept;
@@ -60,10 +60,10 @@ fn generate_billing_fixtures() {
     let edge_types: Vec<TypeMetadata> = EdgeType::iter().map(|t| t.to_metadata()).collect();
     write_fixture(&edge_types, "edge-types.json");
 
-    let group_types: Vec<TypeMetadata> = GroupType::iter()
+    let dependency_types: Vec<TypeMetadata> = DependencyType::iter()
         .map(|t| t.discriminant().to_metadata())
         .collect();
-    write_fixture(&group_types, "group-types.json");
+    write_fixture(&dependency_types, "dependency-types.json");
 
     let ports: Vec<TypeMetadata> = PortType::iter().map(|p| p.to_metadata()).collect();
     write_fixture(&ports, "ports.json");

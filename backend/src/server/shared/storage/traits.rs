@@ -1,7 +1,8 @@
 use std::net::IpAddr;
 
 use crate::server::bindings::r#impl::base::Binding;
-use crate::server::groups::r#impl::base::Group;
+use crate::server::credentials::r#impl::types::CredentialType;
+use crate::server::dependencies::r#impl::base::Dependency;
 use crate::server::services::r#impl::base::Service;
 use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::entity_metadata::EntityCategory;
@@ -13,8 +14,8 @@ use crate::server::{
     daemons::r#impl::{api::DaemonCapabilities, base::DaemonMode},
     discovery::r#impl::types::{DiscoveryType, RunType},
     hosts::r#impl::{base::Host, virtualization::HostVirtualization},
-    if_entries::r#impl::base::IfEntry,
     interfaces::r#impl::base::Interface,
+    ip_addresses::r#impl::base::IPAddress,
     organizations::r#impl::base::PlanLimitNotifications,
     ports::r#impl::base::Port,
     services::r#impl::{definitions::ServiceDefinition, virtualization::ServiceVirtualization},
@@ -64,6 +65,7 @@ pub trait Storage<T: Storable>: Send + Sync {
     async fn get_one(&self, filter: StorableFilter<T>) -> Result<Option<T>, anyhow::Error>;
     async fn update(&self, entity: &mut T) -> Result<T, anyhow::Error>;
     async fn delete(&self, id: &Uuid) -> Result<(), anyhow::Error>;
+    async fn create_many(&self, entities: &[T]) -> Result<Vec<T>, anyhow::Error>;
     async fn delete_many(&self, ids: &[Uuid]) -> Result<usize, anyhow::Error>;
     async fn delete_by_filter(&self, filter: StorableFilter<T>) -> Result<usize, anyhow::Error>;
 }
@@ -79,12 +81,6 @@ pub trait Storable: Sized + Clone + Send + Sync + 'static + Default {
     /// Database table name
     fn table_name() -> &'static str;
 
-    /// Primary key
-    fn id(&self) -> Uuid;
-    fn created_at(&self) -> DateTime<Utc>;
-    fn set_id(&mut self, id: Uuid);
-    fn set_created_at(&mut self, time: DateTime<Utc>);
-
     /// Serialization for database storage
     /// Returns (column_names, bind_values)
     fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error>;
@@ -96,6 +92,12 @@ pub trait Storable: Sized + Clone + Send + Sync + 'static + Default {
 /// Extended trait for user-facing domain entities (excludes junction tables).
 /// Provides entity metadata, tenant scoping, timestamps, and tagging support.
 pub trait Entity: Storable {
+    /// Primary key
+    fn id(&self) -> Uuid;
+    fn created_at(&self) -> DateTime<Utc>;
+    fn set_id(&mut self, id: Uuid);
+    fn set_created_at(&mut self, time: DateTime<Utc>);
+
     /// Entity type discriminant for the entity enum
     fn entity_type() -> EntityDiscriminants;
 
@@ -152,9 +154,9 @@ pub trait Entity: Storable {
     fn set_updated_at(&mut self, time: DateTime<Utc>);
 
     /// Whether this entity type supports tagging.
-    /// Default implementation delegates to is_entity_taggable().
+    /// Default implementation delegates to `EntityDiscriminants::is_taggable`.
     fn is_taggable() -> bool {
-        crate::server::shared::entities::is_entity_taggable(Self::entity_type())
+        Self::entity_type().is_taggable()
     }
 
     /// Get the tags field from the entity for validation.
@@ -190,6 +192,7 @@ pub enum SqlValue {
     String(String),
     OptionalString(Option<String>),
     I32(i32),
+    OptionalI64(Option<i64>),
     U16(u16),
     Bool(bool),
     Email(EmailAddress),
@@ -204,8 +207,11 @@ pub enum SqlValue {
     ServiceDefinition(Box<dyn ServiceDefinition>),
     OptionalServiceVirtualization(Option<ServiceVirtualization>),
     OptionalHostVirtualization(Option<HostVirtualization>),
+    OptionalSubnetVirtualization(
+        Option<crate::server::subnets::r#impl::virtualization::SubnetVirtualization>,
+    ),
     Ports(Vec<Port>),
-    Interfaces(Vec<Interface>),
+    IPAddresses(Vec<IPAddress>),
     RunType(RunType),
     DiscoveryType(DiscoveryType),
     DaemonCapabilities(DaemonCapabilities),
@@ -221,14 +227,24 @@ pub enum SqlValue {
     Subnets(Vec<Subnet>),
     Services(Vec<Service>),
     Bindings(Vec<Binding>),
-    Groups(Vec<Group>),
+    Dependencies(Vec<Dependency>),
     OnboardingOperation(Vec<OnboardingOperation>),
     StringArray(Vec<String>),
     OptionalStringArray(Option<Vec<String>>),
-    JsonValue(serde_json::Value),
+    OptionalLldpChassisId(Option<crate::server::snmp::resolution::lldp::LldpChassisId>),
+    OptionalLldpPortId(Option<crate::server::snmp::resolution::lldp::LldpPortId>),
+    OptionalFdbMacs(Option<Vec<String>>),
+    OptionVecU16(Option<Vec<u16>>),
+    OptionVecUuid(Option<Vec<Uuid>>),
+    ShareOptions(crate::server::shares::r#impl::base::ShareOptions),
+    EnabledViews(Option<Vec<crate::server::topology::types::views::TopologyView>>),
+    CredentialType(CredentialType),
     MacAddress(MacAddress),
     OptionalMacAddress(Option<MacAddress>),
-    IfEntries(Vec<IfEntry>),
+    Interfaces(Vec<Interface>),
     Tags(Vec<Tag>),
+    Vlans(Vec<crate::server::vlans::r#impl::base::Vlan>),
     PlanLimitNotifications(PlanLimitNotifications),
+    OptionalIpAddrArray(Option<Vec<IpAddr>>),
+    OptionalUuidVec(Option<Vec<Uuid>>),
 }

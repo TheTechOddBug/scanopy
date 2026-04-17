@@ -37,8 +37,8 @@
 
 	let loading = $state(false);
 
-	// Get use case config (default to company)
-	let useCaseConfig = $derived(useCase ? getUseCases()[useCase] : getUseCases().company);
+	// Get use case config (default to internal_it)
+	let useCaseConfig = $derived(useCase ? getUseCases()[useCase] : getUseCases().internal_it);
 
 	// Initialize from store (for back navigation persistence)
 	const storeState = onboardingStore.getState();
@@ -106,7 +106,7 @@
 	let title = $derived(
 		useCase === 'msp'
 			? onboarding_visualizeMsp()
-			: useCase === 'company'
+			: useCase === 'internal_it'
 				? onboarding_visualizeCompany()
 				: onboarding_visualizeHomelab()
 	);

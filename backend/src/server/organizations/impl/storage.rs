@@ -47,22 +47,6 @@ impl Storable for Organization {
         self.base.clone()
     }
 
-    fn id(&self) -> Uuid {
-        self.id
-    }
-
-    fn created_at(&self) -> DateTime<Utc> {
-        self.created_at
-    }
-
-    fn set_id(&mut self, id: Uuid) {
-        self.id = id;
-    }
-
-    fn set_created_at(&mut self, time: DateTime<Utc>) {
-        self.created_at = time;
-    }
-
     fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error> {
         let Self {
             id,
@@ -112,7 +96,12 @@ impl Storable for Organization {
                 SqlValue::OptionTimestamp(trial_end_date),
                 SqlValue::OptionalString(brevo_company_id),
                 SqlValue::PlanLimitNotifications(plan_limit_notifications),
-                SqlValue::OptionalString(use_case),
+                SqlValue::OptionalString(Some(
+                    serde_json::to_value(use_case)
+                        .ok()
+                        .and_then(|v| v.as_str().map(String::from))
+                        .unwrap_or_else(|| "other".to_string()),
+                )),
             ],
         ))
     }
@@ -149,13 +138,34 @@ impl Storable for Organization {
                     .ok()
                     .and_then(|v| serde_json::from_value(v).ok())
                     .unwrap_or_default(),
-                use_case: row.try_get("use_case").ok().flatten(),
+                use_case: row
+                    .try_get::<Option<String>, _>("use_case")
+                    .ok()
+                    .flatten()
+                    .and_then(|s| serde_json::from_value(serde_json::json!(s)).ok())
+                    .unwrap_or_default(),
             },
         })
     }
 }
 
 impl Entity for Organization {
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
+    }
+
     type CsvRow = OrganizationCsvRow;
 
     fn to_csv_row(&self) -> Self::CsvRow {

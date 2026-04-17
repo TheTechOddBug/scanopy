@@ -129,10 +129,10 @@ impl EntityBuffer {
     // Host methods
     // ========================================================================
 
-    /// Add a discovered host with its children (interfaces, ports, services).
+    /// Add a discovered host with its children (ip_addresses, ports, services).
     ///
     /// If a host with the same ID already exists and is pending, merges children
-    /// (interfaces, ports, services, if_entries) into the existing entry.
+    /// (ip_addresses, ports, services, interfaces) into the existing entry.
     /// This is critical for Docker discovery where all containers share the daemon's host_id.
     pub async fn push_host(&self, host: DiscoveryHostRequest) {
         let mut hosts = self.hosts.write().await;
@@ -140,10 +140,15 @@ impl EntityBuffer {
         match hosts.get_mut(&host.host.id) {
             Some(BufferedEntity::Pending(existing)) => {
                 // Merge children into existing pending entry
-                existing.interfaces.extend(host.interfaces);
+                existing.ip_addresses.extend(host.ip_addresses);
                 existing.ports.extend(host.ports);
                 existing.services.extend(host.services);
-                existing.if_entries.extend(host.if_entries);
+                existing.interfaces.extend(host.interfaces);
+                existing
+                    .host
+                    .base
+                    .credential_assignments
+                    .extend(host.host.base.credential_assignments);
             }
             Some(BufferedEntity::Created { .. }) | None => {
                 // No existing pending entry - insert new one
@@ -162,10 +167,11 @@ impl EntityBuffer {
             if let BufferedEntity::Pending(_) = entry {
                 let updated_req = DiscoveryHostRequest {
                     host: actual.to_host(),
-                    interfaces: actual.interfaces,
+                    ip_addresses: actual.ip_addresses,
                     ports: actual.ports,
                     services: actual.services,
-                    if_entries: actual.if_entries,
+                    interfaces: actual.interfaces,
+                    subnets: vec![],
                 };
                 *entry = BufferedEntity::Created {
                     pending_id,
@@ -320,12 +326,17 @@ mod tests {
                 sys_contact: None,
                 management_url: None,
                 chassis_id: None,
-                snmp_credential_id: None,
+                sys_name: None,
+                manufacturer: None,
+                model: None,
+                serial_number: None,
+                credential_assignments: vec![],
             }),
-            interfaces: vec![],
+            ip_addresses: vec![],
             ports: vec![],
             services: vec![],
-            if_entries: vec![],
+            interfaces: vec![],
+            subnets: vec![],
         };
         buffer.push_host(host).await;
 
@@ -367,12 +378,17 @@ mod tests {
                             sys_contact: None,
                             management_url: None,
                             chassis_id: None,
-                            snmp_credential_id: None,
+                            sys_name: None,
+                            manufacturer: None,
+                            model: None,
+                            serial_number: None,
+                            credential_assignments: vec![],
                         }),
-                        interfaces: vec![],
+                        ip_addresses: vec![],
                         ports: vec![],
                         services: vec![],
-                        if_entries: vec![],
+                        interfaces: vec![],
+                        subnets: vec![],
                     };
                     buf.push_host(host).await;
                 })
@@ -409,6 +425,7 @@ mod tests {
                 network_id,
                 description: None,
                 subnet_type: SubnetType::Unknown,
+                virtualization: None,
                 source: EntitySource::Manual,
                 tags: vec![],
             },
@@ -454,6 +471,7 @@ mod tests {
                 network_id,
                 description: None,
                 subnet_type: SubnetType::Unknown,
+                virtualization: None,
                 source: EntitySource::Manual,
                 tags: vec![],
             },
@@ -468,6 +486,7 @@ mod tests {
                 network_id,
                 description: None,
                 subnet_type: SubnetType::Unknown,
+                virtualization: None,
                 source: EntitySource::Manual,
                 tags: vec![],
             },
@@ -513,6 +532,7 @@ mod tests {
                 network_id,
                 description: None,
                 subnet_type: SubnetType::Unknown,
+                virtualization: None,
                 source: EntitySource::Manual,
                 tags: vec![],
             },
@@ -527,6 +547,7 @@ mod tests {
                 network_id,
                 description: None,
                 subnet_type: SubnetType::Unknown,
+                virtualization: None,
                 source: EntitySource::Manual,
                 tags: vec![],
             },
@@ -585,6 +606,7 @@ mod tests {
                 network_id,
                 description: None,
                 subnet_type: SubnetType::Unknown,
+                virtualization: None,
                 source: EntitySource::Manual,
                 tags: vec![],
             },
@@ -637,7 +659,7 @@ mod tests {
         // This test verifies that push_host merges children when called multiple times
         // with the same host_id. This is critical for Docker discovery where all containers
         // share the daemon's host_id - without merging, only the last container survives.
-        use crate::server::interfaces::r#impl::base::{Interface, InterfaceBase};
+        use crate::server::ip_addresses::r#impl::base::{IPAddress, IPAddressBase};
         use crate::server::services::r#impl::base::{Service, ServiceBase};
         use chrono::Utc;
         use std::net::{IpAddr, Ipv4Addr};
@@ -648,7 +670,7 @@ mod tests {
         let subnet_id = Uuid::new_v4();
         let now = Utc::now();
 
-        // First push: host with 2 interfaces
+        // First push: host with 2 ip_addresses
         let host1 = DiscoveryHostRequest {
             host: Host::new(HostBase {
                 name: "daemon-host".to_string(),
@@ -665,14 +687,18 @@ mod tests {
                 sys_contact: None,
                 management_url: None,
                 chassis_id: None,
-                snmp_credential_id: None,
+                sys_name: None,
+                manufacturer: None,
+                model: None,
+                serial_number: None,
+                credential_assignments: vec![],
             }),
-            interfaces: vec![
-                Interface {
+            ip_addresses: vec![
+                IPAddress {
                     id: Uuid::new_v4(),
                     created_at: now,
                     updated_at: now,
-                    base: InterfaceBase {
+                    base: IPAddressBase {
                         network_id,
                         host_id,
                         subnet_id,
@@ -682,11 +708,11 @@ mod tests {
                         position: 0,
                     },
                 },
-                Interface {
+                IPAddress {
                     id: Uuid::new_v4(),
                     created_at: now,
                     updated_at: now,
-                    base: InterfaceBase {
+                    base: IPAddressBase {
                         network_id,
                         host_id,
                         subnet_id,
@@ -709,7 +735,8 @@ mod tests {
                     ..Default::default()
                 },
             }],
-            if_entries: vec![],
+            interfaces: vec![],
+            subnets: vec![],
         };
         // Set the host ID to match our shared host_id
         let mut host1 = host1;
@@ -733,13 +760,17 @@ mod tests {
                 sys_contact: None,
                 management_url: None,
                 chassis_id: None,
-                snmp_credential_id: None,
+                sys_name: None,
+                manufacturer: None,
+                model: None,
+                serial_number: None,
+                credential_assignments: vec![],
             }),
-            interfaces: vec![Interface {
+            ip_addresses: vec![IPAddress {
                 id: Uuid::new_v4(),
                 created_at: now,
                 updated_at: now,
-                base: InterfaceBase {
+                base: IPAddressBase {
                     network_id,
                     host_id,
                     subnet_id,
@@ -761,28 +792,29 @@ mod tests {
                     ..Default::default()
                 },
             }],
-            if_entries: vec![],
+            interfaces: vec![],
+            subnets: vec![],
         };
         let mut host2 = host2;
         host2.host.id = host_id;
         buffer.push_host(host2).await;
 
-        // Verify: should have 1 host with 3 interfaces and 2 services
+        // Verify: should have 1 host with 3 ip_addresses and 2 services
         let pending = buffer.get_pending().await;
         assert_eq!(pending.hosts.len(), 1, "Should have exactly 1 host");
 
         let host = &pending.hosts[0];
         assert_eq!(host.host.id, host_id);
         assert_eq!(
-            host.interfaces.len(),
+            host.ip_addresses.len(),
             3,
-            "Should have 3 interfaces after merge"
+            "Should have 3 ip_addresses after merge"
         );
         assert_eq!(host.services.len(), 2, "Should have 2 services after merge");
 
         // Verify interface names to confirm correct merge
         let interface_names: Vec<_> = host
-            .interfaces
+            .ip_addresses
             .iter()
             .filter_map(|i| i.base.name.clone())
             .collect();

@@ -15,7 +15,7 @@ impl ServiceDefinition for OpenShift {
         "Enterprise Kubernetes"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Orchestrator
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortType::Kubernetes, "/healthz", "openshift", None)

@@ -3,34 +3,33 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Service } from '../types/base';
-	import type { Host, Interface, Port } from '$lib/features/hosts/types/base';
+	import type { Host, IPAddress, Port } from '$lib/features/hosts/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
-	import { formatInterface } from '$lib/features/hosts/queries';
+	import { formatIPAddress } from '$lib/features/hosts/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
-	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
 	import { usePortsQuery } from '$lib/features/ports/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { SvelteMap } from 'svelte/reactivity';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';
 	import {
 		common_delete,
 		common_edit,
-		common_interfaceBindings,
+		common_ipAddressBindings,
+		common_notAssigned,
 		common_portBindings,
 		common_tags,
-		common_unbound,
-		services_noInterfacesAssigned,
-		services_noPortsAssigned
+		common_unbound
 	} from '$lib/paraglide/messages';
 
 	// TanStack Query hooks
 	const subnetsQuery = useSubnetsQuery();
-	const interfacesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const portsQuery = usePortsQuery();
 
 	// Derived data from queries
 	let subnetsData = $derived(subnetsQuery.data ?? []);
-	let interfacesData = $derived(interfacesQuery.data ?? []);
+	let ipAddressesData = $derived(ipAddressesQuery.data ?? []);
 	let portsData = $derived(portsQuery.data ?? []);
 
 	// Helper to check if subnet is a container subnet
@@ -63,15 +62,15 @@
 	let groupedPortBindings = $derived(
 		(() => {
 			const portBindings = service.bindings.filter((b) => b.type === 'Port');
-			const grouped = new SvelteMap<string | null, { iface: Interface | null; ports: Port[] }>();
+			const grouped = new SvelteMap<string | null, { iface: IPAddress | null; ports: Port[] }>();
 
 			for (const binding of portBindings) {
 				const port = portsData.find((p) => p.id === binding.port_id);
 				if (!port) continue;
 
-				const interfaceId = binding.interface_id ?? null;
+				const interfaceId = binding.ip_address_id ?? null;
 				if (!grouped.has(interfaceId)) {
-					const iface = interfaceId ? interfacesData.find((i) => i.id === interfaceId) : null;
+					const iface = interfaceId ? ipAddressesData.find((i) => i.id === interfaceId) : null;
 					grouped.set(interfaceId, { iface: iface ?? null, ports: [] });
 				}
 				grouped.get(interfaceId)!.ports.push(port);
@@ -94,14 +93,14 @@
 	// Get interface bindings - look up interfaces from query data
 	let ifaces = $derived(
 		(() => {
-			const interfaceBindingIds = service.bindings
-				.filter((b) => b.type === 'Interface')
-				.map((b) => b.interface_id)
+			const ipAddressBindingIds = service.bindings
+				.filter((b) => b.type === 'IPAddress')
+				.map((b) => b.ip_address_id)
 				.filter((id): id is string => id !== null);
 
-			return interfaceBindingIds
-				.map((id) => interfacesData.find((i) => i.id === id))
-				.filter((i): i is Interface => i !== undefined);
+			return ipAddressBindingIds
+				.map((id) => ipAddressesData.find((i) => i.id === id))
+				.filter((i): i is IPAddress => i !== undefined);
 		})()
 	);
 
@@ -125,17 +124,17 @@
 			{
 				label: common_portBindings(),
 				value: groupedPortBindings,
-				emptyText: services_noPortsAssigned()
+				emptyText: common_notAssigned()
 			},
 			{
-				label: common_interfaceBindings(),
-				value: ifaces.map((iface: Interface) => ({
+				label: common_ipAddressBindings(),
+				value: ifaces.map((iface: IPAddress) => ({
 					id: iface.id,
-					label: formatInterface(iface, isContainerSubnetFn),
-					color: entities.getColorHelper('Interface').color,
-					entityRef: entityRef('Interface', iface.id, iface, { subnets: subnetsData })
+					label: formatIPAddress(iface, isContainerSubnetFn),
+					color: entities.getColorHelper('IPAddress').color,
+					entityRef: entityRef('IPAddress', iface.id, iface, { subnets: subnetsData })
 				})),
-				emptyText: services_noInterfacesAssigned()
+				emptyText: common_notAssigned()
 			},
 			{ label: common_tags(), snippet: tagsSnippet }
 		],

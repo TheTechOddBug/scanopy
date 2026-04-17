@@ -7,15 +7,16 @@ import type { EntityDiscriminants } from '$lib/api/entities';
 import type { EntityDisplayComponent } from '$lib/shared/components/forms/selection/types';
 import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
+import { IPAddressDisplay } from '$lib/shared/components/forms/selection/display/IPAddressDisplay.svelte';
 import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
-import { IfEntryDisplay } from '$lib/shared/components/forms/selection/display/IfEntryDisplay.svelte';
 import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
 import { DaemonDisplay } from '$lib/shared/components/forms/selection/display/DaemonDisplay.svelte';
-import { GroupDisplay } from '$lib/shared/components/forms/selection/display/GroupDisplay.svelte';
+import { DependencyDisplay } from '$lib/shared/components/forms/selection/display/DependencyDisplay.svelte';
 import { NetworkDisplay } from '$lib/shared/components/forms/selection/display/NetworkDisplay.svelte';
-import { SnmpCredentialDisplay } from '$lib/shared/components/forms/selection/display/SnmpCredentialDisplay.svelte';
+import { CredentialDisplay } from '$lib/shared/components/forms/selection/display/CredentialDisplay.svelte';
 import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
 import { DaemonApiKeyDisplay } from '$lib/shared/components/forms/selection/display/DaemonApiKeyDisplay.svelte';
+import { BindingDisplay } from '$lib/shared/components/forms/selection/display/BindingDisplay.svelte';
 
 export interface EntityUIConfig {
 	tabId: string;
@@ -34,12 +35,10 @@ export interface EntityUIConfig {
 export const TAB_LABELS: Record<string, string> = {
 	home: 'Home',
 	topology: 'Topology',
-	groups: 'Groups',
 	shares: 'Sharing',
 	discovery: 'Scans',
-	'discovery-sessions': 'Sessions',
-	'discovery-scheduled': 'Scheduled',
-	'discovery-history': 'History',
+	'discovery-scans': 'Scans',
+	'discovery-history': 'Historical',
 	daemons: 'Daemons',
 	'daemon-api-keys': 'API Keys',
 	networks: 'Networks',
@@ -49,12 +48,19 @@ export const TAB_LABELS: Record<string, string> = {
 	tags: 'Tags',
 	users: 'Users',
 	'api-keys': 'API Keys',
-	'snmp-credentials': 'SNMP Credentials'
+	credentials: 'Credentials'
 };
 
 export const entityUIConfig: Record<EntityDiscriminants, EntityUIConfig | null> = {
 	Host: { tabId: 'hosts', modalName: 'host-editor', displayComponent: HostDisplay },
 	Service: { tabId: 'services', modalName: 'service-editor', displayComponent: ServiceDisplay },
+	IPAddress: {
+		tabId: 'hosts',
+		displayComponent: IPAddressDisplay,
+		parentType: 'Host',
+		parentIdField: 'host_id',
+		modalTab: 'ip-addresses'
+	},
 	Interface: {
 		tabId: 'hosts',
 		displayComponent: InterfaceDisplay,
@@ -62,19 +68,14 @@ export const entityUIConfig: Record<EntityDiscriminants, EntityUIConfig | null> 
 		parentIdField: 'host_id',
 		modalTab: 'interfaces'
 	},
-	IfEntry: {
-		tabId: 'hosts',
-		displayComponent: IfEntryDisplay,
-		parentType: 'Host',
-		parentIdField: 'host_id',
-		modalTab: 'if-entries'
-	},
+	Vlan: null,
 	Port: { tabId: 'hosts', parentType: 'Host', parentIdField: 'host_id', modalTab: 'ports' },
 	Binding: {
 		tabId: 'hosts',
 		parentType: 'Host',
 		parentIdField: 'host_id',
-		modalTab: 'services'
+		modalTab: 'services',
+		displayComponent: BindingDisplay
 	},
 	Subnet: { tabId: 'subnets', modalName: 'subnet-editor', displayComponent: SubnetDisplay },
 	Daemon: { tabId: 'daemons', displayComponent: DaemonDisplay },
@@ -83,14 +84,18 @@ export const entityUIConfig: Record<EntityDiscriminants, EntityUIConfig | null> 
 		modalName: 'daemon-api-key',
 		displayComponent: DaemonApiKeyDisplay
 	},
-	Group: { tabId: 'groups', modalName: 'group-editor', displayComponent: GroupDisplay },
-	Network: { tabId: 'networks', modalName: 'network-editor', displayComponent: NetworkDisplay },
-	SnmpCredential: {
-		tabId: 'snmp-credentials',
-		modalName: 'snmp-credential-editor',
-		displayComponent: SnmpCredentialDisplay
+	Dependency: {
+		tabId: 'dependencies',
+		modalName: 'dependency-editor',
+		displayComponent: DependencyDisplay
 	},
-	Discovery: { tabId: 'discovery-scheduled', modalName: 'discovery-editor' },
+	Network: { tabId: 'networks', modalName: 'network-editor', displayComponent: NetworkDisplay },
+	Credential: {
+		tabId: 'credentials',
+		modalName: 'credential-editor',
+		displayComponent: CredentialDisplay
+	},
+	Discovery: { tabId: 'discovery-scans', modalName: 'discovery-editor' },
 	Tag: { tabId: 'tags', modalName: 'tag-editor' },
 	Share: { tabId: 'shares', modalName: 'share-editor' },
 	Topology: { tabId: 'topology', modalName: 'topology-editor', displayComponent: TopologyDisplay },

@@ -232,6 +232,14 @@ pub struct ApiError {
     pub error_code: Option<ErrorCode>,
 }
 
+impl fmt::Display for ApiError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for ApiError {}
+
 impl ApiError {
     pub fn new(status: StatusCode, message: String) -> Self {
         Self {
@@ -387,6 +395,11 @@ impl ApiError {
     /// Forbidden (403) - action blocked in demo mode
     pub fn demo_mode_blocked() -> Self {
         Self::coded(StatusCode::FORBIDDEN, ErrorCode::AuthDemoMode)
+    }
+
+    /// Forbidden (403) - action blocked because license is locked
+    pub fn license_locked() -> Self {
+        Self::coded(StatusCode::FORBIDDEN, ErrorCode::LicenseLocked)
     }
 
     // === Generic entity operations ===
@@ -572,6 +585,17 @@ impl ApiError {
     pub fn daemon_identity_mismatch() -> Self {
         Self::coded(StatusCode::FORBIDDEN, ErrorCode::DaemonIdentityMismatch)
     }
+
+    /// Bad request (400) - daemon version is older than server version
+    pub fn daemon_version_too_old(daemon_version: &str, server_version: &str) -> Self {
+        Self::coded(
+            StatusCode::BAD_REQUEST,
+            ErrorCode::DaemonVersionTooOld {
+                daemon_version: daemon_version.to_string(),
+                server_version: server_version.to_string(),
+            },
+        )
+    }
 }
 
 impl axum::response::IntoResponse for ApiError {
@@ -595,6 +619,11 @@ impl axum::response::IntoResponse for ApiError {
 
 impl From<anyhow::Error> for ApiError {
     fn from(err: anyhow::Error) -> Self {
+        // Check if this is an ApiError (preserves status code and error code)
+        if let Some(api_err) = err.downcast_ref::<ApiError>() {
+            return api_err.clone();
+        }
+
         // Check if this is a ValidationError (should return 400)
         if let Some(validation_err) = err.downcast_ref::<ValidationError>() {
             tracing::warn!("Validation error: {}", validation_err.0);
@@ -664,6 +693,7 @@ where
             Ok(Json(value)) => Ok(ApiJson(value)),
             Err(rejection) => {
                 let message = rejection.body_text();
+                tracing::warn!("JSON deserialization failed: {}", message);
                 // Extract the useful part of the error message
                 let friendly_message = if message.contains("Failed to deserialize") {
                     // Extract the actual error after the boilerplate

@@ -78,10 +78,10 @@ export const queryKeys = {
 		details: () => [...queryKeys.hosts.all, 'detail'] as const,
 		detail: (id: string) => [...queryKeys.hosts.details(), id] as const
 	},
-	interfaces: {
-		all: ['interfaces'] as const,
-		byHost: (hostId: string) => [...queryKeys.interfaces.all, 'host', hostId] as const,
-		detail: (id: string) => [...queryKeys.interfaces.all, 'detail', id] as const
+	ipAddresses: {
+		all: ['ipAddresses'] as const,
+		byHost: (hostId: string) => [...queryKeys.ipAddresses.all, 'host', hostId] as const,
+		detail: (id: string) => [...queryKeys.ipAddresses.all, 'detail', id] as const
 	},
 	ports: {
 		all: ['ports'] as const,
@@ -107,9 +107,9 @@ export const queryKeys = {
 		byNetwork: (networkId: string) => [...queryKeys.subnets.all, 'network', networkId] as const,
 		detail: (id: string) => [...queryKeys.subnets.all, 'detail', id] as const
 	},
-	groups: {
-		all: ['groups'] as const,
-		detail: (id: string) => [...queryKeys.groups.all, 'detail', id] as const
+	dependencies: {
+		all: ['dependencies'] as const,
+		detail: (id: string) => [...queryKeys.dependencies.all, 'detail', id] as const
 	},
 	users: {
 		all: ['users'] as const,
@@ -141,13 +141,13 @@ export const queryKeys = {
 		all: ['tags'] as const,
 		detail: (id: string) => [...queryKeys.tags.all, 'detail', id] as const
 	},
-	snmpCredentials: {
-		all: ['snmpCredentials'] as const,
-		detail: (id: string) => [...queryKeys.snmpCredentials.all, 'detail', id] as const
+	credentials: {
+		all: ['credentials'] as const,
+		detail: (id: string) => [...queryKeys.credentials.all, 'detail', id] as const
 	},
-	ifEntries: {
-		all: ['ifEntries'] as const,
-		byHost: (hostId: string) => [...queryKeys.ifEntries.all, 'host', hostId] as const
+	interfaces: {
+		all: ['interfaces'] as const,
+		byHost: (hostId: string) => [...queryKeys.interfaces.all, 'host', hostId] as const
 	},
 	topology: {
 		all: ['topology'] as const,

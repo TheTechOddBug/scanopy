@@ -15,6 +15,7 @@
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { onMount } from 'svelte';
 	import { common_creating, tags_addTag, tags_createTagQuoted } from '$lib/paraglide/messages';
+	import { concepts } from '$lib/shared/stores/metadata';
 
 	/**
 	 * Compact inline tag picker for use in cards and bulk actions.
@@ -34,7 +35,16 @@
 		onAdd,
 		onRemove,
 		// Optional pre-resolved tags (e.g. from topology snapshot on share pages)
-		availableTags: availableTagsProp
+		availableTags: availableTagsProp,
+		// When true, tags created inline will have is_application set
+		createAsApplication = false,
+		// When false, hides the inline tag creation option
+		allowCreate = true,
+		// Bindable: mirrors the dropdown's open state. Set to true to open programmatically;
+		// updates back to false when the dropdown closes (e.g. user blurs away).
+		open = $bindable(false),
+		// When true, hide the "+" affordance. The dropdown input still renders while `open`.
+		hideAddButton = false
 	}: {
 		selectedTagIds?: string[];
 		disabled?: boolean;
@@ -43,6 +53,10 @@
 		onAdd?: (tagId: string) => void;
 		onRemove?: (tagId: string) => void;
 		availableTags?: import('$lib/features/tags/types/base').Tag[];
+		createAsApplication?: boolean;
+		allowCreate?: boolean;
+		open?: boolean;
+		hideAddButton?: boolean;
 	} = $props();
 
 	// Entity mode: use generic mutations
@@ -53,7 +67,6 @@
 	let isEntityMode = $derived(entityId !== undefined && entityType !== undefined);
 
 	let inputValue = $state('');
-	let isDropdownOpen = $state(false);
 	let inputElement: HTMLInputElement | undefined = $state();
 	let triggerElement: HTMLDivElement | undefined = $state();
 	let dropdownElement: HTMLDivElement | undefined = $state();
@@ -113,14 +126,14 @@
 
 	// Recalculate position once dropdown renders (so we measure real height for flip)
 	$effect(() => {
-		if (isDropdownOpen && dropdownElement) {
+		if (open && dropdownElement) {
 			calculatePosition();
 		}
 	});
 
 	// Reposition dropdown on scroll when open
 	$effect(() => {
-		if (!isDropdownOpen) return;
+		if (!open) return;
 
 		const handleScroll = () => calculatePosition();
 		window.addEventListener('scroll', handleScroll, true);
@@ -141,7 +154,9 @@
 
 	// Check if user can create tags
 	let canCreateTags = $derived(
-		currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities
+		allowCreate &&
+			currentUser &&
+			permissions.getMetadata(currentUser.permissions).manage_org_entities
 	);
 
 	// Check if typed value matches an existing tag name exactly
@@ -166,7 +181,7 @@
 		)
 	);
 
-	let showDropdown = $derived(isDropdownOpen && (availableTags.length > 0 || showCreateOption));
+	let showDropdown = $derived(open && (availableTags.length > 0 || showCreateOption));
 
 	function getRandomColor(): Color {
 		return AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)];
@@ -183,11 +198,14 @@
 			const newTag = createDefaultTag(organization.id);
 			newTag.name = name;
 			newTag.color = getRandomColor();
+			if (createAsApplication) {
+				(newTag as typeof newTag & { is_application: boolean }).is_application = true;
+			}
 
 			const result = await createTagMutation.mutateAsync(newTag);
 			await handleAddTag(result.id);
 			inputValue = '';
-			isDropdownOpen = false;
+			open = false;
 		} finally {
 			inputElement?.focus();
 		}
@@ -204,7 +222,7 @@
 			onAdd?.(tagId);
 		}
 		inputValue = '';
-		isDropdownOpen = false;
+		open = false;
 	}
 
 	async function handleRemoveTag(tagId: string) {
@@ -231,7 +249,7 @@
 			}
 		} else if (e.key === 'Escape') {
 			inputValue = '';
-			isDropdownOpen = false;
+			open = false;
 			inputElement?.blur();
 		}
 	}
@@ -239,36 +257,45 @@
 	function handleBlur() {
 		// Delay to allow click on dropdown item
 		setTimeout(() => {
-			isDropdownOpen = false;
+			open = false;
 		}, 150);
 	}
 
 	function handleAddClick() {
 		if (disabled) return;
-		isDropdownOpen = true;
-		calculatePosition();
-		// Focus input after dropdown opens
-		setTimeout(() => inputElement?.focus(), 0);
+		open = true;
 	}
+
+	// When the dropdown opens (via button click or parent programmatically setting `open`),
+	// compute position and focus the input.
+	$effect(() => {
+		if (open && !disabled) {
+			calculatePosition();
+			setTimeout(() => inputElement?.focus(), 0);
+		}
+	});
 </script>
 
-<div class="flex min-w-0 flex-wrap items-center gap-1 overflow-hidden">
+<div class="flex min-w-0 flex-wrap items-center gap-1">
 	<!-- Selected tags -->
-	{#each selectedTagIds as tagId (tagId)}
+	{#each selectedTagIds.filter((id) => getTag(id)) as tagId (tagId)}
 		{@const tag = getTag(tagId)}
 		<Tag
 			label={tag?.name}
 			color={tag?.color}
+			icon={tag?.is_application ? concepts.getIconComponent('Application') : null}
+			isShiny={tag?.is_application ?? false}
 			pill={!disabled}
 			removable={!disabled && !!(onRemove || isEntityMode)}
 			onRemove={() => handleRemoveTag(tagId)}
 		/>
 	{/each}
 
-	<!-- Add button / dropdown -->
-	{#if (onAdd || isEntityMode) && !disabled}
+	<!-- Add button / dropdown (hide when no tags to add and creation disabled).
+	     `hideAddButton` hides only the "+" affordance — the input still renders while `open`. -->
+	{#if (onAdd || isEntityMode) && !disabled && (canCreateTags || tags.some((t) => !selectedTagIds.includes(t.id)))}
 		<div bind:this={triggerElement} class="relative flex h-5 items-center">
-			{#if isDropdownOpen}
+			{#if open}
 				<!-- Input for searching/creating tags -->
 				<input
 					bind:this={inputElement}
@@ -277,11 +304,11 @@
 					placeholder={tags_addTag()}
 					class="h-5 w-24 rounded-full px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
 					style="border: 1px solid var(--color-border-input); background: var(--color-bg-input); color: var(--color-text-primary)"
-					onfocus={() => (isDropdownOpen = true)}
+					onfocus={() => (open = true)}
 					onblur={handleBlur}
 					onkeydown={handleKeydown}
 				/>
-			{:else}
+			{:else if !hideAddButton}
 				<!-- Add button -->
 				<button
 					type="button"

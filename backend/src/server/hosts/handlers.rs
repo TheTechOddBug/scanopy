@@ -1,8 +1,8 @@
 use crate::daemon::runtime::state::BufferedEntities;
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::{Authorized, IsDaemon, Member, Or, Viewer};
-use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
+use crate::server::ip_addresses::r#impl::base::IPAddress;
 use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
 use crate::server::shared::entities::EntityDiscriminants;
@@ -24,7 +24,7 @@ use crate::server::shared::types::metadata::TypeMetadataProvider;
 use crate::server::shared::validation::{validate_network_access, validate_read_access};
 use crate::server::{
     config::AppState,
-    daemons::r#impl::base::Daemon,
+    daemons::r#impl::{base::Daemon, version::pre_interface_to_ip_address_rename},
     hosts::r#impl::{
         api::{CreateHostRequest, DiscoveryHostRequest, HostResponse, UpdateHostRequest},
         base::Host,
@@ -65,7 +65,7 @@ pub enum HostOrderField {
     /// Sort by virtualizing service name. Requires JOIN to services table.
     VirtualizedBy,
     NetworkId,
-    /// Sort by primary interface IP address. Requires JOIN to interfaces table.
+    /// Sort by primary interface IP address. Requires JOIN to ip_addresses table.
     InterfaceIp,
 }
 
@@ -91,7 +91,7 @@ impl OrderField for HostOrderField {
             Self::InterfaceIp => Some(
                 "LEFT JOIN (\
                     SELECT DISTINCT ON (host_id) host_id, ip_address \
-                    FROM interfaces \
+                    FROM ip_addresses \
                     ORDER BY host_id, position ASC\
                 ) AS primary_interface ON hosts.id = primary_interface.host_id",
             ),
@@ -189,7 +189,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
 /// List all hosts
 ///
 /// Returns all hosts the authenticated user has access to, with their
-/// interfaces, ports, and services included. Supports pagination via
+/// ip_addresses, ports, and services included. Supports pagination via
 /// `limit` and `offset` query parameters, and ordering via `group_by`,
 /// `order_by`, and `order_direction`.
 #[utoipa::path(
@@ -230,11 +230,25 @@ async fn get_all_hosts(
     // Apply ordering and JOINs
     let (filter, order_by) = query.apply_ordering(filter);
 
-    let result = state
+    let mut result = state
         .services
         .host_service
         .get_all_host_responses_paginated(filter, &order_by)
         .await?;
+
+    // Hydrate credential assignments from junction table
+    let host_ids: Vec<Uuid> = result.items.iter().map(|h| h.id).collect();
+    let cred_map = state
+        .services
+        .credential_service
+        .get_credential_assignments_for_hosts(&host_ids)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+    for host in &mut result.items {
+        if let Some(assignments) = cred_map.get(&host.id) {
+            host.credential_assignments = assignments.clone();
+        }
+    }
 
     // Get effective pagination values for response metadata
     let limit = pagination.effective_limit().unwrap_or(0);
@@ -250,7 +264,7 @@ async fn get_all_hosts(
 
 /// Get a host by ID
 ///
-/// Returns a single host with its interfaces, ports, and services.
+/// Returns a single host with its ip_addresses, ports, and services.
 #[utoipa::path(
     get,
     path = "/{id}",
@@ -291,12 +305,20 @@ async fn get_host_by_id(
         host.tags = tags.clone();
     }
 
+    // Hydrate credential assignments from junction table
+    host.credential_assignments = state
+        .services
+        .credential_service
+        .get_credential_assignments_for_host(&host.id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
     Ok(Json(ApiResponse::success(host)))
 }
 
 /// Create a new host
 ///
-/// Creates a host with optional interfaces, ports, and services.
+/// Creates a host with optional ip_addresses, ports, and services.
 /// The `source` field is automatically set to `Manual`.
 ///
 /// ### Tag Validation
@@ -388,22 +410,30 @@ async fn create_host(
             }
 
             // Check interface subnets are on the same network
-            for interface in &request.interfaces {
+            for ip_address in &request.ip_addresses {
                 if let Some(subnet) = state
                     .services
                     .subnet_service
-                    .get_by_id(&interface.subnet_id)
+                    .get_by_id(&ip_address.subnet_id)
                     .await?
                     && subnet.base.network_id != request.network_id
                 {
                     return Err(ApiError::bad_request(&format!(
-                        "Host is on network {}, cannot have an interface with a subnet \"{}\" which is on network {}.",
+                        "Host is on network {}, cannot have an ip_address with a subnet \"{}\" which is on network {}.",
                         request.network_id, subnet.base.name, subnet.base.network_id
                     )));
                 }
             }
 
             let host_response = host_service.create_from_request(request, entity).await?;
+
+            // Sync credential assignments to junction table
+            state
+                .services
+                .credential_service
+                .set_host_credentials(&host_response.id, &host_response.credential_assignments)
+                .await
+                .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 
             Ok(Json(ApiResponse::success(HostCreateResponse::New(
                 host_response,
@@ -431,14 +461,24 @@ async fn create_host(
 
             let DiscoveryHostRequest {
                 host,
-                interfaces,
+                ip_addresses,
                 ports,
                 services,
-                if_entries,
+                interfaces,
+                subnets,
             } = discovery_request;
 
             let host_response = host_service
-                .discover_host(host, interfaces, ports, services, if_entries, entity, None)
+                .discover_host(
+                    host,
+                    ip_addresses,
+                    ports,
+                    services,
+                    interfaces,
+                    subnets,
+                    entity,
+                    None,
+                )
                 .await?;
 
             let legacy_response = LegacyHostWithServicesResponse::from_host_response(host_response);
@@ -457,7 +497,7 @@ async fn create_host(
 
 /// Update a host
 ///
-/// Updates host properties. Children (interfaces, ports, services)
+/// Updates host properties. Children (ip_addresses, ports, services)
 /// are managed via their own endpoints.
 ///
 /// ### Tag Validation
@@ -512,9 +552,30 @@ async fn update_host(
         organization_id,
     )?;
 
+    let credential_assignments = request.credential_assignments.clone();
+
     let mut host_response = host_service
         .update_from_request(request, auth.into_entity())
         .await?;
+
+    // Sync credential assignments if provided
+    if let Some(ref assignments) = credential_assignments {
+        state
+            .services
+            .credential_service
+            .set_host_credentials(&host_response.id, assignments)
+            .await
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+        host_response.credential_assignments = assignments.clone();
+    } else {
+        // Hydrate from junction table
+        host_response.credential_assignments = state
+            .services
+            .credential_service
+            .get_credential_assignments_for_host(&host_response.id)
+            .await
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+    }
 
     // Hydrate tags from junction table
     let tags_map = state
@@ -551,7 +612,10 @@ async fn create_host_discovery(
     State(state): State<Arc<AppState>>,
     auth: Authorized<IsDaemon>,
     Json(request): Json<DiscoveryHostRequest>,
-) -> ApiResult<Json<ApiResponse<HostResponse>>> {
+) -> ApiResult<impl IntoResponse> {
+    // Legacy cleanup: remove once minimum_supported >= 0.16.0
+    let is_legacy_daemon = pre_interface_to_ip_address_rename(auth.entity.daemon_version());
+
     // Get daemon network_id from entity
     let daemon_network_id = auth
         .network_ids()
@@ -589,12 +653,24 @@ async fn create_host_discovery(
         }
     })?;
 
-    Ok(Json(ApiResponse::success(host_response)))
+    // Legacy cleanup: remove once minimum_supported >= 0.16.0
+    // Pre-0.16.0 daemons expect "Interface"/"interface_id" in binding responses
+    if is_legacy_daemon {
+        let mut json = serde_json::to_value(ApiResponse::success(host_response))
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+        rewrite_response_for_legacy_daemon(&mut json);
+        return Ok(Json(json));
+    }
+
+    Ok(Json(
+        serde_json::to_value(ApiResponse::success(host_response))
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?,
+    ))
 }
 
 /// Consolidate hosts
 ///
-/// Merges all interfaces, ports, and services from `other_host` into
+/// Merges all ip_addresses, ports, and services from `other_host` into
 /// `destination_host`, then deletes `other_host`. Both hosts must be
 /// on the same network.
 ///
@@ -683,6 +759,14 @@ async fn consolidate_hosts(
         host_response.tags = tags.clone();
     }
 
+    // Hydrate credential assignments from junction table
+    host_response.credential_assignments = state
+        .services
+        .credential_service
+        .get_credential_assignments_for_host(&host_response.id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
     Ok(Json(ApiResponse::success(host_response)))
 }
 
@@ -717,8 +801,12 @@ pub async fn delete_host(
         .await?
         .is_some()
     {
-        return Err(ApiError::conflict(
-            "Can't delete a host with an associated daemon. Delete the daemon first.",
+        return Err(ApiError::coded(
+            StatusCode::CONFLICT,
+            ErrorCode::EntityDeleteForbidden {
+                entity: "host".to_string(),
+                reason: Some("has an associated daemon — delete the daemon first".to_string()),
+            },
         ));
     }
 
@@ -751,8 +839,15 @@ pub async fn bulk_delete_hosts(
     let daemon_filter = StorableFilter::<Daemon>::new_from_host_ids(&ids);
 
     if !daemon_service.get_all(daemon_filter).await?.is_empty() {
-        return Err(ApiError::conflict(
-            "One or more hosts has an associated daemon, and can't be deleted. Delete the daemon(s) first.",
+        return Err(ApiError::coded(
+            StatusCode::CONFLICT,
+            ErrorCode::EntityDeleteForbidden {
+                entity: "host".to_string(),
+                reason: Some(
+                    "one or more hosts has an associated daemon — delete the daemon(s) first"
+                        .to_string(),
+                ),
+            },
         ));
     }
 
@@ -762,7 +857,7 @@ pub async fn bulk_delete_hosts(
 /// Export hosts with children to ZIP
 ///
 /// Exports all hosts matching the filter criteria along with their children
-/// (interfaces, ports, services, if_entries) as a ZIP archive containing
+/// (ip_addresses, ports, services, interfaces) as a ZIP archive containing
 /// separate CSV files for each entity type.
 #[utoipa::path(
     get,
@@ -802,11 +897,11 @@ async fn export_hosts_zip(
     let host_ids: Vec<Uuid> = hosts.iter().map(|h| h.id).collect();
 
     // Fetch children for these hosts
-    let interfaces = state
+    let ip_addresses = state
         .services
-        .interface_service
+        .ip_address_service
         .get_all(
-            StorableFilter::<Interface>::new_from_host_ids(&host_ids).network_ids(&network_ids),
+            StorableFilter::<IPAddress>::new_from_host_ids(&host_ids).network_ids(&network_ids),
         )
         .await?;
 
@@ -822,23 +917,26 @@ async fn export_hosts_zip(
         .get_all(StorableFilter::<Service>::new_from_host_ids(&host_ids).network_ids(&network_ids))
         .await?;
 
-    let if_entries = state
+    let interfaces = state
         .services
-        .if_entry_service
-        .get_all(StorableFilter::<IfEntry>::new_from_host_ids(&host_ids).network_ids(&network_ids))
+        .interface_service
+        .get_all(
+            StorableFilter::<Interface>::new_from_host_ids(&host_ids).network_ids(&network_ids),
+        )
         .await?;
 
     // Build CSVs
     let hosts_csv = build_csv(&hosts)
         .map_err(|e| ApiError::internal_error(&format!("Failed to build hosts CSV: {}", e)))?;
-    let interfaces_csv = build_csv(&interfaces)
-        .map_err(|e| ApiError::internal_error(&format!("Failed to build interfaces CSV: {}", e)))?;
+    let ip_addresses_csv = build_csv(&ip_addresses).map_err(|e| {
+        ApiError::internal_error(&format!("Failed to build ip_addresses CSV: {}", e))
+    })?;
     let ports_csv = build_csv(&ports)
         .map_err(|e| ApiError::internal_error(&format!("Failed to build ports CSV: {}", e)))?;
     let services_csv = build_csv(&services)
         .map_err(|e| ApiError::internal_error(&format!("Failed to build services CSV: {}", e)))?;
-    let if_entries_csv = build_csv(&if_entries)
-        .map_err(|e| ApiError::internal_error(&format!("Failed to build if_entries CSV: {}", e)))?;
+    let if_entries_csv = build_csv(&interfaces)
+        .map_err(|e| ApiError::internal_error(&format!("Failed to build interfaces CSV: {}", e)))?;
 
     // Build zip archive
     let mut buffer = Cursor::new(Vec::new());
@@ -851,9 +949,9 @@ async fn export_hosts_zip(
         zip.write_all(&hosts_csv)
             .map_err(|e| ApiError::internal_error(&format!("Failed to write zip: {}", e)))?;
 
-        zip.start_file("interfaces.csv", options)
+        zip.start_file("ip_addresses.csv", options)
             .map_err(|e| ApiError::internal_error(&format!("Failed to create zip: {}", e)))?;
-        zip.write_all(&interfaces_csv)
+        zip.write_all(&ip_addresses_csv)
             .map_err(|e| ApiError::internal_error(&format!("Failed to write zip: {}", e)))?;
 
         zip.start_file("ports.csv", options)
@@ -866,7 +964,7 @@ async fn export_hosts_zip(
         zip.write_all(&services_csv)
             .map_err(|e| ApiError::internal_error(&format!("Failed to write zip: {}", e)))?;
 
-        zip.start_file("if_entries.csv", options)
+        zip.start_file("interfaces.csv", options)
             .map_err(|e| ApiError::internal_error(&format!("Failed to create zip: {}", e)))?;
         zip.write_all(&if_entries_csv)
             .map_err(|e| ApiError::internal_error(&format!("Failed to write zip: {}", e)))?;
@@ -890,3 +988,5 @@ async fn export_hosts_zip(
 
     Ok((headers, Body::from(zip_data)))
 }
+
+use crate::server::shared::legacy::rewrite_response_for_legacy_daemon;

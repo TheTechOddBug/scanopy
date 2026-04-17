@@ -4,12 +4,12 @@ use crate::server::{
         api::DaemonCapabilities,
         base::{Daemon, DaemonBase, DaemonMode},
     },
-    groups::r#impl::{
-        base::{Group, GroupBase},
-        types::GroupType,
+    dependencies::r#impl::{
+        base::{Dependency, DependencyBase, DependencyMembers},
+        types::DependencyType,
     },
     hosts::r#impl::base::{Host, HostBase},
-    interfaces::r#impl::base::{Interface, InterfaceBase},
+    ip_addresses::r#impl::base::{IPAddress, IPAddressBase},
     networks::r#impl::{Network, NetworkBase},
     organizations::r#impl::base::{Organization, OrganizationBase},
     ports::r#impl::base::{Port, PortBase, PortType},
@@ -101,8 +101,8 @@ pub fn host(network_id: &Uuid) -> Host {
     })
 }
 
-pub fn interface(network_id: &Uuid, subnet_id: &Uuid) -> Interface {
-    Interface::new(InterfaceBase {
+pub fn ip_address(network_id: &Uuid, subnet_id: &Uuid) -> IPAddress {
+    IPAddress::new(IPAddressBase {
         network_id: *network_id,
         subnet_id: *subnet_id,
         ip_address: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
@@ -128,6 +128,7 @@ pub fn subnet(network_id: &Uuid) -> Subnet {
         network_id: *network_id,
         cidr: IpCidr::V4(Ipv4Cidr::new(Ipv4Addr::new(192, 168, 1, 0), 24).unwrap()),
         subnet_type: SubnetType::Lan,
+        virtualization: None,
         source: EntitySource::System,
         tags: Vec::new(),
     })
@@ -150,14 +151,14 @@ pub fn service(network_id: &Uuid, host_id: &Uuid) -> Service {
     })
 }
 
-pub fn group(network_id: &Uuid) -> Group {
-    Group::new(GroupBase {
-        name: "Test Group".to_string(),
+pub fn dependency(network_id: &Uuid) -> Dependency {
+    Dependency::new(DependencyBase {
+        name: "Test Dependency".to_string(),
         description: None,
         network_id: *network_id,
         color: Color::default(),
-        group_type: GroupType::RequestPath,
-        binding_ids: vec![],
+        dependency_type: DependencyType::RequestPath,
+        members: DependencyMembers::default(),
         source: EntitySource::System,
         edge_style: EdgeStyle::Bezier,
         tags: Vec::new(),

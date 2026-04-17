@@ -1,7 +1,5 @@
 import type { components } from '$lib/api/schema';
 import type { Service } from '$lib/features/services/types/base';
-import type { ColorStyle } from '$lib/shared/utils/styling';
-import type { IconComponent } from '$lib/shared/utils/types';
 
 // Re-export generated types
 export type Topology = components['schemas']['Topology'];
@@ -14,23 +12,33 @@ export type TopologyNode = components['schemas']['Node'];
 export type EdgeHandle = components['schemas']['EdgeHandle'];
 
 // Variant types from Node union
-export type InterfaceNode = Extract<TopologyNode, { node_type: 'InterfaceNode' }>;
-export type SubnetNode = Extract<TopologyNode, { node_type: 'SubnetNode' }>;
+export type ElementNode = Extract<TopologyNode, { node_type: 'Element' }>;
+export type ContainerNode = Extract<TopologyNode, { node_type: 'Container' }>;
 
 // Frontend-specific render types (not from backend)
-export interface NodeRenderData {
+export interface PortStatus {
+	operStatus: 'Up' | 'Down' | string;
+	speed: string | null;
+	macAddress: string | null;
+}
+
+type ElementEntityTypeDiscriminant = components['schemas']['ElementEntityType']['element_type'];
+
+export interface ElementRenderData {
+	elementType: ElementEntityTypeDiscriminant;
 	headerText: string | null;
+	subtitleText?: string | null;
 	footerText: string | null;
 	bodyText: string | null;
 	showServices: boolean;
 	isVirtualized: boolean;
+	isContainerized: boolean;
 	services: Service[];
-	interface_id: string;
+	hiddenOpenPorts: Service[];
+	ip_address_id: string;
+	isCategoryHidden?: boolean;
+	portStatus?: PortStatus;
 }
 
-export interface SubnetRenderData {
-	headerText: string;
-	cidr: string;
-	IconComponent: IconComponent;
-	colorHelper: ColorStyle;
-}
+// ContainerRenderData removed — ContainerNode now reads icon/color directly
+// from node data (set by backend graph builder) and metadata.

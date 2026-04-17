@@ -1,0 +1,685 @@
+<script lang="ts">
+	import { Edit, Check, Eye, EyeOff } from 'lucide-svelte';
+	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
+	import { SimpleOptionDisplay } from '$lib/shared/components/forms/selection/display/SimpleOptionDisplay';
+	import FilterGroup from './FilterGroup.svelte';
+	import GroupingRuleItem from './GroupingRuleItem.svelte';
+	import type {
+		ContainerGraphRule,
+		ElementGraphRule,
+		ElementRule,
+		ContainerRule
+	} from '../../../types/grouping';
+	import {
+		setElementRuleTitle,
+		getElementRuleType,
+		getElementRuleTitle,
+		makeGraphRule,
+		getContainerRuleDiscriminant
+	} from '../../../types/grouping';
+	import {
+		topologyOptions,
+		updateTopologyOptions,
+		activeView,
+		sharedElementRules,
+		updateSharedElementRules,
+		getInfrastructureRuleId,
+		getOrgUseCase
+	} from '../../../queries';
+	import { getUseCases } from '$lib/features/auth/types/base';
+	import { getTopologyEditState } from '../../../state';
+	import {
+		useTopologiesQuery,
+		useRebuildTopologyMutation,
+		selectedTopologyId,
+		autoRebuild
+	} from '../../../queries';
+	import type { components } from '$lib/api/schema';
+	type ServiceCategory = components['schemas']['ServiceCategory'];
+	type Entity = components['schemas']['EntityDiscriminants'];
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import { entities } from '$lib/shared/stores/metadata';
+	import { formatEntityLabel, formatEntityLabelTitle } from '$lib/features/topology/labels';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { type Color } from '$lib/shared/utils/styling';
+	interface RuleTypeMetadata {
+		id: string;
+		name: string | null;
+		description: string | null;
+		category: string | null;
+		icon: string | null;
+		color: string | null;
+		metadata: {
+			is_removable: boolean;
+			is_reorderable: boolean;
+			is_configurable: boolean;
+			allow_multiple: boolean;
+			views?: string[];
+		} | null;
+	}
+	import _containerRuleTypes from '$lib/data/container-rule-types.json';
+	import _elementRuleTypes from '$lib/data/element-rule-types.json';
+	const typedContainerRuleTypes = _containerRuleTypes as RuleTypeMetadata[];
+	const typedElementRuleTypes = _elementRuleTypes as RuleTypeMetadata[];
+	import {
+		topology_containerGroupingHelp,
+		topology_containerGroupingPerspective,
+		topology_elementGrouping,
+		topology_addContainerRule,
+		topology_addElementRule,
+		topology_elementGroupingHelp,
+		topology_elementRuleNotApplicable,
+		topology_groupRuleTitlePlaceholder,
+		topology_showDisabledRules,
+		topology_hideDisabledRules,
+		topology_showAllToReorder,
+		topology_noHiddenRules,
+		topology_byTagRuleDescription,
+		topology_infraRuleDescription,
+		topology_infraRuleNote
+	} from '$lib/paraglide/messages';
+	import viewsJson from '$lib/data/views.json';
+
+	// Topology for edit state and rebuild
+	const topologiesQuery = useTopologiesQuery();
+	const rebuildMutation = useRebuildTopologyMutation();
+	let topologiesData = $derived(topologiesQuery.data ?? []);
+	let topology = $derived(topologiesData.find((t) => t.id === $selectedTopologyId));
+	let editState = $derived(getTopologyEditState(topology, $autoRebuild, false));
+
+	// Tags query
+	const tagsQuery = useTagsQuery();
+	let allTags = $derived(tagsQuery.data ?? []);
+
+	// Use case label for infra rule note
+	let useCaseLabel = $derived.by(() => {
+		const useCase = getOrgUseCase();
+		return getUseCases()[useCase as keyof ReturnType<typeof getUseCases>]?.label ?? useCase;
+	});
+
+	// Container rules for the active view (per-view HashMap)
+	let containerRules = $derived(
+		((
+			$topologyOptions.request.container_rules as Record<string, ContainerGraphRule[]> | undefined
+		)?.[$activeView] ?? []) as ContainerGraphRule[]
+	);
+
+	// Element rules from shared store (committed state, cross-view)
+	let committedElementRules = $derived($sharedElementRules);
+
+	// Pending edits buffer: used while an editor is open so individual toggles
+	// don't trigger rebuilds. Flushed to the store on checkmark close.
+	let pendingElementRules = $state<ElementGraphRule[] | null>(null);
+
+	// Active rules: pending edits if editing, otherwise committed
+	let elementRules = $derived(pendingElementRules ?? committedElementRules);
+
+	// Editing state tracked by rule UUID + the view it was opened on.
+	// When the view changes, activeEditingId becomes null so the editor
+	// collapses. The next edit toggle flushes stale pending state.
+	let editingElementId = $state<string | null>(null);
+	let editingView = $state<string | null>(null);
+
+	// Show/hide disabled (non-applicable) element rules
+	let hideDisabledElementRules = $state(false);
+
+	// Metadata lookups
+	const containerRuleMeta = Object.fromEntries(typedContainerRuleTypes.map((m) => [m.id, m]));
+	const elementRuleMeta = Object.fromEntries(typedElementRuleTypes.map((m) => [m.id, m]));
+
+	// Perspective name lookup for tooltip
+	const viewNames = Object.fromEntries(viewsJson.map((p) => [p.id, p.name ?? p.id]));
+
+	/** Whether an element rule applies to the current view */
+	function isElementRuleApplicable(item: ElementGraphRule): boolean {
+		const ruleId = getElementRuleType(item.rule);
+		const meta = elementRuleMeta[ruleId];
+		const applicableViews = meta?.metadata?.views;
+		return !applicableViews || applicableViews.includes(currentView);
+	}
+
+	/** Tooltip for a disabled (non-applicable) element rule */
+	function getElementRuleDisabledTooltip(item: ElementGraphRule): string | undefined {
+		if (isElementRuleApplicable(item)) return undefined;
+		const ruleId = getElementRuleType(item.rule);
+		const meta = elementRuleMeta[ruleId];
+		const applicableViews = meta?.metadata?.views ?? [];
+		const names = applicableViews.map((p: string) => viewNames[p] ?? p);
+		return topology_elementRuleNotApplicable({ perspectives: names.join(', ') });
+	}
+
+	// Filtered element rules and index mapping for show/hide toggle
+	let visibleElementRules = $derived(
+		hideDisabledElementRules ? elementRules.filter((r) => isElementRuleApplicable(r)) : elementRules
+	);
+	let visibleToRealIndexMap = $derived(
+		hideDisabledElementRules
+			? elementRules.reduce<number[]>((map, r, i) => {
+					if (isElementRuleApplicable(r)) map.push(i);
+					return map;
+				}, [])
+			: elementRules.map((_, i) => i)
+	);
+	let disabledCount = $derived(elementRules.filter((r) => !isElementRuleApplicable(r)).length);
+
+	// Service categories from fixture data (all categories, not just those in current topology)
+	import serviceCategoriesJson from '$lib/data/service-categories.json';
+	let serviceCategoriesWithColors = serviceCategoriesJson
+		.map((cat) => ({
+			value: cat.id,
+			label: cat.name,
+			color: (cat.color ?? 'Gray') as Color,
+			tooltip: cat.description || undefined
+		}))
+		.sort((a, b) => a.label.localeCompare(b.label));
+
+	// All tags as toggleable pills
+	let allTagsWithColors = $derived(
+		allTags.map((t) => ({
+			value: t.id,
+			label: t.name,
+			color: t.color as Color
+		}))
+	);
+
+	// --- Container Rules ---
+
+	let containerAddOptions = $derived.by(() => {
+		return filteredContainerRuleTypes
+			.filter(
+				(m) =>
+					m.metadata?.is_removable &&
+					!containerRules.some((r) => getContainerRuleDiscriminant(r.rule) === m.id)
+			)
+			.map((m) => ({
+				value: m.id,
+				label: m.name ?? m.id,
+				description: m.description ?? undefined
+			}));
+	});
+
+	const containerRuleDisplayComponent = {
+		getId: (item: ContainerGraphRule) => item.id,
+		getLabel: (item: ContainerGraphRule) =>
+			containerRuleMeta[getContainerRuleDiscriminant(item.rule)]?.name ??
+			getContainerRuleDiscriminant(item.rule)
+	};
+
+	let currentView = $derived($activeView);
+	let activeEditingId = $derived(editingView === currentView ? editingElementId : null);
+
+	let viewMeta = $derived(viewsJson.find((p) => p.id === currentView));
+
+	// Resolve each element entity to its nearest taggable ancestor (or itself
+	// if taggable), deduped — drives both the ByTag rule description and the
+	// "{entity} Grouping" heading.
+	let viewTaggableEntities = $derived.by((): Entity[] => {
+		const elementEntities =
+			(
+				(viewMeta?.metadata as Record<string, unknown>)?.element_config as
+					| { element_entities?: Entity[] }
+					| undefined
+			)?.element_entities ?? [];
+		const resolved = new SvelteSet<Entity>();
+		for (const e of elementEntities) {
+			const meta = entities.getMetadata(e);
+			if (meta?.is_taggable) {
+				resolved.add(e);
+			} else if (meta?.parent_taggable_entity) {
+				resolved.add(meta.parent_taggable_entity as Entity);
+			}
+		}
+		return [...resolved];
+	});
+
+	let elementGroupingLabel = $derived(formatEntityLabelTitle(viewTaggableEntities));
+	let elementGroupingLabelPlural = $derived(formatEntityLabel(viewTaggableEntities));
+
+	let byTagRuleDescription = $derived(
+		topology_byTagRuleDescription({
+			view: viewMeta?.name ?? currentView,
+			entities: formatEntityLabel(viewTaggableEntities)
+		})
+	);
+
+	let filteredContainerRuleTypes = $derived(
+		typedContainerRuleTypes.filter((m) => {
+			const applicableViews = m.metadata?.views;
+			return !applicableViews || applicableViews.includes(currentView);
+		})
+	);
+
+	let filteredElementRuleTypes = $derived(
+		typedElementRuleTypes.filter((m) => m.metadata?.is_removable)
+	);
+
+	function updateContainerRules(newRules: ContainerGraphRule[]) {
+		updateTopologyOptions((opts) => ({
+			...opts,
+			request: {
+				...opts.request,
+				container_rules: {
+					...(opts.request.container_rules as Record<string, ContainerGraphRule[]>),
+					[$activeView]: newRules
+				}
+			}
+		}));
+	}
+
+	function handleContainerAdd(optionId: string) {
+		let rule: ContainerRule;
+		if (optionId === 'ByApplication') {
+			rule = { ByApplication: { tag_ids: [] } };
+		} else {
+			rule = optionId as 'BySubnet' | 'MergeDockerBridges';
+		}
+		updateContainerRules([...containerRules, makeGraphRule(rule)]);
+	}
+
+	function handleContainerRemove(index: number) {
+		updateContainerRules(containerRules.filter((_, i) => i !== index));
+	}
+
+	function handleContainerMoveUp(fromIndex: number) {
+		if (fromIndex <= 0) return;
+		const newRules = [...containerRules];
+		[newRules[fromIndex - 1], newRules[fromIndex]] = [newRules[fromIndex], newRules[fromIndex - 1]];
+		updateContainerRules(newRules);
+	}
+
+	function handleContainerMoveDown(fromIndex: number) {
+		if (fromIndex >= containerRules.length - 1) return;
+		const newRules = [...containerRules];
+		[newRules[fromIndex], newRules[fromIndex + 1]] = [newRules[fromIndex + 1], newRules[fromIndex]];
+		updateContainerRules(newRules);
+	}
+
+	function canRemoveContainerRule(rule: ContainerGraphRule): boolean {
+		const meta = containerRuleMeta[getContainerRuleDiscriminant(rule.rule)];
+		return meta?.metadata?.is_removable ?? false;
+	}
+
+	function canReorderContainerRule(rule: ContainerGraphRule): boolean {
+		const meta = containerRuleMeta[getContainerRuleDiscriminant(rule.rule)];
+		return meta?.metadata?.is_reorderable ?? false;
+	}
+
+	function canRemoveElementRule(item: ElementGraphRule): boolean {
+		const meta = elementRuleMeta[getElementRuleType(item.rule)];
+		if (!meta?.metadata?.is_removable) return false;
+		if (item.id === getInfrastructureRuleId()) return false;
+		return true;
+	}
+
+	function canReorderElementRule(item: ElementGraphRule): boolean {
+		const meta = elementRuleMeta[getElementRuleType(item.rule)];
+		if (!meta?.metadata?.is_reorderable) return false;
+		if (item.id === getInfrastructureRuleId()) return false;
+		return true;
+	}
+
+	function canConfigureElementRule(item: ElementGraphRule): boolean {
+		const meta = elementRuleMeta[getElementRuleType(item.rule)];
+		return meta?.metadata?.is_configurable ?? false;
+	}
+
+	function isElementRuleLocked(item: ElementGraphRule): boolean {
+		return !canRemoveElementRule(item) && !canReorderElementRule(item);
+	}
+
+	// --- Element Rules ---
+
+	let elementAddOptions = $derived(
+		filteredElementRuleTypes.map((m) => {
+			const applicableViews = m.metadata?.views;
+			const isApplicable = !applicableViews || applicableViews.includes(currentView);
+			const alreadyPresent =
+				!m.metadata?.allow_multiple &&
+				elementRules.some((r) => getElementRuleType(r.rule) === m.id);
+
+			let disabled = false;
+			let disabledReason: string | undefined;
+
+			if (!isApplicable) {
+				disabled = true;
+				const viewNames = (applicableViews ?? []).join(', ');
+				disabledReason = topology_elementRuleNotApplicable({ perspectives: viewNames });
+			} else if (alreadyPresent) {
+				disabled = true;
+			}
+
+			return {
+				value: m.id,
+				label: m.name ?? m.id,
+				description: m.description ?? undefined,
+				disabled,
+				disabledReason
+			};
+		})
+	);
+
+	const elementRuleDisplayComponent = {
+		getId: (item: ElementGraphRule) => item.id,
+		getLabel: (item: ElementGraphRule) => getElementRuleType(item.rule)
+	};
+
+	function getElementRuleLabel(item: ElementGraphRule): string {
+		const ruleType = getElementRuleType(item.rule);
+		const title = getElementRuleTitle(item.rule);
+		const typeName = elementRuleMeta[ruleType]?.name ?? '';
+		return title ?? typeName;
+	}
+
+	function updateElementRules(newRules: ElementGraphRule[]) {
+		updateSharedElementRules(() => newRules);
+	}
+
+	function handleElementAdd(optionId: string) {
+		let newRule: ElementRule;
+		switch (optionId) {
+			case 'ByServiceCategory':
+				newRule = { ByServiceCategory: { categories: [], title: null } };
+				break;
+			case 'ByTag':
+				newRule = { ByTag: { tag_ids: [], title: null } };
+				break;
+			default:
+				return;
+		}
+		const graphRule = makeGraphRule(newRule);
+		updateElementRules([...elementRules, graphRule]);
+		editingElementId = graphRule.id;
+	}
+
+	function handleElementRemove(index: number) {
+		// Always operate on committed state to avoid flushing pending edits
+		const rules = committedElementRules;
+		const removedId = rules[index]?.id;
+		updateElementRules(rules.filter((_, i) => i !== index));
+		// Keep pending buffer in sync if active
+		if (pendingElementRules) {
+			pendingElementRules = pendingElementRules.filter((r) => r.id !== removedId);
+		}
+		if (editingElementId === removedId) editingElementId = null;
+		if (topology) rebuildMutation.mutate(topology);
+	}
+
+	function handleElementMoveUp(fromIndex: number) {
+		if (fromIndex <= 0) return;
+		const newRules = [...elementRules];
+		[newRules[fromIndex - 1], newRules[fromIndex]] = [newRules[fromIndex], newRules[fromIndex - 1]];
+		updateElementRules(newRules);
+		if (topology) rebuildMutation.mutate(topology);
+	}
+
+	function handleElementMoveDown(fromIndex: number) {
+		if (fromIndex >= elementRules.length - 1) return;
+		const newRules = [...elementRules];
+		[newRules[fromIndex], newRules[fromIndex + 1]] = [newRules[fromIndex + 1], newRules[fromIndex]];
+		updateElementRules(newRules);
+		if (topology) rebuildMutation.mutate(topology);
+	}
+
+	function handleElementEdit(_item: ElementGraphRule, index: number) {
+		// If there's a stale editor from a different view, flush and reset first
+		if (editingElementId && editingView !== currentView) {
+			if (pendingElementRules) {
+				updateElementRules(pendingElementRules);
+				pendingElementRules = null;
+			}
+			editingElementId = null;
+			editingView = null;
+		}
+
+		const ruleId = elementRules[index]?.id;
+		const wasEditing = editingElementId === ruleId;
+		editingElementId = wasEditing ? null : ruleId;
+		editingView = wasEditing ? null : currentView;
+
+		if (wasEditing) {
+			// Closing editor: flush pending edits to store and rebuild
+			if (pendingElementRules) {
+				updateElementRules(pendingElementRules);
+				pendingElementRules = null;
+			}
+			if (topology) {
+				rebuildMutation.mutate(topology);
+			}
+		} else {
+			// Opening editor: start buffering edits
+			pendingElementRules = [...elementRules];
+		}
+	}
+
+	function isElementEditing(item: ElementGraphRule): boolean {
+		return item.id === activeEditingId;
+	}
+
+	function getElementEditIcon(item: ElementGraphRule) {
+		return isElementEditing(item) ? Check : Edit;
+	}
+
+	function getElementEditButtonClass(item: ElementGraphRule): string {
+		return isElementEditing(item) ? 'btn-icon-success' : 'btn-icon';
+	}
+
+	function isElementItemEditing(item: ElementGraphRule): boolean {
+		return isElementEditing(item);
+	}
+
+	// Wrappers that map visible indices to real indices when filtering
+	function handleVisibleElementRemove(visibleIndex: number) {
+		handleElementRemove(visibleToRealIndexMap[visibleIndex]);
+	}
+	function handleVisibleElementEdit(item: ElementGraphRule, visibleIndex: number) {
+		handleElementEdit(item, visibleToRealIndexMap[visibleIndex]);
+	}
+
+	function bufferElementEdit(updater: (rules: ElementGraphRule[]) => ElementGraphRule[]) {
+		pendingElementRules = updater(elementRules);
+	}
+
+	function handleElementTitleChange(index: number, title: string | null) {
+		bufferElementEdit((rules) => {
+			const newRules = [...rules];
+			newRules[index] = {
+				...newRules[index],
+				rule: setElementRuleTitle(newRules[index].rule, title)
+			};
+			return newRules;
+		});
+	}
+
+	function handleTagToggle(index: number, tagId: string) {
+		const item = elementRules[index];
+		if (typeof item.rule === 'object' && 'ByTag' in item.rule) {
+			const byTag = item.rule.ByTag;
+			const current = byTag.tag_ids ?? [];
+			const idx = current.indexOf(tagId);
+			const newTagIds = idx === -1 ? [...current, tagId] : current.filter((id) => id !== tagId);
+			bufferElementEdit((rules) => {
+				const newRules = [...rules];
+				newRules[index] = {
+					...item,
+					rule: { ByTag: { ...byTag, tag_ids: newTagIds } }
+				};
+				return newRules;
+			});
+		}
+	}
+
+	function toggleCategory(index: number, category: ServiceCategory) {
+		const item = elementRules[index];
+		if (typeof item.rule === 'object' && 'ByServiceCategory' in item.rule) {
+			const byCat = item.rule.ByServiceCategory;
+			const current = byCat.categories;
+			const idx = current.indexOf(category);
+			const newCategories: ServiceCategory[] =
+				idx === -1 ? [...current, category] : current.filter((c) => c !== category);
+			bufferElementEdit((rules) => {
+				const newRules = [...rules];
+				newRules[index] = {
+					...item,
+					rule: {
+						ByServiceCategory: { ...byCat, categories: newCategories }
+					}
+				};
+				return newRules;
+			});
+		}
+	}
+</script>
+
+<!-- Container grouping section -->
+<div class="mb-4">
+	<ListManager
+		label={topology_containerGroupingPerspective({ perspective: viewMeta?.name ?? '' })}
+		placeholder={topology_addContainerRule()}
+		items={containerRules}
+		options={containerAddOptions}
+		optionDisplayComponent={SimpleOptionDisplay}
+		itemDisplayComponent={containerRuleDisplayComponent}
+		allowReorder={true}
+		allowDuplicates={false}
+		allowAddFromOptions={containerAddOptions.length > 0}
+		allowItemEdit={() => false}
+		allowItemRemove={canRemoveContainerRule}
+		allowItemReorder={canReorderContainerRule}
+		onAdd={handleContainerAdd}
+		onRemove={handleContainerRemove}
+		onMoveUp={handleContainerMoveUp}
+		onMoveDown={handleContainerMoveDown}
+	>
+		{#snippet helpSnippet()}
+			<p class="text-tertiary text-xs">{topology_containerGroupingHelp()}</p>
+		{/snippet}
+		{#snippet itemSnippet({ item })}
+			<GroupingRuleItem
+				label={containerRuleMeta[getContainerRuleDiscriminant(item.rule)]?.name ??
+					getContainerRuleDiscriminant(item.rule)}
+				description={containerRuleMeta[getContainerRuleDiscriminant(item.rule)]?.description ??
+					undefined}
+				locked={!canReorderContainerRule(item) && !canRemoveContainerRule(item)}
+			/>
+		{/snippet}
+	</ListManager>
+</div>
+
+<!-- Element grouping section -->
+<ListManager
+	label={topology_elementGrouping({ label: elementGroupingLabel })}
+	placeholder={topology_addElementRule()}
+	items={visibleElementRules}
+	options={elementAddOptions}
+	optionDisplayComponent={SimpleOptionDisplay}
+	itemDisplayComponent={elementRuleDisplayComponent}
+	allowReorder={true}
+	allowDuplicates={true}
+	allowItemEdit={(item) => canConfigureElementRule(item) && isElementRuleApplicable(item)}
+	allowItemRemove={(item) => isElementRuleApplicable(item) && canRemoveElementRule(item)}
+	allowItemReorder={canReorderElementRule}
+	reorderDisabledTooltip={hideDisabledElementRules ? topology_showAllToReorder() : undefined}
+	editIcon={getElementEditIcon}
+	editButtonClass={getElementEditButtonClass}
+	isItemEditing={isElementItemEditing}
+	onAdd={handleElementAdd}
+	onRemove={handleVisibleElementRemove}
+	onMoveUp={handleElementMoveUp}
+	onMoveDown={handleElementMoveDown}
+	onEdit={handleVisibleElementEdit}
+>
+	{#snippet helpSnippet()}
+		<p class="text-tertiary text-xs">
+			{topology_elementGroupingHelp({ label: elementGroupingLabelPlural })}
+		</p>
+	{/snippet}
+	{#snippet headerSnippet()}
+		<button
+			type="button"
+			class="btn-icon flex items-center gap-1 text-xs"
+			class:opacity-50={disabledCount === 0}
+			disabled={disabledCount === 0}
+			title={disabledCount === 0
+				? topology_noHiddenRules()
+				: hideDisabledElementRules
+					? topology_showDisabledRules()
+					: topology_hideDisabledRules({ count: String(disabledCount) })}
+			onclick={() => (hideDisabledElementRules = !hideDisabledElementRules)}
+		>
+			{#if hideDisabledElementRules}
+				<EyeOff size={14} />
+			{:else}
+				<Eye size={14} />
+			{/if}
+			{#if disabledCount > 0}
+				<span class="text-tertiary">({disabledCount})</span>
+			{/if}
+		</button>
+	{/snippet}
+	{#snippet itemSnippet({ item })}
+		<GroupingRuleItem
+			label={getElementRuleLabel(item)}
+			description={item.id === getInfrastructureRuleId()
+				? topology_infraRuleDescription()
+				: getElementRuleType(item.rule) === 'ByTag'
+					? byTagRuleDescription
+					: (elementRuleMeta[getElementRuleType(item.rule)]?.description ?? undefined)}
+			disabled={!isElementRuleApplicable(item)}
+			locked={isElementRuleLocked(item)}
+			disabledTooltip={getElementRuleDisabledTooltip(item)}
+		/>
+	{/snippet}
+	{#snippet itemExpandedSnippet({ item, index })}
+		{@const realIndex = visibleToRealIndexMap[index]}
+		{#if item.id === activeEditingId && typeof item.rule !== 'string'}
+			{@const rule = item.rule}
+			<!-- Click/keydown stopPropagation keeps edits local to this
+			     expanded row (prevents parent list from re-selecting). -->
+			<div
+				role="presentation"
+				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => e.stopPropagation()}
+				class="mt-2 w-full space-y-3 border-t border-gray-200 pt-2 dark:border-gray-700"
+			>
+				{#if item.id === getInfrastructureRuleId()}
+					<p class="text-tertiary text-xs">{topology_infraRuleNote({ useCase: useCaseLabel })}</p>
+				{/if}
+				<!-- Title input (hidden for infrastructure rule — title is system-managed) -->
+				{#if item.id !== getInfrastructureRuleId()}
+					<input
+						type="text"
+						class="input-field w-full py-1 text-sm"
+						placeholder={topology_groupRuleTitlePlaceholder()}
+						value={getElementRuleTitle(item.rule) ?? ''}
+						oninput={(e) =>
+							handleElementTitleChange(
+								realIndex,
+								(e.currentTarget as HTMLInputElement).value || null
+							)}
+						disabled={!editState.isEditable}
+					/>
+				{/if}
+
+				<!-- Selection pills -->
+				{#if 'ByServiceCategory' in rule}
+					<FilterGroup
+						items={serviceCategoriesWithColors}
+						selectedValues={rule.ByServiceCategory.categories}
+						mode="include"
+						onToggle={(cat) => toggleCategory(realIndex, cat as ServiceCategory)}
+						disabled={!editState.isEditable}
+						nativeTooltip={true}
+					/>
+				{:else if 'ByTag' in rule}
+					<FilterGroup
+						items={allTagsWithColors}
+						selectedValues={rule.ByTag.tag_ids}
+						mode="include"
+						onToggle={(tagId) => handleTagToggle(realIndex, tagId)}
+						disabled={!editState.isEditable}
+					/>
+				{/if}
+			</div>
+		{/if}
+	{/snippet}
+</ListManager>

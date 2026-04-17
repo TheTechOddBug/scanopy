@@ -1,13 +1,15 @@
 <script lang="ts" module>
-	import { concepts, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { concepts, serviceCategories, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Port } from '$lib/features/hosts/types/base';
 
 	export interface ServiceDisplayContext {
-		interfaceId?: string | null;
+		ipAddressId?: string | null;
 		ports?: Port[];
 		showEntityTagPicker?: boolean;
 		tagPickerDisabled?: boolean;
 		entityTags?: import('$lib/features/tags/types/base').Tag[];
+		allowTagCreate?: boolean;
+		compact?: boolean;
 	}
 
 	export const ServiceDisplay: EntityDisplayComponent<Service, ServiceDisplayContext> = {
@@ -24,7 +26,9 @@
 
 			// Filter bindings relevant to the interface(s)
 			let bindingsOnInterface = service.bindings.filter((b) =>
-				b.interface_id ? context.interfaceId == b.interface_id || context.interfaceId == null : true
+				b.ip_address_id
+					? context.ipAddressId == b.ip_address_id || context.ipAddressId == null
+					: true
 			);
 
 			// Show actual port numbers when ports are available in context
@@ -63,8 +67,17 @@
 		},
 		getIconColor: (service: Service) =>
 			serviceDefinitions.getColorHelper(service.service_definition).icon,
-		getTags: (service: Service) => {
+		getTags: (service: Service, context: ServiceDisplayContext) => {
+			if (context?.compact) return [];
 			let tags: TagProps[] = [];
+
+			const category = serviceDefinitions.getCategory(service.service_definition);
+			if (category) {
+				tags.push({
+					label: serviceCategories.getName(category),
+					color: serviceCategories.getColorString(category)
+				});
+			}
 
 			if (service.virtualization) {
 				tags.push({
@@ -81,7 +94,8 @@
 				selectedTagIds: service.tags,
 				entityId: service.id,
 				entityType: 'Service' as const,
-				availableTags: context.entityTags
+				availableTags: context.entityTags,
+				allowCreate: context.allowTagCreate
 			};
 		},
 		getCategory: () => null

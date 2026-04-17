@@ -1,78 +1,254 @@
 <script lang="ts">
-	import { writable, get } from 'svelte/store';
+	import { writable, derived, get, type Writable } from 'svelte/store';
 	import {
 		SvelteFlow,
-		Controls,
 		MiniMap,
-		Panel,
 		Background,
 		BackgroundVariant,
-		type EdgeMarkerType,
 		useNodesInitialized,
 		type Connection,
 		useSvelteFlow
 	} from '@xyflow/svelte';
-	import { Keyboard } from 'lucide-svelte';
-	import { topology_shortcutsTitle } from '$lib/paraglide/messages';
+	import {
+		common_collapse,
+		common_expand,
+		topology_levelFullyCollapsed,
+		topology_levelContainersExpanded,
+		topology_levelSubcontainersExpanded,
+		topology_levelFullyExpanded
+	} from '$lib/paraglide/messages';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { edgeTypes } from '$lib/shared/stores/metadata';
+	import './topology-viewer.css';
 	import { pushError } from '$lib/shared/stores/feedback';
-	import { previewEdges, selectedNodes, topologyOptions } from '../../queries';
-	import { isExporting } from '../../interactions';
+	import {
+		previewEdges,
+		baseFlowEdges,
+		selectedNodes,
+		selectedEdge as selectedEdgeStore,
+		selectedNode as selectedNodeStore,
+		topologyOptions,
+		optionsPanelExpanded,
+		editingDependencyId,
+		OPTIONS_PANEL_FITVIEW_PADDING_PX,
+		MINIMAP_WIDTH_PX,
+		MINIMAP_HEIGHT_PX,
+		MINIMAP_OFFSET_PX,
+		aggregatedEdgeOriginals,
+		getInfrastructureRuleId
+	} from '../../queries';
+	import { isExporting, expandedPortNodeIds } from '../../interactions';
 
 	// Import custom node/edge components
-	import SubnetNode from './SubnetNode.svelte';
-	import InterfaceNode from './InterfaceNode.svelte';
+	import ContainerNode from './ContainerNode.svelte';
+	import ElementNode from './ElementNode.svelte';
 	import CustomEdge from './CustomEdge.svelte';
-	import type { TopologyEdge, Topology } from '../../types/base';
-	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
-	import { onMount, tick, setContext } from 'svelte';
+	import TopologySidebarControls from './TopologySidebarControls.svelte';
+	import type { Topology } from '../../types/base';
+	import { collapsedContainers, collapseLevel, stepExpand, stepCollapse } from '../../collapse';
+	import type { CollapseLevel } from '../../collapse';
+	import {
+		updateConnectedNodes,
+		setEdgeHover,
+		clearEdgeHoverState,
+		expandedBundles,
+		collapseAllBundles,
+		searchHiddenNodeIds,
+		tagHiddenNodeIds
+	} from '../../interactions';
+	import {
+		selectNode,
+		selectEdge,
+		clearSelection,
+		handleModifierNodeClick,
+		handleBoxSelect,
+		type SelectionStores
+	} from '../../selection';
+	import { onMount, tick, setContext, getContext } from 'svelte';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { writable as svelteWritable } from 'svelte/store';
 	import { themeStore } from '$lib/shared/stores/theme.svelte';
+	import { containerTypes } from '$lib/shared/stores/metadata';
+
+	// Pipeline imports
+	import { createInitialState } from '../../pipeline/types';
+	import { prepareTopologyData } from '../../pipeline/prepare';
+	import { resolveNodeSizes } from '../../pipeline/measure';
+	import { executeLayout, handlePortExpansion } from '../../pipeline/execute-layout';
+	import { buildFlowNodes, sortFlowNodes } from '../../pipeline/build-flow-nodes';
+	import { buildFlowEdges } from '../../pipeline/build-flow-edges';
+	import { cacheCollapsedSizes } from '../../pipeline/post-render';
+	import { computeEdgeDisplayUpdates } from '../../pipeline/sync-edge-display';
 
 	// Props
-	export let topology: Topology;
-	export let readonly: boolean = false;
-	export let showControls: boolean = true;
-	export let isEmbed: boolean = false;
-	export let showBranding: boolean = false;
-	export let showMinimap: boolean | undefined = undefined;
+	let {
+		topology,
+		readonly = false,
+		showControls = true,
+		isEmbed = false,
+		showBranding = false,
+		showMinimap = undefined,
+		onNodeDragStop = null,
+		onReconnect = null,
+		onOpenShortcuts = null,
+		onOpenSearch = null,
+		editMode = false,
+		onToggleEditMode = null,
+		sidebarCollapsed = false
+	}: {
+		topology: Topology;
+		readonly?: boolean;
+		showControls?: boolean;
+		isEmbed?: boolean;
+		showBranding?: boolean;
+		showMinimap?: boolean | undefined;
+		onNodeDragStop?: ((node: Node) => void) | null;
+		onReconnect?: ((edge: Edge, newConnection: Connection) => void) | null;
+		onOpenShortcuts?: (() => void) | null;
+		onOpenSearch?: (() => void) | null;
+		editMode?: boolean;
+		onToggleEditMode?: (() => void) | null;
+		sidebarCollapsed?: boolean;
+	} = $props();
 
-	// Create a context store for the topology so child nodes can access it
+	// Create a context store for the topology so child nodes can access it.
+	// The effect below keeps the store in sync with the prop across updates;
+	// the initial read of `topology` here is just seeding the store.
+	// svelte-ignore state_referenced_locally
 	const topologyContext = svelteWritable<Topology>(topology);
 	setContext('topology', topologyContext);
+	$effect(() => {
+		topologyContext.set(topology);
+	});
 
-	// Keep context in sync with prop
-	$: topologyContext.set(topology);
-
-	// Selection state - can be bound by parent
-	export let selectedNode: Node | null = null;
-	export let selectedEdge: Edge | null = null;
-
-	// Optional callbacks for editing
-	export let onNodeDragStop: ((node: Node) => void) | null = null;
-	export let onReconnect: ((edge: Edge, newConnection: Connection) => void) | null = null;
-
-	// Optional callbacks for selection changes
-	export let onNodeSelect: ((node: Node | null, event?: MouseEvent | TouchEvent) => void) | null =
-		null;
-	export let onEdgeSelect: ((edge: Edge | null) => void) | null = null;
-	export let onPaneSelect: ((event?: MouseEvent, wasPanning?: boolean) => void) | null = null;
-	export let onSelectionChange: ((nodes: Node[], edges: Edge[]) => void) | null = null;
-	export let onOpenShortcuts: (() => void) | null = null;
+	// Resolve selection stores from context (share/embed) or fall back to global stores.
+	// We pass the store *reference* through, not its value, so $/get() don't apply.
+	/* eslint-disable svelte/require-store-reactive-access */
+	const selNodeStore = getContext<Writable<Node | null>>('selectedNode') ?? selectedNodeStore;
+	const selEdgeStore = getContext<Writable<Edge | null>>('selectedEdge') ?? selectedEdgeStore;
+	const selNodesStore = getContext<Writable<Node[]>>('selectedNodes') ?? selectedNodes;
+	/* eslint-enable svelte/require-store-reactive-access */
+	const selectionStores: SelectionStores = {
+		selectedNode: selNodeStore,
+		selectedEdge: selEdgeStore,
+		selectedNodes: selNodesStore
+	};
 
 	// Track viewport panning state
 	let viewportMoved = false;
 	let viewportMoveTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const { fitView } = useSvelteFlow();
+	const { fitView, getNodes } = useSvelteFlow();
 	const queryClient = useQueryClient();
 	let containerElement: HTMLDivElement;
 
+	/**
+	 * Returns fitView padding that accounts for overlays (options panel, minimap).
+	 *
+	 * The minimap occupies a rectangle in the bottom-left corner. Rather than
+	 * reserving an entire row or column, we simulate fitView with uniform padding,
+	 * project each node into viewport coordinates, and check if any actually
+	 * overlap the minimap region. Only adds padding if real overlap is detected,
+	 * and picks the direction (left or bottom) that requires the smallest shift.
+	 */
+	function getFitViewPadding(): import('@xyflow/system').Padding {
+		const minimapVisible =
+			showMinimap !== undefined ? showMinimap : get(topologyOptions).local.show_minimap;
+		const hasPanel = get(optionsPanelExpanded);
+
+		if (!hasPanel && !minimapVisible) return 0.2;
+
+		const BASE_PAD = 0.2;
+		type Pad = number | `${number}px` | `${number}%`;
+		let extraBottom: Pad = BASE_PAD;
+		let extraLeft: Pad = BASE_PAD;
+
+		if (minimapVisible && containerElement) {
+			const cw = containerElement.clientWidth;
+			const ch = containerElement.clientHeight;
+			const allNodes = getNodes();
+
+			if (allNodes.length > 0 && cw > 0 && ch > 0) {
+				// 1. Compute topology bounding box
+				let minX = Infinity,
+					maxX = -Infinity,
+					minY = Infinity,
+					maxY = -Infinity;
+				for (const n of allNodes) {
+					const x = n.position.x;
+					const y = n.position.y;
+					const w = n.measured?.width ?? n.width ?? 0;
+					const h = n.measured?.height ?? n.height ?? 0;
+					if (x < minX) minX = x;
+					if (x + w > maxX) maxX = x + w;
+					if (y < minY) minY = y;
+					if (y + h > maxY) maxY = y + h;
+				}
+				const topoW = maxX - minX || 1;
+				const topoH = maxY - minY || 1;
+
+				// 2. Simulate fitView with uniform base padding
+				const availW = cw * (1 - 2 * BASE_PAD);
+				const availH = ch * (1 - 2 * BASE_PAD);
+				const zoom = Math.min(availW / topoW, availH / topoH);
+
+				// Center offset: maps topology coords → viewport coords
+				const cx = cw / 2 - (minX + topoW / 2) * zoom;
+				const cy = ch / 2 - (minY + topoH / 2) * zoom;
+
+				// 3. Minimap rectangle in viewport coords (with breathing room)
+				const GAP = 8;
+				const mmLeft = MINIMAP_OFFSET_PX - GAP;
+				const mmTop = ch - MINIMAP_OFFSET_PX - MINIMAP_HEIGHT_PX - GAP;
+				const mmRight = MINIMAP_OFFSET_PX + MINIMAP_WIDTH_PX + GAP;
+				const mmBottom = ch - MINIMAP_OFFSET_PX + GAP;
+
+				// 4. Check if any node overlaps the minimap region
+				let hasOverlap = false;
+				let maxNodeRight = 0; // rightmost edge of overlapping nodes (for left shift calc)
+				let maxNodeBottom = 0; // bottommost edge of overlapping nodes (for bottom shift calc)
+
+				for (const n of allNodes) {
+					const nw = n.measured?.width ?? n.width ?? 0;
+					const nh = n.measured?.height ?? n.height ?? 0;
+					const vx = n.position.x * zoom + cx;
+					const vy = n.position.y * zoom + cy;
+					const vr = vx + nw * zoom;
+					const vb = vy + nh * zoom;
+
+					// Rectangle intersection test
+					if (vx < mmRight && vr > mmLeft && vy < mmBottom && vb > mmTop) {
+						hasOverlap = true;
+						if (vr > maxNodeRight) maxNodeRight = vr;
+						if (vb > maxNodeBottom) maxNodeBottom = vb;
+					}
+				}
+
+				// 5. If overlap, compute minimum shift in each direction and pick the smaller
+				if (hasOverlap) {
+					const shiftRight = mmRight - mmLeft + GAP; // push content right past minimap
+					const shiftUp = mmBottom - mmTop + GAP; // push content up past minimap
+
+					if (shiftRight <= shiftUp) {
+						extraLeft = `${MINIMAP_WIDTH_PX + MINIMAP_OFFSET_PX + GAP * 2}px`;
+					} else {
+						extraBottom = `${MINIMAP_HEIGHT_PX + MINIMAP_OFFSET_PX + GAP * 2}px`;
+					}
+				}
+				// No overlap → extraLeft and extraBottom stay at BASE_PAD
+			}
+		}
+
+		return {
+			top: BASE_PAD,
+			right: BASE_PAD,
+			bottom: extraBottom,
+			left: hasPanel ? `${OPTIONS_PANEL_FITVIEW_PADDING_PX}px` : extraLeft
+		};
+	}
+
 	export function triggerFitView() {
-		requestAnimationFrame(() => fitView({ padding: 0.2 }));
+		requestAnimationFrame(() => fitView({ padding: getFitViewPadding() }));
 	}
 
 	export function fitViewToNodes(nodeIds: string[]) {
@@ -83,7 +259,6 @@
 
 	onMount(() => {
 		const { fitView } = useSvelteFlow();
-
 		const observer = new IntersectionObserver(
 			(entries) => {
 				if (entries[0].isIntersecting) {
@@ -93,202 +268,403 @@
 			},
 			{ threshold: 0.1 }
 		);
-
 		if (containerElement) {
 			observer.observe(containerElement);
 		}
-
 		return () => observer.disconnect();
 	});
 
 	// Define node types
-	const nodeTypes = {
-		SubnetNode: SubnetNode,
-		InterfaceNode: InterfaceNode
-	};
+	const nodeTypes = { Container: ContainerNode, Element: ElementNode };
+	const customEdgeTypes = { custom: CustomEdge };
 
-	const customEdgeTypes = {
-		custom: CustomEdge
-	};
+	// Refit viewport when panel expands/collapses (after 300ms CSS transition)
+	let panelInitialized = false;
+	$effect(() => {
+		if ($optionsPanelExpanded !== undefined) {
+			if (panelInitialized) {
+				setTimeout(() => fitView({ padding: getFitViewPadding() }), 300);
+			}
+			panelInitialized = true;
+		}
+	});
 
 	// Stores for SvelteFlow
 	let nodes = writable<Node[]>([]);
 	let edges = writable<Edge[]>([]);
-
-	// Hook to check when nodes are initialized
 	const nodesInitialized = useNodesInitialized();
-
-	// Store pending edges until nodes are ready
 	let pendingEdges: Edge[] = [];
 
-	// Load topology data when it changes
-	$: if (topology && (topology.edges || topology.nodes)) {
-		void loadTopologyData();
+	// Pipeline state
+	const layoutState = createInitialState();
+	let isMeasuring = $state(false);
+	let animatingCollapse = $state(false);
+
+	// --- Reactive triggers ---
+
+	// Clear expanded bundles when bundling is toggled off
+	$effect(() => {
+		if (!$topologyOptions.local.bundle_edges) {
+			collapseAllBundles();
+		}
+	});
+
+	// Trigger loadTopologyData on topology or store changes
+	const bundleEdgesStore = derived(topologyOptions, (o) => o.local.bundle_edges ?? false);
+	const hideEdgeTypesStore = derived(topologyOptions, (o) =>
+		(o.local.hide_edge_types ?? []).join(',')
+	);
+
+	let loadInProgress = false;
+	let pendingReload = false;
+	function triggerLoad() {
+		if (!topology || loadInProgress) {
+			if (topology && loadInProgress) pendingReload = true;
+			return;
+		}
+		loadInProgress = true;
+		pendingReload = false;
+		void loadTopologyData()
+			.catch((err) => {
+				isMeasuring = false;
+				pushError(`Failed to parse topology data ${err}`);
+			})
+			.finally(() => {
+				loadInProgress = false;
+				if (pendingReload) {
+					pendingReload = false;
+					triggerLoad();
+				}
+			});
 	}
 
-	// Update edges when selection changes
-	$: {
-		void selectedNode;
-		void selectedEdge;
-		void $selectedNodes;
+	let storesInitialized = false;
+	collapsedContainers.subscribe(() => {
+		if (storesInitialized) triggerLoad();
+	});
+	expandedBundles.subscribe(() => {
+		if (storesInitialized) triggerLoad();
+	});
+	expandedPortNodeIds.subscribe(() => {
+		if (storesInitialized) triggerLoad();
+	});
+	bundleEdgesStore.subscribe(() => {
+		if (storesInitialized) triggerLoad();
+	});
+	hideEdgeTypesStore.subscribe(() => {
+		if (storesInitialized) triggerLoad();
+	});
+	storesInitialized = true;
+
+	$effect(() => {
+		if (topology) triggerLoad();
+	});
+
+	// Update edges when selection or search/tag filter changes
+	$effect(() => {
+		const curSelectedNode = $selNodeStore;
+		const curSelectedEdge = $selEdgeStore;
+		const multiSelected = $selNodesStore;
+		const searchHidden = $searchHiddenNodeIds;
+		const tagHidden = $tagHiddenNodeIds;
 
 		if (topology && (topology.edges || topology.nodes)) {
-			const currentEdges = get(edges);
+			const currentBaseEdges = get(baseFlowEdges);
 			const currentNodes = get(nodes);
-			const multiSelected = get(selectedNodes);
+			const opts = get(topologyOptions);
+
 			updateConnectedNodes(
-				selectedNode,
-				selectedEdge,
-				currentEdges,
+				curSelectedNode,
+				curSelectedEdge,
+				currentBaseEdges,
 				currentNodes,
 				queryClient,
 				topology,
-				multiSelected
+				multiSelected,
+				opts.local.hide_edge_types ?? []
 			);
-
-			// Update edge animated state based on selection
-			const updatedEdges = currentEdges.map((edge) => {
-				const { shouldAnimate } = getEdgeDisplayState(edge, selectedNode, selectedEdge);
-
-				return {
-					...edge,
-					id: edge.id, // Force new reference
-					animated: shouldAnimate
-				};
-			});
-
-			edges.set(updatedEdges);
+			baseFlowEdges.set(
+				computeEdgeDisplayUpdates(
+					currentBaseEdges,
+					curSelectedNode,
+					curSelectedEdge,
+					searchHidden,
+					tagHidden
+				)
+			);
 		}
-	}
+	});
 
 	// Add edges when nodes are ready
-	$: if (nodesInitialized.current && pendingEdges.length > 0) {
-		edges.set(pendingEdges);
-		pendingEdges = [];
-	}
+	$effect(() => {
+		if (nodesInitialized.current && pendingEdges.length > 0) {
+			baseFlowEdges.set(pendingEdges);
+			pendingEdges = [];
+		}
+	});
+
+	// --- Main layout pipeline ---
 
 	async function loadTopologyData() {
-		try {
-			if (topology && (topology.edges || topology.nodes)) {
-				// Create nodes FIRST
-				const allNodes: Node[] = topology.nodes.map((node) => ({
-					id: node.id,
-					type: node.node_type,
-					position: { x: node.position.x, y: node.position.y },
-					width: node.size.x,
-					height: node.size.y,
-					expandParent: true,
-					deletable: false,
-					selectable: node.node_type !== 'SubnetNode',
-					parentId: node.node_type == 'InterfaceNode' ? node.subnet_id : undefined,
-					extent: node.node_type == 'InterfaceNode' ? 'parent' : undefined,
-					data: node
-				}));
+		// Wait for containerElement to be available (bind:this fires after mount)
+		if (!containerElement) {
+			await tick();
+			if (!containerElement) return;
+		}
+		const thisGeneration = ++layoutState.layoutGeneration;
+		const isStale = (): boolean => thisGeneration !== layoutState.layoutGeneration;
 
-				// Save current edge animated states before clearing
-				const currentEdges = get(edges);
-				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
+		if (!topology || (!topology.edges && !topology.nodes)) return;
 
-				// Clear edges FIRST
-				edges.set([]);
+		const prep = prepareTopologyData(topology, layoutState, getInfrastructureRuleId);
+		if (!prep) return;
+		const { needsElk, collapsed, visibleNodes: initialVisibleNodes } = prep;
+		let visibleNodes = initialVisibleNodes;
 
-				// Sort so children come before parents (as per Svelte Flow docs)
-				const sortedNodes = allNodes.sort((a, b) => {
-					if (a.parentId && !b.parentId) return 1; // children first
-					if (!a.parentId && b.parentId) return -1; // parents second
-					return 0;
-				});
+		// Helper: build positioned flow nodes (called multiple times with different useGraph)
+		const makeNodes = (useGraph: boolean) =>
+			sortFlowNodes(
+				buildFlowNodes({
+					visibleNodes,
+					collapsed,
+					topology,
+					useGraph,
+					layoutGraph: layoutState.layoutGraph,
+					isNewStructure: prep.isNewStructure,
+					liveNodes: getNodes(),
+					infraRuleId: getInfrastructureRuleId(),
+					editMode: editMode ?? false
+				})
+			);
 
-				// Set nodes
-				nodes.set(sortedNodes);
-
-				// Create edges with markers
-				const flowEdges: Edge[] = topology.edges.map((edge: TopologyEdge, index: number) => {
-					const edgeType = edge.edge_type as string;
-					const edgeMetadata = edgeTypes.getMetadata(edgeType);
-					const edgeColorHelper = edgeTypes.getColorHelper(edgeType);
-
-					const markerStart = !edgeMetadata.has_start_marker
-						? undefined
-						: ({
-								type: 'arrow',
-								color: edgeColorHelper.rgb
-							} as EdgeMarkerType);
-					const markerEnd = !edgeMetadata.has_end_marker
-						? undefined
-						: ({
-								type: 'arrow',
-								color: edgeColorHelper.rgb
-							} as EdgeMarkerType);
-
-					const edgeId = `edge-${index}`;
-
-					return {
-						id: `edge-${index}`,
-						source: edge.source,
-						target: edge.target,
-						markerEnd,
-						markerStart,
-						sourceHandle: edge.source_handle.toString(),
-						targetHandle: edge.target_handle.toString(),
-						type: 'custom',
-						label: edge.label ?? undefined,
-						data: { ...edge, edgeIndex: index },
-						animated: animatedStates.get(edgeId) ?? false,
-						interactionWidth: 50
-					};
-				});
-
-				pendingEdges = flowEdges;
-
-				// Wait for nodes to render, then set edges
-				await tick();
-				if (pendingEdges.length > 0) {
-					edges.set(pendingEdges);
-					pendingEdges = [];
+		if (needsElk) {
+			const elementNodeSizes = await resolveNodeSizes(
+				layoutState,
+				prep,
+				getNodes,
+				containerElement,
+				isStale,
+				{
+					setMeasuring: (v) => {
+						// Only hide viewport during measurement for initial load
+						// (no nodes on screen). For subsequent measurements (e.g.
+						// cacheMisses on collapse), nodes keep their current positions
+						// so hiding is unnecessary — and skipping it lets shouldAnimate
+						// fire normally.
+						if (layoutState.lastRenderedTopoKey === '') {
+							isMeasuring = v;
+						}
+					},
+					setNodes: (n) => nodes.set(n),
+					setEdges: (e) => baseFlowEdges.set(e),
+					buildMeasureNodes: () => {
+						const measureNodes = makeNodes(false);
+						// Preserve current positions during measurement — DOM
+						// measurement only needs element presence, not positions.
+						// This prevents nodes from jumping to (0,0) while visible.
+						const currentPositions = new Map(getNodes().map((n) => [n.id, n.position]));
+						if (currentPositions.size === 0) return measureNodes;
+						return measureNodes.map((n) => ({
+							...n,
+							position: currentPositions.get(n.id) ?? n.position
+						}));
+					},
+					waitForNodesRendered: async () => {
+						// Wait for SvelteFlow to render node DOM elements.
+						// We only need DOM presence for measurement, not full initialization.
+						await tick();
+						// Poll for DOM nodes with a short timeout — nodesInitialized
+						// can hang indefinitely for large topologies.
+						const start = performance.now();
+						while (performance.now() - start < 2000) {
+							const nodeEls = containerElement?.querySelectorAll('.svelte-flow__node');
+							if (nodeEls && nodeEls.length > 0) break;
+							await new Promise((r) => requestAnimationFrame(r));
+						}
+					}
 				}
+			);
+			if (!elementNodeSizes) {
+				isMeasuring = false;
+				return;
 			}
-		} catch (err) {
-			pushError(`Failed to parse topology data ${err}`);
+
+			const layoutResult = await executeLayout(
+				topology,
+				layoutState,
+				prep,
+				elementNodeSizes,
+				isStale,
+				getInfrastructureRuleId
+			);
+			if (!layoutResult) {
+				isMeasuring = false;
+				return;
+			}
+			visibleNodes = layoutResult.visibleNodes;
+		}
+
+		// Port expansion handling (no full ELK re-layout)
+		const currentExpandedPorts = get(expandedPortNodeIds);
+		const portsChanged = await handlePortExpansion(
+			layoutState,
+			currentExpandedPorts,
+			containerElement,
+			() => makeNodes(false),
+			(n) => nodes.set(n),
+			isStale,
+			needsElk
+		);
+
+		// Build final nodes and edges. Edge handles are computed inside
+		// buildFlowEdges against final post-layout positions (from layoutGraph)
+		// rather than being precomputed by the layout engines.
+		const needsLayout = needsElk || portsChanged || prep.collapseChanged;
+		const allNodes = makeNodes(needsLayout);
+
+		const { flowEdges, originalsMap } = buildFlowEdges({
+			elevatedEdges: prep.elevatedEdges,
+			collapsed,
+			elementToContainer: prep.elementToContainer,
+			aggregatedEdges: prep.aggregatedEdges,
+			hiddenEdgeTypes: prep.hiddenEdgeTypes,
+			layoutNodes: prep.layoutNodes,
+			topology,
+			layoutGraph: layoutState.layoutGraph,
+			bundleEnabled: $topologyOptions.local.bundle_edges ?? false,
+			currentExpandedBundles: get(expandedBundles),
+			selectionStores
+		});
+		aggregatedEdgeOriginals.set(originalsMap);
+
+		// Render
+		const shouldAnimate =
+			needsElk && !isMeasuring && layoutState.lastRenderedTopoKey !== '' && !prep.viewChanged;
+
+		if (shouldAnimate) {
+			animatingCollapse = true;
+			const previousNodeIds = new Set(get(nodes).map((n) => n.id));
+			const phase1Nodes = allNodes.filter((n) => previousNodeIds.has(n.id));
+			nodes.set(phase1Nodes);
+			baseFlowEdges.set(flowEdges);
+
+			const fullNodes = [...allNodes];
+			const fullEdges = [...flowEdges];
+			setTimeout(() => {
+				// Phase 2: disable transitions, show all nodes.
+				// New nodes get opacity 0 initially, then fade in.
+				animatingCollapse = false;
+				const newNodeIds = new Set(
+					fullNodes.filter((n) => !previousNodeIds.has(n.id)).map((n) => n.id)
+				);
+				if (newNodeIds.size > 0) {
+					// Set new nodes with opacity 0 via style
+					const fadingNodes = fullNodes.map((n) =>
+						newNodeIds.has(n.id)
+							? { ...n, style: 'opacity: 0; transition: opacity 0.3s ease-in-out;' }
+							: n
+					);
+					nodes.set(fadingNodes);
+					baseFlowEdges.set(fullEdges);
+					// Next frame: set opacity back to trigger fade
+					requestAnimationFrame(() => {
+						nodes.set(fullNodes);
+						baseFlowEdges.set(fullEdges);
+					});
+				} else {
+					nodes.set(fullNodes);
+					baseFlowEdges.set(fullEdges);
+				}
+			}, 350);
+		} else if (!isMeasuring) {
+			nodes.set(allNodes);
+			baseFlowEdges.set(flowEdges);
+		} else {
+			baseFlowEdges.set([]);
+			nodes.set(allNodes);
+			pendingEdges = flowEdges;
+			await tick();
+			if (isStale()) {
+				isMeasuring = false;
+				return;
+			}
+			if (pendingEdges.length > 0) {
+				baseFlowEdges.set(pendingEdges);
+				pendingEdges = [];
+			}
+			await tick();
+			await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+			if (isStale()) {
+				isMeasuring = false;
+				return;
+			}
+			isMeasuring = false;
+		}
+
+		// Post-render: cache collapsed sizes, re-run if needed.
+		// Skip during animation — CSS transitions on width/height would
+		// corrupt the temporary width:auto measurement. Metadata defaults
+		// are used by ELK as fallback; the next layout pass caches correct
+		// sizes via the cacheMisses full-measurement path.
+		if (!shouldAnimate && containerElement && layoutState.layoutGraph) {
+			await tick();
+			const newEntries = cacheCollapsedSizes(
+				containerElement,
+				layoutState.layoutGraph,
+				collapsed,
+				layoutState.containerSizeCache
+			);
+			if (newEntries > 0 && !isStale()) {
+				// Invalidate structureKey to force ELK re-run. Do NOT
+				// invalidate baseKey — base structure hasn't changed, and
+				// clearing it would delete viewSizeCache (element sizes).
+				layoutState.sessionStructureKey = '';
+				// Preserve fitView intent across the recursive call — the
+				// re-run won't see viewChanged/topologyChanged since we
+				// update the tracking keys here.
+				if (prep.viewChanged || prep.topologyChanged) {
+					layoutState.fitViewPending = true;
+				}
+				layoutState.lastRenderedTopoKey = prep.topoKey;
+				layoutState.lastRenderedView = prep.currentView;
+				await loadTopologyData();
+				return;
+			}
+		}
+
+		const isFirstRender = layoutState.lastRenderedTopoKey === '';
+		layoutState.lastRenderedTopoKey = prep.topoKey;
+		layoutState.lastRenderedView = prep.currentView;
+
+		if (prep.viewChanged || prep.topologyChanged || isFirstRender || layoutState.fitViewPending) {
+			layoutState.fitViewPending = false;
+			// Double rAF: first lets SvelteFlow process node positions, second triggers fitView
+			requestAnimationFrame(() =>
+				requestAnimationFrame(() => fitView({ padding: getFitViewPadding() }))
+			);
 		}
 	}
 
-	function handleNodeDragStop({
-		targetNode
-	}: {
-		targetNode: Node | null;
-		nodes: Node[];
-		event: MouseEvent | TouchEvent;
-	}) {
-		if (onNodeDragStop && targetNode) {
-			onNodeDragStop(targetNode);
-		}
-	}
+	// --- Event handlers ---
 
-	function handleReconnect(edge: Edge, newConnection: Connection) {
-		if (onReconnect) {
-			onReconnect(edge, newConnection);
-		}
-	}
+	let ignoreNextSelectionChange = false;
 
 	function handleNodeClick({ node, event }: { node: Node; event: MouseEvent | TouchEvent }) {
 		const isModifierClick = event instanceof MouseEvent && (event.ctrlKey || event.metaKey);
-
-		if (!isModifierClick) {
-			selectedNode = node;
-			selectedEdge = null;
-		}
-		if (onNodeSelect) {
-			onNodeSelect(node, event);
+		if (isModifierClick) {
+			handleModifierNodeClick(node, selectionStores);
+			ignoreNextSelectionChange = true;
+		} else {
+			collapseAllBundles();
+			selectNode(node, selectionStores);
+			ignoreNextSelectionChange = true;
 		}
 	}
 
 	function handleEdgeClick({ edge }: { edge: Edge; event: MouseEvent }) {
-		selectedEdge = edge;
-		selectedNode = null;
-		if (onEdgeSelect) {
-			onEdgeSelect(edge);
-		}
+		collapseAllBundles();
+		selectEdge(edge, selectionStores);
+		ignoreNextSelectionChange = true;
 	}
 
 	function handleMove() {
@@ -300,21 +676,29 @@
 	}
 
 	function handleMoveEnd() {
-		// Delay clearing the flag so it's still set when onpaneclick fires
 		viewportMoveTimer = setTimeout(() => {
 			viewportMoved = false;
 		}, 50);
 	}
 
-	function handlePaneClick({ event }: { event: MouseEvent }) {
-		selectedEdge = null;
+	function syncEdgeDisplayState() {
+		baseFlowEdges.set(
+			computeEdgeDisplayUpdates(
+				get(baseFlowEdges),
+				get(selectionStores.selectedNode),
+				get(selectionStores.selectedEdge),
+				get(searchHiddenNodeIds),
+				get(tagHiddenNodeIds)
+			)
+		);
+	}
+
+	function handlePaneClick() {
 		if (!viewportMoved) {
-			selectedNode = null;
+			clearSelection(selectionStores);
+			clearEdgeHoverState();
+			syncEdgeDisplayState();
 		}
-		if (onPaneSelect) {
-			onPaneSelect(event, viewportMoved);
-		}
-		// Reset immediately after handling
 		viewportMoved = false;
 		if (viewportMoveTimer) {
 			clearTimeout(viewportMoveTimer);
@@ -322,52 +706,159 @@
 		}
 	}
 
-	function handleEdgeHover({ edge }: { edge: Edge }) {
-		const currentEdges = get(edges);
-		toggleEdgeHover(edge, currentEdges);
+	function handleEdgePointerEnter({ edge }: { edge: Edge }) {
+		setEdgeHover(edge, true, get(edges));
+		syncEdgeDisplayState();
+	}
 
-		// Update animated state for all edges after hover toggle
-		const updatedEdges = currentEdges.map((e) => {
-			const { shouldAnimate } = getEdgeDisplayState(e, selectedNode, selectedEdge);
-
-			return {
-				...e,
-				id: e.id,
-				animated: shouldAnimate
-			};
-		});
-
-		edges.set(updatedEdges);
+	function handleEdgePointerLeave({ edge }: { edge: Edge }) {
+		setEdgeHover(edge, false, get(edges));
+		syncEdgeDisplayState();
 	}
 
 	function handleSelectionChange({ nodes: selNodes }: { nodes: Node[]; edges: Edge[] }) {
-		if (onSelectionChange) {
-			onSelectionChange(selNodes, []);
+		if (ignoreNextSelectionChange) {
+			ignoreNextSelectionChange = false;
+			return;
+		}
+		if (selNodes.length === 0 && !viewportMoved) {
+			tick().then(() => {
+				// Skip if a click handler has set an active selection, or a multi-selection is active
+				if (
+					get(selectionStores.selectedNode) ||
+					get(selectionStores.selectedEdge) ||
+					get(selectionStores.selectedNodes).length > 0
+				)
+					return;
+				clearSelection(selectionStores);
+				clearEdgeHoverState();
+				syncEdgeDisplayState();
+			});
+			return;
+		}
+		handleBoxSelect(selNodes, selectionStores);
+	}
+
+	function handleNodeDragStop({
+		targetNode
+	}: {
+		targetNode: Node | null;
+		nodes: Node[];
+		event: MouseEvent | TouchEvent;
+	}) {
+		if (onNodeDragStop && targetNode) onNodeDragStop(targetNode);
+	}
+
+	function handleReconnect(edge: Edge, newConnection: Connection) {
+		if (onReconnect) onReconnect(edge, newConnection);
+	}
+
+	// --- Collapse controls ---
+
+	function getCollapseLevelName(level: CollapseLevel): string {
+		switch (level) {
+			case 1:
+				return topology_levelFullyCollapsed();
+			case 2:
+				return topology_levelContainersExpanded();
+			case 3:
+				return topology_levelSubcontainersExpanded();
+			case 4:
+				return topology_levelFullyExpanded();
 		}
 	}
 
-	// Merge preview edges into the edge store when they change
-	$: {
-		const preview = $previewEdges;
-		if (preview.length > 0) {
-			const currentEdges = get(edges);
-			// Remove old preview edges, add new ones
-			const realEdges = currentEdges.filter((e) => !e.id.startsWith('preview-'));
-			edges.set([...realEdges, ...preview]);
-		} else {
-			const currentEdges = get(edges);
-			const hasPreview = currentEdges.some((e) => e.id.startsWith('preview-'));
-			if (hasPreview) {
-				edges.set(currentEdges.filter((e) => !e.id.startsWith('preview-')));
-			}
-		}
+	let expandDisabled = $derived($collapseLevel === 4 || !!editMode);
+	let collapseDisabled = $derived($collapseLevel === 1 || !!editMode);
+	let collapseLevelTooltipCollapse = $derived(
+		$collapseLevel > 1
+			? `${common_collapse()}: ${getCollapseLevelName(($collapseLevel - 1) as CollapseLevel)}`
+			: ''
+	);
+	let collapseLevelTooltipExpand = $derived(
+		$collapseLevel < 4
+			? `${common_expand()}: ${getCollapseLevelName(($collapseLevel + 1) as CollapseLevel)}`
+			: ''
+	);
+
+	function handleStepCollapse() {
+		if (editMode) return;
+		clearSelection(selectionStores);
+		stepCollapse(topology.nodes, containerTypes, getInfrastructureRuleId());
+		setTimeout(() => fitView({ padding: getFitViewPadding(), duration: 300 }), 100);
 	}
+
+	function handleStepExpand() {
+		if (editMode) return;
+		clearSelection(selectionStores);
+		const { autoCollapseIds } = stepExpand(
+			topology.nodes,
+			containerTypes,
+			getInfrastructureRuleId()
+		);
+		for (const id of autoCollapseIds) layoutState.seenAutoCollapseIds.add(id);
+		setTimeout(() => fitView({ padding: getFitViewPadding(), duration: 300 }), 100);
+	}
+
+	export function triggerStepExpand() {
+		handleStepExpand();
+	}
+	export function triggerStepCollapse() {
+		handleStepCollapse();
+	}
+
+	// Derive the xyflow `edges` store from three reactive sources:
+	//   - baseFlowEdges: the real edges produced by the rebuild pipeline
+	//   - previewEdges:  preview edges from the dependency editor
+	//   - editingDependencyId: when set, hide the real edge for that dep
+	// This is the ONLY writer of `edges`. Exits and rebuilds are symmetric:
+	// clearing editingDependencyId naturally restores the filtered real edge.
+	//
+	// Svelte's `$baseFlowEdges` auto-subscribe hits a compiler bug here, so
+	// bridge the store into a $state and depend on that in the merge effect.
+	let currentBaseFlowEdges = $state<Edge[]>([]);
+	$effect(() => {
+		return baseFlowEdges.subscribe((v) => {
+			currentBaseFlowEdges = v;
+		});
+	});
+	$effect(() => {
+		const base = currentBaseFlowEdges;
+		const preview = $previewEdges;
+		const editingId = $editingDependencyId;
+		const aggregatedOriginals = $aggregatedEdgeOriginals;
+
+		// Hide any edge whose underlying dependency is being edited. An edge may
+		// directly carry `data.dependency_id` (plain dep edge), be a bundled
+		// representative with `data.bundleEdges` (an array of originals), or be
+		// an aggregated collapse edge whose originals live in the
+		// `aggregatedEdgeOriginals` store (keyed by edge.id).
+		const matchesEditingDep = (e: Edge): boolean => {
+			const data = e.data as
+				| {
+						dependency_id?: string;
+						bundleEdges?: Array<{ dependency_id?: string }>;
+				  }
+				| undefined;
+			if (data?.dependency_id === editingId) return true;
+			if (data?.bundleEdges?.some((o) => o.dependency_id === editingId)) return true;
+			const originals = aggregatedOriginals.get(e.id);
+			if (originals?.some((o) => (o as { dependency_id?: string }).dependency_id === editingId))
+				return true;
+			return false;
+		};
+
+		const visibleReal = editingId ? base.filter((e) => !matchesEditingDep(e)) : base;
+		edges.set([...visibleReal, ...preview]);
+	});
 </script>
 
 <div
 	class="h-full w-full overflow-hidden !p-0"
 	class:card={!isEmbed}
 	class:card-static={!isEmbed}
+	class:collapse-transition={animatingCollapse}
+	style:visibility={isMeasuring ? 'hidden' : 'visible'}
 	bind:this={containerElement}
 >
 	<SvelteFlow
@@ -378,8 +869,8 @@
 		onpaneclick={handlePaneClick}
 		onedgeclick={handleEdgeClick}
 		onnodeclick={handleNodeClick}
-		onedgepointerenter={handleEdgeHover}
-		onedgepointerleave={handleEdgeHover}
+		onedgepointerenter={handleEdgePointerEnter}
+		onedgepointerleave={handleEdgePointerLeave}
 		onnodedragstop={readonly ? undefined : handleNodeDragStop}
 		onreconnect={readonly ? undefined : handleReconnect}
 		onselectionchange={handleSelectionChange}
@@ -405,28 +896,28 @@
 		/>
 
 		{#if showControls}
-			<Panel position="top-right" class="!m-[10px] !flex !flex-col !items-center !gap-2 !p-0">
-				{#if onOpenShortcuts}
-					<button
-						class="flex items-center justify-center rounded !border !border-gray-300 !bg-gray-50 p-1.5 !text-gray-700 !shadow-lg hover:!bg-gray-100 dark:!border-gray-600 dark:!bg-gray-700 dark:!text-gray-100 dark:hover:!bg-gray-600"
-						onclick={onOpenShortcuts}
-						title={topology_shortcutsTitle()}
-					>
-						<Keyboard class="h-4 w-4" />
-					</button>
-				{/if}
-				<Controls
-					showZoom={true}
-					showFitView={true}
-					showLock={false}
-					class="!static !m-0 !rounded !border !border-gray-300 !bg-white !shadow-lg dark:!border-gray-600 dark:!bg-gray-800 [&_button:hover]:!bg-gray-100 dark:[&_button:hover]:!bg-gray-600 [&_button]:!border-gray-300 [&_button]:!bg-gray-50 [&_button]:!text-gray-700 dark:[&_button]:!border-gray-600 dark:[&_button]:!bg-gray-700 dark:[&_button]:!text-gray-100"
-				/>
-			</Panel>
+			<TopologySidebarControls
+				{editMode}
+				{onToggleEditMode}
+				{onOpenShortcuts}
+				{onOpenSearch}
+				{sidebarCollapsed}
+				onStepExpand={handleStepExpand}
+				onStepCollapse={handleStepCollapse}
+				onFitView={() => triggerFitView()}
+				{expandDisabled}
+				{collapseDisabled}
+				collapseLevel={$collapseLevel}
+				{collapseLevelTooltipExpand}
+				{collapseLevelTooltipCollapse}
+			/>
 		{/if}
 
 		{#if (showMinimap !== undefined ? showMinimap : $topologyOptions.local.show_minimap) && !$isExporting}
 			<MiniMap
 				position="bottom-left"
+				width={MINIMAP_WIDTH_PX}
+				height={MINIMAP_HEIGHT_PX}
 				bgColor={themeStore.resolvedTheme === 'dark' ? '#1f2937' : '#ffffff'}
 				nodeColor={themeStore.resolvedTheme === 'dark' ? '#6b7280' : '#9ca3af'}
 				maskColor={themeStore.resolvedTheme === 'dark'
@@ -453,25 +944,6 @@
 </div>
 
 <style>
-	:global(.svelte-flow__attribution) {
-		background: transparent;
-		color: var(--color-text-disabled);
-		font-size: 10px;
-	}
-
-	:global(.svelte-flow__attribution.bottom) {
-		bottom: 10px;
-		right: 10px;
-	}
-
-	:global(.svelte-flow__attribution a) {
-		color: var(--color-text-disabled);
-	}
-
-	:global(.svelte-flow__attribution a:hover) {
-		color: var(--color-text-muted);
-	}
-
 	.branding-badge {
 		position: absolute;
 		bottom: 10px;
@@ -488,36 +960,5 @@
 
 	.branding-badge:hover {
 		color: var(--color-text-secondary);
-	}
-
-	:global(.hide-for-export .svelte-flow__attribution) {
-		opacity: 0;
-	}
-
-	:global(.hide-for-export .svelte-flow__controls) {
-		opacity: 0;
-	}
-
-	:global(.hide-for-export .svelte-flow__minimap) {
-		opacity: 0;
-	}
-
-	:global(.hide-for-export .svelte-flow__resize-control) {
-		opacity: 0;
-	}
-
-	:global(.hide-for-export .branding-badge) {
-		opacity: 0;
-	}
-
-	/* Force full opacity on all nodes during export to disable focus effect */
-	:global(.hide-for-export .svelte-flow__node .card) {
-		opacity: 1 !important;
-		transition: none !important;
-	}
-
-	:global(.hide-for-export .svelte-flow__node > .relative) {
-		opacity: 1 !important;
-		transition: none !important;
 	}
 </style>

@@ -1,3 +1,4 @@
+use crate::server::shared::oui;
 use crate::server::{
     services::{
         definitions::ServiceDefinitionRegistry,
@@ -14,7 +15,6 @@ use crate::server::{
 };
 use anyhow::{Error, anyhow};
 use itertools::Itertools;
-use mac_oui::Oui;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::{net::IpAddr, ops::Range};
@@ -143,6 +143,15 @@ impl MatchConfidence {
     }
 }
 
+/// Types of credentialed client probes that run before service matching.
+/// The probe result (success/failure) is pre-computed; Pattern::ClientResponse
+/// just checks whether it succeeded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ClientProbe {
+    Docker,
+    Snmp,
+}
+
 #[derive(Debug, Clone, EnumDiscriminants)]
 #[strum_discriminants(derive(IntoStaticStr))]
 pub enum Pattern<'a> {
@@ -194,6 +203,11 @@ pub enum Pattern<'a> {
         MatchConfidence,
     ),
 
+    /// Whether a credentialed client probe succeeded for this host.
+    /// The probe (connection + ping) runs before service matching;
+    /// the pattern just checks the pre-computed result.
+    ClientResponse(ClientProbe),
+
     /// Whether the host is a docker container
     DockerContainer,
 
@@ -208,7 +222,7 @@ impl Vendor {
     pub const HP: &'static str = "HP Inc.";
     pub const EERO: &'static str = "eero Inc";
     pub const TPLINK: &'static str = "TP-LINK TECHNOLOGIES CO.,LTD";
-    pub const UBIQUITI: &'static str = "Ubiquiti Networks Inc";
+    pub const UBIQUITI: &'static str = "Ubiquiti Inc";
     pub const GOOGLE: &'static str = "Google, Inc.";
     pub const NEST: &'static str = "Nest Labs Inc.";
     pub const AMAZON: &'static str = "Amazon Technologies Inc.";
@@ -249,6 +263,7 @@ impl PartialEq for Pattern<'_> {
                     && no_match_a == no_match_b
                     && conf_a == conf_b
             }
+            (Pattern::ClientResponse(a), Pattern::ClientResponse(b)) => a == b,
             (Pattern::DockerContainer, Pattern::DockerContainer) => true,
             (Pattern::None, Pattern::None) => true,
             _ => false,
@@ -321,6 +336,7 @@ impl Display for Pattern<'_> {
             Pattern::Custom(_, _, _, _, _) => {
                 write!(f, "A custom match pattern evaluated at runtime")
             }
+            Pattern::ClientResponse(probe) => write!(f, "Client probe {:?} succeeded", probe),
             Pattern::DockerContainer => write!(f, "Service is running in a docker container"),
             Pattern::None => write!(f, "No match pattern provided"),
         }
@@ -344,7 +360,7 @@ impl Pattern<'_> {
 
         let ServiceMatchBaselineParams {
             subnet,
-            interface,
+            ip_address,
             endpoint_responses,
             virtualization,
             ..
@@ -522,7 +538,7 @@ impl Pattern<'_> {
                             actual,
                             format!(
                                 "Response for {}:{}{} {}",
-                                interface.base.ip_address,
+                                ip_address.base.ip_address,
                                 port_base.number(),
                                 path,
                                 match_reason.join(" and ")
@@ -549,14 +565,11 @@ impl Pattern<'_> {
             }
 
             Pattern::MacVendor(vendor_string) => {
-                if let Some(mac_address) = interface.base.mac_address {
-                    let Ok(oui_db) = Oui::default() else {
-                        return Err(anyhow!("Could not load Oui database"));
-                    };
+                if let Some(mac_address) = ip_address.base.mac_address {
                     let mac_str = mac_address.to_string();
-                    let Ok(Some(entry)) = Oui::lookup_by_mac(&oui_db, &mac_str) else {
+                    let Some(entry) = oui::lookup_by_mac(&mac_str) else {
                         return Err(anyhow!(
-                            "Could not find vendor for mac address in Oui database"
+                            "Could not find vendor for mac address in OUI database"
                         ));
                     };
 
@@ -589,8 +602,8 @@ impl Pattern<'_> {
                     }
                 } else {
                     Err(anyhow!(
-                        "Interface {} does not have a mac address",
-                        interface.base.ip_address
+                        "IPAddress {} does not have a mac address",
+                        ip_address.base.ip_address
                     ))
                 }
             }
@@ -731,9 +744,9 @@ impl Pattern<'_> {
 
                 let count_gateways_in_subnet = gateway_ips_in_subnet.len();
                 let host_ip_in_routing_table =
-                    gateway_ips_in_subnet.contains(&&interface.base.ip_address);
+                    gateway_ips_in_subnet.contains(&&ip_address.base.ip_address);
 
-                let last_octet_1_or_254 = match interface.base.ip_address {
+                let last_octet_1_or_254 = match ip_address.base.ip_address {
                     IpAddr::V4(ipv4) => {
                         let octets = ipv4.octets();
                         octets[3] == 1 || octets[3] == 254
@@ -827,6 +840,25 @@ impl Pattern<'_> {
                 }
             }
 
+            Pattern::ClientResponse(probe) => {
+                if let Some(ports) = baseline_params.client_responses.get(probe) {
+                    Ok(MatchResult {
+                        ports: ports.clone(),
+                        endpoint: None,
+                        mac_vendor: None,
+                        details: MatchDetails {
+                            reason: MatchReason::Reason(format!(
+                                "Client probe {:?} succeeded",
+                                probe
+                            )),
+                            confidence: MatchConfidence::Certain,
+                        },
+                    })
+                } else {
+                    Err(anyhow!("Client probe {:?} did not succeed", probe))
+                }
+            }
+
             Pattern::DockerContainer => match virtualization {
                 Some(ServiceVirtualization::Docker(..)) => Ok(MatchResult {
                     ports: vec![],
@@ -909,16 +941,16 @@ mod tests {
     use std::collections::HashMap;
     use std::net::IpAddr;
 
+    use crate::server::credentials::r#impl::mapping::SnmpCredentialMapping;
     use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
     use crate::server::services::r#impl::base::Service;
     use crate::server::services::r#impl::virtualization::ServiceVirtualization;
-    use crate::server::snmp_credentials::r#impl::discovery::SnmpCredentialMapping;
     use crate::tests::{network, organization};
     use uuid::Uuid;
 
     use crate::{
         server::{
-            interfaces::r#impl::base::Interface,
+            ip_addresses::r#impl::base::IPAddress,
             ports::r#impl::base::PortType,
             services::{
                 definitions::ServiceDefinitionRegistry,
@@ -934,12 +966,12 @@ mod tests {
             },
             subnets::r#impl::base::Subnet,
         },
-        tests::{interface, subnet},
+        tests::{ip_address, subnet},
     };
 
     struct TestContext {
         subnet: Subnet,
-        interface: Interface,
+        ip_address: IPAddress,
         pi: Box<dyn ServiceDefinition>,
         host_id: Uuid,
         daemon_id: Uuid,
@@ -949,6 +981,7 @@ mod tests {
         endpoint_responses: Vec<EndpointResponse>,
         virtualization: Option<ServiceVirtualization>,
         matched_services: Vec<Service>,
+        client_responses: std::collections::HashMap<super::ClientProbe, Vec<PortType>>,
     }
 
     impl TestContext {
@@ -956,12 +989,12 @@ mod tests {
             let organization = organization();
             let network = network(&organization.id);
             let subnet = subnet(&network.id);
-            let interface = interface(&network.id, &subnet.id);
+            let ip_address = ip_address(&network.id, &subnet.id);
             let pi = ServiceDefinitionRegistry::find_by_id("Pi-Hole")
                 .expect("Pi-hole service not found");
 
             let endpoint_responses = vec![EndpointResponse {
-                endpoint: Endpoint::http(Some(interface.base.ip_address), "/admin"),
+                endpoint: Endpoint::http(Some(ip_address.base.ip_address), "/admin"),
                 body: "Pi-hole".to_string(),
                 headers: HashMap::new(),
                 status: 200,
@@ -969,7 +1002,7 @@ mod tests {
 
             Self {
                 subnet,
-                interface,
+                ip_address,
                 pi,
                 host_id: Uuid::new_v4(),
                 network_id: Uuid::new_v4(),
@@ -978,12 +1011,12 @@ mod tests {
                     subnet_ids: None,
                     host_naming_fallback: HostNamingFallback::BestService,
                     snmp_credentials: SnmpCredentialMapping::default(),
-                    probe_raw_socket_ports: false,
                 },
                 gateway_ips: vec![],
                 endpoint_responses,
                 virtualization: None,
                 matched_services: vec![],
+                client_responses: std::collections::HashMap::new(),
             }
         }
 
@@ -1013,10 +1046,11 @@ mod tests {
         ) -> ServiceMatchBaselineParams<'a> {
             ServiceMatchBaselineParams {
                 subnet: &self.subnet,
-                interface: &self.interface,
+                ip_address: &self.ip_address,
                 all_ports,
                 endpoint_responses: &self.endpoint_responses,
                 virtualization: &self.virtualization,
+                client_responses: &self.client_responses,
             }
         }
     }
@@ -1126,6 +1160,194 @@ mod tests {
         assert!(
             result.is_err(),
             "OR pattern should not match when no conditions met"
+        );
+    }
+
+    #[test]
+    fn test_jenkins_https_header_detection() {
+        let ctx = TestContext::new();
+        let service = ServiceDefinitionRegistry::find_by_id("Jenkins")
+            .expect("Jenkins service should be registered");
+
+        let ports = vec![PortType::Https];
+        let endpoint_responses = vec![EndpointResponse {
+            endpoint: Endpoint::for_pattern(PortType::Https, "/")
+                .use_ip(ctx.ip_address.base.ip_address),
+            body: "Authentication required".to_string(),
+            headers: HashMap::from([("x-jenkins".to_string(), "2.541.3".to_string())]),
+            status: 403,
+        }];
+        let client_responses = HashMap::new();
+        let baseline = ServiceMatchBaselineParams {
+            subnet: &ctx.subnet,
+            ip_address: &ctx.ip_address,
+            all_ports: &ports,
+            endpoint_responses: &endpoint_responses,
+            virtualization: &ctx.virtualization,
+            client_responses: &client_responses,
+        };
+        let params = DiscoverySessionServiceMatchParams {
+            host_id: &ctx.host_id,
+            gateway_ips: &ctx.gateway_ips,
+            daemon_id: &ctx.daemon_id,
+            network_id: &ctx.network_id,
+            discovery_type: &ctx.discovery_type,
+            baseline_params: &baseline,
+            service_params: ServiceMatchServiceParams {
+                service_definition: service.clone(),
+                matched_services: &ctx.matched_services,
+                unbound_ports: &ports,
+            },
+        };
+
+        let result = service.discovery_pattern().matches(&params);
+        assert!(
+            result.is_ok(),
+            "Jenkins should match HTTPS responses that include the X-Jenkins header"
+        );
+    }
+
+    #[test]
+    fn test_jenkins_http8080_body_detection() {
+        let ctx = TestContext::new();
+        let service = ServiceDefinitionRegistry::find_by_id("Jenkins")
+            .expect("Jenkins service should be registered");
+
+        let ports = vec![PortType::Http8080];
+        let endpoint_responses = vec![EndpointResponse {
+            endpoint: Endpoint::for_pattern(PortType::Http8080, "/")
+                .use_ip(ctx.ip_address.base.ip_address),
+            body: "powered by jenkins.io".to_string(),
+            headers: HashMap::new(),
+            status: 200,
+        }];
+        let client_responses = HashMap::new();
+        let baseline = ServiceMatchBaselineParams {
+            subnet: &ctx.subnet,
+            ip_address: &ctx.ip_address,
+            all_ports: &ports,
+            endpoint_responses: &endpoint_responses,
+            virtualization: &ctx.virtualization,
+            client_responses: &client_responses,
+        };
+        let params = DiscoverySessionServiceMatchParams {
+            host_id: &ctx.host_id,
+            gateway_ips: &ctx.gateway_ips,
+            daemon_id: &ctx.daemon_id,
+            network_id: &ctx.network_id,
+            discovery_type: &ctx.discovery_type,
+            baseline_params: &baseline,
+            service_params: ServiceMatchServiceParams {
+                service_definition: service.clone(),
+                matched_services: &ctx.matched_services,
+                unbound_ports: &ports,
+            },
+        };
+
+        let result = service.discovery_pattern().matches(&params);
+        assert!(
+            result.is_ok(),
+            "Jenkins should keep matching the existing HTTP 8080 body signature"
+        );
+    }
+
+    #[test]
+    fn test_client_response_with_port() {
+        let mut ctx = TestContext::new();
+        let probed_port = PortType::new_tcp(2376);
+        ctx.client_responses
+            .insert(super::ClientProbe::Docker, vec![probed_port]);
+
+        let ports = vec![probed_port];
+        let baseline = ctx.create_baseline_params(&ports);
+        let params = ctx.create_params_with_ports(&baseline, &ports);
+        let pattern = Pattern::ClientResponse(super::ClientProbe::Docker);
+        let result = pattern.matches(&params);
+        assert!(
+            result.is_ok(),
+            "ClientResponse should match when probe succeeded"
+        );
+        let result = result.unwrap();
+        assert_eq!(
+            result.ports,
+            vec![probed_port],
+            "Should return the probed port"
+        );
+        assert_eq!(result.details.confidence, super::MatchConfidence::Certain);
+    }
+
+    #[test]
+    fn test_client_response_without_port() {
+        let mut ctx = TestContext::new();
+        ctx.client_responses
+            .insert(super::ClientProbe::Docker, vec![]);
+
+        let ports = vec![];
+        let baseline = ctx.create_baseline_params(&ports);
+        let params = ctx.create_params_with_ports(&baseline, &ports);
+        let pattern = Pattern::ClientResponse(super::ClientProbe::Docker);
+        let result = pattern.matches(&params);
+        assert!(
+            result.is_ok(),
+            "ClientResponse should match even without ports (local socket)"
+        );
+        let result = result.unwrap();
+        assert!(
+            result.ports.is_empty(),
+            "Should return no ports for local socket case"
+        );
+    }
+
+    #[test]
+    fn test_client_response_no_probe() {
+        let ctx = TestContext::new();
+
+        let ports = vec![PortType::new_tcp(2376)];
+        let baseline = ctx.create_baseline_params(&ports);
+        let params = ctx.create_params_with_ports(&baseline, &ports);
+        let pattern = Pattern::ClientResponse(super::ClientProbe::Docker);
+        let result = pattern.matches(&params);
+        assert!(
+            result.is_err(),
+            "ClientResponse should not match when probe not present"
+        );
+    }
+
+    #[test]
+    fn test_mac_vendor_pattern_match() {
+        let mut ctx = TestContext::new();
+        // Set a known Sonos MAC address (B8:E9:37 is a Sonos OUI prefix)
+        ctx.ip_address.base.mac_address = Some("B8:E9:37:00:00:01".parse().expect("valid MAC"));
+
+        let ports = vec![];
+        let baseline = ctx.create_baseline_params(&ports);
+        let params = ctx.create_params_with_ports(&baseline, &ports);
+        let pattern = Pattern::MacVendor(super::Vendor::SONOS);
+        let result = pattern.matches(&params);
+
+        assert!(
+            result.is_ok(),
+            "MacVendor should match Sonos MAC: {:?}",
+            result.err()
+        );
+        let match_result = result.unwrap();
+        assert!(match_result.mac_vendor.is_some());
+    }
+
+    #[test]
+    fn test_mac_vendor_pattern_no_mac() {
+        let ctx = TestContext::new();
+        // Default interface has mac_address: None
+
+        let ports = vec![];
+        let baseline = ctx.create_baseline_params(&ports);
+        let params = ctx.create_params_with_ports(&baseline, &ports);
+        let pattern = Pattern::MacVendor(super::Vendor::SONOS);
+        let result = pattern.matches(&params);
+
+        assert!(
+            result.is_err(),
+            "MacVendor should error when ip_address has no MAC"
         );
     }
 }

@@ -5,12 +5,15 @@
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import { TagIcon } from 'lucide-svelte';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
-	import { permissions } from '$lib/shared/stores/metadata';
+	import { permissions, concepts } from '$lib/shared/stores/metadata';
 	import {
 		common_color,
 		common_delete,
 		common_description,
-		common_edit
+		common_edit,
+		common_no,
+		common_yes,
+		common_application
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -38,10 +41,13 @@
 		(currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities) || false
 	);
 
+	let appIcon = $derived(tag.is_application ? concepts.getIconComponent('Application') : null);
+	let appColor = $derived(tag.is_application ? concepts.getColorHelper('Application')?.icon : null);
+
 	let cardData = $derived({
 		title: tag.name,
-		iconColor: colorHelper.icon,
-		Icon: TagIcon,
+		iconColor: appColor ?? colorHelper.icon,
+		Icon: appIcon ?? TagIcon,
 		fields: [
 			{
 				label: common_description(),
@@ -56,6 +62,10 @@
 						color: tag.color
 					}
 				]
+			},
+			{
+				label: common_application(),
+				value: tag.is_application ? common_yes() : common_no()
 			}
 		],
 		actions: [

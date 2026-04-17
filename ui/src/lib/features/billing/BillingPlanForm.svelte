@@ -7,8 +7,14 @@
 	 * auto-fit desktop.
 	 */
 	import { untrack } from 'svelte';
-	import { SvelteMap } from 'svelte/reactivity';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { Check, X, ChevronDown, ChevronUp, Loader2, Minus, Plus } from 'lucide-svelte';
+	import {
+		billing_everythingInPlanPlus,
+		billing_showFeatures,
+		billing_hideFeatures,
+		billing_startTrialNoCreditCard
+	} from '$lib/paraglide/messages';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
 	import type { BillingPlan } from './types';
@@ -223,11 +229,8 @@
 	function formatRate(plan: BillingPlan): string {
 		const metadata = billingPlanHelpers.getMetadata(plan.type);
 		if (metadata?.custom_price) return '';
-		return '/ month';
-	}
-
-	function showBilledYearly(plan: BillingPlan): boolean {
-		return plan.rate === 'Year' && !hasCustomPrice(plan);
+		if (plan.rate === 'Year') return '/mo, billed yearly';
+		return '/mo';
 	}
 
 	function formatSeatAddonPricing(plan: BillingPlan): string {
@@ -322,11 +325,27 @@
 			return (catA === -1 ? 99 : catA) - (catB === -1 ? 99 : catB);
 		});
 	}
+
+	// ============================================================================
+	// Mobile feature list toggle
+	// ============================================================================
+
+	let expandedFeatures = $state(new Set<string>());
+
+	function toggleFeatures(planType: string) {
+		const next = new SvelteSet(expandedFeatures);
+		if (next.has(planType)) {
+			next.delete(planType);
+		} else {
+			next.add(planType);
+		}
+		expandedFeatures = next;
+	}
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col {className}">
 	<!-- Header with Toggles (fixed, does not scroll) -->
-	<div class="flex shrink-0 flex-wrap items-center justify-center px-4 py-2 lg:px-6">
+	<div class="flex shrink-0 flex-wrap items-center justify-center px-4 py-1 lg:px-6">
 		{#if showGithubStars}
 			<!-- <GithubStars /> -->
 		{/if}
@@ -354,8 +373,19 @@
 					{@const enterprise = isEnterprise(plan)}
 					{@const metadata = billingPlanHelpers.getMetadata(plan.type)}
 					{@const incrementalFeatures = metadata?.incremental_features ?? []}
-					{@const sortedIncrFeatures = sortFeaturesByCategory(incrementalFeatures)}
 					{@const prevTier = metadata?.previous_tier}
+					{@const prevTierVisible = prevTier
+						? filteredPlans.some((p) => p.type === prevTier)
+						: false}
+					{@const prevTierFeatures =
+						prevTier && !prevTierVisible
+							? (billingPlanHelpers.getMetadata(prevTier)?.incremental_features ?? [])
+							: []}
+					{@const displayFeatures = sortFeaturesByCategory(
+						prevTierFeatures.length > 0
+							? [...new Set([...prevTierFeatures, ...incrementalFeatures])]
+							: incrementalFeatures
+					)}
 
 					<div
 						class="plan-card card card-static flex flex-col {isRecommended
@@ -419,11 +449,6 @@
 								</div>
 							{/if}
 							<div
-								class={`text-tertiary text-xs ${showBilledYearly(plan) ? 'opacity-100' : 'opacity-0'}`}
-							>
-								billed yearly
-							</div>
-							<div
 								class={`text-xs font-medium text-success ${(hasTrial(plan) || (isCurrentlyTrialing && plan.trial_days > 0)) && !hasCustomPrice(plan) ? 'opacity-100' : 'opacity-0'}`}
 							>
 								{isCurrentlyTrialing ? 'Your trial continues' : `${plan.trial_days}-day free trial`}
@@ -460,7 +485,7 @@
 									{:else if isCurrentlyTrialing}
 										Switch plan
 									{:else}
-										{trial ? `Start ${plan.trial_days}-day free trial` : 'Get Started'}
+										{trial ? billing_startTrialNoCreditCard() : 'Get Started'}
 									{/if}
 								</button>
 							{:else if hosting === 'SelfHosted'}
@@ -585,29 +610,32 @@
 
 						<!-- Incremental Features -->
 						<div class="flex-1 py-4">
-							{#if prevTier}
-								<p class="text-secondary mb-4 text-xs font-medium">
-									Everything in <span class="text-primary"
-										>{billingPlanHelpers.getName(prevTier)}</span
-									>, plus:
+							{#if prevTier && prevTierVisible}
+								<p class="text-secondary mb-2 text-xs font-medium">
+									{billing_everythingInPlanPlus({ planName: billingPlanHelpers.getName(prevTier) })}
 								</p>
-							{:else if plan.type !== 'Free' && incrementalFeatures.length > 0}
-								<p class="text-tertiary mb-2 text-xs">Key features:</p>
 							{/if}
-							<ul class="space-y-1.5">
-								{#each sortedIncrFeatures as featureKey, i (featureKey)}
-									{@const category = featureHelpers.getCategory(featureKey)}
-									{@const prevCategory =
-										i > 0 ? featureHelpers.getCategory(sortedIncrFeatures[i - 1]) : null}
-									{#if category !== prevCategory}
-										<li
-											class="text-tertiary text-[10px] font-medium uppercase tracking-wider {i > 0
-												? 'mt-2'
-												: ''}"
-										>
-											{category}
-										</li>
+
+							<!-- Mobile: collapsible feature list -->
+							{#if displayFeatures.length > 0}
+								<button
+									type="button"
+									class="text-tertiary mb-2 flex items-center gap-1 text-xs font-medium sm:hidden"
+									onclick={() => toggleFeatures(plan.type)}
+								>
+									{expandedFeatures.has(plan.type)
+										? billing_hideFeatures()
+										: billing_showFeatures()}
+									{#if expandedFeatures.has(plan.type)}
+										<ChevronUp class="h-3 w-3" />
+									{:else}
+										<ChevronDown class="h-3 w-3" />
 									{/if}
+								</button>
+							{/if}
+
+							<ul class="space-y-1.5 {expandedFeatures.has(plan.type) ? '' : 'hidden sm:block'}">
+								{#each displayFeatures as featureKey (featureKey)}
 									{@const comingSoon = isComingSoon(featureKey)}
 									<li class="flex items-start gap-2 text-sm">
 										<Check

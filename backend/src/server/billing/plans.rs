@@ -9,7 +9,7 @@ fn get_default_plans() -> Vec<BillingPlan> {
         BillingPlan::Starter(PlanConfig {
             base_cents: 1499,
             rate: BillingRate::Month,
-            trial_days: 0,
+            trial_days: 14,
             seat_cents: None,
             network_cents: None,
             host_cents: None,
@@ -79,7 +79,7 @@ pub fn get_community_plan() -> BillingPlan {
         network_cents: None,
         host_cents: None,
         included_seats: Some(1),
-        included_networks: Some(3),
+        included_networks: Some(1),
         included_hosts: None,
     })
 }

@@ -18,6 +18,10 @@ use crate::server::{
         oidc::{OidcRegisterResult, OidcService},
     },
     config::{AppState, DeploymentType, get_deployment_type},
+    credentials::r#impl::{
+        base::{Credential, CredentialBase},
+        types::{CredentialType, SecretValue},
+    },
     daemon_api_keys::r#impl::base::{DaemonApiKey, DaemonApiKeyBase},
     invites::handlers::process_pending_invite,
     networks::r#impl::{Network, NetworkBase},
@@ -30,7 +34,6 @@ use crate::server::{
         types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
         types::error_codes::ErrorCode,
     },
-    snmp_credentials::r#impl::base::{SnmpCredential, SnmpCredentialBase, SnmpVersion},
     topology::types::base::{Topology, TopologyBase},
     users::r#impl::base::{User, UserBase},
 };
@@ -42,7 +45,6 @@ use axum::{
 };
 use axum_client_ip::ClientIp;
 use axum_extra::{TypedHeader, extract::Host, headers::UserAgent};
-use bad_email::is_email_unwanted;
 use chrono::{DateTime, Utc};
 use secrecy::SecretString;
 use std::{net::IpAddr, sync::Arc};
@@ -173,8 +175,10 @@ async fn register(
         ));
     }
 
-    // Honeypot: hidden "website" field filled = likely bot
-    if request.website.as_ref().is_some_and(|w| !w.is_empty()) {
+    // Honeypot: hidden field filled = likely bot (cloud only — self-hosted has no public signup)
+    if get_deployment_type(state.clone()) == DeploymentType::Cloud
+        && request.website.as_ref().is_some_and(|w| !w.is_empty())
+    {
         tracing::warn!(
             ip = %ip,
             email = %request.email,
@@ -202,7 +206,7 @@ async fn register(
         ));
     }
 
-    if is_email_unwanted(request.email.as_str())
+    if !mailchecker::is_valid(request.email.as_str())
         && get_deployment_type(state.clone()) == DeploymentType::Cloud
     {
         return Err(ApiError::conflict(
@@ -552,43 +556,36 @@ async fn apply_pending_setup(
     if pending_network.snmp_enabled
         && let Some(ref community) = pending_network.snmp_community
     {
-        let version = pending_network
-            .snmp_version
-            .as_ref()
-            .and_then(|v| v.parse::<SnmpVersion>().ok())
-            .unwrap_or(SnmpVersion::V2c);
-
         let credential_name = format!("{} SNMP Credential", pending_network.name);
-        let credential = SnmpCredential::new(SnmpCredentialBase {
+        let credential = Credential::new(CredentialBase {
             organization_id,
             name: credential_name,
-            version,
-            community: SecretString::new(community.clone().into()),
+            credential_type: CredentialType::SnmpV2c {
+                community: SecretValue::Inline {
+                    value: SecretString::new(community.clone().into()),
+                },
+            },
+            target_ips: None,
             tags: Vec::new(),
         });
 
         let created_credential = state
             .services
-            .snmp_credential_service
+            .credential_service
             .create(credential, auth_entity.clone())
             .await
             .map_err(|e| {
-                ApiError::internal_error(&format!("Failed to create SNMP credential: {}", e))
+                ApiError::internal_error(&format!("Failed to create credential: {}", e))
             })?;
 
-        // Update network with the SNMP credential ID
-        let mut updated_network = network.clone();
-        updated_network.base.snmp_credential_id = Some(created_credential.id);
+        // Link credential to network via junction table
         state
             .services
-            .network_service
-            .update(&mut updated_network, auth_entity.clone())
+            .credential_service
+            .set_network_credentials(&network.id, &[created_credential.id])
             .await
             .map_err(|e| {
-                ApiError::internal_error(&format!(
-                    "Failed to update network with SNMP credential: {}",
-                    e
-                ))
+                ApiError::internal_error(&format!("Failed to link credential to network: {}", e))
             })?;
     }
 
@@ -1429,7 +1426,10 @@ async fn handle_login_flow(
                 )));
             }
 
-            Ok(Redirect::to(return_url.as_str()))
+            Ok(Redirect::to(&format!(
+                "{}?login_method=oidc:{}",
+                return_url, slug
+            )))
         }
         Err(e) => {
             tracing::error!("Failed to login via OIDC: {}", e);
@@ -1514,6 +1514,15 @@ async fn handle_register_flow(
             let (user, is_new_user) = match result {
                 OidcRegisterResult::NewUser(user) => (user, true),
                 OidcRegisterResult::ExistingUser(user) => (user, false),
+                OidcRegisterResult::EmailAlreadyExists => {
+                    return Err(Redirect::to(&format!(
+                        "{}?error={}&error_code=user_email_in_use",
+                        return_url,
+                        urlencoding::encode(
+                            "An account with this email already exists. Please sign in instead."
+                        )
+                    )));
+                }
             };
 
             // Cycle session ID to prevent session fixation attacks
@@ -1550,22 +1559,18 @@ async fn handle_register_flow(
             // Clear pending setup data from session
             clear_pending_setup(&session).await;
 
-            Ok(Redirect::to(return_url.as_str()))
+            Ok(Redirect::to(&format!(
+                "{}?login_method=oidc:{}",
+                return_url, slug
+            )))
         }
         Err(e) => {
             tracing::error!("Failed to register via OIDC: {}", e);
             let error_msg = format!("Failed to register: {}", e);
-            let err_str = e.to_string();
-            let error_code = if err_str.contains("already exists") {
-                "&error_code=user_email_in_use"
-            } else {
-                ""
-            };
             Err(Redirect::to(&format!(
-                "{}?error={}{}",
+                "{}?error={}",
                 return_url,
                 urlencoding::encode(&error_msg),
-                error_code
             )))
         }
     }
@@ -1620,4 +1625,46 @@ async fn unlink_oidc_account(
         .map_err(|e| ApiError::internal_error(&format!("Failed to unlink OIDC: {}", e)))?;
 
     Ok(Json(ApiResponse::success(updated_user)))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_legitimate_regional_domains_not_blocked() {
+        let legitimate = [
+            "user@yahoo.co.jp",
+            "user@yahoo.co.uk",
+            "user@yahoo.ca",
+            "user@hotmail.co.uk",
+            "user@hotmail.it",
+            "user@outlook.com",
+            "user@gmail.com",
+            "user@protonmail.com",
+        ];
+        for email in legitimate {
+            assert!(
+                mailchecker::is_valid(email),
+                "{} should not be blocked as disposable",
+                email
+            );
+        }
+    }
+
+    #[test]
+    fn test_disposable_domains_blocked() {
+        let disposable = [
+            "user@mailinator.com",
+            "user@guerrillamail.com",
+            "user@yopmail.com",
+            "user@sharklasers.com",
+            "user@trashmail.com",
+        ];
+        for email in disposable {
+            assert!(
+                !mailchecker::is_valid(email),
+                "{} should be blocked as disposable",
+                email
+            );
+        }
+    }
 }

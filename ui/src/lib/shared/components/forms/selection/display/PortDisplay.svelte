@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-	import { ALL_INTERFACES, type Interface, type Port } from '$lib/features/hosts/types/base';
+	import { ALL_IP_ADDRESSES, type IPAddress, type Port } from '$lib/features/hosts/types/base';
 	import type { EntityDisplayComponent } from '../types';
 	import { entities, ports } from '$lib/shared/stores/metadata';
 	import type { Service } from '$lib/features/services/types/base';
@@ -7,13 +7,13 @@
 	// Context for port display - needs access to interfaces for binding display
 	export interface PortDisplayContext {
 		currentServices: Service[];
-		interfaces: Interface[];
+		ip_addresses: IPAddress[];
 		isContainerSubnet: (subnetId: string) => boolean;
 	}
 
-	// Helper to format interface for display
+	// Helper to format IP address for display
 	function formatInterfaceForPort(
-		iface: Interface | typeof ALL_INTERFACES,
+		iface: IPAddress | typeof ALL_IP_ADDRESSES,
 		isContainerSubnet: (subnetId: string) => boolean
 	): string {
 		if (iface.id == null) return iface.name;
@@ -34,7 +34,7 @@
 		},
 		getDescription: (port: Port, context: PortDisplayContext) => {
 			const currentServices = context?.currentServices ?? [];
-			const interfacesData = context?.interfaces ?? [];
+			const ipAddressesData = context?.ip_addresses ?? [];
 			const isContainerSubnetFn = context?.isContainerSubnet ?? (() => false);
 
 			// Use context services if available
@@ -51,9 +51,9 @@
 							s.bindings
 								.filter((b) => b.type == 'Port' && b.port_id == port.id)
 								.map((b) => {
-									let iface = b.interface_id
-										? interfacesData.find((i) => i.id === b.interface_id)
-										: ALL_INTERFACES;
+									let iface = b.ip_address_id
+										? ipAddressesData.find((i) => i.id === b.ip_address_id)
+										: ALL_IP_ADDRESSES;
 									if (iface) {
 										return formatInterfaceForPort(iface, isContainerSubnetFn);
 									} else {
@@ -80,7 +80,7 @@
 	export let item: Port;
 	export let context: PortDisplayContext = {
 		currentServices: [],
-		interfaces: [],
+		ip_addresses: [],
 		isContainerSubnet: () => false
 	};
 </script>

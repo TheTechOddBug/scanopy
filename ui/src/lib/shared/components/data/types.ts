@@ -31,6 +31,7 @@ export interface CardAction {
 	class?: string;
 	onClick: () => void;
 	disabled?: boolean;
+	tooltip?: string | ((disabled: boolean) => string | null);
 	animation?: string;
 	forceLabel?: boolean;
 }
@@ -65,6 +66,7 @@ export interface CardFieldItem {
 	metadata?: Record<string, unknown>;
 	badge?: string; // For things like "5m", "Critical", etc.
 	badgeColor?: string;
+	title?: string;
 	entityRef?: EntityRef;
 }
 

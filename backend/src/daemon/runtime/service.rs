@@ -5,14 +5,24 @@ use crate::daemon::shared::config::ConfigStore;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
 use crate::server::daemons::r#impl::api::{
-    DaemonCapabilities, DaemonRegistrationRequest, DaemonRegistrationResponse,
-    DaemonStartupRequest, DiscoveryUpdatePayload, ServerCapabilities,
+    DaemonCapabilities, DaemonDiscoveryRequest, DaemonRegistrationRequest,
+    DaemonRegistrationResponse, DaemonStartupRequest, ServerCapabilities,
 };
 use crate::server::daemons::r#impl::base::Daemon;
 use crate::server::shared::types::api::{ApiError, ApiErrorResponse};
 use crate::server::shared::types::error_codes::ErrorCode;
 use anyhow::Result;
 use backon::{ExponentialBuilder, Retryable};
+
+/// Outcome of daemon startup initialization
+pub enum StartupOutcome {
+    /// Successfully connected and announced/registered
+    Ok,
+    /// Connection failed (timeout, refused, DNS) — retryable
+    ConnectionFailed(anyhow::Error),
+    /// Auth failed (invalid API key) — fatal, don't poll
+    AuthFailed(anyhow::Error),
+}
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -63,6 +73,17 @@ impl DaemonRuntimeService {
     /// Check Docker availability and return a detailed description of the connection method.
     /// Returns (is_available, description) where description explains how Docker is being accessed.
     pub async fn check_docker_availability(&self) -> (bool, String) {
+        if !self
+            .config
+            .get_enable_local_docker_socket()
+            .await
+            .unwrap_or(true)
+        {
+            return (
+                false,
+                "Local Docker socket scanning disabled by configuration".to_string(),
+            );
+        }
         let docker_proxy = self.config.get_docker_proxy().await;
         let docker_proxy_ssl_info = self.config.get_docker_proxy_ssl_info().await;
 
@@ -89,7 +110,7 @@ impl DaemonRuntimeService {
 
         match self
             .utils
-            .new_local_docker_client(docker_proxy, docker_proxy_ssl_info)
+            .new_docker_client(docker_proxy, docker_proxy_ssl_info)
             .await
         {
             Ok(_) => (true, format!("Available {}", connection_method)),
@@ -154,8 +175,8 @@ impl DaemonRuntimeService {
             .is_some_and(|e| e.matches_error(&ApiError::daemon_key_not_yet_active()))
     }
 
-    /// Maximum consecutive poll failures before daemon exits
-    const MAX_POLL_RETRIES: usize = 30;
+    /// Maximum consecutive poll failures before falling back to outer retry loop
+    const MAX_POLL_RETRIES: usize = 5;
 
     pub async fn request_work(&self) -> Result<()> {
         let interval_secs = self.config.get_heartbeat_interval().await?;
@@ -182,20 +203,27 @@ impl DaemonRuntimeService {
             tracing::debug!(target: LOG_TARGET, daemon_id = %daemon_id, "Polling server for work");
 
             let path = format!("/api/daemons/{}/request-work", daemon_id);
+            // Detect ip_addresses fresh — cheap NIC enumeration
+            let interfaced_subnets = self.detect_interfaced_subnets().await.unwrap_or_default();
+            // Detect Docker socket — cheap local socket check
+            let has_docker_socket = self.detect_docker_socket().await;
+
             let status_payload = DaemonStatus {
                 // URL not sent - server manages this via provisioning
                 url: None,
                 name: name.clone(),
                 mode,
                 version: Some(semver::Version::parse(env!("CARGO_PKG_VERSION")).unwrap()),
-                capabilities: self.config.get_capabilities().await.unwrap_or_default(),
+                capabilities: DaemonCapabilities::default(),
+                interfaced_subnets,
+                has_docker_socket,
                 ready_for_work: !self.discovery_manager.is_discovery_running().await,
             };
 
             // Use backon for retry with exponential backoff
             let result = (|| async {
                 self.api_client
-                    .post::<_, (Option<DiscoveryUpdatePayload>, bool)>(
+                    .post::<_, (Option<DaemonDiscoveryRequest>, bool)>(
                         &path,
                         &status_payload,
                         "Failed to request work",
@@ -214,28 +242,52 @@ impl DaemonRuntimeService {
                     // Don't retry API errors (structured responses from server)
                     && e.downcast_ref::<ApiErrorResponse>().is_none()
             })
+            .notify(|e, dur| {
+                tracing::warn!(
+                    target: LOG_TARGET,
+                    "Server unreachable, retrying in {:.0?}... ({})",
+                    dur,
+                    e
+                );
+            })
             .await;
 
             match result {
-                Ok((payload, cancel_current_session)) => {
+                Ok((request, cancel_current_session)) => {
                     if cancel_current_session {
                         tracing::info!(target: LOG_TARGET, "Received cancellation request from server");
                         self.discovery_manager.cancel_current_session().await;
                     }
 
-                    if let Some(payload) = payload {
+                    if let Some(request) = request {
                         tracing::info!(
                             target: LOG_TARGET,
                             "Discovery session received: {} ({:?})",
-                            payload.session_id,
-                            payload.discovery_type
+                            request.session_id,
+                            request.discovery_type
                         );
-                        self.discovery_manager
-                            .initiate_session(payload.into())
-                            .await;
+                        self.discovery_manager.initiate_session(request).await;
                     }
                 }
                 Err(e) => {
+                    // Check if daemon record was deleted or DB was reset
+                    if let Some(api_err) = e.downcast_ref::<ApiErrorResponse>()
+                        && api_err.matches_error(&ApiError::coded(
+                            axum::http::StatusCode::NOT_FOUND,
+                            ErrorCode::DaemonNotRegistered,
+                        ))
+                    {
+                        tracing::error!(
+                            target: LOG_TARGET,
+                            daemon_id = %daemon_id,
+                            "Daemon not found on server — deleted or database was reset. \
+                             Entering standby. Reinstall or reconfigure the daemon to resume. \
+                             Waiting for shutdown signal (Ctrl+C)..."
+                        );
+                        tokio::signal::ctrl_c().await.ok();
+                        return Err(anyhow::anyhow!("Daemon not registered — shutting down"));
+                    }
+
                     // Check if daemon has been put on standby (inactivity)
                     if let Some(api_err) = e.downcast_ref::<ApiErrorResponse>()
                         && api_err.matches_error(&ApiError::coded(
@@ -257,13 +309,18 @@ impl DaemonRuntimeService {
                         return Err(auth_error);
                     }
                     // Backon exhausted retries - exit the daemon
+                    let server_url = self.config.get_server_url().await.unwrap_or_default();
                     tracing::error!(
                         target: LOG_TARGET,
-                        "Lost connection to server after {} retries: {}",
+                        "Lost connection to server at {} after {} retries: {}. Check that the server is running and reachable.",
+                        server_url,
                         Self::MAX_POLL_RETRIES,
                         e
                     );
-                    return Err(anyhow::anyhow!("Lost connection to server"));
+                    return Err(anyhow::anyhow!(
+                        "Lost connection to server at {}",
+                        server_url
+                    ));
                 }
             }
 
@@ -284,45 +341,80 @@ impl DaemonRuntimeService {
         }
     }
 
-    pub async fn initialize_services(&self, network_id: Uuid, api_key: String) -> Result<()> {
+    /// Detect subnets from daemon's network ip_addresses.
+    async fn detect_interfaced_subnets(
+        &self,
+    ) -> Result<Vec<crate::server::subnets::r#impl::base::Subnet>> {
+        let daemon_id = self.config.get_id().await?;
+        let network_id = match self.config.get_network_id().await? {
+            Some(id) => id,
+            None => return Ok(Vec::new()),
+        };
+        let interface_filter = self.config.get_interfaces().await?;
+
+        let (_, subnets, _) = self
+            .utils
+            .get_own_interfaces(
+                crate::server::discovery::r#impl::types::DiscoveryType::SelfReport {
+                    host_id: daemon_id,
+                },
+                daemon_id,
+                network_id,
+                &interface_filter,
+            )
+            .await?;
+
+        Ok(subnets)
+    }
+
+    /// Check if Docker socket is available (local socket or proxy).
+    async fn detect_docker_socket(&self) -> bool {
+        if !self
+            .config
+            .get_enable_local_docker_socket()
+            .await
+            .unwrap_or(true)
+        {
+            return false;
+        }
+        let docker_proxy = self.config.get_docker_proxy().await;
+        let docker_proxy_ssl_info = self.config.get_docker_proxy_ssl_info().await;
+
+        self.utils
+            .new_docker_client(docker_proxy, docker_proxy_ssl_info)
+            .await
+            .is_ok()
+    }
+
+    pub async fn initialize_services(
+        &self,
+        network_id: Uuid,
+        api_key: String,
+    ) -> Result<StartupOutcome> {
         self.config.set_network_id(network_id).await?;
         self.config.set_api_key(api_key).await?;
 
         let daemon_id = self.config.get_id().await?;
 
-        // Check Docker availability with detailed description
-        let (has_docker_client, docker_description) = self.check_docker_availability().await;
-        tracing::info!(target: LOG_TARGET, "  Docker:          {}", docker_description);
-
-        tracing::info!(target: LOG_TARGET, "Connecting to server...");
+        // Check Docker availability (logged once by caller, not on retries)
+        let (has_docker_client, _) = self.check_docker_availability().await;
 
         match self.announce_startup(daemon_id).await {
             Ok(_) => {
-                tracing::info!(target: LOG_TARGET, "  Status:          Daemon recognized, startup announced");
-                return Ok(());
+                tracing::info!(target: LOG_TARGET, "  Status:          Connected");
+                return Ok(StartupOutcome::Ok);
             }
             Err(e) if Self::is_daemon_not_found_error(&e, &daemon_id) => {
                 tracing::info!(target: LOG_TARGET, "  Status:          Daemon not yet registered; beginning registration");
             }
-            Err(e) if Self::is_registered_daemon_auth_error(&e) => {
-                // Daemon exists but API key is invalid/revoked - fail immediately
-                tracing::error!(
-                    target: LOG_TARGET,
-                    "  Status:          API key invalid for registered daemon. Reconfigure with valid key."
-                );
-                return Err(e);
-            }
-            Err(e) if Self::is_unregistered_auth_error(&e) => {
-                // Unregistered daemon with invalid key - likely onboarding scenario
-                // Proceed to registration which has retry logic
-                tracing::warn!(
-                    target: LOG_TARGET,
-                    "  Status:          API key not yet active, attempting registration with retry"
-                );
+            Err(e)
+                if Self::is_registered_daemon_auth_error(&e)
+                    || Self::is_unregistered_auth_error(&e) =>
+            {
+                return Ok(StartupOutcome::AuthFailed(e));
             }
             Err(e) => {
-                tracing::error!(target: LOG_TARGET, "  Status:          Failed to connect: {}", e);
-                return Err(e);
+                return Ok(StartupOutcome::ConnectionFailed(e));
             }
         }
 
@@ -334,13 +426,16 @@ impl DaemonRuntimeService {
                 target: LOG_TARGET,
                 "  Status:          ServerPoll mode - skipping registration (daemon must be provisioned via server)"
             );
-            return Ok(());
+            return Ok(StartupOutcome::Ok);
         }
 
-        self.register_with_server(daemon_id, network_id, has_docker_client)
-            .await?;
-
-        Ok(())
+        match self
+            .register_with_server(daemon_id, network_id, has_docker_client)
+            .await
+        {
+            Ok(()) => Ok(StartupOutcome::Ok),
+            Err(e) => Ok(StartupOutcome::ConnectionFailed(e)),
+        }
     }
 
     // Helper function to get daemon url if override is being used, or fallback to default ip + port if not
@@ -360,8 +455,6 @@ impl DaemonRuntimeService {
     }
 
     /// Maximum number of registration retries (about 5 minutes with backoff)
-    const MAX_REGISTRATION_RETRIES: usize = 30;
-
     pub async fn register_with_server(
         &self,
         daemon_id: Uuid,
@@ -374,6 +467,8 @@ impl DaemonRuntimeService {
         let version = env!("CARGO_PKG_VERSION");
 
         let user_id = config.get_user_id().await?.unwrap_or(Uuid::nil());
+
+        let credential_ids = config.get_credential_ids().await?;
 
         let registration_request = DaemonRegistrationRequest {
             daemon_id,
@@ -389,6 +484,7 @@ impl DaemonRuntimeService {
             },
             user_id,
             version: Some(version.to_string()),
+            credential_ids,
         };
 
         tracing::info!(target: LOG_TARGET, "Registering with server:");
@@ -401,35 +497,14 @@ impl DaemonRuntimeService {
             if has_docker_socket { "yes" } else { "no" }
         );
 
-        // Use backon for retry logic - only retry on "key not yet active" errors
-        let result = (|| async {
-            self.api_client
-                .post::<_, DaemonRegistrationResponse>(
-                    "/api/daemons/register",
-                    &registration_request,
-                    "Registration failed",
-                )
-                .await
-        })
-        .retry(
-            ExponentialBuilder::default()
-                .with_min_delay(Duration::from_secs(10))
-                .with_max_delay(Duration::from_secs(30))
-                .with_max_times(Self::MAX_REGISTRATION_RETRIES),
-        )
-        .when(|e| {
-            // Only retry on "key not yet active" errors
-            e.downcast_ref::<ApiErrorResponse>()
-                .is_some_and(|r| r.matches_error(&ApiError::daemon_key_not_yet_active()))
-        })
-        .notify(|_, dur| {
-            tracing::warn!(
-                target: LOG_TARGET,
-                "API key not yet active. Retrying in {:?}...",
-                dur
+        let result = self
+            .api_client
+            .post::<_, DaemonRegistrationResponse>(
+                "/api/daemons/register",
+                &registration_request,
+                "Registration failed",
             )
-        })
-        .await;
+            .await;
 
         match result {
             Ok(response) => {
@@ -452,13 +527,27 @@ impl DaemonRuntimeService {
     ) -> Result<()> {
         // Check for API error responses first
         if let Some(api_err) = e.downcast_ref::<ApiErrorResponse>() {
-            if api_err.matches_error(&ApiError::daemon_key_not_yet_active()) {
+            if api_err.matches_error(&ApiError::daemon_version_too_old("", "")) {
                 tracing::error!(
                     target: LOG_TARGET,
                     daemon_id = %daemon_id,
-                    "API key validation timed out. Please verify the API key is correct and restart the daemon."
+                    "Daemon version is older than the server version. \
+                     Please update the daemon binary to match the server. \
+                     Download the latest version from the Scanopy UI under Discover > Daemons."
                 );
-                return Err(anyhow::anyhow!("API key validation timed out"));
+                return Err(anyhow::anyhow!(
+                    "Daemon version is older than server — update required"
+                ));
+            }
+            if api_err.matches_error(&ApiError::daemon_key_not_yet_active()) {
+                let server_url = config.get_server_url().await.unwrap_or_default();
+                tracing::error!(
+                    target: LOG_TARGET,
+                    daemon_id = %daemon_id,
+                    "API key rejected by server at {}. Re-run the install command from the Scanopy UI to generate a new key.",
+                    server_url
+                );
+                return Err(anyhow::anyhow!("API key rejected by server"));
             }
             if api_err.matches_error(&ApiError::demo_mode_blocked()) {
                 tracing::error!(

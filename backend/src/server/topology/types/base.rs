@@ -1,8 +1,8 @@
 use crate::server::bindings::r#impl::base::Binding;
-use crate::server::groups::r#impl::base::Group;
+use crate::server::dependencies::r#impl::base::Dependency;
 use crate::server::hosts::r#impl::base::Host;
-use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
+use crate::server::ip_addresses::r#impl::base::IPAddress;
 use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
 use crate::server::services::r#impl::categories::ServiceCategory;
@@ -10,11 +10,17 @@ use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::tags::r#impl::base::Tag;
 use crate::server::topology::types::edges::{Edge, EdgeHandle, EdgeTypeDiscriminants};
+use crate::server::topology::types::grouping::{
+    ContainerRule, ElementRule, GraphRule, IdentifiedRule,
+};
 use crate::server::topology::types::layout::{Ixy, Uxy};
 use crate::server::topology::types::nodes::Node;
+use crate::server::topology::types::views::{TopologyView, TopologyViewSupport};
+use crate::server::vlans::r#impl::base::Vlan;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, hash::Hash};
+use std::{collections::HashMap, fmt::Display};
+use strum::IntoEnumIterator;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -23,17 +29,16 @@ pub struct SetEntitiesParams {
     pub hosts: Vec<Host>,
     pub services: Vec<Service>,
     pub subnets: Vec<Subnet>,
-    pub groups: Vec<Group>,
+    pub dependencies: Vec<Dependency>,
     pub ports: Vec<Port>,
     pub bindings: Vec<Binding>,
+    pub ip_addresses: Vec<IPAddress>,
     pub interfaces: Vec<Interface>,
-    pub if_entries: Vec<IfEntry>,
     pub entity_tags: Vec<Tag>,
+    pub vlans: Vec<Vlan>,
 }
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, ToSchema, Validate)]
 pub struct Topology {
     #[serde(default)]
     #[schema(read_only, required)]
@@ -63,14 +68,14 @@ impl Topology {
     }
 
     pub fn clear_stale(&mut self) {
-        self.base.removed_groups = vec![];
+        self.base.removed_dependencies = vec![];
         self.base.removed_hosts = vec![];
-        self.base.removed_interfaces = vec![];
+        self.base.removed_ip_addresses = vec![];
         self.base.removed_services = vec![];
         self.base.removed_subnets = vec![];
         self.base.removed_bindings = vec![];
         self.base.removed_ports = vec![];
-        self.base.removed_if_entries = vec![];
+        self.base.removed_interfaces = vec![];
         self.base.is_stale = false;
         self.base.last_refreshed = Utc::now()
     }
@@ -79,23 +84,50 @@ impl Topology {
         self.base.hosts = params.hosts;
         self.base.services = params.services;
         self.base.subnets = params.subnets;
-        self.base.groups = params.groups;
+        self.base.dependencies = params.dependencies;
         self.base.ports = params.ports;
         self.base.bindings = params.bindings;
+        self.base.ip_addresses = params.ip_addresses;
         self.base.interfaces = params.interfaces;
-        self.base.if_entries = params.if_entries;
         self.base.entity_tags = params.entity_tags;
+        self.base.vlans = params.vlans;
     }
 
     pub fn set_graph(&mut self, nodes: Vec<Node>, edges: Vec<Edge>) {
         self.base.nodes = nodes;
         self.base.edges = edges;
     }
+
+    /// Resolve the available views for a share, filtering by data availability.
+    /// If `configured` is None or empty, all data-supported views are returned.
+    /// If `configured` is Some(non-empty list), returns the intersection preserving list order.
+    ///
+    /// `support` must be computed from raw entity data (see
+    /// `TopologyService::get_view_support`) — NOT from this topology's
+    /// persisted graph, because the graph is rebuilt per-view and its
+    /// edges/entity_tags reflect only the most recently rendered view.
+    pub fn resolve_available_views(
+        &self,
+        configured: &Option<Vec<TopologyView>>,
+        support: &TopologyViewSupport,
+    ) -> Vec<TopologyView> {
+        let data_supported: Vec<TopologyView> = TopologyView::iter()
+            .filter(|v| v.is_supported(support))
+            .collect();
+
+        match configured {
+            None => data_supported,
+            Some(list) if list.is_empty() => data_supported,
+            Some(list) => list
+                .iter()
+                .filter(|v| data_supported.contains(v))
+                .cloned()
+                .collect(),
+        }
+    }
 }
 
-#[derive(
-    Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash, Default, ToSchema,
-)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Default, ToSchema)]
 pub struct TopologyBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -112,16 +144,20 @@ pub struct TopologyBase {
 
     // Entities
     pub hosts: Vec<Host>,
-    pub interfaces: Vec<Interface>,
+    pub ip_addresses: Vec<IPAddress>,
     pub ports: Vec<Port>,
     pub bindings: Vec<Binding>,
     pub subnets: Vec<Subnet>,
     pub services: Vec<Service>,
-    pub groups: Vec<Group>,
-    pub if_entries: Vec<IfEntry>,
+    pub dependencies: Vec<Dependency>,
+    pub interfaces: Vec<Interface>,
 
     // Tag definitions for filtering
     pub entity_tags: Vec<Tag>,
+
+    // VLAN definitions for name resolution
+    #[serde(default)]
+    pub vlans: Vec<Vlan>,
 
     // Build state
     pub is_stale: bool,
@@ -131,13 +167,13 @@ pub struct TopologyBase {
     pub locked_by: Option<Uuid>,
 
     pub removed_hosts: Vec<Uuid>,
-    pub removed_interfaces: Vec<Uuid>,
+    pub removed_ip_addresses: Vec<Uuid>,
     pub removed_subnets: Vec<Uuid>,
     pub removed_services: Vec<Uuid>,
-    pub removed_groups: Vec<Uuid>,
+    pub removed_dependencies: Vec<Uuid>,
     pub removed_ports: Vec<Uuid>,
     pub removed_bindings: Vec<Uuid>,
-    pub removed_if_entries: Vec<Uuid>,
+    pub removed_interfaces: Vec<Uuid>,
 }
 
 impl TopologyBase {
@@ -150,28 +186,29 @@ impl TopologyBase {
             edges: vec![],
             hosts: vec![],
             ports: vec![],
-            interfaces: vec![],
+            ip_addresses: vec![],
             subnets: vec![],
             bindings: vec![],
             services: vec![],
-            groups: vec![],
-            if_entries: vec![],
+            dependencies: vec![],
+            interfaces: vec![],
             is_stale: true,
             last_refreshed: Utc::now(),
             is_locked: false,
             locked_at: None,
             locked_by: None,
             removed_hosts: vec![],
-            removed_interfaces: vec![],
+            removed_ip_addresses: vec![],
             removed_subnets: vec![],
             removed_services: vec![],
-            removed_groups: vec![],
+            removed_dependencies: vec![],
             removed_bindings: vec![],
             removed_ports: vec![],
-            removed_if_entries: vec![],
+            removed_interfaces: vec![],
             parent_id: None,
             tags: vec![],
             entity_tags: vec![],
+            vlans: vec![],
         }
     }
 }
@@ -196,7 +233,7 @@ impl Display for Topology {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, Hash, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, ToSchema)]
 pub struct TopologyOptions {
     pub local: TopologyLocalOptions,
     pub request: TopologyRequestOptions,
@@ -218,14 +255,14 @@ pub struct TopologyTagFilter {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]
 pub struct TopologyLocalOptions {
-    pub left_zone_title: String,
     pub no_fade_edges: bool,
-    pub hide_resize_handles: bool,
     pub hide_edge_types: Vec<EdgeTypeDiscriminants>,
     #[serde(default)]
     pub tag_filter: TopologyTagFilter,
     #[serde(default = "default_true")]
     pub show_minimap: bool,
+    #[serde(default = "default_true")]
+    pub bundle_edges: bool,
 }
 
 fn default_true() -> bool {
@@ -235,35 +272,87 @@ fn default_true() -> bool {
 impl Default for TopologyLocalOptions {
     fn default() -> Self {
         Self {
-            left_zone_title: "Infrastructure".to_string(),
             no_fade_edges: false,
-            hide_resize_handles: false,
-            hide_edge_types: vec![EdgeTypeDiscriminants::HostVirtualization],
+            hide_edge_types: vec![EdgeTypeDiscriminants::Hypervisor],
             tag_filter: TopologyTagFilter::default(),
             show_minimap: true,
+            bundle_edges: true,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, ToSchema)]
 pub struct TopologyRequestOptions {
-    pub group_docker_bridges_by_host: bool,
-    pub hide_vm_title_on_docker_container: bool,
     pub hide_ports: bool,
-    pub left_zone_service_categories: Vec<ServiceCategory>,
-    pub hide_service_categories: Vec<ServiceCategory>,
-    pub show_gateway_in_left_zone: bool,
+    #[serde(default = "default_hide_service_categories")]
+    pub hide_service_categories: HashMap<TopologyView, Vec<ServiceCategory>>,
+    #[serde(default = "default_container_rules")]
+    pub container_rules: HashMap<TopologyView, Vec<IdentifiedRule<ContainerRule>>>,
+    #[serde(default = "default_element_rules")]
+    pub element_rules: Vec<IdentifiedRule<ElementRule>>,
+    #[serde(default)]
+    pub view: TopologyView,
+}
+
+fn default_hide_service_categories() -> HashMap<TopologyView, Vec<ServiceCategory>> {
+    TopologyView::iter()
+        .map(|p| (p, vec![ServiceCategory::OpenPorts]))
+        .collect()
+}
+
+fn default_container_rules() -> HashMap<TopologyView, Vec<IdentifiedRule<ContainerRule>>> {
+    use ContainerRule::*;
+
+    // Build from applicable_views: for each rule type, add it to every view it applies to
+    let all_rules: Vec<IdentifiedRule<ContainerRule>> = vec![
+        IdentifiedRule::new(BySubnet),
+        IdentifiedRule::new(MergeDockerBridges),
+        IdentifiedRule::new(ByApplication { tag_ids: vec![] }),
+        IdentifiedRule::new(ByHost),
+    ];
+
+    let mut map: HashMap<TopologyView, Vec<IdentifiedRule<ContainerRule>>> =
+        TopologyView::iter().map(|p| (p, vec![])).collect();
+
+    for gr in all_rules {
+        for &view in gr.rule.applicable_views() {
+            map.entry(view).or_default().push(gr.clone());
+        }
+    }
+
+    map
+}
+
+fn default_element_rules() -> Vec<IdentifiedRule<ElementRule>> {
+    vec![
+        IdentifiedRule::new(ElementRule::ByTrunkPort),
+        IdentifiedRule::new(ElementRule::ByVLAN),
+        IdentifiedRule::new(ElementRule::ByPortOpStatus),
+        IdentifiedRule::new(ElementRule::ByServiceCategory {
+            categories: ServiceCategory::iter()
+                .filter(|c| c.application_relevant_use_cases().is_empty())
+                .collect(),
+            title: Some("Infrastructure".into()),
+            is_infra_rule: true,
+        }),
+        IdentifiedRule::new(ElementRule::ByTag {
+            tag_ids: vec![],
+            title: None,
+        }),
+        IdentifiedRule::new(ElementRule::ByHypervisor),
+        IdentifiedRule::new(ElementRule::ByContainerRuntime),
+        IdentifiedRule::new(ElementRule::ByStack),
+    ]
 }
 
 impl Default for TopologyRequestOptions {
     fn default() -> Self {
         Self {
-            group_docker_bridges_by_host: true,
-            hide_vm_title_on_docker_container: false,
             hide_ports: false,
-            left_zone_service_categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
-            hide_service_categories: vec![ServiceCategory::OpenPorts],
-            show_gateway_in_left_zone: true,
+            hide_service_categories: default_hide_service_categories(),
+            container_rules: default_container_rules(),
+            element_rules: default_element_rules(),
+            view: TopologyView::default(),
         }
     }
 }
@@ -271,7 +360,7 @@ impl Default for TopologyRequestOptions {
 /// Lightweight request type for topology rebuild/refresh operations.
 ///
 /// This type only includes the fields actually needed by the server - entity data
-/// (hosts, interfaces, services, etc.) is fetched fresh from the database.
+/// (hosts, ip_addresses, services, etc.) is fetched fresh from the database.
 /// Using this instead of the full Topology dramatically reduces payload size
 /// for large networks (from MBs to KBs), fixing HTTP 413 errors.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -340,7 +429,7 @@ pub struct TopologyNodeResizeUpdate {
 /// Lightweight request type for updating topology metadata.
 ///
 /// Used for editing topology name/parent - instead of sending the entire topology
-/// (which includes all hosts, interfaces, services, etc.), only sends the metadata fields.
+/// (which includes all hosts, ip_addresses, services, etc.), only sends the metadata fields.
 /// Fixes HTTP 413 errors on metadata edit operations.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TopologyMetadataUpdate {

@@ -25,6 +25,25 @@ impl Default for DaemonVersionPolicy {
     }
 }
 
+/// Minimum daemon version required for unified discovery support.
+pub fn minimum_unified_discovery() -> Version {
+    Version::new(0, 15, 0)
+}
+
+/// Returns true if the daemon version supports unified discovery (>= 0.15.0).
+pub fn supports_unified_discovery(version: Option<&Version>) -> bool {
+    version.is_some_and(|v| v >= &minimum_unified_discovery())
+}
+
+/// Returns true if the daemon predates the Interface → IPAddress binding type rename (< 0.16.0).
+/// These daemons expect `"type": "Interface"` / `"interface_id"` in binding responses.
+/// Legacy cleanup: remove once minimum_supported >= 0.16.0
+pub fn pre_interface_to_ip_address_rename(version: Option<&str>) -> bool {
+    version
+        .and_then(|v| Version::parse(v).ok())
+        .is_none_or(|v| v < Version::new(0, 16, 0))
+}
+
 impl DaemonVersionPolicy {
     pub fn evaluate(&self, version: Option<&Version>) -> DaemonVersionStatus {
         match version {
@@ -46,10 +65,12 @@ impl DaemonVersionPolicy {
                 sunset_date: None,
                 severity: DeprecationSeverity::Warning,
             }],
+            supports_unified_discovery: false,
         }
     }
 
     fn evaluate_known(&self, v: &Version) -> DaemonVersionStatus {
+        let supports_unified = supports_unified_discovery(Some(v));
         if v < &self.minimum_supported {
             DaemonVersionStatus {
                 version: Some(v.to_string()),
@@ -62,6 +83,7 @@ impl DaemonVersionPolicy {
                     sunset_date: Some("2025-02-01".into()),
                     severity: DeprecationSeverity::Critical,
                 }],
+                supports_unified_discovery: supports_unified,
             }
         } else if v < &self.recommended {
             DaemonVersionStatus {
@@ -75,12 +97,14 @@ impl DaemonVersionPolicy {
                     sunset_date: None,
                     severity: DeprecationSeverity::Warning,
                 }],
+                supports_unified_discovery: supports_unified,
             }
         } else {
             DaemonVersionStatus {
                 version: Some(v.to_string()),
                 status: VersionHealthStatus::Current,
                 warnings: vec![],
+                supports_unified_discovery: supports_unified,
             }
         }
     }
@@ -111,6 +135,8 @@ pub struct DaemonVersionStatus {
     pub status: VersionHealthStatus,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub warnings: Vec<DeprecationWarning>,
+    #[serde(default)]
+    pub supports_unified_discovery: bool,
 }
 
 /// Health status for daemon versions
@@ -143,6 +169,7 @@ mod tests {
         assert!(status.version.is_none());
         assert_eq!(status.warnings.len(), 1);
         assert_eq!(status.warnings[0].severity, DeprecationSeverity::Warning);
+        assert!(!status.supports_unified_discovery);
     }
 
     #[test]
@@ -156,6 +183,7 @@ mod tests {
         assert_eq!(status.warnings.len(), 1);
         assert_eq!(status.warnings[0].severity, DeprecationSeverity::Critical);
         assert!(status.warnings[0].sunset_date.is_some());
+        assert!(!status.supports_unified_discovery);
     }
 
     #[test]
@@ -168,6 +196,7 @@ mod tests {
         assert_eq!(status.version, Some("0.12.5".to_string()));
         assert_eq!(status.warnings.len(), 1);
         assert_eq!(status.warnings[0].severity, DeprecationSeverity::Warning);
+        assert!(!status.supports_unified_discovery);
     }
 
     #[test]
@@ -179,6 +208,7 @@ mod tests {
         assert_eq!(status.status, VersionHealthStatus::Current);
         assert_eq!(status.version, Some("0.12.8".to_string()));
         assert!(status.warnings.is_empty());
+        assert!(!status.supports_unified_discovery);
     }
 
     #[test]
@@ -189,5 +219,23 @@ mod tests {
 
         assert_eq!(status.status, VersionHealthStatus::Current);
         assert!(status.warnings.is_empty());
+        assert!(!status.supports_unified_discovery);
+    }
+
+    #[test]
+    fn test_supports_unified_discovery() {
+        assert!(!supports_unified_discovery(None));
+        assert!(!supports_unified_discovery(Some(&Version::new(0, 14, 0))));
+        assert!(supports_unified_discovery(Some(&Version::new(0, 15, 0))));
+        assert!(supports_unified_discovery(Some(&Version::new(0, 16, 0))));
+        assert!(supports_unified_discovery(Some(&Version::new(1, 0, 0))));
+    }
+
+    #[test]
+    fn test_version_status_supports_unified_at_015() {
+        let policy = test_policy();
+        let v015 = Version::new(0, 15, 0);
+        let status = policy.evaluate(Some(&v015));
+        assert!(status.supports_unified_discovery);
     }
 }

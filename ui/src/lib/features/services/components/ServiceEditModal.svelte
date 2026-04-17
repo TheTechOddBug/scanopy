@@ -9,28 +9,34 @@
 	import type { Service } from '../types/base';
 	import ServiceConfigPanel from '$lib/features/hosts/components/HostEditModal/Services/ServiceConfigPanel.svelte';
 	import type { Host, HostFormData } from '$lib/features/hosts/types/base';
-	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { usePortsQuery } from '$lib/features/ports/queries';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
-	import { common_cancel, common_updating, services_updateService } from '$lib/paraglide/messages';
+	import {
+		common_cancel,
+		common_delete,
+		common_deleting,
+		common_updating,
+		services_updateService
+	} from '$lib/paraglide/messages';
 
 	// TanStack Query hooks to get child entities for hydrating host form data
-	const interfacesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const portsQuery = usePortsQuery();
 	const servicesQuery = useServicesCacheQuery();
-	let interfacesData = $derived(interfacesQuery.data ?? []);
+	let ipAddressesData = $derived(ipAddressesQuery.data ?? []);
 	let portsData = $derived(portsQuery.data ?? []);
 	let servicesData = $derived(servicesQuery.data ?? []);
 
 	// Hydrate host to form data for ServiceConfigPanel
 	function hydrateHostToFormData(host: Host): HostFormData {
-		const hostInterfaces = interfacesData.filter((i) => i.host_id === host.id);
+		const hostInterfaces = ipAddressesData.filter((i) => i.host_id === host.id);
 		const hostPorts = portsData.filter((p) => p.host_id === host.id);
 		const hostServices = servicesData.filter((s) => s.host_id === host.id);
 
 		return {
 			...host,
-			interfaces: hostInterfaces,
+			ip_addresses: hostInterfaces,
 			ports: hostPorts,
 			services: hostServices,
 			// SNMP fields - spread from host, default to null if not present
@@ -40,8 +46,8 @@
 			sys_contact: host.sys_contact ?? null,
 			management_url: host.management_url ?? null,
 			chassis_id: host.chassis_id ?? null,
-			snmp_credential_id: host.snmp_credential_id ?? null,
-			if_entries: [] // IfEntries not available in this context
+			credential_assignments: host.credential_assignments ?? [],
+			interfaces: [] // Interfaces not available in this context
 		};
 	}
 
@@ -51,12 +57,22 @@
 		isOpen?: boolean;
 		onUpdate: (id: string, data: Service) => Promise<void> | void;
 		onClose: () => void;
+		onDelete?: ((id: string) => Promise<void> | void) | null;
 		name?: string;
 	}
 
-	let { service, host, isOpen = false, onUpdate, onClose, name = undefined }: Props = $props();
+	let {
+		service,
+		host,
+		isOpen = false,
+		onUpdate,
+		onClose,
+		onDelete = null,
+		name = undefined
+	}: Props = $props();
 
 	let loading = $state(false);
+	let deleting = $state(false);
 	let formData = $state(untrack(() => service));
 
 	// Hydrate host to form data for ServiceConfigPanel
@@ -84,10 +100,13 @@
 		const isValid = await validateForm(form);
 		if (!isValid) return;
 
-		// Clean up the data before sending
+		// Read name from form state (authoritative source for user input)
+		// rather than formData, which may be stale due to createForm's
+		// reactive callback re-evaluating on formData changes
+		const formName = form.state.values.services?.[0]?.name;
 		const serviceData: Service = {
 			...formData,
-			name: formData.name.trim()
+			name: (formName ?? formData.name).trim()
 		};
 
 		loading = true;
@@ -96,6 +115,17 @@
 			onClose();
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function handleDelete() {
+		if (onDelete && service) {
+			deleting = true;
+			try {
+				await onDelete(service.id);
+			} finally {
+				deleting = false;
+			}
 		}
 	}
 
@@ -138,11 +168,32 @@
 
 	{#snippet footer()}
 		<div class="modal-footer">
-			<div class="flex items-center justify-end gap-3">
-				<button type="button" onclick={onClose} class="btn-secondary"> {common_cancel()} </button>
-				<button type="button" onclick={handleSubmit} disabled={loading} class="btn-primary">
-					{loading ? common_updating() : services_updateService()}
-				</button>
+			<div class="flex items-center justify-between">
+				<div>
+					{#if onDelete}
+						<button
+							type="button"
+							disabled={deleting || loading}
+							onclick={handleDelete}
+							class="btn-danger"
+						>
+							{deleting ? common_deleting() : common_delete()}
+						</button>
+					{/if}
+				</div>
+				<div class="flex items-center gap-3">
+					<button type="button" onclick={onClose} class="btn-secondary">
+						{common_cancel()}
+					</button>
+					<button
+						type="button"
+						onclick={handleSubmit}
+						disabled={loading || deleting}
+						class="btn-primary"
+					>
+						{loading ? common_updating() : services_updateService()}
+					</button>
+				</div>
 			</div>
 		</div>
 	{/snippet}

@@ -7,6 +7,7 @@ use crate::server::shared::storage::traits::Storable;
 use crate::server::shared::types::api::deserialize_empty_string_as_none;
 use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
 use crate::server::subnets::r#impl::types::SubnetType;
+use crate::server::subnets::r#impl::virtualization::SubnetVirtualization;
 use chrono::{DateTime, Utc};
 use cidr::{IpCidr, Ipv4Cidr};
 use pnet::ipnetwork::IpNetwork;
@@ -17,7 +18,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::server::{interfaces::r#impl::base::Interface, services::r#impl::base::Service};
+use crate::server::{ip_addresses::r#impl::base::IPAddress, services::r#impl::base::Service};
 
 fn deserialize_cidr<'de, D>(deserializer: D) -> Result<IpCidr, D::Error>
 where
@@ -49,6 +50,10 @@ pub struct SubnetBase {
     #[validate(length(min = 0, max = 500))]
     pub description: Option<String>,
     pub subnet_type: SubnetType,
+    /// Virtualization provider that owns this subnet.
+    /// Docker bridge subnets use this for per-host dedup (same CIDR on different hosts = distinct).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub virtualization: Option<SubnetVirtualization>,
     #[serde(default)]
     #[schema(required)]
     /// Will be automatically set to Manual for creation through API
@@ -66,6 +71,7 @@ impl Default for SubnetBase {
             network_id: Uuid::new_v4(),
             description: None,
             subnet_type: SubnetType::Unknown,
+            virtualization: None,
             source: EntitySource::Manual,
             tags: Vec::new(),
         }
@@ -105,11 +111,17 @@ impl Subnet {
         discovery_type: &DiscoveryType,
         network_id: Uuid,
     ) -> Option<Self> {
-        let subnet_type = SubnetType::from_interface_name(&interface_name);
+        let mut subnet_type = SubnetType::from_interface_name(&interface_name);
 
         match ip_network {
             IpNetwork::V6(_) => None,
             IpNetwork::V4(ipv4_network) => {
+                // Non-loopback CIDRs on loopback ip_addresses (e.g. 10.99.0.0/24 aliased
+                // on lo0) are real networks, not loopback
+                if subnet_type.is_loopback() && ipv4_network.ip().octets()[0] != 127 {
+                    subnet_type = SubnetType::Unknown;
+                }
+
                 let (network_addr, prefix_len) = match (&subnet_type, ipv4_network.prefix()) {
                     // VPN tunnels with /32 -> expand to /24
                     (SubnetType::VpnTunnel, 32) => {
@@ -133,6 +145,7 @@ impl Subnet {
                     tags: Vec::new(),
                     name: cidr.to_string(),
                     subnet_type,
+                    virtualization: None,
                     source: EntitySource::Discovery {
                         metadata: vec![DiscoveryMetadata::new(discovery_type.clone(), daemon_id)],
                     },
@@ -143,17 +156,17 @@ impl Subnet {
 
     pub fn has_interface_with_service(
         &self,
-        host_interfaces: &[&Interface],
+        host_interfaces: &[&IPAddress],
         service: &Service,
     ) -> bool {
         service.base.bindings.iter().any(|binding| {
-            host_interfaces.iter().any(|interface| {
-                let interface_match = match binding.interface_id() {
-                    Some(id) => interface.id == id,
-                    None => true, // Listens on all interfaces
+            host_interfaces.iter().any(|ip_address| {
+                let interface_match = match binding.ip_address_id() {
+                    Some(id) => ip_address.id == id,
+                    None => true, // Listens on all ip_addresses
                 };
 
-                interface_match && interface.base.subnet_id == self.id
+                interface_match && ip_address.base.subnet_id == self.id
             })
         })
     }
@@ -188,5 +201,49 @@ impl Display for Subnet {
 impl ChangeTriggersTopologyStaleness<Subnet> for Subnet {
     fn triggers_staleness(&self, _other: Option<Subnet>) -> bool {
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::discovery::r#impl::types::DiscoveryType;
+    use pnet::ipnetwork::IpNetwork;
+    use std::str::FromStr;
+
+    fn test_discovery_type() -> DiscoveryType {
+        DiscoveryType::Unified {
+            host_id: Uuid::nil(),
+            subnet_ids: None,
+            host_naming_fallback:
+                crate::server::discovery::r#impl::types::HostNamingFallback::default(),
+            scan_settings: crate::server::discovery::r#impl::scan_settings::ScanSettings::default(),
+        }
+    }
+
+    #[test]
+    fn from_discovery_accepts_valid_prefix() {
+        let ip = IpNetwork::from_str("192.168.1.0/24").unwrap();
+        let result = Subnet::from_discovery(
+            "eth0".to_string(),
+            &ip,
+            Uuid::nil(),
+            &test_discovery_type(),
+            Uuid::nil(),
+        );
+        assert!(result.is_some(), "/24 prefix should be accepted");
+    }
+
+    #[test]
+    fn from_discovery_accepts_prefix_2() {
+        let ip = IpNetwork::from_str("10.0.0.0/2").unwrap();
+        let result = Subnet::from_discovery(
+            "eth0".to_string(),
+            &ip,
+            Uuid::nil(),
+            &test_discovery_type(),
+            Uuid::nil(),
+        );
+        assert!(result.is_some(), "/2 prefix should be accepted");
     }
 }

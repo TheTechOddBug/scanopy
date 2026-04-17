@@ -32,8 +32,16 @@ export function tooltip(node: HTMLElement) {
 		document.body.appendChild(tip);
 
 		const rect = node.getBoundingClientRect();
+		const tipHeight = tip.offsetHeight;
+
+		// Auto-detect: if tooltip would overflow above viewport, position below instead
+		if (rect.top - tipHeight - 6 < 0) {
+			tip.style.transform = 'translateX(-50%)';
+			tip.style.top = `${rect.bottom + 6}px`;
+		} else {
+			tip.style.top = `${rect.top - 6}px`;
+		}
 		tip.style.left = `${rect.left + rect.width / 2}px`;
-		tip.style.top = `${rect.top - 6}px`;
 	}
 
 	function hide() {

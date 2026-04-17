@@ -8,12 +8,13 @@ use validator::Validate;
 
 use crate::server::{
     bindings::r#impl::base::{Binding, BindingBase, BindingType},
+    credentials::r#impl::types::CredentialAssignment,
     hosts::r#impl::{
         base::{Host, HostBase},
         virtualization::HostVirtualization,
     },
-    if_entries::r#impl::base::{IfAdminStatus, IfEntry, IfEntryBase, IfOperStatus},
-    interfaces::r#impl::base::{Interface, InterfaceBase},
+    interfaces::r#impl::base::{IfAdminStatus, IfOperStatus, Interface, InterfaceBase},
+    ip_addresses::r#impl::base::{IPAddress, IPAddressBase},
     ports::r#impl::base::{Port, PortBase, PortConfig, PortType, TransportProtocol},
     services::r#impl::{
         base::{Service, ServiceBase},
@@ -47,15 +48,112 @@ pub enum ConflictBehavior {
 /// Request type for daemon discovery - accepts full entities with IDs.
 /// Used internally by daemons for host creation/upsert, NOT the external API.
 /// This supports the discovery workflow where daemons manage entity IDs.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+///
+/// ## Backwards compatibility (daemons < v0.16.0)
+///
+/// Pre-v0.16.0 daemons send the old field layout:
+///   - `interfaces` → IPAddress data (now `ip_addresses`)
+///   - `if_entries` → SNMP Interface data (now `interfaces`)
+///
+/// The custom deserializer detects the old layout (missing `ip_addresses` field)
+/// and remaps fields automatically. This can be removed once all daemons are ≥ v0.16.0.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(into = "DiscoveryHostRequestWire")]
 pub struct DiscoveryHostRequest {
     pub host: Host,
-    pub interfaces: Vec<Interface>,
+    pub ip_addresses: Vec<IPAddress>,
     pub ports: Vec<Port>,
     pub services: Vec<Service>,
-    /// SNMP interface entries (ifTable data) - optional, populated when SNMP is enabled
+    /// SNMP interface entries (ifTable data) - optional, populated when SNMP is enabled.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub if_entries: Vec<crate::server::if_entries::r#impl::base::IfEntry>,
+    pub interfaces: Vec<crate::server::interfaces::r#impl::base::Interface>,
+    /// Integration-derived subnets (e.g., Docker bridge networks) — created during
+    /// create_with_children after service dedup so virtualization.service_id is correct.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subnets: Vec<crate::server::subnets::r#impl::base::Subnet>,
+}
+
+/// Wire format for DiscoveryHostRequest — handles both old and new field layouts.
+/// Backwards compat for daemons < v0.16.0 that send `interfaces` for IPAddress data
+/// and `if_entries` for SNMP Interface data.
+#[derive(Deserialize, Serialize)]
+struct DiscoveryHostRequestWire {
+    host: Host,
+    /// New field name (v0.16.0+). Missing in old payloads.
+    #[serde(default)]
+    ip_addresses: Option<Vec<IPAddress>>,
+    ports: Vec<Port>,
+    services: Vec<Service>,
+    /// In new payloads: SNMP Interface data.
+    /// In old payloads (< v0.16.0): IPAddress data (remapped by From impl).
+    #[serde(default)]
+    interfaces: Vec<serde_json::Value>,
+    /// Old field name for SNMP Interface data (< v0.16.0). Absent in new payloads.
+    #[serde(default)]
+    if_entries: Vec<crate::server::interfaces::r#impl::base::Interface>,
+    #[serde(default)]
+    subnets: Vec<crate::server::subnets::r#impl::base::Subnet>,
+}
+
+impl From<DiscoveryHostRequest> for DiscoveryHostRequestWire {
+    fn from(req: DiscoveryHostRequest) -> Self {
+        Self {
+            host: req.host,
+            ip_addresses: Some(req.ip_addresses),
+            ports: req.ports,
+            services: req.services,
+            interfaces: req
+                .interfaces
+                .into_iter()
+                .map(|i| serde_json::to_value(i).unwrap())
+                .collect(),
+            if_entries: vec![],
+            subnets: req.subnets,
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for DiscoveryHostRequest {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let wire = DiscoveryHostRequestWire::deserialize(deserializer)?;
+
+        if let Some(ip_addresses) = wire.ip_addresses {
+            // New format (v0.16.0+): ip_addresses present, interfaces = SNMP data
+            let interfaces: Vec<crate::server::interfaces::r#impl::base::Interface> = wire
+                .interfaces
+                .into_iter()
+                .map(|v| serde_json::from_value(v).map_err(serde::de::Error::custom))
+                .collect::<Result<_, _>>()?;
+
+            Ok(DiscoveryHostRequest {
+                host: wire.host,
+                ip_addresses,
+                ports: wire.ports,
+                services: wire.services,
+                interfaces,
+                subnets: wire.subnets,
+            })
+        } else {
+            // Old format (< v0.16.0): interfaces = IPAddress data, if_entries = SNMP data
+            let ip_addresses: Vec<IPAddress> = wire
+                .interfaces
+                .into_iter()
+                .map(|v| serde_json::from_value(v).map_err(serde::de::Error::custom))
+                .collect::<Result<_, _>>()?;
+
+            Ok(DiscoveryHostRequest {
+                host: wire.host,
+                ip_addresses,
+                ports: wire.ports,
+                services: wire.services,
+                interfaces: wire.if_entries,
+                subnets: wire.subnets,
+            })
+        }
+    }
 }
 
 // =============================================================================
@@ -66,7 +164,7 @@ pub struct DiscoveryHostRequest {
 /// Used in both CreateHostRequest and UpdateHostRequest.
 /// Client must provide a UUID for the interface.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct InterfaceInput {
+pub struct IPAddressInput {
     /// Client-provided UUID for this interface
     pub id: Uuid,
     pub subnet_id: Uuid,
@@ -77,22 +175,22 @@ pub struct InterfaceInput {
     pub name: Option<String>,
     /// Position in the host's interface list (for ordering).
     /// If omitted on create: appends to end of list.
-    /// If omitted on update: existing interfaces keep their positions; new interfaces append.
-    /// Must be all specified or all omitted across all interfaces in the request.
+    /// If omitted on update: existing ip_addresses keep their positions; new ip_addresses append.
+    /// Must be all specified or all omitted across all ip_addresses in the request.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position: Option<i32>,
 }
 
-impl InterfaceInput {
-    /// Convert to Interface entity with the given host_id and network_id.
+impl IPAddressInput {
+    /// Convert to IPAddress entity with the given host_id and network_id.
     /// Position must be resolved before calling this (via `resolve_and_validate_input_positions`).
-    pub fn into_interface(self, host_id: Uuid, network_id: Uuid) -> Interface {
+    pub fn into_ip_address(self, host_id: Uuid, network_id: Uuid) -> IPAddress {
         let now = chrono::Utc::now();
-        Interface {
+        IPAddress {
             id: self.id,
             created_at: now,
             updated_at: now,
-            base: InterfaceBase {
+            base: IPAddressBase {
                 network_id,
                 host_id,
                 subnet_id: self.subnet_id,
@@ -105,7 +203,7 @@ impl InterfaceInput {
     }
 }
 
-impl PositionedInput for InterfaceInput {
+impl PositionedInput for IPAddressInput {
     fn position(&self) -> Option<i32> {
         self.position
     }
@@ -234,21 +332,21 @@ impl PositionedInput for ServiceInput {
 #[serde(tag = "type")]
 pub enum BindingInput {
     /// Bind to an interface (service is present at this interface without a specific port)
-    #[schema(title = "Interface")]
-    Interface {
+    #[schema(title = "IPAddress")]
+    IPAddress {
         /// Client-provided UUID for this binding
         id: Uuid,
-        interface_id: Uuid,
+        ip_address_id: Uuid,
     },
-    /// Bind to a port (optionally on a specific interface)
+    /// Bind to a port (optionally on a specific ip_address)
     #[schema(title = "Port")]
     Port {
         /// Client-provided UUID for this binding
         id: Uuid,
         port_id: Uuid,
         #[serde(skip_serializing_if = "Option::is_none")]
-        /// null = bind to all interfaces
-        interface_id: Option<Uuid>,
+        /// null = bind to all ip_addresses
+        ip_address_id: Option<Uuid>,
     },
 }
 
@@ -256,7 +354,7 @@ impl BindingInput {
     /// Get the client-provided ID for this binding
     pub fn id(&self) -> Uuid {
         match self {
-            BindingInput::Interface { id, .. } => *id,
+            BindingInput::IPAddress { id, .. } => *id,
             BindingInput::Port { id, .. } => *id,
         }
     }
@@ -264,18 +362,18 @@ impl BindingInput {
     /// Convert to a full Binding with the given service_id and network_id.
     pub fn into_binding(self, service_id: Uuid, network_id: Uuid) -> Binding {
         let (id, binding_type) = match self {
-            BindingInput::Interface { id, interface_id } => {
-                (id, BindingType::Interface { interface_id })
+            BindingInput::IPAddress { id, ip_address_id } => {
+                (id, BindingType::IPAddress { ip_address_id })
             }
             BindingInput::Port {
                 id,
                 port_id,
-                interface_id,
+                ip_address_id,
             } => (
                 id,
                 BindingType::Port {
                     port_id,
-                    interface_id,
+                    ip_address_id,
                 },
             ),
         };
@@ -295,9 +393,9 @@ impl BindingInput {
 
 /// Input for creating an SNMP interface entry (ifTable data).
 /// Used in CreateHostRequest. Server assigns UUIDs since nothing references
-/// IfEntry IDs at creation time (neighbor resolution is done server-side).
+/// Interface IDs at creation time (neighbor resolution is done server-side).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct IfEntryInput {
+pub struct InterfaceInput {
     /// SNMP ifIndex - stable identifier within device
     pub if_index: i32,
     /// SNMP ifDescr - interface description (e.g., GigabitEthernet0/1)
@@ -323,18 +421,18 @@ pub struct IfEntryInput {
     pub mac_address: Option<MacAddress>,
     /// Optional FK to Interface - links this SNMP port to its IP assignment
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub interface_id: Option<Uuid>,
+    pub ip_address_id: Option<Uuid>,
 }
 
-impl IfEntryInput {
-    /// Convert to IfEntry entity with the given host_id and network_id.
-    pub fn into_if_entry(self, host_id: Uuid, network_id: Uuid) -> IfEntry {
+impl InterfaceInput {
+    /// Convert to Interface entity with the given host_id and network_id.
+    pub fn into_interface(self, host_id: Uuid, network_id: Uuid) -> Interface {
         let now = chrono::Utc::now();
-        IfEntry {
+        Interface {
             id: Uuid::new_v4(),
             created_at: now,
             updated_at: now,
-            base: IfEntryBase {
+            base: InterfaceBase {
                 host_id,
                 network_id,
                 if_index: self.if_index,
@@ -346,7 +444,7 @@ impl IfEntryInput {
                 admin_status: self.admin_status.unwrap_or_default(),
                 oper_status: self.oper_status.unwrap_or_default(),
                 mac_address: self.mac_address,
-                interface_id: self.interface_id,
+                ip_address_id: self.ip_address_id,
                 // Neighbor resolution fields - not set from API, resolved server-side
                 neighbor: None,
                 lldp_chassis_id: None,
@@ -359,6 +457,9 @@ impl IfEntryInput {
                 cdp_port_id: None,
                 cdp_platform: None,
                 cdp_address: None,
+                fdb_macs: None,
+                native_vlan_id: None,
+                vlan_ids: None,
             },
         }
     }
@@ -368,10 +469,10 @@ impl IfEntryInput {
 // EXTERNAL API - CREATE REQUEST
 // =============================================================================
 
-/// Request type for creating a host with its associated interfaces, ports, and services.
+/// Request type for creating a host with its associated ip_addresses, ports, and services.
 /// Server assigns `host_id`, `network_id`, and `source` to all children.
 /// Client must provide UUIDs for all entities, enabling services to reference
-/// interfaces/ports by ID in the same request.
+/// ip_addresses/ports by ID in the same request.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 #[schema(example = crate::server::shared::types::examples::create_host_request)]
 pub struct CreateHostRequest {
@@ -402,21 +503,21 @@ pub struct CreateHostRequest {
     pub management_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chassis_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub snmp_credential_id: Option<Uuid>,
+    #[serde(default)]
+    pub credential_assignments: Vec<CredentialAssignment>,
 
     /// Interfaces to create with this host (client provides UUIDs)
     #[serde(default)]
-    pub interfaces: Vec<InterfaceInput>,
+    pub ip_addresses: Vec<IPAddressInput>,
     /// Ports to create with this host (client provides UUIDs)
     #[serde(default)]
     pub ports: Vec<PortInput>,
-    /// Services to create with this host (can reference interfaces/ports by their UUIDs)
+    /// Services to create with this host (can reference ip_addresses/ports by their UUIDs)
     #[serde(default)]
     pub services: Vec<ServiceInput>,
     /// SNMP interface entries (ifTable data) - server assigns UUIDs
     #[serde(default)]
-    pub if_entries: Vec<IfEntryInput>,
+    pub interfaces: Vec<InterfaceInput>,
 }
 
 // =============================================================================
@@ -445,9 +546,9 @@ pub struct UpdateHostRequest {
 
     /// Interfaces to sync with this host.
     /// If Some, server will create/update/delete to match this list.
-    /// If None, existing interfaces are preserved.
+    /// If None, existing ip_addresses are preserved.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub interfaces: Option<Vec<InterfaceInput>>,
+    pub ip_addresses: Option<Vec<IPAddressInput>>,
 
     /// Ports to sync with this host.
     /// If Some, server will create/update/delete to match this list.
@@ -460,6 +561,11 @@ pub struct UpdateHostRequest {
     /// If None, existing services are preserved.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<ServiceInput>>,
+
+    /// Credential assignments for this host.
+    /// If provided, replaces all existing credential assignments.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credential_assignments: Option<Vec<CredentialAssignment>>,
 }
 
 // =============================================================================
@@ -467,7 +573,7 @@ pub struct UpdateHostRequest {
 // =============================================================================
 
 /// Response type for host endpoints.
-/// Includes children (interfaces, ports, services, if_entries).
+/// Includes children (ip_addresses, ports, services, interfaces).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::host_response)]
 pub struct HostResponse {
@@ -499,15 +605,15 @@ pub struct HostResponse {
     pub management_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chassis_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub snmp_credential_id: Option<Uuid>,
+    #[serde(default)]
+    pub credential_assignments: Vec<CredentialAssignment>,
 
     // Children (fetched by service layer)
-    pub interfaces: Vec<Interface>,
+    pub ip_addresses: Vec<IPAddress>,
     pub ports: Vec<Port>,
     pub services: Vec<Service>,
     /// SNMP ifTable entries
-    pub if_entries: Vec<IfEntry>,
+    pub interfaces: Vec<Interface>,
 }
 
 impl HostResponse {
@@ -533,11 +639,11 @@ impl HostResponse {
             sys_contact,
             management_url,
             chassis_id,
-            snmp_credential_id,
-            interfaces: _,
+            credential_assignments,
+            ip_addresses: _,
             ports: _,
             services: _,
-            if_entries: _,
+            interfaces: _,
         } = self;
 
         Host {
@@ -559,7 +665,11 @@ impl HostResponse {
                 sys_contact: sys_contact.clone(),
                 management_url: management_url.clone(),
                 chassis_id: chassis_id.clone(),
-                snmp_credential_id: *snmp_credential_id,
+                sys_name: None,
+                manufacturer: None,
+                model: None,
+                serial_number: None,
+                credential_assignments: credential_assignments.clone(),
             },
         }
     }
@@ -568,10 +678,10 @@ impl HostResponse {
     /// Uses exhaustive destructuring to ensure compile error if Host/HostBase changes.
     pub fn from_host_with_children(
         host: Host,
-        interfaces: Vec<Interface>,
+        ip_addresses: Vec<IPAddress>,
         ports: Vec<Port>,
         services: Vec<Service>,
-        if_entries: Vec<IfEntry>,
+        interfaces: Vec<Interface>,
     ) -> Self {
         // Exhaustive destructuring of Host
         let Host {
@@ -598,7 +708,11 @@ impl HostResponse {
             sys_contact,
             management_url,
             chassis_id,
-            snmp_credential_id,
+            sys_name: _,
+            manufacturer: _,
+            model: _,
+            serial_number: _,
+            credential_assignments,
         } = base;
 
         Self {
@@ -619,11 +733,11 @@ impl HostResponse {
             sys_contact,
             management_url,
             chassis_id,
-            snmp_credential_id,
-            interfaces,
+            credential_assignments,
+            ip_addresses,
             ports,
             services,
-            if_entries,
+            interfaces,
         }
     }
 }

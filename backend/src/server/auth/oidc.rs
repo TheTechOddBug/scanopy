@@ -1,5 +1,4 @@
 use anyhow::{Error, Result, anyhow};
-use bad_email::is_email_unwanted;
 use chrono::Utc;
 use email_address::EmailAddress;
 use std::{collections::HashMap, net::IpAddr, str::FromStr, sync::Arc};
@@ -32,8 +31,10 @@ use crate::server::{
 pub enum OidcRegisterResult {
     /// Brand new user was created
     NewUser(User),
-    /// Existing user was found and logged in (OIDC subject or email matched)
+    /// Existing user was found and logged in (OIDC subject matched)
     ExistingUser(User),
+    /// Email already belongs to an existing account (no auto-link)
+    EmailAlreadyExists,
 }
 
 pub struct OidcService {
@@ -172,7 +173,7 @@ impl OidcService {
             Ok::<EmailAddress, Error>(EmailAddress::new_unchecked(fallback_email_str))
         })?;
 
-        if is_email_unwanted(email.as_str()) && deployment_type == DeploymentType::Cloud {
+        if !mailchecker::is_valid(email.as_str()) && deployment_type == DeploymentType::Cloud {
             return Err(anyhow!(
                 "Email address uses a disposable domain. Please register with a non-disposable email address."
             ));
@@ -188,54 +189,7 @@ impl OidcService {
             )
             .await?;
         if !existing.is_empty() {
-            // Auto-link OIDC identity to existing account and log them in
-            let mut existing_user = existing.into_iter().next().unwrap();
-
-            // If already linked to a different OIDC provider, don't override
-            if let Some(existing_provider) = &existing_user.base.oidc_provider
-                && existing_provider != &provider.slug
-            {
-                let existing_provider_name = self
-                    .get_provider(existing_provider)
-                    .map(|p| p.name.as_str())
-                    .unwrap_or(existing_provider.as_str());
-                return Err(anyhow!(
-                    "This account is already linked to {}. Please sign in with {} or unlink it first.",
-                    existing_provider_name,
-                    existing_provider_name
-                ));
-            }
-
-            existing_user.base.oidc_provider = Some(provider.slug.clone());
-            existing_user.base.oidc_subject = Some(user_info.subject);
-            existing_user.base.oidc_linked_at = Some(chrono::Utc::now());
-
-            let authentication: AuthenticatedEntity = existing_user.clone().into();
-
-            self.event_bus
-                .publish_auth(AuthEvent {
-                    id: Uuid::new_v4(),
-                    user_id: Some(existing_user.id),
-                    organization_id: Some(existing_user.base.organization_id),
-                    timestamp: Utc::now(),
-                    operation: AuthOperation::OidcLinked,
-                    ip_address: ip,
-                    user_agent,
-                    metadata: serde_json::json!({
-                        "method": "oidc",
-                        "provider": provider.slug,
-                        "provider_name": provider.name,
-                        "auto_linked": true
-                    }),
-                    authentication: authentication.clone(),
-                })
-                .await?;
-
-            let updated = self
-                .user_service
-                .update(&mut existing_user, authentication)
-                .await?;
-            return Ok(OidcRegisterResult::ExistingUser(updated));
+            return Ok(OidcRegisterResult::EmailAlreadyExists);
         }
 
         // Register new user
@@ -299,16 +253,37 @@ impl OidcService {
         let user_info = provider.exchange_code(code, &pending_auth).await?;
 
         // Check if user exists with this OIDC account
-        let user = self
+        let user = match self
             .user_service
             .get_user_by_oidc(&user_info.subject)
             .await?
-            .ok_or_else(|| {
-                anyhow!(
+        {
+            Some(user) => user,
+            None => {
+                // Check if an account exists with the same email but no OIDC link
+                if let Some(email_str) = &user_info.email
+                    && let Ok(email) = EmailAddress::from_str(email_str)
+                {
+                    let existing =
+                        self.user_service
+                            .get_all(crate::server::shared::storage::filter::StorableFilter::<
+                                User,
+                            >::new_from_email(&email))
+                            .await?;
+                    if !existing.is_empty() {
+                        return Err(anyhow!(
+                            "An account with this email exists but isn't linked to {}. Please sign in with email first, then link your {} account from settings.",
+                            provider.name,
+                            provider.name
+                        ));
+                    }
+                }
+                return Err(anyhow!(
                     "No account found with this {} login. Please register first.",
                     provider.name
-                )
-            })?;
+                ));
+            }
+        };
 
         // Publish event
         let authentication: AuthenticatedEntity = user.clone().into();

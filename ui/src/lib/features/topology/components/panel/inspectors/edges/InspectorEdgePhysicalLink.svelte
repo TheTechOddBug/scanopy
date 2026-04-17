@@ -1,39 +1,34 @@
 <script lang="ts">
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
-	import { IfEntryDisplay } from '$lib/shared/components/forms/selection/display/IfEntryDisplay.svelte';
-	import { useTopologiesQuery, selectedTopologyId } from '$lib/features/topology/queries';
-	import type { Topology } from '$lib/features/topology/types/base';
-	import { getContext } from 'svelte';
-	import type { Writable } from 'svelte/store';
+	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
+	import { useTopology, selectedTopologyId } from '$lib/features/topology/context';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 
 	let {
-		sourceIfEntryId,
-		targetIfEntryId,
+		sourceEntityId,
+		targetEntityId,
 		protocol
 	}: {
-		sourceIfEntryId?: string;
-		targetIfEntryId?: string;
+		sourceEntityId?: string;
+		targetEntityId?: string;
 		protocol?: 'LLDP' | 'CDP';
 	} = $props();
 
-	// Try to get topology from context (for share/embed pages), fallback to query + selected topology
-	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
-	const topologiesQuery = useTopologiesQuery();
-	let topologiesData = $derived(topologiesQuery.data ?? []);
+	const topo = useTopology();
+	const topoStore = topo.fromContext ? topo.store : null;
 	let topology = $derived(
-		topologyContext ? $topologyContext : topologiesData.find((t) => t.id === $selectedTopologyId)
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
 	);
 
-	// Derive IfEntry and Host data
-	let sourceIfEntry = $derived(topology?.if_entries.find((e) => e.id === sourceIfEntryId));
-	let targetIfEntry = $derived(topology?.if_entries.find((e) => e.id === targetIfEntryId));
+	// Derive Interface and Host data
+	let sourceInterface = $derived(topology?.interfaces.find((e) => e.id === sourceEntityId));
+	let targetInterface = $derived(topology?.interfaces.find((e) => e.id === targetEntityId));
 	let sourceHost = $derived(
-		sourceIfEntry ? topology?.hosts.find((h) => h.id === sourceIfEntry.host_id) : null
+		sourceInterface ? topology?.hosts.find((h) => h.id === sourceInterface.host_id) : null
 	);
 	let targetHost = $derived(
-		targetIfEntry ? topology?.hosts.find((h) => h.id === targetIfEntry.host_id) : null
+		targetInterface ? topology?.hosts.find((h) => h.id === targetInterface.host_id) : null
 	);
 </script>
 
@@ -44,49 +39,51 @@
 		</div>
 	{/if}
 
-	{#if sourceHost || sourceIfEntry}
+	{#if sourceHost || sourceInterface}
 		<span class="text-secondary mb-2 block text-sm font-medium">Source</span>
 		{#if sourceHost}
 			<div class="card card-static">
 				<EntityDisplayWrapper
 					context={{
-						services: topology?.services.filter((s) => s.host_id === sourceHost.id) ?? []
+						services: topology?.services.filter((s) => s.host_id === sourceHost.id) ?? [],
+						compact: true
 					}}
 					item={sourceHost}
 					displayComponent={HostDisplay}
 				/>
 			</div>
 		{/if}
-		{#if sourceIfEntry}
+		{#if sourceInterface}
 			<div class="card card-static">
 				<EntityDisplayWrapper
 					context={undefined}
-					item={sourceIfEntry}
-					displayComponent={IfEntryDisplay}
+					item={sourceInterface}
+					displayComponent={InterfaceDisplay}
 				/>
 			</div>
 		{/if}
 	{/if}
 
-	{#if targetHost || targetIfEntry}
+	{#if targetHost || targetInterface}
 		<span class="text-secondary mb-2 block text-sm font-medium">Target</span>
 		{#if targetHost}
 			<div class="card card-static">
 				<EntityDisplayWrapper
 					context={{
-						services: topology?.services.filter((s) => s.host_id === targetHost.id) ?? []
+						services: topology?.services.filter((s) => s.host_id === targetHost.id) ?? [],
+						compact: true
 					}}
 					item={targetHost}
 					displayComponent={HostDisplay}
 				/>
 			</div>
 		{/if}
-		{#if targetIfEntry}
+		{#if targetInterface}
 			<div class="card card-static">
 				<EntityDisplayWrapper
 					context={undefined}
-					item={targetIfEntry}
-					displayComponent={IfEntryDisplay}
+					item={targetInterface}
+					displayComponent={InterfaceDisplay}
 				/>
 			</div>
 		{/if}

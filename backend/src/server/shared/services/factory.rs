@@ -4,15 +4,16 @@ use crate::server::{
     bindings::service::BindingService,
     brevo::service::BrevoService,
     config::ServerConfig,
+    credentials::service::CredentialService,
     daemon_api_keys::service::DaemonApiKeyService,
     daemons::service::DaemonService,
+    dependencies::{dependency_members::DependencyMemberStorage, service::DependencyService},
     discovery::service::DiscoveryService,
     email::{brevo::BrevoEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
-    groups::{group_bindings::GroupBindingStorage, service::GroupService},
     hosts::service::HostService,
-    if_entries::service::IfEntryService,
     interfaces::service::InterfaceService,
     invites::service::InviteService,
+    ip_addresses::service::IPAddressService,
     logging::service::LoggingService,
     metrics::service::MetricsService,
     networks::service::NetworkService,
@@ -22,7 +23,6 @@ use crate::server::{
     services::service::ServiceService,
     shared::{events::bus::EventBus, storage::factory::StorageFactory},
     shares::service::ShareService,
-    snmp_credentials::service::SnmpCredentialService,
     subnets::service::SubnetService,
     tags::{
         entity_tags::{EntityTagService, EntityTagStorage},
@@ -33,6 +33,7 @@ use crate::server::{
         r#impl::network_access::UserApiKeyNetworkAccessStorage, service::UserApiKeyService,
     },
     users::{UserNetworkAccessStorage, service::UserService},
+    vlans::{r#impl::subnet_vlans::SubnetVlanStorage, service::VlanService},
 };
 use anyhow::Result;
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
@@ -46,8 +47,8 @@ pub struct ServiceFactory {
     pub auth_service: Arc<AuthService>,
     pub network_service: Arc<NetworkService>,
     pub host_service: Arc<HostService>,
-    pub interface_service: Arc<InterfaceService>,
-    pub group_service: Arc<GroupService>,
+    pub ip_address_service: Arc<IPAddressService>,
+    pub dependency_service: Arc<DependencyService>,
     pub subnet_service: Arc<SubnetService>,
     pub daemon_service: Arc<DaemonService>,
     pub topology_service: Arc<TopologyService>,
@@ -70,8 +71,9 @@ pub struct ServiceFactory {
     pub entity_tag_service: Arc<EntityTagService>,
     pub port_service: Arc<PortService>,
     pub binding_service: Arc<BindingService>,
-    pub snmp_credential_service: Arc<SnmpCredentialService>,
-    pub if_entry_service: Arc<IfEntryService>,
+    pub credential_service: Arc<CredentialService>,
+    pub interface_service: Arc<InterfaceService>,
+    pub vlan_service: Arc<VlanService>,
 }
 
 impl ServiceFactory {
@@ -113,10 +115,11 @@ impl ServiceFactory {
             entity_tag_service.clone(),
         ));
 
-        let group_binding_storage = Arc::new(GroupBindingStorage::new(storage.pool.clone()));
-        let group_service = Arc::new(GroupService::new(
-            storage.groups.clone(),
-            group_binding_storage,
+        let dependency_member_storage =
+            Arc::new(DependencyMemberStorage::new(storage.pool.clone()));
+        let dependency_service = Arc::new(DependencyService::new(
+            storage.dependencies.clone(),
+            dependency_member_storage,
             event_bus.clone(),
             entity_tag_service.clone(),
         ));
@@ -138,8 +141,8 @@ impl ServiceFactory {
             event_bus.clone(),
         ));
 
-        let interface_service = Arc::new(InterfaceService::new(
-            storage.interfaces.clone(),
+        let ip_address_service = Arc::new(IPAddressService::new(
+            storage.ip_addresses.clone(),
             event_bus.clone(),
         ));
 
@@ -147,6 +150,13 @@ impl ServiceFactory {
             storage.subnets.clone(),
             event_bus.clone(),
             entity_tag_service.clone(),
+        ));
+
+        let subnet_vlan_storage = Arc::new(SubnetVlanStorage::new(storage.pool.clone()));
+        let vlan_service = Arc::new(VlanService::new(
+            storage.vlans.clone(),
+            event_bus.clone(),
+            subnet_vlan_storage,
         ));
 
         let network_service = Arc::new(NetworkService::new(
@@ -167,25 +177,26 @@ impl ServiceFactory {
         let service_service = Arc::new(ServiceService::new(
             storage.services.clone(),
             binding_service.clone(),
-            group_service.clone(),
+            dependency_service.clone(),
             event_bus.clone(),
             entity_tag_service.clone(),
         ));
 
-        // IfEntryService needs InterfaceService for validation
-        let if_entry_service = Arc::new(IfEntryService::new(
-            storage.if_entries.clone(),
+        // InterfaceService needs IPAddressService for validation
+        let interface_service = Arc::new(InterfaceService::new(
+            storage.interfaces.clone(),
             event_bus.clone(),
-            interface_service.clone(),
+            ip_address_service.clone(),
         ));
 
-        let snmp_credential_service = Arc::new(SnmpCredentialService::new(
-            storage.snmp_credentials.clone(),
+        let credential_service = Arc::new(CredentialService::new(
+            storage.credentials.clone(),
             event_bus.clone(),
             entity_tag_service.clone(),
             network_service.clone(),
-            interface_service.clone(),
+            ip_address_service.clone(),
             organization_service.clone(),
+            storage.pool.clone(),
         ));
 
         // Already implements Arc internally due to scheduler + sessions
@@ -193,7 +204,7 @@ impl ServiceFactory {
             storage.discovery.clone(),
             event_bus.clone(),
             entity_tag_service.clone(),
-            snmp_credential_service.clone(),
+            credential_service.clone(),
             network_service.clone(),
             organization_service.clone(),
         )
@@ -205,6 +216,7 @@ impl ServiceFactory {
             event_bus.clone(),
             entity_tag_service.clone(),
             discovery_service.clone(),
+            credential_service.clone(),
             subnet_service.clone(),
             network_service.clone(),
             organization_service.clone(),
@@ -215,11 +227,14 @@ impl ServiceFactory {
         // HostService needs DaemonService
         let host_service = Arc::new(HostService::new(
             storage.hosts.clone(),
-            interface_service.clone(),
+            ip_address_service.clone(),
             port_service.clone(),
             service_service.clone(),
-            if_entry_service.clone(),
+            interface_service.clone(),
             daemon_service.clone(),
+            credential_service.clone(),
+            subnet_service.clone(),
+            vlan_service.clone(),
             event_bus.clone(),
             entity_tag_service.clone(),
         ));
@@ -227,19 +242,21 @@ impl ServiceFactory {
         // Set lazy dependencies to break circular references
         let _ = service_service.set_host_service(host_service.clone());
         let _ = daemon_service.set_host_service(host_service.clone());
-        let _ = snmp_credential_service.set_host_service(host_service.clone());
+        let _ = credential_service.set_host_service(host_service.clone());
         let _ = discovery_service.set_daemon_service(daemon_service.clone());
 
         let topology_service = Arc::new(TopologyService::new(
             host_service.clone(),
-            interface_service.clone(),
+            ip_address_service.clone(),
             subnet_service.clone(),
-            group_service.clone(),
+            dependency_service.clone(),
             service_service.clone(),
             port_service.clone(),
             binding_service.clone(),
-            if_entry_service.clone(),
+            interface_service.clone(),
             tag_service.clone(),
+            vlan_service.clone(),
+            network_service.clone(),
             storage.topologies.clone(),
             event_bus.clone(),
         ));
@@ -329,7 +346,7 @@ impl ServiceFactory {
                     daemon_service.clone(),
                     tag_service.clone(),
                     user_api_key_service.clone(),
-                    snmp_credential_service.clone(),
+                    credential_service.clone(),
                 ))
             })
         });
@@ -397,8 +414,8 @@ impl ServiceFactory {
             auth_service,
             network_service,
             host_service,
-            interface_service,
-            group_service,
+            ip_address_service,
+            dependency_service,
             subnet_service,
             daemon_service,
             topology_service,
@@ -421,8 +438,9 @@ impl ServiceFactory {
             entity_tag_service,
             port_service,
             binding_service,
-            snmp_credential_service,
-            if_entry_service,
+            credential_service,
+            interface_service,
+            vlan_service,
         })
     }
 }

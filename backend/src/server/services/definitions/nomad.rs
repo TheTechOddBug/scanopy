@@ -15,7 +15,7 @@ impl ServiceDefinition for Nomad {
         "Workload orchestration"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Virtualization
+        ServiceCategory::Orchestrator
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortType::new_tcp(4646), "/v1/status/leader", "", None)

@@ -93,7 +93,7 @@
 
 	// Recommended plan based on use case
 	let baseRecommendedPlan = $derived<string | null>(
-		useCase === 'company' ? 'Team' : useCase === 'msp' ? 'Business' : null
+		useCase === 'internal_it' ? 'Team' : useCase === 'msp' ? 'Business' : null
 	);
 
 	// Feature-contextual plan highlighting from upgrade CTAs
@@ -169,7 +169,7 @@
 >
 	<div class="flex min-h-0 flex-1 flex-col">
 		<BillingPlanForm
-			plans={plansData}
+			plans={dismissible ? plansData : plansData.filter((p) => p.type !== 'Free')}
 			{billingPlanHelpers}
 			{featureHelpers}
 			onPlanSelect={handlePlanSelect}

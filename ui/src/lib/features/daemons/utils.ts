@@ -83,6 +83,12 @@ export function buildDefaultValues(
 	return defaults;
 }
 
+export interface DockerConfig {
+	mode: string;
+	credentialId: string | null;
+	disableLocalSocket?: boolean;
+}
+
 export function buildRunCommand(
 	serverUrl: string,
 	networkId: string,
@@ -90,7 +96,9 @@ export function buildRunCommand(
 	values: Record<string, string | number | boolean>,
 	daemon: Daemon | null,
 	userId: string | null,
-	os: DaemonOS = 'linux'
+	os: DaemonOS = 'linux',
+	dockerConfig?: DockerConfig,
+	credentialIds?: string[]
 ): string {
 	const isWindows = os === 'windows';
 	const binary = isWindows ? '.\\scanopy-daemon-windows-amd64.exe' : 'scanopy-daemon';
@@ -152,6 +160,20 @@ export function buildRunCommand(
 		}
 	}
 
+	// Docker config flags
+	if (dockerConfig) {
+		if (dockerConfig.mode === 'disabled' || dockerConfig.disableLocalSocket) {
+			cmd += ` --enable-local-docker-socket false`;
+		}
+	}
+
+	// Credential IDs (includes docker proxy and wizard credentials)
+	if (credentialIds) {
+		for (const id of credentialIds) {
+			cmd += ` --credential-id ${id}`;
+		}
+	}
+
 	return cmd;
 }
 
@@ -160,7 +182,9 @@ export function buildDockerCompose(
 	networkId: string,
 	key: string,
 	values: Record<string, string | number | boolean>,
-	userId: string | null
+	userId: string | null,
+	dockerConfig?: DockerConfig,
+	credentialIds?: string[]
 ): string {
 	const envVars: string[] = [`SCANOPY_SERVER_URL=${serverUrl}`, `SCANOPY_DAEMON_API_KEY=${key}`];
 
@@ -192,6 +216,11 @@ export function buildDockerCompose(
 			continue;
 		}
 
+		// Skip logFile - handled explicitly below for Docker with volume mount
+		if (def.id === 'logFile') {
+			continue;
+		}
+
 		if (value === '' || value === null || value === undefined) {
 			continue;
 		}
@@ -213,15 +242,29 @@ export function buildDockerCompose(
 		}
 	}
 
-	const dockerProxyDef = fieldDefs.find((d) => d.id === 'dockerProxy');
-	const hasDockerProxy =
-		values.dockerProxy &&
-		values.dockerProxy !== '' &&
-		(!dockerProxyDef || fieldPassesValidation(dockerProxyDef, values.dockerProxy));
-	const volumeMounts = ['daemon-config:/root/.config/daemon'];
-	if (!hasDockerProxy) {
-		volumeMounts.push('/var/run/docker.sock:/var/run/docker.sock:ro');
+	// Docker config env vars
+	if (dockerConfig) {
+		if (dockerConfig.mode === 'disabled' || dockerConfig.disableLocalSocket) {
+			envVars.push(`SCANOPY_ENABLE_LOCAL_DOCKER_SOCKET=false`);
+		}
 	}
+
+	// Credential IDs (includes docker proxy and wizard credentials)
+	if (credentialIds && credentialIds.length > 0) {
+		envVars.push(`SCANOPY_CREDENTIAL_IDS=${credentialIds.join(',')}`);
+	}
+
+	// Mount log volume in Docker so logs persist on host
+	const daemonName = (values['name'] as string) || 'scanopy-daemon';
+	const customLogFile = values['logFile'] as string;
+	const dockerLogPath = customLogFile || `/var/log/scanopy/${daemonName}.log`;
+	envVars.push(`SCANOPY_LOG_FILE=${dockerLogPath}`);
+
+	const volumeMounts = [
+		'daemon-config:/root/.config/daemon',
+		'/var/run/docker.sock:/var/run/docker.sock:ro',
+		'/var/log/scanopy:/var/log/scanopy'
+	];
 
 	const lines = [
 		'services:',

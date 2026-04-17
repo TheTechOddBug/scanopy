@@ -4,6 +4,10 @@ use crate::server::{
         client::BrevoClient,
         types::{CompanyAttributes, ContactAttributes},
     },
+    credentials::{
+        r#impl::{base::Credential, types::CredentialType},
+        service::CredentialService,
+    },
     daemons::{r#impl::base::Daemon, service::DaemonService},
     hosts::{r#impl::base::Host, service::HostService},
     networks::{r#impl::Network, service::NetworkService},
@@ -16,7 +20,6 @@ use crate::server::{
         services::traits::CrudService,
         storage::filter::StorableFilter,
     },
-    snmp_credentials::{r#impl::base::SnmpCredential, service::SnmpCredentialService},
     tags::{r#impl::base::Tag, service::TagService},
     user_api_keys::{r#impl::base::UserApiKey, service::UserApiKeyService},
     users::{r#impl::base::User, r#impl::permissions::UserOrgPermissions, service::UserService},
@@ -32,6 +35,10 @@ const BREVO_PRODUCT_UPDATES_LIST_ID: i64 = 9;
 const BREVO_MARKETING_LIST_ID: i64 = 10;
 /// Brevo list ID for "App Users - Onboarding" (all app signups)
 const BREVO_ONBOARDING_LIST_ID: i64 = 12;
+/// Brevo DOI template ID — TODO: set to actual Brevo template ID before go-live
+const BREVO_DOI_TEMPLATE_ID: i64 = 1;
+/// Redirect URL after DOI confirmation
+const BREVO_DOI_REDIRECTION_URL: &str = "https://scanopy.net/newsletter-confirmed";
 
 /// Service for syncing data to Brevo CRM
 pub struct BrevoService {
@@ -43,7 +50,7 @@ pub struct BrevoService {
     daemon_service: Arc<DaemonService>,
     tag_service: Arc<TagService>,
     user_api_key_service: Arc<UserApiKeyService>,
-    snmp_credential_service: Arc<SnmpCredentialService>,
+    credential_service: Arc<CredentialService>,
 }
 
 impl BrevoService {
@@ -57,7 +64,7 @@ impl BrevoService {
         daemon_service: Arc<DaemonService>,
         tag_service: Arc<TagService>,
         user_api_key_service: Arc<UserApiKeyService>,
-        snmp_credential_service: Arc<SnmpCredentialService>,
+        credential_service: Arc<CredentialService>,
     ) -> Self {
         Self {
             client: Arc::new(BrevoClient::new(api_key)),
@@ -68,7 +75,7 @@ impl BrevoService {
             daemon_service,
             tag_service,
             user_api_key_service,
-            snmp_credential_service,
+            credential_service,
         }
     }
 
@@ -168,9 +175,11 @@ impl BrevoService {
             OnboardingOperation::SecondNetworkCreated
             | OnboardingOperation::FirstHostDiscovered
             | OnboardingOperation::FirstTagCreated
-            | OnboardingOperation::FirstGroupCreated
+            | OnboardingOperation::FirstDependencyCreated
+            | OnboardingOperation::FirstApplicationTagCreated
             | OnboardingOperation::FirstUserApiKeyCreated
             | OnboardingOperation::FirstSnmpCredentialCreated
+            | OnboardingOperation::FirstCredentialCreated
             | OnboardingOperation::InviteSent
             | OnboardingOperation::InviteAccepted
             | OnboardingOperation::ReferralSourceCompleted => {
@@ -191,14 +200,21 @@ impl BrevoService {
             OnboardingOperation::FirstTagCreated => {
                 company_attrs = company_attrs.with_first_tag_date(event.timestamp);
             }
-            OnboardingOperation::FirstGroupCreated => {
-                company_attrs = company_attrs.with_first_group_date(event.timestamp);
+            OnboardingOperation::FirstDependencyCreated => {
+                company_attrs = company_attrs.with_first_dependency_date(event.timestamp);
+            }
+            OnboardingOperation::FirstApplicationTagCreated => {
+                company_attrs =
+                    company_attrs.with_first_application_group_tag_date(event.timestamp);
             }
             OnboardingOperation::FirstUserApiKeyCreated => {
                 company_attrs = company_attrs.with_first_api_key_date(event.timestamp);
             }
             OnboardingOperation::FirstSnmpCredentialCreated => {
                 company_attrs = company_attrs.with_first_snmp_credential_date(event.timestamp);
+            }
+            OnboardingOperation::FirstCredentialCreated => {
+                company_attrs = company_attrs.with_first_credential_date(event.timestamp);
             }
             OnboardingOperation::InviteSent => {
                 company_attrs = company_attrs.with_first_invite_sent_date(event.timestamp);
@@ -325,6 +341,8 @@ impl BrevoService {
             company_attrs = company_attrs.with_org_type(use_case);
         }
 
+        let doi_attributes = contact_attrs.to_attributes();
+
         let (_contact_id, company_id) = self
             .client
             .sync_contact_and_company(email.as_ref(), contact_attrs, org_name, company_attrs)
@@ -346,14 +364,20 @@ impl BrevoService {
             tracing::warn!(error = %e, "Failed to add contact to Onboarding list");
         }
 
-        // Add to "Marketing" list only if opted in
+        // Trigger DOI confirmation for marketing list if opted in
         if marketing_opt_in
             && let Err(e) = self
                 .client
-                .add_contacts_to_list(BREVO_MARKETING_LIST_ID, vec![email.to_string()])
+                .create_doi_contact(
+                    email.as_ref(),
+                    vec![BREVO_MARKETING_LIST_ID],
+                    BREVO_DOI_TEMPLATE_ID,
+                    BREVO_DOI_REDIRECTION_URL,
+                    doi_attributes,
+                )
                 .await
         {
-            tracing::warn!(error = %e, "Failed to add contact to Marketing list");
+            tracing::warn!(error = %e, "Failed to trigger DOI for Marketing list");
         }
 
         // Store the company ID on the organization
@@ -932,9 +956,16 @@ impl BrevoService {
             attrs = attrs.with_first_api_key_date(first_api_key.created_at);
         }
 
-        let snmp_filter = StorableFilter::<SnmpCredential>::new_from_org_id(&org_id);
-        let snmp_creds = self.snmp_credential_service.get_all(snmp_filter).await?;
-        if let Some(first_snmp) = snmp_creds.iter().min_by_key(|s| s.created_at) {
+        let cred_filter = StorableFilter::<Credential>::new_from_org_id(&org_id);
+        let creds = self.credential_service.get_all(cred_filter).await?;
+        if let Some(first_cred) = creds.iter().min_by_key(|c| c.created_at) {
+            attrs = attrs.with_first_credential_date(first_cred.created_at);
+        }
+        if let Some(first_snmp) = creds
+            .iter()
+            .filter(|c| matches!(c.base.credential_type, CredentialType::SnmpV2c { .. }))
+            .min_by_key(|c| c.created_at)
+        {
             attrs = attrs.with_first_snmp_credential_date(first_snmp.created_at);
         }
 

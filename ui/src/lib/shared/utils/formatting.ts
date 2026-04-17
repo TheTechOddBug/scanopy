@@ -1,5 +1,18 @@
 import type { Port } from '$lib/features/hosts/types/base';
 
+/**
+ * Lowercase a string while preserving runs of 2+ consecutive uppercase letters
+ * as acronyms. Examples:
+ *   "Host"           → "host"
+ *   "IP Address"     → "IP address"
+ *   "IP Addresses"   → "IP addresses"
+ *   "Daemon API Key" → "daemon API key"
+ *   "VLAN"           → "VLAN"
+ */
+export function lowercasePreservingAcronyms(s: string): string {
+	return s.replace(/(\p{Lu}{2,})|./gu, (m, acronym) => (acronym ? acronym : m.toLowerCase()));
+}
+
 export const uuidv4Sentinel: string = '00000000-0000-0000-0000-000000000000';
 
 export const utcTimeZoneSentinel: string = '1970-01-01T00:00:00Z';
@@ -22,6 +35,27 @@ export function formatDuration(startTime: string, endTime?: string) {
 	const ss = seconds.toString().padStart(2, '0');
 
 	return `${hh}:${mm}:${ss}`;
+}
+
+export function formatDurationHuman(totalSeconds: number): string {
+	const weeks = Math.floor(totalSeconds / 604800);
+	const days = Math.floor((totalSeconds % 604800) / 86400);
+	const hours = Math.floor((totalSeconds % 86400) / 3600);
+	const minutes = Math.round((totalSeconds % 3600) / 60);
+
+	const parts: string[] = [];
+	if (weeks > 0) parts.push(`${weeks} week${weeks !== 1 ? 's' : ''}`);
+	if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+	if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+	if (parts.length === 0 || (weeks === 0 && days === 0 && hours === 0)) {
+		if (minutes === 0) {
+			parts.push('< 1 minute');
+		} else {
+			parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
+		}
+	}
+
+	return parts.join(', ');
 }
 
 export function formatTimestamp(timestamp: string): string {

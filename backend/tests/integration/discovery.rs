@@ -2,15 +2,14 @@
 
 use crate::infra::{BASE_URL, TestClient, retry};
 use scanopy::server::daemons::r#impl::api::DiscoveryUpdatePayload;
+use scanopy::server::dependencies::r#impl::base::{Dependency, DependencyBase};
 use scanopy::server::discovery::r#impl::base::{Discovery, DiscoveryBase};
 use scanopy::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback, RunType};
-use scanopy::server::groups::r#impl::base::{Group, GroupBase};
 use scanopy::server::services::definitions::home_assistant::HomeAssistant;
 use scanopy::server::services::r#impl::base::Service;
 use scanopy::server::shared::entities::EntityDiscriminants;
 use scanopy::server::shared::storage::traits::Storable;
 use scanopy::server::shared::types::metadata::HasId;
-use scanopy::server::snmp_credentials::r#impl::discovery::SnmpCredentialMapping;
 use scanopy::server::tags::handlers::BulkTagRequest;
 use scanopy::server::tags::r#impl::base::{Tag, TagBase};
 use uuid::Uuid;
@@ -20,21 +19,22 @@ use uuid::Uuid;
 pub async fn trigger_discovery(
     client: &TestClient,
     daemon_id: Uuid,
+    host_id: Uuid,
     network_id: Uuid,
 ) -> Result<Uuid, String> {
     println!("\n=== Creating Discovery for ServerPoll Daemon ===");
 
-    // Create a Discovery record
+    // Create a Unified Discovery record
     let discovery = Discovery {
         id: Uuid::nil(), // Server assigns ID
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         base: DiscoveryBase {
-            discovery_type: DiscoveryType::Network {
-                subnet_ids: None, // Discover all subnets on the network
+            discovery_type: DiscoveryType::Unified {
+                host_id,
+                subnet_ids: None,
                 host_naming_fallback: HostNamingFallback::BestService,
-                snmp_credentials: SnmpCredentialMapping::default(),
-                probe_raw_socket_ports: false,
+                scan_settings: Default::default(),
             },
             run_type: RunType::AdHoc { last_run: None },
             name: "ServerPoll Integration Test Discovery".to_string(),
@@ -42,6 +42,9 @@ pub async fn trigger_discovery(
             network_id,
             tags: vec![],
         },
+        scan_count: 0,
+        force_full_scan: false,
+        pending_credential_ids: vec![],
     };
 
     let created_discovery: Discovery = client.post("/api/v1/discovery", &discovery).await?;
@@ -99,8 +102,8 @@ pub async fn run_discovery(client: &TestClient, session_id: Option<Uuid>) -> Res
                                         continue;
                                     }
                                 } else {
-                                    // No session_id filter - only accept Network discoveries
-                                    if !matches!(update.discovery_type, DiscoveryType::Network { .. }) {
+                                    // No session_id filter - only accept Network or Unified discoveries
+                                    if !matches!(update.discovery_type, DiscoveryType::Network { .. } | DiscoveryType::Unified { .. }) {
                                         continue;
                                     }
                                 }
@@ -157,16 +160,20 @@ pub async fn verify_home_assistant_discovered(client: &TestClient) -> Result<Ser
     .await
 }
 
-pub async fn create_group(client: &TestClient, network_id: Uuid) -> Result<Group, String> {
-    println!("\n=== Creating Group ===");
+pub async fn create_dependency(
+    client: &TestClient,
+    network_id: Uuid,
+) -> Result<Dependency, String> {
+    println!("\n=== Creating Dependency ===");
 
-    let mut group = Group::new(GroupBase::default());
-    group.base.network_id = network_id;
+    let mut dependency = Dependency::new(DependencyBase::default());
+    dependency.base.network_id = network_id;
 
-    retry("create Group", 10, 3, || async {
-        let created_group: Group = client.post("/api/v1/groups", &group).await?;
-        println!("✅ Created group");
-        Ok(created_group)
+    retry("create Dependency", 10, 3, || async {
+        let created_dependency: Dependency =
+            client.post("/api/v1/dependencies", &dependency).await?;
+        println!("✅ Created dependency");
+        Ok(created_dependency)
     })
     .await
 }

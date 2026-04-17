@@ -28,7 +28,12 @@ pub enum Concept {
     IoT,
     Storage,
     Virtualization,
+    Containerization,
+    Workloads,
     SNMP,
+    L2,
+    L3,
+    Application,
 }
 
 impl HasId for Concept {
@@ -46,8 +51,16 @@ impl EntityMetadataProvider for Concept {
             Concept::ReverseProxy => Color::Cyan,
             Concept::IoT => Color::Yellow,
             Concept::Storage => Color::Green,
-            Concept::Virtualization => Color::Indigo,
             Concept::SNMP => Color::Pink,
+
+            Concept::L2 => Color::Green,
+            Concept::L3 => Color::Blue,
+
+            Concept::Workloads => Color::Orange,
+            Concept::Virtualization => Color::Amber,
+            Concept::Containerization => Color::Blue,
+
+            Concept::Application => Color::Purple,
         }
     }
 
@@ -57,10 +70,18 @@ impl EntityMetadataProvider for Concept {
             Concept::Vpn => Icon::VenetianMask,
             Concept::Gateway => Icon::Router,
             Concept::ReverseProxy => Icon::Split,
-            Concept::IoT => Icon::Cpu,
+            Concept::IoT => Icon::CircuitBoard,
             Concept::Storage => Icon::HardDrive,
-            Concept::Virtualization => Icon::Boxes,
             Concept::SNMP => Icon::Activity,
+
+            Concept::L2 => Icon::Cable,
+            Concept::L3 => Icon::Signpost,
+
+            Concept::Workloads => Icon::Boxes,
+            Concept::Virtualization => Icon::MonitorCog,
+            Concept::Containerization => Icon::Box,
+
+            Concept::Application => Icon::Workflow,
         }
     }
 }

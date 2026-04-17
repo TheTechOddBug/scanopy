@@ -1,19 +1,19 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
-	import InspectorInterfaceNode from './nodes/InspectorInterfaceNode.svelte';
-	import InspectorSubnetNode from './nodes/InspectorSubnetNode.svelte';
+	import InspectorElementNode from './nodes/InspectorElementNode.svelte';
+	import InspectorContainerNode from './nodes/InspectorContainerNode.svelte';
 
 	let { node }: { node: Node } = $props();
 
-	let isInterfaceNode = $derived(node.type === 'InterfaceNode');
-	let isSubnetNode = $derived(node.type === 'SubnetNode');
+	let isElementNode = $derived(node.type === 'Element');
+	let isContainerNode = $derived(node.type === 'Container');
 </script>
 
 <div class="w-full space-y-4">
-	{#if isInterfaceNode}
-		<InspectorInterfaceNode {node} />
-	{:else if isSubnetNode}
-		<InspectorSubnetNode {node} />
+	{#if isElementNode}
+		<InspectorElementNode {node} />
+	{:else if isContainerNode}
+		<InspectorContainerNode {node} />
 	{:else}
 		<div class="space-y-3">
 			<p class="text-tertiary text-sm">Unable to display node details</p>

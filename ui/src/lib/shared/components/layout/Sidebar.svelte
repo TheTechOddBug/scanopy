@@ -6,16 +6,15 @@
 	import SupportModal from '$lib/features/support/SupportModal.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { useActiveSessionsQuery } from '$lib/features/discovery/queries';
-	import { modalState, openModal } from '$lib/shared/stores/modal-registry';
+	import { modalState } from '$lib/shared/stores/modal-registry';
 	import { entityUIConfig, TAB_LABELS } from '$lib/shared/entity-ui-config';
 	import type { EntityDiscriminants } from '$lib/api/entities';
-	import { upgradeContext } from '$lib/features/billing/stores';
+	import { triggerUpgrade } from '$lib/features/billing/trigger-upgrade';
 	import type { IconComponent } from '$lib/shared/utils/types';
 	import {
 		Menu,
 		ChevronDown,
 		History,
-		Calendar,
 		Settings,
 		LifeBuoy,
 		ArrowUpCircle,
@@ -25,7 +24,7 @@
 	import type { Component } from 'svelte';
 	import type { UserOrgPermissions } from '$lib/features/users/types';
 	import type { SubTab } from '$lib/shared/components/layout/ContentSubTabs.svelte';
-	import { trackEvent } from '$lib/shared/utils/analytics';
+	import { common_upgrade } from '$lib/paraglide/messages';
 	import { daemonSetupState } from '$lib/features/daemons/stores/daemon-setup';
 	import { isAllComplete } from '$lib/shared/onboarding/checklist';
 	import SidebarChecklist from './SidebarChecklist.svelte';
@@ -33,12 +32,10 @@
 
 	// Import tab components
 	import TopologyTab from '$lib/features/topology/components/TopologyTab.svelte';
-	import DiscoverySessionTab from '$lib/features/discovery/components/tabs/DiscoverySessionTab.svelte';
 	import DiscoveryScheduledTab from '$lib/features/discovery/components/tabs/DiscoveryScheduledTab.svelte';
 	import DiscoveryHistoryTab from '$lib/features/discovery/components/tabs/DiscoveryHistoryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
 	import SubnetTab from '$lib/features/subnets/components/SubnetTab.svelte';
-	import GroupTab from '$lib/features/groups/components/GroupTab.svelte';
 	import HostTab from '$lib/features/hosts/components/HostTab.svelte';
 	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
 	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
@@ -46,9 +43,9 @@
 	import UserTab from '$lib/features/users/components/UserTab.svelte';
 	import UserApiKeyTab from '$lib/features/user_api_keys/components/UserApiKeyTab.svelte';
 	import TagTab from '$lib/features/tags/components/TagTab.svelte';
-	import SnmpCredentialsTab from '$lib/features/snmp/components/SnmpCredentialsTab.svelte';
+	import CredentialsTab from '$lib/features/credentials/components/CredentialsTab.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
-	import ShareTab from '$lib/features/shares/components/ShareTab.svelte';
+
 	import HomeTab from '$lib/features/home/components/HomeTab.svelte';
 
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
@@ -124,7 +121,9 @@
 	let onboarding = $derived((organization?.onboarding ?? []) as OnboardingOperation[]);
 	let showSidebarChecklist = $derived(organization && !isAllComplete(onboarding));
 	let isDiscoveryActive = $derived(
-		(activeSessionsQuery.data ?? []).some((s) => s.discovery_type?.type === 'Network')
+		(activeSessionsQuery.data ?? []).some(
+			(s) => s.discovery_type?.type === 'Network' || s.discovery_type?.type === 'Unified'
+		)
 	);
 
 	// Subscribe to daemon setup state
@@ -179,31 +178,11 @@
 			component: HomeTab
 		},
 		{
-			id: 'visualize',
-			label: 'Visualize',
-			items: [
-				{
-					id: entityUIConfig.Topology!.tabId,
-					label: TAB_LABELS[entityUIConfig.Topology!.tabId],
-					icon: entities.getIconComponent('Topology'),
-					entityType: 'Topology',
-					component: TopologyTab
-				},
-				{
-					id: entityUIConfig.Group!.tabId,
-					label: TAB_LABELS[entityUIConfig.Group!.tabId],
-					icon: entities.getIconComponent('Group'),
-					entityType: 'Group',
-					component: GroupTab
-				},
-				{
-					id: entityUIConfig.Share!.tabId,
-					label: TAB_LABELS[entityUIConfig.Share!.tabId],
-					icon: entities.getIconComponent('Share'),
-					entityType: 'Share',
-					component: ShareTab
-				}
-			]
+			id: entityUIConfig.Topology!.tabId,
+			label: TAB_LABELS[entityUIConfig.Topology!.tabId],
+			icon: entities.getIconComponent('Topology'),
+			entityType: 'Topology',
+			component: TopologyTab
 		},
 		{
 			id: 'discover',
@@ -215,15 +194,9 @@
 					icon: entities.getIconComponent('Discovery'),
 					subTabs: [
 						{
-							id: 'discovery-sessions',
-							label: TAB_LABELS['discovery-sessions'],
-							icon: entities.getIconComponent('Discovery'),
-							component: DiscoverySessionTab
-						},
-						{
 							id: entityUIConfig.Discovery!.tabId,
 							label: TAB_LABELS[entityUIConfig.Discovery!.tabId],
-							icon: Calendar as IconComponent,
+							icon: entities.getIconComponent('Discovery'),
 							component: DiscoveryScheduledTab
 						},
 						{
@@ -318,11 +291,11 @@
 					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
-					id: entityUIConfig.SnmpCredential!.tabId,
-					label: TAB_LABELS[entityUIConfig.SnmpCredential!.tabId],
-					icon: entities.getIconComponent('SnmpCredential'),
-					entityType: 'SnmpCredential',
-					component: SnmpCredentialsTab
+					id: entityUIConfig.Credential!.tabId,
+					label: TAB_LABELS[entityUIConfig.Credential!.tabId],
+					icon: entities.getIconComponent('Credential'),
+					entityType: 'Credential',
+					component: CredentialsTab
 				}
 			]
 		},
@@ -379,7 +352,7 @@
 						subTabDefs: visibleSubTabs,
 						subTabNotifications:
 							item.id === 'discovery' && hasActiveSessions
-								? { 'discovery-sessions': entities.getColorHelper('Discovery').rgb }
+								? { [entityUIConfig.Discovery!.tabId]: entities.getColorHelper('Discovery').rgb }
 								: undefined
 					});
 				}
@@ -633,7 +606,7 @@
 <div
 	class="sidebar flex flex-shrink-0 flex-col transition-all duration-300"
 	class:w-16={collapsed}
-	class:w-64={!collapsed}
+	class:w-48={!collapsed}
 >
 	<!-- Logo/Brand -->
 	<div class="flex min-h-0 flex-1 flex-col">
@@ -641,15 +614,13 @@
 			<button
 				onclick={toggleCollapse}
 				class="text-tertiary hover:text-secondary flex w-full items-center rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
-				style="height: 2.5rem; padding: 0.5rem 0.75rem;"
+				style="height: 2rem; padding: 0.375rem 0.75rem;"
 				aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 			>
 				<Menu class="h-5 w-5 flex-shrink-0" />
 				{#if !collapsed}
-					<div class="absolute left-1/2 flex -translate-x-1/2 transform items-center">
-						<img src="/logos/scanopy-logo.png" alt="Logo" class="h-8 w-auto" />
-						<h1 class="text-primary ml-3 truncate whitespace-nowrap text-xl font-bold">Scanopy</h1>
-					</div>
+					<img src="/logos/scanopy-logo.png" alt="Logo" class="ml-2 h-6 w-auto rounded" />
+					<h1 class="text-primary ml-1.5 text-sm font-bold">Scanopy</h1>
 				{/if}
 			</button>
 			{#if !collapsed && isDemoOrg}
@@ -674,8 +645,8 @@
 		{/if}
 
 		<!-- Main Navigation -->
-		<nav class="flex-1 overflow-y-auto px-2 py-4">
-			<ul class="space-y-4">
+		<nav class="flex-1 overflow-y-auto px-2 py-2">
+			<ul class="space-y-3">
 				{#each mainNavItems as configItem (configItem.id)}
 					{#if isSection(configItem)}
 						<!-- Section with items -->
@@ -704,11 +675,11 @@
 												class="{baseClasses} {isItemActive(item)
 													? 'text-primary border border-blue-500/30 bg-blue-100 dark:border-blue-600 dark:bg-blue-700'
 													: inactiveButtonClass}"
-												style="height: 2.5rem; padding: 0.5rem 0.75rem;"
+												style="height: 2rem; padding: 0.375rem 0.75rem;"
 												title={collapsed ? item.label : ''}
 											>
 												<span class="relative">
-													<item.icon class="h-5 w-5 flex-shrink-0" />
+													<item.icon class="h-4 w-4 flex-shrink-0" />
 													{#if item.id === 'discovery' && hasActiveSessions}
 														<span
 															class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full"
@@ -717,7 +688,7 @@
 													{/if}
 												</span>
 												{#if !collapsed}
-													<span class="ml-3 truncate">{item.label}</span>
+													<span class="ml-2.5 truncate">{item.label}</span>
 												{/if}
 											</button>
 											<!-- Render children if present -->
@@ -756,12 +727,12 @@
 								(configItem.id === 'settings' && showSettings)
 									? 'text-primary border border-blue-500/30 bg-blue-100 dark:border-blue-600 dark:bg-blue-700'
 									: inactiveButtonClass}"
-								style="height: 2.5rem; padding: 0.5rem 0.75rem;"
+								style="height: 2rem; padding: 0.375rem 0.75rem;"
 								title={collapsed ? configItem.label : ''}
 							>
-								<configItem.icon class="h-5 w-5 flex-shrink-0" />
+								<configItem.icon class="h-4 w-4 flex-shrink-0" />
 								{#if !collapsed}
-									<span class="ml-3 truncate">{configItem.label}</span>
+									<span class="ml-2.5 truncate">{configItem.label}</span>
 								{/if}
 							</button>
 						</li>
@@ -778,17 +749,13 @@
 				<li>
 					<button
 						class="{baseClasses} text-amber-400 hover:bg-amber-500/10"
-						style="height: 2.5rem; padding: 0.5rem 0.75rem;"
-						title={collapsed ? 'Upgrade' : ''}
-						onclick={() => {
-							trackEvent('upgrade_button_clicked', { feature: 'sidebar' });
-							upgradeContext.set(null);
-							openModal('billing-plan');
-						}}
+						style="height: 2rem; padding: 0.375rem 0.75rem;"
+						title={collapsed ? common_upgrade() : ''}
+						onclick={() => triggerUpgrade({ source: 'sidebar' })}
 					>
-						<ArrowUpCircle class="h-5 w-5 flex-shrink-0" />
+						<ArrowUpCircle class="h-4 w-4 flex-shrink-0" />
 						{#if !collapsed}
-							<span class="ml-3 truncate">Upgrade</span>
+							<span class="ml-2.5 truncate">{common_upgrade()}</span>
 						{/if}
 					</button>
 				</li>
@@ -802,7 +769,7 @@
 							(item.id === 'settings' && showSettings)
 								? 'text-primary border border-blue-500/30 bg-blue-100 dark:border-blue-600 dark:bg-blue-700'
 								: inactiveButtonClass}"
-							style="height: 2.5rem; padding: 0.5rem 0.75rem;"
+							style="height: 2rem; padding: 0.375rem 0.75rem;"
 							title={collapsed ? item.label : ''}
 						>
 							<span class="relative">

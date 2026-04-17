@@ -98,13 +98,13 @@ impl EventSubscriber for PosthogService {
         entity_ops.insert(EntityDiscriminants::Host, ops.clone());
         entity_ops.insert(EntityDiscriminants::Subnet, ops.clone());
         entity_ops.insert(EntityDiscriminants::Discovery, ops.clone());
-        entity_ops.insert(EntityDiscriminants::Group, ops.clone());
+        entity_ops.insert(EntityDiscriminants::Dependency, ops.clone());
         entity_ops.insert(EntityDiscriminants::Tag, ops.clone());
         entity_ops.insert(EntityDiscriminants::Share, ops.clone());
         entity_ops.insert(EntityDiscriminants::UserApiKey, ops.clone());
         entity_ops.insert(EntityDiscriminants::DaemonApiKey, ops.clone());
         entity_ops.insert(EntityDiscriminants::Daemon, ops.clone());
-        entity_ops.insert(EntityDiscriminants::SnmpCredential, ops.clone());
+        entity_ops.insert(EntityDiscriminants::Credential, ops.clone());
         entity_ops.insert(EntityDiscriminants::Invite, ops.clone());
         entity_ops.insert(EntityDiscriminants::User, ops);
 
@@ -134,11 +134,15 @@ impl EventSubscriber for PosthogService {
                 OnboardingOperation::FirstHostDiscovered,
                 OnboardingOperation::SecondNetworkCreated,
                 OnboardingOperation::FirstTagCreated,
-                OnboardingOperation::FirstGroupCreated,
+                OnboardingOperation::FirstDependencyCreated,
                 OnboardingOperation::FirstUserApiKeyCreated,
                 OnboardingOperation::FirstSnmpCredentialCreated,
+                OnboardingOperation::FirstCredentialCreated,
                 OnboardingOperation::InviteSent,
                 OnboardingOperation::InviteAccepted,
+                OnboardingOperation::ProfileCompleted,
+                OnboardingOperation::FirstApplicationTagCreated,
+                OnboardingOperation::ReferralSourceCompleted,
             ]),
             discovery_phases: Some(vec![
                 DiscoveryPhase::Pending,
@@ -433,9 +437,9 @@ mod tests {
         assert_eq!(to_snake_case("Host"), "host");
         assert_eq!(to_snake_case("DaemonApiKey"), "daemon_api_key");
         assert_eq!(to_snake_case("UserApiKey"), "user_api_key");
-        assert_eq!(to_snake_case("SnmpCredential"), "snmp_credential");
+        assert_eq!(to_snake_case("Credential"), "credential");
         assert_eq!(to_snake_case("Network"), "network");
-        assert_eq!(to_snake_case("IfEntry"), "if_entry");
+        assert_eq!(to_snake_case("Interface"), "interface");
     }
 
     #[test]

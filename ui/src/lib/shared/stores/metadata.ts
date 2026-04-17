@@ -3,14 +3,18 @@ import type { components } from '$lib/api/schema';
 import serviceDefinitionsJson from '$lib/data/service-definitions.json';
 import subnetTypesJson from '$lib/data/subnet-types.json';
 import edgeTypesJson from '$lib/data/edge-types.json';
-import groupTypesJson from '$lib/data/group-types.json';
+import dependencyTypesJson from '$lib/data/dependency-types.json';
 import entitiesJson from '$lib/data/entities.json';
 import portsJson from '$lib/data/ports.json';
 import discoveryTypesJson from '$lib/data/discovery-types.json';
 import billingPlansJson from '$lib/data/billing-plans-all.json';
 import featuresJson from '$lib/data/features.json';
 import permissionsJson from '$lib/data/permissions.json';
+import credentialTypesJson from '$lib/data/credential-types.json';
 import conceptsJson from '$lib/data/concepts.json';
+import containerTypesJson from '$lib/data/container-types.json';
+import viewsJson from '$lib/data/views.json';
+import serviceCategoriesJson from '$lib/data/service-categories.json';
 import {
 	createColorHelper,
 	createIconComponent,
@@ -35,18 +39,51 @@ export interface TypeMetadata extends EntityMetadata {
 	metadata: unknown;
 }
 
+export interface FieldDefinition {
+	id: string;
+	label: string;
+	field_type: 'string' | 'text' | 'select' | 'secretpathorinline' | 'pathorinline';
+	placeholder?: string;
+	secret: boolean;
+	optional: boolean;
+	help_text?: string;
+	options?: string[];
+	default_value?: string;
+	inline_format?: 'plain' | 'pemprivatekey' | 'pemcertificate';
+	group?: string;
+}
+
+export interface CredentialTypeMetadata {
+	fields: FieldDefinition[];
+	/** How this credential type can be scoped to targets */
+	scope_models?: string[];
+	/** Name of the associated ServiceDefinition (e.g. "SNMP", "Docker") */
+	associated_service?: string;
+	/** Whether the associated service has a logo */
+	has_logo?: boolean;
+	/** Whether the logo needs a white background */
+	logo_needs_white_background?: boolean;
+	/** Whether this credential type is selectable by users in the UI.
+	 * Auto-managed types (e.g. DockerSocket) are injected by daemons, not user-created. */
+	is_user_selectable?: boolean;
+}
+
 export interface MetadataRegistry {
 	service_definitions: TypeMetadata[];
 	subnet_types: TypeMetadata[];
 	edge_types: TypeMetadata[];
-	group_types: TypeMetadata[];
-	entities: EntityMetadata[];
+	dependency_types: TypeMetadata[];
+	entities: TypeMetadata[];
 	ports: TypeMetadata[];
 	discovery_types: TypeMetadata[];
 	billing_plans: TypeMetadata[];
 	features: TypeMetadata[];
 	permissions: TypeMetadata[];
 	concepts: EntityMetadata[];
+	credential_types: TypeMetadata[];
+	container_types: TypeMetadata[];
+	views: TypeMetadata[];
+	service_categories: TypeMetadata[];
 }
 
 // Utility type to add proper typing to the metadata field
@@ -79,6 +116,8 @@ export interface BillingPlanFeatures {
 	svg_export: boolean;
 	mermaid_export: boolean;
 	confluence_export: boolean;
+	pdf_export: boolean;
+	html_export: boolean;
 }
 
 export type FeatureId = keyof BillingPlanFeatures;
@@ -99,7 +138,8 @@ export interface ServicedDefinitionMetadata {
 	can_be_added: boolean;
 	manages_virtualization: 'vms' | 'containers';
 	has_logo: boolean;
-	logo_url: string;
+	logo_ext: string;
+	logo_needs_white_background: boolean;
 	has_raw_socket_endpoint: boolean;
 }
 
@@ -115,19 +155,20 @@ export interface SubnetTypeMetadata {
 	network_scan_discovery_eligible: boolean;
 	is_for_containers: boolean;
 	show_label: boolean;
+	hide_from_subnet_list: boolean;
 }
 
 export interface EdgeTypeMetadata {
-	is_dashed: boolean;
 	has_start_marker: boolean;
 	has_end_marker: boolean;
 	edge_style: 'Straight' | 'Smoothstep' | 'Bezier' | 'Simplebezier' | 'Step';
-	is_group_edge: boolean;
+	is_dependency_edge: boolean;
 	is_host_edge: boolean;
+	is_physical_edge: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface GroupTypeMetadata {}
+export interface DependencyTypeMetadata {}
 
 export interface FeatureMetadata {
 	is_coming_soon: boolean;
@@ -146,18 +187,33 @@ export interface PortTypeMetadata {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface DiscoveryTypeMetadata {}
 
+export interface ContainerTypeMetadata {
+	title_style: 'External' | 'Inline';
+	is_subcontainer: boolean;
+	is_collapsible: boolean;
+	collapsed_by_default: boolean;
+	has_border: boolean;
+	fill_icon: boolean;
+	padding: { top: number; left: number; bottom: number; right: number };
+	collapsed_size: { width: number; height: number };
+}
+
 export const metadata = writable<MetadataRegistry>({
 	service_definitions: serviceDefinitionsJson,
 	subnet_types: subnetTypesJson,
 	edge_types: edgeTypesJson,
-	group_types: groupTypesJson,
+	dependency_types: dependencyTypesJson,
 	entities: entitiesJson,
 	ports: portsJson,
 	discovery_types: discoveryTypesJson,
 	billing_plans: billingPlansJson,
 	features: featuresJson,
 	permissions: permissionsJson,
-	concepts: conceptsJson
+	concepts: conceptsJson,
+	credential_types: credentialTypesJson,
+	container_types: containerTypesJson,
+	views: viewsJson,
+	service_categories: serviceCategoriesJson
 } as unknown as MetadataRegistry);
 
 // Shared color helper functions that work for both TypeMetadata and EntityMetadata
@@ -223,21 +279,20 @@ function createTypeMetadataHelpers<T extends TypeMetadataKeys, M = unknown>(cate
 			const iconName = item?.icon || null;
 
 			const meta = item?.metadata;
-			if (
-				meta &&
-				typeof meta === 'object' &&
-				'has_logo' in meta &&
-				meta.has_logo &&
-				'logo_url' in meta
-			) {
-				if ('logo_needs_white_background' in meta) {
-					return createLogoIconComponent(
-						iconName,
-						meta.logo_url as string,
-						!!meta.logo_needs_white_background
-					);
+			if (meta && typeof meta === 'object' && 'has_logo' in meta && meta.has_logo) {
+				// For credential types, the logo is named after the associated service
+				const logoId =
+					'associated_service' in meta && typeof meta.associated_service === 'string'
+						? meta.associated_service
+						: id;
+				const ext = 'logo_ext' in meta && meta.logo_ext ? meta.logo_ext : 'svg';
+				if (logoId) {
+					const logoSlug = logoId.toLowerCase().replaceAll(' ', '-');
+					const logoUrl = `/logos/services/${logoSlug}.${ext}`;
+					const useWhiteBg =
+						'logo_needs_white_background' in meta && !!meta.logo_needs_white_background;
+					return createLogoIconComponent(iconName, logoUrl, useWhiteBg);
 				}
-				return createLogoIconComponent(iconName, meta.logo_url as string);
 			}
 
 			return createIconComponent(iconName);
@@ -322,10 +377,17 @@ export const subnetTypes = createTypeMetadataHelpers<'subnet_types', SubnetTypeM
 	'subnet_types'
 );
 export const edgeTypes = createTypeMetadataHelpers<'edge_types', EdgeTypeMetadata>('edge_types');
-export const groupTypes = createTypeMetadataHelpers<'group_types', GroupTypeMetadata>(
-	'group_types'
-);
-export const entities = createEntityMetadataHelpers('entities');
+export const dependencyTypes = createTypeMetadataHelpers<
+	'dependency_types',
+	DependencyTypeMetadata
+>('dependency_types');
+interface EntityTypeMetadata {
+	parent_taggable_entity?: string;
+	is_taggable?: boolean;
+	entity_name_singular?: string;
+	entity_name_plural?: string;
+}
+export const entities = createTypeMetadataHelpers<'entities', EntityTypeMetadata>('entities');
 export const ports = createTypeMetadataHelpers<'ports', PortTypeMetadata>('ports');
 export const discoveryTypes = createTypeMetadataHelpers<'discovery_types', DiscoveryTypeMetadata>(
 	'discovery_types'
@@ -338,6 +400,47 @@ export const permissions = createTypeMetadataHelpers<'permissions', PermissionsM
 	'permissions'
 );
 export const concepts = createEntityMetadataHelpers('concepts');
+export const credentialTypes = createTypeMetadataHelpers<
+	'credential_types',
+	CredentialTypeMetadata
+>('credential_types');
+export const containerTypes = createTypeMetadataHelpers<'container_types', ContainerTypeMetadata>(
+	'container_types'
+);
+export const views = createTypeMetadataHelpers<'views', object>('views');
+
+export interface ServiceCategoryMetadata {
+	application_relevant_use_cases: string[];
+}
+export const serviceCategories = createTypeMetadataHelpers<
+	'service_categories',
+	ServiceCategoryMetadata
+>('service_categories');
+
+/**
+ * Get service categories that are NOT application-relevant for the given use case.
+ * Used by the infra service grouping rule and workloads container sorting.
+ */
+export function getIrrelevantServiceCategories(useCase: string): Set<string> {
+	const categories = new Set<string>();
+	for (const cat of serviceCategoriesJson) {
+		const meta = cat.metadata as ServiceCategoryMetadata | null;
+		if (meta && !meta.application_relevant_use_cases.includes(useCase)) {
+			categories.add(cat.id);
+		}
+	}
+	return categories;
+}
+
+/** Map service definition name → category */
+const svcDefToCategoryMap = new Map<string, string>(
+	serviceDefinitionsJson.map((d) => [d.id, d.category])
+);
+
+/** Get the service category for a service definition name */
+export function getServiceDefinitionCategory(serviceDefinition: string): string | undefined {
+	return svcDefToCategoryMap.get(serviceDefinition);
+}
 
 /**
  * Generic metadata item structure for static fixtures.

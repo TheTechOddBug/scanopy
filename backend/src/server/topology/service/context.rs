@@ -1,34 +1,37 @@
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::server::{
     bindings::r#impl::base::Binding,
-    groups::r#impl::base::Group,
+    dependencies::r#impl::base::Dependency,
     hosts::r#impl::{base::Host, virtualization::HostVirtualization},
-    if_entries::r#impl::base::IfEntry,
     interfaces::r#impl::base::Interface,
+    ip_addresses::r#impl::base::IPAddress,
     ports::r#impl::base::Port,
-    services::r#impl::{
-        base::Service, definitions::ServiceDefinitionExt, virtualization::ServiceVirtualization,
-    },
+    services::r#impl::{base::Service, virtualization::ServiceVirtualization},
     subnets::r#impl::base::Subnet,
+    tags::r#impl::base::Tag,
     topology::types::{
         base::TopologyOptions,
         edges::Edge,
-        nodes::{Node, NodeType},
+        nodes::{ElementEntityType, Node, NodeType},
     },
+    vlans::r#impl::base::Vlan,
 };
 
 /// Central context for topology building operations
 /// Provides topology-specific business logic and data access
 pub struct TopologyContext<'a> {
     pub hosts: &'a [Host],
-    pub interfaces: &'a [Interface],
+    pub ip_addresses: &'a [IPAddress],
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
-    pub groups: &'a [Group],
+    pub dependencies: &'a [Dependency],
     pub ports: &'a [Port],
     pub bindings: &'a [Binding],
-    pub if_entries: &'a [IfEntry],
+    pub interfaces: &'a [Interface],
+    pub entity_tags: &'a [Tag],
+    pub vlans: &'a [Vlan],
     pub options: &'a TopologyOptions,
 }
 
@@ -36,24 +39,28 @@ impl<'a> TopologyContext<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         hosts: &'a [Host],
-        interfaces: &'a [Interface],
+        ip_addresses: &'a [IPAddress],
         subnets: &'a [Subnet],
         services: &'a [Service],
-        groups: &'a [Group],
+        dependencies: &'a [Dependency],
         ports: &'a [Port],
         bindings: &'a [Binding],
-        if_entries: &'a [IfEntry],
+        interfaces: &'a [Interface],
+        entity_tags: &'a [Tag],
+        vlans: &'a [Vlan],
         options: &'a TopologyOptions,
     ) -> Self {
         Self {
             hosts,
-            interfaces,
+            ip_addresses,
             subnets,
             services,
-            groups,
+            dependencies,
             ports,
             bindings,
-            if_entries,
+            interfaces,
+            entity_tags,
+            vlans,
             options,
         }
     }
@@ -74,13 +81,13 @@ impl<'a> TopologyContext<'a> {
         self.services.iter().find(|s| s.id == service_id)
     }
 
-    pub fn get_interface_by_id(&self, interface_id: Option<Uuid>) -> Option<&'a Interface> {
-        let id = interface_id?;
-        self.interfaces.iter().find(|i| i.id == id)
+    pub fn get_ip_address_by_id(&self, ip_address_id: Option<Uuid>) -> Option<&'a IPAddress> {
+        let id = ip_address_id?;
+        self.ip_addresses.iter().find(|i| i.id == id)
     }
 
-    pub fn get_interfaces_for_host(&self, host_id: Uuid) -> Vec<&'a Interface> {
-        self.interfaces
+    pub fn get_ip_addresses_for_host(&self, host_id: Uuid) -> Vec<&'a IPAddress> {
+        self.ip_addresses
             .iter()
             .filter(|i| i.base.host_id == host_id)
             .collect()
@@ -94,62 +101,63 @@ impl<'a> TopologyContext<'a> {
     }
 
     /// Get the first non-docker-bridge interface for a host
-    pub fn get_first_non_docker_bridge_interface_for_host(
+    pub fn get_first_non_docker_bridge_ip_address_for_host(
         &self,
         host_id: Uuid,
-    ) -> Option<&'a Interface> {
-        self.interfaces.iter().find(|interface| {
-            if interface.base.host_id != host_id {
+    ) -> Option<&'a IPAddress> {
+        self.ip_addresses.iter().find(|ip_address| {
+            if ip_address.base.host_id != host_id {
                 return false;
             }
-            if let Some(subnet) = self.get_subnet_by_id(interface.base.subnet_id) {
-                return !subnet.base.subnet_type.is_docker_bridge();
+            if let Some(subnet) = self.get_subnet_by_id(ip_address.base.subnet_id) {
+                return !subnet.base.subnet_type.is_docker_bridge()
+                    && !subnet.base.subnet_type.is_loopback();
             }
             false
         })
     }
 
-    pub fn get_services_bound_to_interface(&self, interface_id: Uuid) -> Vec<&'a Service> {
+    pub fn get_services_bound_to_interface(&self, ip_address_id: Uuid) -> Vec<&'a Service> {
         self.services
             .iter()
             .filter(|s| {
-                s.to_bound_interface_ids()
+                s.to_bound_ip_address_ids()
                     .iter()
-                    .any(|s| s.map(|id| id == interface_id).unwrap_or(false))
+                    .any(|s| s.map(|id| id == ip_address_id).unwrap_or(false))
             })
             .collect()
     }
 
-    pub fn get_subnet_from_interface_id(&self, interface_id: Uuid) -> Option<&'a Subnet> {
-        let interface = self.interfaces.iter().find(|i| i.id == interface_id)?;
-        self.get_subnet_by_id(interface.base.subnet_id)
+    pub fn get_subnet_from_ip_address_id(&self, ip_address_id: Uuid) -> Option<&'a Subnet> {
+        let ip_address = self.ip_addresses.iter().find(|i| i.id == ip_address_id)?;
+        self.get_subnet_by_id(ip_address.base.subnet_id)
     }
 
-    pub fn get_host_from_interface_id(&self, interface_id: Uuid) -> Option<&'a Host> {
-        let interface = self.interfaces.iter().find(|i| i.id == interface_id)?;
-        self.hosts.iter().find(|h| h.id == interface.base.host_id)
+    pub fn get_host_from_interface_id(&self, ip_address_id: Uuid) -> Option<&'a Host> {
+        let ip_address = self.ip_addresses.iter().find(|i| i.id == ip_address_id)?;
+        self.hosts.iter().find(|h| h.id == ip_address.base.host_id)
     }
 
     // ============================================================================
-    // IfEntry (SNMP Interface Table) Methods
+    // Interface (SNMP Interface Table) Methods
     // ============================================================================
 
-    pub fn get_if_entry_by_id(&self, id: Uuid) -> Option<&'a IfEntry> {
-        self.if_entries.iter().find(|e| e.id == id)
+    pub fn get_if_entry_by_id(&self, id: Uuid) -> Option<&'a Interface> {
+        self.interfaces.iter().find(|e| e.id == id)
     }
 
-    /// Resolve an interface ID from an IfEntry, with single-interface host fallback.
-    /// Returns Some(interface_id) if:
-    /// - The if_entry has interface_id set, OR
-    /// - The if_entry's host has exactly one interface
-    pub fn resolve_interface_for_if_entry(&self, if_entry: &IfEntry) -> Option<Uuid> {
+    /// Resolve an interface ID from an Interface, with single-interface host fallback.
+    /// Returns Some(ip_address_id) if:
+    /// - The interface has ip_address_id set, OR
+    /// - The interface's host has exactly one interface
+    pub fn resolve_ip_address_for_if_entry(&self, interface: &Interface) -> Option<Uuid> {
         // Direct resolution
-        if let Some(interface_id) = if_entry.base.interface_id {
-            return Some(interface_id);
+        if let Some(ip_address_id) = interface.base.ip_address_id {
+            return Some(ip_address_id);
         }
 
         // Single-interface host fallback
-        let host_interfaces = self.get_interfaces_for_host(if_entry.base.host_id);
+        let host_interfaces = self.get_ip_addresses_for_host(interface.base.host_id);
         if host_interfaces.len() == 1 {
             return Some(host_interfaces[0].id);
         }
@@ -157,19 +165,19 @@ impl<'a> TopologyContext<'a> {
         None
     }
 
-    pub fn get_if_entries_for_host(&self, host_id: Uuid) -> Vec<&'a IfEntry> {
-        self.if_entries
+    pub fn get_if_entries_for_host(&self, host_id: Uuid) -> Vec<&'a Interface> {
+        self.interfaces
             .iter()
             .filter(|e| e.base.host_id == host_id)
             .collect()
     }
 
-    /// Get all if_entries that have a resolved neighbor (full resolution only)
-    pub fn get_if_entries_with_neighbor(&self) -> Vec<&'a IfEntry> {
-        use crate::server::if_entries::r#impl::base::Neighbor;
-        self.if_entries
+    /// Get all interfaces that have a resolved neighbor (full resolution only)
+    pub fn get_if_entries_with_neighbor(&self) -> Vec<&'a Interface> {
+        use crate::server::interfaces::r#impl::base::Neighbor;
+        self.interfaces
             .iter()
-            .filter(|e| matches!(e.base.neighbor, Some(Neighbor::IfEntry(_))))
+            .filter(|e| matches!(e.base.neighbor, Some(Neighbor::Interface(_))))
             .collect()
     }
 
@@ -207,72 +215,35 @@ impl<'a> TopologyContext<'a> {
         nodes
             .iter()
             .find(|n| n.id == node_id)
-            .map(|node| match node.node_type {
-                NodeType::InterfaceNode { subnet_id, .. } => subnet_id,
-                NodeType::SubnetNode { .. } => node.id,
+            .and_then(|node| match &node.node_type {
+                NodeType::Element {
+                    element: ElementEntityType::IPAddress { subnet_id, .. },
+                    ..
+                } => Some(*subnet_id),
+                NodeType::Container { .. } => Some(node.id),
+                _ => None,
             })
     }
 
     // ============================================================================
-    // Infrastructure Zone Methods
+    // VLAN Methods
     // ============================================================================
 
-    pub fn get_interfaces_with_infra_service(&self, subnet: &Subnet) -> Vec<Option<Uuid>> {
-        self.services
+    /// Look up a VLAN by its entity UUID
+    pub fn get_vlan_by_id(&self, vlan_id: Uuid) -> Option<&'a Vlan> {
+        self.vlans.iter().find(|v| v.id == vlan_id)
+    }
+
+    // ============================================================================
+    // Tag Methods
+    // ============================================================================
+
+    pub fn get_host_ids_with_tags(&self, tag_ids: &[Uuid]) -> HashSet<Uuid> {
+        self.hosts
             .iter()
-            .filter(|s| {
-                if let Some(host) = self.hosts.iter().find(|h| h.id == s.base.host_id) {
-                    let host_interfaces = self.get_interfaces_for_host(host.id);
-                    return (self
-                        .options
-                        .request
-                        .left_zone_service_categories
-                        .contains(&s.base.service_definition.category())
-                        || (self.options.request.show_gateway_in_left_zone
-                            && s.base.service_definition.is_gateway()))
-                        && subnet.has_interface_with_service(&host_interfaces, s);
-                }
-                false
-            })
-            .flat_map(|s| s.to_bound_interface_ids())
+            .filter(|h| h.base.tags.iter().any(|t| tag_ids.contains(t)))
+            .map(|h| h.id)
             .collect()
-    }
-
-    pub fn is_interface_infra(&self, interface_id: Uuid) -> bool {
-        if let Some(subnet) = self.get_subnet_from_interface_id(interface_id) {
-            let infra_interfaces = self.get_interfaces_with_infra_service(subnet);
-            return infra_interfaces.contains(&Some(interface_id));
-        }
-        false
-    }
-
-    /// Check if a subnet has both infra and non-infra nodes
-    /// If it only has one type, infra constraints are not necessary
-    pub fn subnet_has_mixed_infra(&self, subnet: &Subnet) -> bool {
-        let infra_interfaces = self.get_interfaces_with_infra_service(subnet);
-
-        // Get all interfaces in this subnet
-        let all_interfaces_in_subnet: Vec<Uuid> = self
-            .interfaces
-            .iter()
-            .filter(|i| i.base.subnet_id == subnet.id)
-            .map(|i| i.id)
-            .collect();
-
-        if all_interfaces_in_subnet.is_empty() {
-            return false;
-        }
-
-        // Check if we have both infra and non-infra
-        let has_infra = all_interfaces_in_subnet
-            .iter()
-            .any(|id| infra_interfaces.contains(&Some(*id)));
-
-        let has_non_infra = all_interfaces_in_subnet
-            .iter()
-            .any(|id| !infra_interfaces.contains(&Some(*id)));
-
-        has_infra && has_non_infra
     }
 
     // ============================================================================
@@ -281,8 +252,8 @@ impl<'a> TopologyContext<'a> {
 
     pub fn edge_is_intra_subnet(&self, edge: &Edge) -> bool {
         if let (Some(source_subnet), Some(target_subnet)) = (
-            self.get_subnet_from_interface_id(edge.source),
-            self.get_subnet_from_interface_id(edge.target),
+            self.get_subnet_from_ip_address_id(edge.source),
+            self.get_subnet_from_ip_address_id(edge.target),
         ) {
             return source_subnet.id == target_subnet.id;
         }
@@ -291,12 +262,12 @@ impl<'a> TopologyContext<'a> {
 
     pub fn edge_is_multi_hop(
         &self,
-        source_interface_id: &Uuid,
-        target_interface_id: &Uuid,
+        source_ip_address_id: &Uuid,
+        target_ip_address_id: &Uuid,
     ) -> bool {
         if let (Some(source_subnet), Some(target_subnet)) = (
-            self.get_subnet_from_interface_id(*source_interface_id),
-            self.get_subnet_from_interface_id(*target_interface_id),
+            self.get_subnet_from_ip_address_id(*source_ip_address_id),
+            self.get_subnet_from_ip_address_id(*target_ip_address_id),
         ) {
             let vertical_order_difference = source_subnet.base.subnet_type.vertical_order()
                 as isize
@@ -311,7 +282,7 @@ impl<'a> TopologyContext<'a> {
     // Node Existence Checks
     // ============================================================================
 
-    pub fn interface_will_have_node(&self, _interface_id: &Uuid) -> bool {
+    pub fn interface_will_have_node(&self, _ip_address_id: &Uuid) -> bool {
         true
     }
 
@@ -319,5 +290,14 @@ impl<'a> TopologyContext<'a> {
         self.get_service_by_id(*service_id)
             .map(|s| !s.base.bindings.is_empty())
             .unwrap_or(true)
+    }
+
+    /// Build a map of binding_id → service_id from all services.
+    /// Used by builders that need to resolve dependency bindings to service IDs.
+    pub fn build_binding_to_service_map(&self) -> HashMap<Uuid, Uuid> {
+        self.services
+            .iter()
+            .flat_map(|s| s.base.bindings.iter().map(move |b| (b.id, s.id)))
+            .collect()
     }
 }

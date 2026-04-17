@@ -5,29 +5,14 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { queryKeys } from '$lib/api/query-client';
 import { apiClient } from '$lib/api/client';
+import type { components } from '$lib/api/schema';
 
-export interface OidcProviderMetadata {
-	name: string;
-	slug: string;
-	logo: string;
-}
+export type OidcProviderMetadata = components['schemas']['OidcProviderMetadata'];
+export type DeploymentType = components['schemas']['DeploymentType'];
+export type PublicServerConfig = components['schemas']['PublicConfigResponse'];
 
-export type DeploymentType = 'cloud' | 'commercial' | 'community';
-
-export interface PublicServerConfig {
-	server_port: number;
-	disable_registration: boolean;
-	disable_password_login: boolean;
-	oidc_providers: OidcProviderMetadata[];
-	billing_enabled: boolean;
-	has_integrated_daemon: boolean;
-	has_email_service: boolean;
-	has_email_opt_in: boolean;
-	public_url: string;
-	posthog_key: string | null;
-	needs_cookie_consent: boolean;
-	deployment_type: DeploymentType;
-}
+export const isLicenseLocked = (cfg: PublicServerConfig) =>
+	cfg.license_status === 'expired' || cfg.license_status === 'invalid';
 
 // Helper functions for deployment type checks
 export const isCloud = (cfg: PublicServerConfig) => cfg.deployment_type === 'cloud';

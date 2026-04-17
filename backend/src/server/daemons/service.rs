@@ -25,14 +25,19 @@ use crate::daemon::runtime::state::{
 use crate::daemon::runtime::types::InitializeDaemonRequest;
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::billing::types::base::BillingPlan;
+use crate::server::credentials::r#impl::types::CredentialAssignment;
+use crate::server::credentials::service::CredentialService;
 use crate::server::daemon_api_keys::service::DaemonApiKeyService;
 use crate::server::daemons::r#impl::api::{
     DaemonCapabilities, DaemonDiscoveryRequest, DaemonRegistrationRequest,
     DaemonRegistrationResponse, DiscoveryUpdatePayload, FirstContactRequest, ServerCapabilities,
 };
 use crate::server::daemons::r#impl::base::{Daemon, DaemonBase};
-use crate::server::daemons::r#impl::version::DaemonVersionPolicy;
+use crate::server::daemons::r#impl::version::{
+    DaemonVersionPolicy, pre_interface_to_ip_address_rename, supports_unified_discovery,
+};
 use crate::server::discovery::r#impl::base::{Discovery, DiscoveryBase};
+use crate::server::discovery::r#impl::scan_settings::ScanSettings;
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback, RunType};
 use crate::server::discovery::service::DiscoveryService;
 use crate::server::hosts::r#impl::base::{Host, HostBase};
@@ -40,17 +45,19 @@ use crate::server::hosts::service::{HostLimitContext, HostService};
 use crate::server::networks::r#impl::Network;
 use crate::server::networks::service::NetworkService;
 use crate::server::organizations::service::OrganizationService;
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::events::bus::EventBus;
 use crate::server::shared::events::types::{
-    BillingEvent, BillingOperation, OnboardingEvent, OnboardingOperation,
+    BillingEvent, BillingOperation, EntityEvent, EntityOperation, OnboardingEvent,
+    OnboardingOperation,
 };
+use crate::server::shared::legacy::rewrite_response_for_legacy_daemon;
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
-use crate::server::shared::storage::traits::Storable;
+use crate::server::shared::storage::traits::{Entity, Storable, Storage};
 use crate::server::shared::types::api::{ApiError, ApiResponse};
 use crate::server::shared::types::entities::EntitySource;
-use crate::server::snmp_credentials::r#impl::discovery::SnmpCredentialMapping;
 use crate::server::subnets::service::SubnetService;
 use crate::server::tags::entity_tags::EntityTagService;
 use crate::server::users::service::UserService;
@@ -76,6 +83,7 @@ pub struct DaemonService {
 
     // Direct dependencies (passed to constructor)
     discovery_service: Arc<DiscoveryService>,
+    credential_service: Arc<CredentialService>,
     subnet_service: Arc<SubnetService>,
     network_service: Arc<NetworkService>,
     organization_service: Arc<OrganizationService>,
@@ -120,6 +128,52 @@ impl CrudService<Daemon> for DaemonService {
     fn entity_tag_service(&self) -> Option<&Arc<EntityTagService>> {
         Some(&self.entity_tag_service)
     }
+
+    async fn delete(
+        &self,
+        id: &Uuid,
+        authentication: AuthenticatedEntity,
+    ) -> Result<(), anyhow::Error> {
+        // Clean up in-memory discovery session state (queued/pending/terminal)
+        // to prevent stale references after deletion.
+        self.discovery_service.clear_sessions_for_daemon(id).await;
+
+        // Delegate to the default CrudService delete implementation
+        let entity = self
+            .get_by_id(id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("{} with id {} not found", Daemon::table_name(), id))?;
+
+        self.storage().delete(id).await?;
+
+        let trigger_stale = entity.triggers_staleness(None);
+        let suppress_logs = self.suppress_logs(Some(&entity), None);
+
+        if let Some(entity_tag_service) = self.entity_tag_service() {
+            entity_tag_service
+                .remove_all_for_entity(entity.id(), <Daemon as Entity>::entity_type())
+                .await?;
+        }
+
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: *id,
+                network_id: self.get_network_id(&entity),
+                organization_id: self.get_organization_id(&entity),
+                entity_type: entity.into(),
+                operation: EntityOperation::Deleted,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale,
+                    "suppress_logs": suppress_logs
+                }),
+                authentication,
+            })
+            .await?;
+
+        Ok(())
+    }
 }
 
 impl DaemonService {
@@ -129,6 +183,7 @@ impl DaemonService {
         event_bus: Arc<EventBus>,
         entity_tag_service: Arc<EntityTagService>,
         discovery_service: Arc<DiscoveryService>,
+        credential_service: Arc<CredentialService>,
         subnet_service: Arc<SubnetService>,
         network_service: Arc<NetworkService>,
         organization_service: Arc<OrganizationService>,
@@ -144,6 +199,7 @@ impl DaemonService {
             event_bus,
             entity_tag_service,
             discovery_service,
+            credential_service,
             subnet_service,
             network_service,
             organization_service,
@@ -380,14 +436,30 @@ impl DaemonService {
             return Ok(());
         }
 
-        let _: Option<serde_json::Value> = self
-            .post_to_daemon(
-                daemon,
-                Some(api_key),
-                "/api/discovery/entities-created",
-                &created_entities,
-            )
-            .await?;
+        // Legacy cleanup: remove once minimum_supported >= 0.16.0
+        // Pre-0.16.0 daemons expect old entity/field names in responses
+        let version_str = daemon.base.version.as_ref().map(|v| v.to_string());
+        if pre_interface_to_ip_address_rename(version_str.as_deref()) {
+            let mut json = serde_json::to_value(&created_entities)?;
+            rewrite_response_for_legacy_daemon(&mut json);
+            let _: Option<serde_json::Value> = self
+                .post_to_daemon(
+                    daemon,
+                    Some(api_key),
+                    "/api/discovery/entities-created",
+                    &json,
+                )
+                .await?;
+        } else {
+            let _: Option<serde_json::Value> = self
+                .post_to_daemon(
+                    daemon,
+                    Some(api_key),
+                    "/api/discovery/entities-created",
+                    &created_entities,
+                )
+                .await?;
+        }
 
         tracing::debug!(
             daemon_id = %daemon.id,
@@ -417,9 +489,13 @@ impl DaemonService {
             "Sending discovery request to daemon"
         );
 
-        // Use with_exposed_snmp() to serialize with SNMP credentials exposed.
-        // The default Serialize impl redacts credentials via Secret<String>.
-        let payload = request.with_exposed_snmp();
+        // Unified: serialize with credential_mappings via with_exposed_credentials().
+        // Legacy: serialize with SNMP inline via with_exposed_snmp().
+        let payload = if matches!(request.discovery_type, DiscoveryType::Unified { .. }) {
+            request.with_exposed_credentials()
+        } else {
+            request.with_exposed_snmp()
+        };
         let _: Option<serde_json::Value> = self
             .post_to_daemon(daemon, api_key, "/api/discovery/initiate", &payload)
             .await?;
@@ -517,7 +593,8 @@ impl DaemonService {
     // Processing methods
     // ========================================================================
 
-    /// Process a heartbeat from a daemon
+    /// Process a heartbeat from a daemon.
+    /// Also resolves interfaced subnets and updates capabilities.
     pub async fn process_status(
         &self,
         daemon_id: Uuid,
@@ -543,6 +620,25 @@ impl DaemonService {
             daemon.base.version = Some(version);
         }
 
+        // Resolve interfaced subnets based on daemon version
+        if supports_unified_discovery(daemon.base.version.as_ref()) {
+            // v0.15.0+ daemon: resolve full Subnet objects (empty = no ip_addresses)
+            let mut resolved_ids = Vec::new();
+            for subnet in status.interfaced_subnets {
+                match self.subnet_service.create(subnet, auth.clone()).await {
+                    Ok(resolved) => resolved_ids.push(resolved.id),
+                    Err(e) => {
+                        tracing::warn!(error = ?e, "Failed to resolve interfaced subnet");
+                    }
+                }
+            }
+            daemon.base.capabilities.interfaced_subnet_ids = resolved_ids;
+            daemon.base.capabilities.has_docker_socket = status.has_docker_socket;
+        } else if !status.capabilities.interfaced_subnet_ids.is_empty() {
+            // Pre-v0.15.0: use capabilities as-is
+            daemon.base.capabilities = status.capabilities;
+        }
+
         self.update(&mut daemon, auth).await?;
         Ok(())
     }
@@ -554,10 +650,21 @@ impl DaemonService {
         version: Version,
         auth: AuthenticatedEntity,
     ) -> Result<ServerCapabilities, ApiError> {
+        // Reject daemons below the minimum supported version
+        let policy = DaemonVersionPolicy::default();
+        if version < policy.minimum_supported {
+            return Err(ApiError::daemon_version_too_old(
+                &version.to_string(),
+                &policy.minimum_supported.to_string(),
+            ));
+        }
+
         let mut daemon = self
             .get_by_id(&daemon_id)
             .await?
             .ok_or_else(|| ApiError::entity_not_found::<Daemon>(daemon_id))?;
+
+        let was_pre_unified = !supports_unified_discovery(daemon.base.version.as_ref());
 
         daemon.base.version = Some(version.clone());
         daemon.base.last_seen = Some(Utc::now());
@@ -566,7 +673,51 @@ impl DaemonService {
 
         tracing::info!(daemon_id = %daemon_id, version = %version, "Daemon startup");
 
-        let policy = DaemonVersionPolicy::default();
+        // Migrate legacy discoveries if daemon just upgraded to unified-capable version
+        if was_pre_unified
+            && supports_unified_discovery(Some(&version))
+            && let Err(e) = self
+                .migrate_discoveries_to_unified(
+                    daemon_id,
+                    daemon.base.host_id,
+                    daemon.base.network_id,
+                )
+                .await
+        {
+            tracing::warn!(
+                daemon_id = %daemon_id,
+                error = ?e,
+                "Failed to migrate legacy discoveries to unified"
+            );
+        }
+
+        // If daemon has no non-historical discoveries, create defaults
+        // (e.g. daemon reconnecting after discoveries were deleted)
+        let filter =
+            StorableFilter::new_from_uuid_column("daemon_id", &daemon_id).exclude_historical();
+        let existing_discoveries = self.discovery_service.get_all(filter).await?;
+        if existing_discoveries.is_empty() {
+            let network = self
+                .network_service
+                .get_by_id(&daemon.base.network_id)
+                .await?
+                .ok_or_else(|| ApiError::entity_not_found::<Network>(daemon.base.network_id))?;
+            let org = self
+                .organization_service
+                .get_by_id(&network.base.organization_id)
+                .await?
+                .ok_or_else(|| ApiError::not_found("Organization not found".to_string()))?;
+            let is_free_plan = matches!(org.base.plan, Some(BillingPlan::Free(_)));
+            self.create_default_discovery_jobs(
+                daemon_id,
+                daemon.base.network_id,
+                daemon.base.host_id,
+                daemon.base.capabilities.has_docker_socket,
+                is_free_plan,
+            )
+            .await?;
+        }
+
         let status = policy.evaluate(Some(&version));
 
         Ok(ServerCapabilities {
@@ -612,8 +763,19 @@ impl DaemonService {
             .as_ref()
             .and_then(|v| semver::Version::parse(v).ok());
 
-        // Compute server_capabilities if version was provided
+        // Reject daemons below the minimum supported version
         let policy = DaemonVersionPolicy::default();
+        if daemon_version
+            .as_ref()
+            .is_some_and(|v| v < &policy.minimum_supported)
+        {
+            return Err(ApiError::daemon_version_too_old(
+                &daemon_version.unwrap().to_string(),
+                &policy.minimum_supported.to_string(),
+            ));
+        }
+
+        // Compute server_capabilities if version was provided
         let server_capabilities = daemon_version.as_ref().map(|v| {
             let status = policy.evaluate(Some(v));
             ServerCapabilities {
@@ -638,11 +800,31 @@ impl DaemonService {
             existing_daemon.base.last_seen = Some(Utc::now());
             existing_daemon.base.mode = request.mode;
             existing_daemon.base.name = request.name;
+            let was_pre_unified =
+                !supports_unified_discovery(existing_daemon.base.version.as_ref());
             if let Some(v) = daemon_version.clone() {
                 existing_daemon.base.version = Some(v);
             }
 
             let updated_daemon = self.update(&mut existing_daemon, auth).await?;
+
+            // Migrate legacy discoveries if daemon just upgraded to unified-capable version
+            if was_pre_unified
+                && supports_unified_discovery(existing_daemon.base.version.as_ref())
+                && let Err(e) = self
+                    .migrate_discoveries_to_unified(
+                        existing_daemon.id,
+                        existing_daemon.base.host_id,
+                        existing_daemon.base.network_id,
+                    )
+                    .await
+            {
+                tracing::warn!(
+                    daemon_id = %existing_daemon.id,
+                    error = ?e,
+                    "Failed to migrate legacy discoveries to unified"
+                );
+            }
 
             return Ok(DaemonRegistrationResponse {
                 daemon: updated_daemon,
@@ -670,7 +852,11 @@ impl DaemonService {
             sys_contact: None,
             management_url: None,
             chassis_id: None,
-            snmp_credential_id: None,
+            sys_name: None,
+            manufacturer: None,
+            model: None,
+            serial_number: None,
+            credential_assignments: vec![],
         });
 
         let host_response = host_service
@@ -680,10 +866,56 @@ impl DaemonService {
                 vec![],
                 vec![],
                 vec![],
+                vec![],
                 auth.clone(),
                 None,
             )
             .await?;
+
+        // Assign only localhost-targeted credentials to daemon host during registration.
+        // Remote credentials will be auto-assigned to their target hosts during discovery.
+        if !request.credential_ids.is_empty() {
+            let mut assignments = Vec::new();
+            for id in &request.credential_ids {
+                let is_local = match self.credential_service.get_by_id(id).await {
+                    Ok(Some(cred)) => match &cred.base.target_ips {
+                        Some(ips) => ips.iter().any(|ip| ip.is_loopback()),
+                        None => false,
+                    },
+                    Ok(None) => {
+                        tracing::warn!(credential_id = %id, "Credential not found during registration");
+                        false
+                    }
+                    Err(e) => {
+                        tracing::warn!(credential_id = %id, error = ?e, "Failed to look up credential during registration");
+                        false
+                    }
+                };
+                if is_local {
+                    assignments.push(CredentialAssignment {
+                        credential_id: *id,
+                        ip_address_ids: None,
+                    });
+                } else {
+                    tracing::debug!(
+                        credential_id = %id,
+                        "Skipping credential with remote target_ips for daemon host assignment"
+                    );
+                }
+            }
+            if !assignments.is_empty()
+                && let Err(e) = self
+                    .credential_service
+                    .set_host_credentials(&host_response.id, &assignments)
+                    .await
+            {
+                tracing::warn!(
+                    host_id = %host_response.id,
+                    error = ?e,
+                    "Failed to assign credentials to host during registration"
+                );
+            }
+        }
 
         // If user_id is nil (old daemon), fall back to org owner
         let user_id = if request.user_id.is_nil() {
@@ -834,16 +1066,32 @@ impl DaemonService {
             match host_service
                 .discover_host(
                     host_request.host,
-                    host_request.interfaces,
+                    host_request.ip_addresses,
                     host_request.ports,
                     host_request.services,
-                    host_request.if_entries,
+                    host_request.interfaces,
+                    host_request.subnets,
                     auth.clone(),
                     limit_ctx.as_ref(),
                 )
                 .await
             {
                 Ok(host_response) => {
+                    // Credential assignments are persisted inside discover_host()
+                    // after remapping daemon interface UUIDs to server-assigned UUIDs.
+
+                    // Scope loopback credentials to the loopback interface
+                    if let Err(e) = self
+                        .scope_loopback_credentials(&host_response.id, host_service)
+                        .await
+                    {
+                        tracing::warn!(
+                            host_id = %host_response.id,
+                            error = ?e,
+                            "Failed to scope loopback credentials"
+                        );
+                    }
+
                     created_hosts.push((pending_id, host_response));
                 }
                 Err(e) => {
@@ -1005,11 +1253,6 @@ impl DaemonService {
             "Creating default discovery jobs for daemon"
         );
 
-        let network_name = match self.network_service.get_by_id(&network_id).await {
-            Ok(Some(network)) => network.base.name,
-            _ => "Unknown Network".to_string(),
-        };
-
         // Free plans use AdHoc (run once immediately), paid plans use Scheduled
         let default_run_type = if is_free_plan {
             RunType::AdHoc { last_run: None }
@@ -1022,70 +1265,21 @@ impl DaemonService {
             }
         };
 
-        // Create SelfReport discovery job
-        let self_report_discovery_type = DiscoveryType::SelfReport { host_id };
-
-        let self_report_discovery = self
-            .discovery_service
-            .create_discovery(
-                Discovery::new(DiscoveryBase {
-                    run_type: default_run_type.clone(),
-                    discovery_type: self_report_discovery_type.clone(),
-                    name: format!("{} \u{2014} {}", self_report_discovery_type, network_name),
-                    daemon_id,
-                    network_id,
-                    tags: Vec::new(),
-                }),
-                AuthenticatedEntity::System,
-            )
-            .await?;
-
-        self.discovery_service
-            .start_session(self_report_discovery, AuthenticatedEntity::System)
-            .await?;
-
-        // Create Docker discovery job if daemon has docker socket
-        if has_docker_socket {
-            let docker_discovery_type = DiscoveryType::Docker {
-                host_id,
-                host_naming_fallback: HostNamingFallback::BestService,
-            };
-
-            let docker_discovery = self
-                .discovery_service
-                .create_discovery(
-                    Discovery::new(DiscoveryBase {
-                        run_type: default_run_type.clone(),
-                        discovery_type: docker_discovery_type.clone(),
-                        name: format!("{} \u{2014} {}", docker_discovery_type, network_name),
-                        daemon_id,
-                        network_id,
-                        tags: Vec::new(),
-                    }),
-                    AuthenticatedEntity::System,
-                )
-                .await?;
-
-            self.discovery_service
-                .start_session(docker_discovery, AuthenticatedEntity::System)
-                .await?;
-        }
-
-        // Create Network discovery job; snmp hydrated at session start
-        let network_discovery_type = DiscoveryType::Network {
+        // Create a single Unified discovery combining self-report, network, and docker
+        let unified_discovery_type = DiscoveryType::Unified {
+            host_id,
             subnet_ids: None,
             host_naming_fallback: HostNamingFallback::BestService,
-            snmp_credentials: SnmpCredentialMapping::default(),
-            probe_raw_socket_ports: false,
+            scan_settings: ScanSettings::default(),
         };
 
-        let network_discovery = self
+        let unified_discovery = self
             .discovery_service
             .create_discovery(
                 Discovery::new(DiscoveryBase {
-                    run_type: default_run_type.clone(),
-                    discovery_type: network_discovery_type.clone(),
-                    name: format!("{} \u{2014} {}", network_discovery_type, network_name),
+                    run_type: default_run_type,
+                    discovery_type: unified_discovery_type.clone(),
+                    name: "Discovery".to_string(),
                     daemon_id,
                     network_id,
                     tags: Vec::new(),
@@ -1095,8 +1289,108 @@ impl DaemonService {
             .await?;
 
         self.discovery_service
-            .start_session(network_discovery, AuthenticatedEntity::System)
+            .start_session(unified_discovery, AuthenticatedEntity::System)
             .await?;
+
+        Ok(())
+    }
+
+    /// Migrate legacy discoveries (SelfReport/Network/Docker) to a single Unified discovery.
+    /// Archives old discoveries as Historical and creates a new Unified discovery inheriting
+    /// settings from the primary Network discovery (if any).
+    pub async fn migrate_discoveries_to_unified(
+        &self,
+        daemon_id: Uuid,
+        host_id: Uuid,
+        network_id: Uuid,
+    ) -> Result<(), ApiError> {
+        let filter =
+            StorableFilter::new_from_uuid_column("daemon_id", &daemon_id).exclude_historical();
+        let discoveries = self.discovery_service.get_all(filter).await?;
+
+        // Skip if any are already Unified
+        if discoveries
+            .iter()
+            .any(|d| matches!(d.base.discovery_type, DiscoveryType::Unified { .. }))
+        {
+            return Ok(());
+        }
+
+        // Skip if there are no discoveries to migrate
+        if discoveries.is_empty() {
+            return Ok(());
+        }
+
+        // Select primary: prefer Network discovery that is enabled + scheduled + most recently updated
+        let primary = discoveries
+            .iter()
+            .filter(|d| {
+                matches!(d.base.discovery_type, DiscoveryType::Network { .. })
+                    && matches!(d.base.run_type, RunType::Scheduled { enabled: true, .. })
+            })
+            .max_by_key(|d| d.updated_at)
+            .or_else(|| discoveries.iter().max_by_key(|d| d.updated_at));
+
+        let primary = match primary {
+            Some(p) => p,
+            None => return Ok(()),
+        };
+
+        // Extract settings from primary
+        let (subnet_ids, host_naming_fallback) = match &primary.base.discovery_type {
+            DiscoveryType::Network {
+                subnet_ids,
+                host_naming_fallback,
+                ..
+            } => (subnet_ids.clone(), *host_naming_fallback),
+            _ => (None, HostNamingFallback::BestService),
+        };
+
+        // Create unified discovery inheriting run_type and tags from primary
+        let unified_type = DiscoveryType::Unified {
+            host_id,
+            subnet_ids,
+            host_naming_fallback,
+            scan_settings: ScanSettings::default(),
+        };
+
+        self.discovery_service
+            .create_discovery(
+                Discovery::new(DiscoveryBase {
+                    run_type: primary.base.run_type.clone(),
+                    discovery_type: unified_type.clone(),
+                    name: "Discovery".to_string(),
+                    daemon_id,
+                    network_id,
+                    tags: primary.base.tags.clone(),
+                }),
+                AuthenticatedEntity::System,
+            )
+            .await?;
+
+        // Delete old discoveries
+        let count = discoveries.len();
+        for old in &discoveries {
+            if let Err(e) = self
+                .discovery_service
+                .delete(&old.id, AuthenticatedEntity::System)
+                .await
+            {
+                tracing::warn!(
+                    discovery_id = %old.id,
+                    error = ?e,
+                    "Failed to delete legacy discovery during migration"
+                );
+            }
+        }
+
+        tracing::info!(
+            daemon_id = %daemon_id,
+            count = count,
+            "Migrated {} legacy discoveries to unified for daemon {}",
+            count,
+            daemon_id
+        );
 
         Ok(())
     }
@@ -1392,7 +1686,8 @@ impl DaemonService {
             daemon_id = %daemon.id,
             daemon_name = %daemon.base.name,
             ready_for_work = status.ready_for_work,
-            capabilities = %status.capabilities,
+            has_docker_socket = status.has_docker_socket,
+            interfaced_subnet_count = status.interfaced_subnets.len(),
             "ServerPoll status received"
         );
 
@@ -1408,10 +1703,13 @@ impl DaemonService {
             );
         }
 
-        // If daemon has a version and we haven't recorded it yet, process startup
+        // If daemon has a version and it's different from what we have, process startup
+        // (process_startup handles migration from legacy to unified discovery internally)
         if let Some(version) = status.version.clone()
-            && daemon.base.version.is_none()
-            && let Err(e) = self.process_startup(daemon.id, version, auth.clone()).await
+            && daemon.base.version.as_ref() != Some(&version)
+            && let Err(e) = self
+                .process_startup(daemon.id, version.clone(), auth.clone())
+                .await
         {
             tracing::warn!(
                 daemon_id = %daemon.id,
@@ -1420,18 +1718,7 @@ impl DaemonService {
             );
         }
 
-        // Update capabilities if changed
-        if daemon.base.capabilities != status.capabilities
-            && let Err(e) = self
-                .process_capabilities(daemon.id, status.capabilities.clone(), auth.clone())
-                .await
-        {
-            tracing::warn!(
-                daemon_id = %daemon.id,
-                error = ?e,
-                "Failed to process daemon capabilities"
-            );
-        }
+        // Capabilities are now resolved inside process_status() — no separate call needed.
 
         // First contact - create default discovery jobs and emit telemetry
         if is_first_contact {
@@ -1466,7 +1753,7 @@ impl DaemonService {
                     daemon.id,
                     daemon.base.network_id,
                     daemon.base.host_id,
-                    status.capabilities.has_docker_socket,
+                    status.has_docker_socket,
                     is_free_plan,
                 )
                 .await
@@ -1549,10 +1836,23 @@ impl DaemonService {
         if status.ready_for_work
             && let Some(work) = self.get_pending_work(daemon.id).await
         {
-            let request = DaemonDiscoveryRequest {
-                session_id: work.session_id,
-                discovery_type: work.discovery_type,
-            };
+            let pending = self
+                .discovery_service
+                .get_pending_credential_ids_for_session(&work.session_id)
+                .await;
+            let request = self
+                .discovery_service
+                .build_daemon_request(&work, work.network_id, &pending)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::error!("Failed to build daemon request: {}", e);
+                    DaemonDiscoveryRequest {
+                        session_id: work.session_id,
+                        discovery_id: work.discovery_id.unwrap_or_default(),
+                        discovery_type: work.discovery_type,
+                        credential_mappings: vec![],
+                    }
+                });
             if let Err(e) = self
                 .send_discovery_request_to_daemon(daemon, Some(&api_key), request)
                 .await
@@ -1736,6 +2036,77 @@ impl DaemonService {
             email_service
                 .send_daemon_unreachable_email(user.base.email, daemon_name, network_name)
                 .await?;
+        }
+
+        Ok(())
+    }
+
+    /// After discovery creates a host with a loopback ip_address, scope any localhost-targeted
+    /// credentials to specifically the loopback interface instead of all ip_addresses.
+    async fn scope_loopback_credentials(
+        &self,
+        host_id: &Uuid,
+        host_service: &HostService,
+    ) -> Result<()> {
+        // Find the loopback interface for this host
+        let ip_addresses = host_service.get_ip_addresses_for_host(host_id).await?;
+        let loopback_interface = ip_addresses
+            .iter()
+            .find(|i| i.base.ip_address.is_loopback());
+
+        let Some(loopback_iface) = loopback_interface else {
+            return Ok(()); // No loopback interface on this host
+        };
+        let loopback_id = loopback_iface.id;
+
+        // Get current credential assignments
+        let assignments = self
+            .credential_service
+            .get_credential_assignments_for_host(host_id)
+            .await?;
+
+        let mut updated = false;
+        let mut new_assignments = Vec::new();
+        for assignment in assignments {
+            if assignment.ip_address_ids.is_some() {
+                new_assignments.push(assignment);
+                continue;
+            }
+
+            // Check if this credential targets localhost
+            let is_loopback_cred = match self
+                .credential_service
+                .get_by_id(&assignment.credential_id)
+                .await
+            {
+                Ok(Some(cred)) => cred
+                    .base
+                    .target_ips
+                    .as_ref()
+                    .is_some_and(|ips| ips.iter().any(|ip| ip.is_loopback())),
+                _ => false,
+            };
+
+            if is_loopback_cred {
+                new_assignments.push(CredentialAssignment {
+                    credential_id: assignment.credential_id,
+                    ip_address_ids: Some(vec![loopback_id]),
+                });
+                updated = true;
+            } else {
+                new_assignments.push(assignment);
+            }
+        }
+
+        if updated {
+            self.credential_service
+                .set_host_credentials(host_id, &new_assignments)
+                .await?;
+            tracing::debug!(
+                host_id = %host_id,
+                loopback_interface_id = %loopback_id,
+                "Scoped loopback credentials to loopback ip_address"
+            );
         }
 
         Ok(())

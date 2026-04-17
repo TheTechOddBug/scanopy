@@ -5,6 +5,8 @@ use axum::{
 };
 use clap::Parser;
 use scanopy::{
+    daemon::runtime::service::StartupOutcome,
+    daemon::shared::api_client::ConnectionError,
     daemon::{
         runtime::types::DaemonAppState,
         shared::{
@@ -22,6 +24,7 @@ use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 fn main() -> anyhow::Result<()> {
@@ -38,14 +41,45 @@ async fn async_main() -> anyhow::Result<()> {
     let cli = DaemonCli::parse();
     let config = AppConfig::load(cli)?;
 
-    // Initialize tracing
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::new(format!(
-            "scanopy={},daemon={}",
-            config.log_level, config.log_level
-        )))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    // Initialize tracing with stdout + optional file appender
+    let log_path = config.resolve_log_path();
+    let env_filter = tracing_subscriber::EnvFilter::new(format!(
+        "scanopy={},daemon={}",
+        config.log_level, config.log_level
+    ));
+
+    // _guard must be held for the lifetime of the program to ensure logs flush
+    let _file_guard: Option<WorkerGuard>;
+
+    if let Some(ref path) = log_path {
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let log_dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+        let log_filename = path
+            .file_name()
+            .unwrap_or_else(|| std::ffi::OsStr::new("scanopy-daemon.log"));
+        let file_appender = tracing_appender::rolling::never(log_dir, log_filename);
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+        _file_guard = Some(guard);
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(non_blocking)
+                    .with_ansi(false),
+            )
+            .init();
+    } else {
+        _file_guard = None;
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer())
+            .init();
+    }
 
     // Get config path using daemon name for namespaced configs
     let (_, path) = AppConfig::get_config_path_for_name(Some(&config.name))?;
@@ -63,8 +97,6 @@ async fn async_main() -> anyhow::Result<()> {
     let mode = config_store.get_mode().await?;
     let interval_secs = config_store.get_heartbeat_interval().await?;
     let interval = Duration::from_secs(interval_secs);
-    let concurrent_scans = config.concurrent_scans;
-
     // Startup banner
     tracing::info!("");
     tracing::info!("   _____                                   ");
@@ -79,6 +111,14 @@ async fn async_main() -> anyhow::Result<()> {
     tracing::info!("  Daemon ID:       {}", daemon_id);
     tracing::info!("  Name:            {}", daemon_name);
     tracing::info!("  Config file:     {}", path_str);
+    match &log_path {
+        Some(p) => tracing::info!("  Log file:        {}", p.display()),
+        None => tracing::info!("  Log file:        disabled (stdout only)"),
+    }
+    tracing::info!(
+        "  OUI database:    {} vendor entries",
+        scanopy::server::shared::oui::entry_count()
+    );
     tracing::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     let state = DaemonAppState::new(config_store.clone(), utils).await?;
@@ -143,51 +183,133 @@ async fn async_main() -> anyhow::Result<()> {
     tracing::info!("  Bind address:    {}", bind_addr);
     tracing::info!("  Daemon URL:      {} ({})", daemon_url, url_source);
     tracing::info!("  Heartbeat:       every {}s", interval_secs);
-    if concurrent_scans == 15 {
-        tracing::info!("  Concurrent:      auto (determined at scan time)");
+    let ip_addresses = config_store.get_interfaces().await.unwrap_or_default();
+    if ip_addresses.is_empty() {
+        tracing::info!("  Interfaces:      all (no restriction)");
     } else {
-        tracing::info!("  Concurrent:      {} parallel scans", concurrent_scans);
+        tracing::info!("  Interfaces:      {}", ip_addresses.join(", "));
+    }
+
+    // Deprecation warnings for config values that have moved to server-side settings
+    if config.docker_proxy.is_some() {
+        tracing::warn!(
+            "Deprecated config: docker_proxy, docker_proxy_ssl_cert, docker_proxy_ssl_key, docker_proxy_ssl_chain"
+        );
+        tracing::warn!("  Docker proxy config will no longer be read from daemon in v0.16.0.");
+        tracing::warn!("  Migrate by creating a DockerProxy credential in the Scanopy UI.");
+        tracing::warn!("  See: https://scanopy.net/docs/guides/unified-discovery-migration/");
+    }
+
+    {
+        use scanopy::server::discovery::r#impl::scan_settings::defaults;
+        let has_deprecated_scan_settings = config.arp_retries != defaults::arp_retries()
+            || config.arp_rate_pps != defaults::arp_rate_pps()
+            || config.scan_rate_pps != defaults::scan_rate_pps()
+            || config.port_scan_batch_size != defaults::port_scan_batch_size();
+        if has_deprecated_scan_settings {
+            tracing::warn!(
+                "Deprecated config: arp_retries, arp_rate_pps, scan_rate_pps, port_scan_batch_size"
+            );
+            tracing::warn!(
+                "  Scan settings are now configured per-discovery on the server and will no longer be read from daemon in v0.16.0."
+            );
+            tracing::warn!("  See: https://scanopy.net/docs/guides/unified-discovery-migration/");
+        }
     }
 
     // Initialize services based on mode
-    match mode {
+    /// Log a connection error with prescriptive guidance if available.
+    fn log_connection_error(e: &anyhow::Error) {
+        tracing::warn!("{e}");
+        // If the error chain contains a ConnectionError, log its guidance
+        if let Some(conn_err) = e.downcast_ref::<ConnectionError>() {
+            tracing::warn!("{}", conn_err.cause_and_fix());
+        }
+    }
+
+    let startup_result: Result<(), ()> = match mode {
         DaemonMode::DaemonPoll => {
-            // DaemonPoll mode: Register with server and poll for work
             if let Some(network_id) = network_id {
                 if let Some(api_key) = api_key {
-                    if let Err(e) = runtime_service
+                    // Log Docker availability once before connection attempts
+                    let (_, docker_desc) = runtime_service.check_docker_availability().await;
+                    tracing::info!("  Docker:          {}", docker_desc);
+
+                    tracing::info!("Connecting to server at {}...", server_addr);
+                    let mut result = runtime_service
                         .initialize_services(network_id, api_key.clone())
-                        .await
-                    {
-                        tracing::warn!(
-                            "Could not connect to server during startup: {e}. Will retry during polling."
-                        );
+                        .await?;
+
+                    if let StartupOutcome::ConnectionFailed(ref e) = result {
+                        log_connection_error(e);
+                        tracing::info!("Retrying connection...");
+
+                        const RETRY_DELAYS: &[u64] = &[5, 10, 20, 40, 60];
+                        for (i, &delay) in RETRY_DELAYS.iter().enumerate() {
+                            tokio::time::sleep(Duration::from_secs(delay)).await;
+                            tracing::info!(
+                                "Connection attempt {}/{}...",
+                                i + 2,
+                                RETRY_DELAYS.len() + 1
+                            );
+                            result = runtime_service
+                                .initialize_services(network_id, api_key.clone())
+                                .await?;
+                            match &result {
+                                StartupOutcome::Ok => {
+                                    tracing::info!("Connected successfully");
+                                    break;
+                                }
+                                StartupOutcome::ConnectionFailed(e) => {
+                                    tracing::warn!("Still unreachable: {e}");
+                                    if let Some(conn_err) = e.downcast_ref::<ConnectionError>() {
+                                        tracing::warn!("{}", conn_err.cause_and_fix());
+                                    }
+                                }
+                                StartupOutcome::AuthFailed(_) => break,
+                            }
+                        }
+                    }
+
+                    match result {
+                        StartupOutcome::Ok => Ok(()),
+                        StartupOutcome::ConnectionFailed(_) => Err(()),
+                        StartupOutcome::AuthFailed(e) => {
+                            tracing::error!(
+                                "API key rejected. Cause: key is invalid or was regenerated. Fix: re-run the install command from the Scanopy UI."
+                            );
+                            tracing::debug!("Auth error detail: {e}");
+                            Err(())
+                        }
                     }
                 } else {
-                    tracing::warn!(
-                        "Daemon is missing an API key. Go to discovery tab in UI to generate an API key."
+                    tracing::error!(
+                        "Daemon is missing an API key. Fix: re-run the install command from the Scanopy UI. Server: {}",
+                        server_addr
                     );
+                    Err(())
                 }
             } else {
-                tracing::info!("Missing network ID - waiting for server to hit /api/initialize...");
+                tracing::info!("Missing network ID — waiting for server to hit /api/initialize...");
+                Ok(())
             }
         }
         DaemonMode::ServerPoll => {
-            // ServerPoll mode: Don't register - daemon was provisioned via server UI
-            // Just serve HTTP endpoints and wait for server to poll
             if api_key.is_none() {
-                tracing::warn!(
+                tracing::error!(
                     "ServerPoll daemon has no API key configured. \
                      Configure with the key from provision response."
                 );
+                Err(())
+            } else {
+                Ok(())
             }
         }
-    }
+    };
 
     // Mode-specific ready message and runtime loop
     match mode {
         DaemonMode::ServerPoll => {
-            // ServerPoll mode: Server polls daemon, no outbound connections
             tracing::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             tracing::info!("Daemon ready [ServerPoll mode]");
             tracing::info!(
@@ -196,27 +318,37 @@ async fn async_main() -> anyhow::Result<()> {
             );
             tracing::info!("  No outbound connections");
             tracing::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            // No outbound loop needed - daemon just serves HTTP endpoints
         }
         DaemonMode::DaemonPoll => {
-            // DaemonPoll mode: Daemon polls server for work
             tracing::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            tracing::info!("Daemon ready [DaemonPoll mode]");
-            tracing::info!(
-                "  Polling server every {}s for discovery work",
-                interval_secs
-            );
-            tracing::info!("  No inbound connections");
+            if startup_result.is_ok() {
+                tracing::info!("Daemon ready [DaemonPoll mode]");
+                tracing::info!(
+                    "  Polling server every {}s for discovery work",
+                    interval_secs
+                );
+            } else {
+                tracing::error!(
+                    "Daemon NOT ready — fix the issue above and restart the daemon (Ctrl+C to stop)"
+                );
+            }
             tracing::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-            tokio::spawn(async move {
-                loop {
-                    if let Err(e) = runtime_service.request_work().await {
-                        tracing::warn!("Work request task failed: {}, retrying...", e);
-                        tokio::time::sleep(interval).await;
+            // Only start polling once successfully connected
+            if startup_result.is_ok() {
+                tokio::spawn(async move {
+                    loop {
+                        if let Err(e) = runtime_service.request_work().await {
+                            tracing::warn!(
+                                "Polling failed: {}. Retrying in {}s...",
+                                e,
+                                interval_secs
+                            );
+                            tokio::time::sleep(interval).await;
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 

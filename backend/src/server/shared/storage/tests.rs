@@ -1,26 +1,27 @@
 use crate::server::{
     bindings::r#impl::base::Binding,
+    credentials::r#impl::base::Credential,
     daemon_api_keys::r#impl::base::DaemonApiKey,
     daemons::r#impl::base::Daemon,
+    dependencies::{dependency_members::DependencyMemberRecord, r#impl::base::Dependency},
     discovery::r#impl::base::Discovery,
-    groups::{group_bindings::GroupBinding, r#impl::base::Group},
     hosts::r#impl::base::Host,
-    if_entries::r#impl::base::IfEntry,
     interfaces::r#impl::base::Interface,
     invites::r#impl::base::Invite,
+    ip_addresses::r#impl::base::IPAddress,
     networks::r#impl::Network,
     organizations::r#impl::base::Organization,
     ports::r#impl::base::Port,
     services::r#impl::base::Service,
     shared::storage::traits::Storable,
     shares::r#impl::base::Share,
-    snmp_credentials::r#impl::base::SnmpCredential,
     subnets::r#impl::base::Subnet,
     tags::entity_tags::EntityTag,
     tags::r#impl::base::Tag,
     topology::types::base::Topology,
     user_api_keys::r#impl::base::UserApiKey,
     users::r#impl::base::User,
+    vlans::r#impl::{base::Vlan, subnet_vlans::SubnetVlanRecord},
 };
 use sqlx::postgres::PgRow;
 use std::collections::HashMap;
@@ -62,9 +63,9 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
     );
 
     map.insert(
-        Group::table_name(),
+        Dependency::table_name(),
         Box::new(|row| {
-            Group::from_row(row)?;
+            Dependency::from_row(row)?;
             Ok(())
         }),
     );
@@ -150,9 +151,9 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
     );
 
     map.insert(
-        Interface::table_name(),
+        IPAddress::table_name(),
         Box::new(|row| {
-            Interface::from_row(row)?;
+            IPAddress::from_row(row)?;
             Ok(())
         }),
     );
@@ -174,9 +175,9 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
     );
 
     map.insert(
-        GroupBinding::table_name(),
+        DependencyMemberRecord::table_name(),
         Box::new(|row| {
-            GroupBinding::from_row(row)?;
+            DependencyMemberRecord::from_row(row)?;
             Ok(())
         }),
     );
@@ -197,18 +198,42 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
         }),
     );
 
+    // snmp_credentials table was dropped by universal_credentials migration
+    // SnmpCredential deserializer is no longer needed
+
     map.insert(
-        SnmpCredential::table_name(),
+        Credential::table_name(),
         Box::new(|row| {
-            SnmpCredential::from_row(row)?;
+            Credential::from_row(row)?;
+            Ok(())
+        }),
+    );
+
+    // Junction tables for multi-credential support — no entity struct, just verify readable
+    map.insert("host_credentials", Box::new(|_row| Ok(())));
+
+    map.insert("network_credentials", Box::new(|_row| Ok(())));
+
+    map.insert(
+        Interface::table_name(),
+        Box::new(|row| {
+            Interface::from_row(row)?;
             Ok(())
         }),
     );
 
     map.insert(
-        IfEntry::table_name(),
+        Vlan::table_name(),
         Box::new(|row| {
-            IfEntry::from_row(row)?;
+            Vlan::from_row(row)?;
+            Ok(())
+        }),
+    );
+
+    map.insert(
+        SubnetVlanRecord::table_name(),
+        Box::new(|row| {
+            SubnetVlanRecord::from_row(row)?;
             Ok(())
         }),
     );

@@ -2,14 +2,28 @@ import { writable, get } from 'svelte/store';
 import type { Edge } from '@xyflow/svelte';
 import type { Node } from '@xyflow/svelte';
 import type { QueryClient } from '@tanstack/svelte-query';
-import { edgeTypes, subnetTypes } from '$lib/shared/stores/metadata';
-import type { TopologyEdge, TopologyNode, Topology } from './types/base';
-import { getHostFromInterfaceIdFromCache } from '../hosts/queries';
 import {
-	getInterfacesForHostFromCache,
-	getInterfacesForSubnetFromCache
-} from '../interfaces/queries';
+	edgeTypes,
+	entities,
+	views,
+	serviceDefinitions,
+	subnetTypes
+} from '$lib/shared/stores/metadata';
+import type { TopologyEdge, TopologyNode, Topology } from './types/base';
+import {
+	isDisabledEdge,
+	getHighlightBehavior,
+	showDirectionality
+} from './layout/edge-classification';
+import { elevateEdgesToContainers } from './layout/edge-elevation';
+import { getContainerContents, buildEntityNodeIndex, type EntityNodeIndex } from './resolvers';
+import { getHostFromIPAddressIdFromCache } from '../hosts/queries';
+import {
+	getIPAddressesForHostFromCache,
+	getIPAddressesForSubnetFromCache
+} from '../ip-addresses/queries';
 import { getSubnetByIdFromCache } from '../subnets/queries';
+import { buildFullParentMap, resolveCollapsedAncestor } from './collapse';
 
 // Shared stores for hover state across all component instances
 export const groupHoverState = writable<Map<string, boolean>>(new Map());
@@ -27,6 +41,10 @@ export const searchHiddenNodeIds = writable<Set<string>>(new Set());
 export const searchMatchNodeIds = writable<string[]>([]);
 export const searchActiveIndex = writable<number>(0);
 export const searchOpen = writable<boolean>(false);
+// Map: collapsed container ID → matched element IDs inside it
+export const searchMatchContainerMap = writable<Map<string, string[]>>(new Map());
+// Navigation-ready list: element IDs for visible matches, container IDs for collapsed matches
+export const searchNavigableNodeIds = writable<string[]>([]);
 
 // Special sentinel value for "Untagged" pseudo-tag
 export const UNTAGGED_SENTINEL = '__untagged__';
@@ -48,10 +66,52 @@ export const hoveredServiceCategory = writable<HoveredServiceCategory | null>(nu
 
 // Edge type hover state for highlighting edges of a specific type
 export interface HoveredEdgeType {
-	edgeType: string;
+	edgeTypes: string[];
 	color: string;
 }
 export const hoveredEdgeType = writable<HoveredEdgeType | null>(null);
+
+// Edge bundle expand/collapse state (transient, not persisted)
+export const expandedBundles = writable<Set<string>>(new Set());
+
+// Open ports expand/collapse state per leaf node (transient, not persisted)
+export const expandedPortNodeIds = writable<Set<string>>(new Set());
+
+export function toggleBundleExpanded(bundleId: string): void {
+	expandedBundles.update((set) => {
+		const next = new Set(set);
+		if (next.has(bundleId)) {
+			next.delete(bundleId);
+		} else {
+			next.add(bundleId);
+		}
+		return next;
+	});
+}
+
+export function toggleExpandedPorts(nodeId: string): void {
+	expandedPortNodeIds.update((set) => {
+		const next = new Set(set);
+		if (next.has(nodeId)) {
+			next.delete(nodeId);
+		} else {
+			next.add(nodeId);
+		}
+		return next;
+	});
+}
+
+export function collapseAllBundles(): void {
+	if (get(expandedBundles).size > 0) {
+		expandedBundles.set(new Set());
+	}
+}
+
+/** Clear all edge hover state — prevents stale hover from drag interactions */
+export function clearEdgeHoverState(): void {
+	edgeHoverState.set(new Map());
+	groupHoverState.set(new Map());
+}
 
 interface TagFilter {
 	hidden_host_tag_ids?: string[];
@@ -60,63 +120,156 @@ interface TagFilter {
 }
 
 /**
- * Update hidden nodes/services based on tag filter settings.
- * - Hosts with hidden tags -> their InterfaceNodes fade out
+ * Update hidden nodes/services based on tag filter and category filter settings.
+ * - Hosts with hidden tags -> their Element nodes fade out
  * - Services with hidden tags -> hidden from node display (node does NOT fade)
- * - Subnets with hidden tags -> SubnetNodes fade out
+ * - Services in hidden categories -> hidden from node display
+ * - Subnets with hidden tags -> Container nodes fade out
  * - UNTAGGED_SENTINEL in hidden arrays -> hide entities with no tags
  */
-export function updateTagFilter(topology: Topology | undefined, tagFilter: TagFilter | undefined) {
+/**
+ * Hide a set of containers and all their descendants (subcontainers + elements).
+ * Recursively finds nested subcontainers via parent_container_id, then hides
+ * all elements whose container_id matches any hidden container.
+ */
+function hideContainersAndDescendants(
+	containerIds: Set<string>,
+	nodes: TopologyNode[],
+	hiddenNodeIds: Set<string>
+) {
+	if (containerIds.size === 0) return;
+
+	// Add containers themselves to hidden
+	for (const cid of containerIds) hiddenNodeIds.add(cid);
+
+	// Recursively find subcontainers inside hidden containers
+	let changed = true;
+	while (changed) {
+		changed = false;
+		for (const node of nodes) {
+			if (node.node_type !== 'Container' || containerIds.has(node.id)) continue;
+			const parentId = (node as Record<string, unknown>).parent_container_id as string | undefined;
+			if (parentId && containerIds.has(parentId)) {
+				containerIds.add(node.id);
+				hiddenNodeIds.add(node.id);
+				changed = true;
+			}
+		}
+	}
+
+	// Hide all element nodes inside any hidden container
+	for (const node of nodes) {
+		if (node.node_type === 'Element') {
+			const containerId = (node as Record<string, unknown>).container_id as string | undefined;
+			if (containerId && containerIds.has(containerId)) {
+				hiddenNodeIds.add(node.id);
+			}
+		}
+	}
+}
+
+export function updateTagFilter(
+	topology: Topology | undefined,
+	tagFilter: TagFilter | undefined,
+	view?: string,
+	hiddenCategories?: string[]
+) {
 	if (!topology) {
 		tagHiddenNodeIds.set(new Set());
 		tagHiddenServiceIds.set(new Set());
 		return;
 	}
 
-	if (!tagFilter || isTagFilterEmpty(tagFilter)) {
+	const hasTagFilter = tagFilter && !isTagFilterEmpty(tagFilter);
+	const hasCategoryFilter = hiddenCategories && hiddenCategories.length > 0;
+
+	if (!hasTagFilter && !hasCategoryFilter) {
 		tagHiddenNodeIds.set(new Set());
 		tagHiddenServiceIds.set(new Set());
 		return;
 	}
 
-	const hiddenHostTagIds = tagFilter.hidden_host_tag_ids ?? [];
-	const hiddenServiceTagIds = tagFilter.hidden_service_tag_ids ?? [];
-	const hiddenSubnetTagIds = tagFilter.hidden_subnet_tag_ids ?? [];
+	const config = getViewElementConfig(view);
+
+	// Determine filter roles from element config and parent_taggable_entity relationships
+	const hostIsContainer = config.container_entity === 'Host';
+	const hostIsElement = config.element_entities.includes('Host');
+	const hostIsParent = config.element_entities.some(
+		(e) => entities.getMetadata(e)?.parent_taggable_entity === 'Host'
+	);
+	const hostIsRelevant = hostIsContainer || hostIsElement || hostIsParent;
+	const serviceIsElement = config.element_entities.includes('Service');
+	const serviceIsInline = config.inline_entities.includes('Service');
+	const serviceIsVisible = serviceIsElement || serviceIsInline;
+
+	const hiddenHostTagIds = tagFilter?.hidden_host_tag_ids ?? [];
+	const hiddenServiceTagIds = tagFilter?.hidden_service_tag_ids ?? [];
+	const hiddenSubnetTagIds = tagFilter?.hidden_subnet_tag_ids ?? [];
 
 	const hideUntaggedHosts = hiddenHostTagIds.includes(UNTAGGED_SENTINEL);
 	const hideUntaggedServices = hiddenServiceTagIds.includes(UNTAGGED_SENTINEL);
 	const hideUntaggedSubnets = hiddenSubnetTagIds.includes(UNTAGGED_SENTINEL);
+	const hiddenCategorySet = new Set(hiddenCategories ?? []);
 
 	const hiddenNodeIds = new Set<string>();
 	const hiddenServiceIds = new Set<string>();
+	const index = buildEntityNodeIndex(topology.nodes);
 
-	// Host tags -> fade InterfaceNodes
-	for (const host of topology.hosts) {
-		const isUntagged = host.tags.length === 0;
-		const hostHasHiddenTag = host.tags.some((t) => hiddenHostTagIds.includes(t));
-		if (hostHasHiddenTag || (isUntagged && hideUntaggedHosts)) {
-			// Add all InterfaceNodes for this host to hidden set
-			const hostInterfaces = topology.interfaces.filter((i) => i.host_id === host.id);
-			hostInterfaces.forEach((i) => hiddenNodeIds.add(i.id));
+	// Host filtering: runs when Host is container, element, or parent of an element entity
+	if (hostIsRelevant) {
+		const hiddenHostIds = new Set<string>();
+		for (const host of topology.hosts) {
+			const isUntagged = host.tags.length === 0;
+			const hostHasHiddenTag = host.tags.some((t) => hiddenHostTagIds.includes(t));
+			if (hostHasHiddenTag || (isUntagged && hideUntaggedHosts)) {
+				hiddenHostIds.add(host.id);
+				// Hide element nodes that represent this host entity (VMs in Workloads)
+				const nodeIds = index.hostIdToNodes.get(host.id);
+				nodeIds?.forEach((id) => hiddenNodeIds.add(id));
+			}
+		}
+
+		// When Host is the container (L2, Workloads): hide container nodes + descendants
+		if (hostIsContainer && hiddenHostIds.size > 0) {
+			const hiddenContainerIds = new Set<string>();
+			for (const [hostId, containerIds] of index.hostIdToContainerIds) {
+				if (hiddenHostIds.has(hostId)) {
+					containerIds.forEach((cid) => hiddenContainerIds.add(cid));
+				}
+			}
+			hideContainersAndDescendants(hiddenContainerIds, topology.nodes, hiddenNodeIds);
 		}
 	}
 
-	// Service tags -> hide services from display (NOT fade the node)
-	for (const service of topology.services) {
-		const isUntagged = service.tags.length === 0;
-		const serviceHasHiddenTag = service.tags.some((t) => hiddenServiceTagIds.includes(t));
-		if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices)) {
-			hiddenServiceIds.add(service.id);
+	// Service filtering: behavior depends on whether Service is element vs inline
+	if (serviceIsVisible) {
+		for (const service of topology.services) {
+			const isUntagged = service.tags.length === 0;
+			const serviceHasHiddenTag = service.tags.some((t) => hiddenServiceTagIds.includes(t));
+			const serviceCategory = serviceDefinitions.getCategory(service.service_definition);
+			const isCategoryHidden = hiddenCategorySet.has(serviceCategory);
+			if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices) || isCategoryHidden) {
+				hiddenServiceIds.add(service.id);
+				// When Service IS the element entity, hide the node too
+				if (serviceIsElement) {
+					hiddenNodeIds.add(service.id);
+				}
+			}
 		}
 	}
 
-	// Subnet tags -> fade SubnetNodes
-	for (const subnet of topology.subnets) {
-		const isUntagged = subnet.tags.length === 0;
-		const subnetHasHiddenTag = subnet.tags.some((t) => hiddenSubnetTagIds.includes(t));
-		if (subnetHasHiddenTag || (isUntagged && hideUntaggedSubnets)) {
-			hiddenNodeIds.add(subnet.id);
+	// Subnet filtering: hide container nodes and their child elements
+	if (hiddenSubnetTagIds.length > 0) {
+		const hiddenContainerIds = new Set<string>();
+		for (const subnet of topology.subnets) {
+			const isUntagged = subnet.tags.length === 0;
+			const subnetHasHiddenTag = subnet.tags.some((t) => hiddenSubnetTagIds.includes(t));
+			if (subnetHasHiddenTag || (isUntagged && hideUntaggedSubnets)) {
+				hiddenNodeIds.add(subnet.id);
+				hiddenContainerIds.add(subnet.id);
+			}
 		}
+		hideContainersAndDescendants(hiddenContainerIds, topology.nodes, hiddenNodeIds);
 	}
 
 	tagHiddenNodeIds.set(hiddenNodeIds);
@@ -136,7 +289,7 @@ function isTagFilterEmpty(filter: {
 }
 
 /**
- * Helper function to get all virtualized container interface IDs for a ServiceVirtualization edge
+ * Helper function to get all virtualized container interface IDs for a ContainerRuntime edge
  * Returns the set of interface IDs for all containers on Docker bridge subnets
  * Uses topology data directly if provided, otherwise falls back to query cache
  */
@@ -149,14 +302,14 @@ function getVirtualizedContainerNodes(
 
 	// Try to use topology data directly (for share views where cache is empty)
 	if (topology) {
-		const iface = topology.interfaces.find((i) => i.id === dockerHostInterfaceId);
+		const iface = topology.ip_addresses.find((i) => i.id === dockerHostInterfaceId);
 		if (!iface) return connected;
 
 		const dockerHost = topology.hosts.find((h) => h.id === iface.host_id);
 		if (!dockerHost) return connected;
 
 		// Get all interfaces for this host
-		const hostInterfaces = topology.interfaces.filter((i) => i.host_id === dockerHost.id);
+		const hostInterfaces = topology.ip_addresses.filter((i) => i.host_id === dockerHost.id);
 		const hostInterfaceSubnetIds = hostInterfaces.map((i) => i.subnet_id);
 
 		// Find container subnets
@@ -167,7 +320,7 @@ function getVirtualizedContainerNodes(
 
 		// Get all interfaces on those container subnets
 		const interfacesOnDockerSubnets = dockerBridgeSubnets.flatMap((s) =>
-			topology.interfaces.filter((i) => i.subnet_id === s.id)
+			topology.ip_addresses.filter((i) => i.subnet_id === s.id)
 		);
 
 		for (const iface of interfacesOnDockerSubnets) {
@@ -178,10 +331,10 @@ function getVirtualizedContainerNodes(
 	}
 
 	// Fall back to query cache
-	const dockerHost = getHostFromInterfaceIdFromCache(queryClient, dockerHostInterfaceId);
+	const dockerHost = getHostFromIPAddressIdFromCache(queryClient, dockerHostInterfaceId);
 	if (dockerHost) {
 		// Get all interfaces for this host from the cache
-		const hostInterfaces = getInterfacesForHostFromCache(queryClient, dockerHost.id);
+		const hostInterfaces = getIPAddressesForHostFromCache(queryClient, dockerHost.id);
 		const hostInterfaceSubnetIds = hostInterfaces.map((i) => i.subnet_id);
 
 		const dockerBridgeSubnets = hostInterfaceSubnetIds
@@ -190,7 +343,7 @@ function getVirtualizedContainerNodes(
 			.filter((s) => subnetTypes.getMetadata(s.subnet_type).is_for_containers);
 
 		const interfacesOnDockerSubnets = dockerBridgeSubnets.flatMap((s) =>
-			getInterfacesForSubnetFromCache(queryClient, s.id)
+			getIPAddressesForSubnetFromCache(queryClient, s.id)
 		);
 
 		for (const iface of interfacesOnDockerSubnets) {
@@ -199,6 +352,36 @@ function getVirtualizedContainerNodes(
 	}
 
 	return connected;
+}
+
+/**
+ * Add container highlights: when a container is in the connected set,
+ * also include its element contents and subcontainers so they highlight.
+ * When a container has connected elements inside it, highlight that container.
+ * Uses topology data to find elements hidden by collapsed containers.
+ */
+function addContainerHighlights(connected: Set<string>, allNodes: Node[], topology?: Topology) {
+	const topoNodes = topology?.nodes ?? allNodes.map((n) => n.data as TopologyNode);
+
+	for (const nd of topoNodes) {
+		if (nd.node_type !== 'Container') continue;
+
+		const contents = getContainerContents(nd.id, topoNodes);
+
+		if (connected.has(nd.id)) {
+			// Container is connected — include its elements and subcontainers
+			for (const id of contents.elementNodeIds) connected.add(id);
+			for (const id of contents.subcontainerIds) connected.add(id);
+		} else {
+			// Check if this container has any connected elements inside it
+			for (const elementId of contents.elementNodeIds) {
+				if (connected.has(elementId)) {
+					connected.add(nd.id);
+					break;
+				}
+			}
+		}
+	}
 }
 
 /**
@@ -213,25 +396,39 @@ export function updateConnectedNodes(
 	allNodes: Node[],
 	queryClient: QueryClient,
 	topology?: Topology,
-	multiSelectedNodes?: Node[]
+	multiSelectedNodes?: Node[],
+	hiddenEdgeTypes?: string[]
 ) {
 	const connected = new Set<string>();
 
 	// If multiple nodes are selected
 	if (multiSelectedNodes && multiSelectedNodes.length >= 2) {
+		const rawEdges = topology?.edges ?? [];
+		const topologyNodes = topology?.nodes ?? [];
+		const elevatedEdges = elevateEdgesToContainers(rawEdges, topologyNodes);
 		for (const node of multiSelectedNodes) {
 			connected.add(node.id);
-			// Add direct neighbors of each selected node
-			for (const edge of allEdges) {
-				const edgeData = edge.data as TopologyEdge | undefined;
-				if (!edgeData) continue;
-				if (edgeData.source === node.id) {
-					connected.add(edgeData.target as string);
+			// Add direct neighbors of each selected node (using elevated edges)
+			for (const edge of elevatedEdges) {
+				if (isDisabledEdge(edge)) continue;
+				const behavior = getHighlightBehavior(edge);
+				if (behavior === 'never') continue;
+				if (behavior === 'when_visible' && hiddenEdgeTypes?.includes(edge.edge_type)) continue;
+				if (edge.source === node.id) {
+					connected.add(edge.target);
 				}
-				if (edgeData.target === node.id) {
-					connected.add(edgeData.source as string);
+				if (edge.target === node.id) {
+					connected.add(edge.source);
 				}
 			}
+		}
+		// Expand connected containers to include their element contents
+		const topoNodes = topology?.nodes ?? allNodes.map((n) => n.data as TopologyNode);
+		for (const nd of topoNodes) {
+			if (nd.node_type !== 'Container' || !connected.has(nd.id)) continue;
+			const contents = getContainerContents(nd.id, topoNodes);
+			for (const id of contents.elementNodeIds) connected.add(id);
+			for (const id of contents.subcontainerIds) connected.add(id);
 		}
 		connectedNodeIds.set(connected);
 		return;
@@ -242,47 +439,47 @@ export function updateConnectedNodes(
 		connected.add(selectedNode.id);
 		const nodeData = selectedNode.data as TopologyNode;
 
-		if (nodeData.node_type == 'SubnetNode') {
-			allNodes.forEach((n) => {
-				const nd = n.data as TopologyNode;
-				if (nd.node_type == 'InterfaceNode' && nd.subnet_id == nodeData.id) {
-					connected.add(nd.id);
-				}
-			});
+		if (nodeData.node_type == 'Container') {
+			const topoNodes2 = topology?.nodes ?? allNodes.map((n) => n.data as TopologyNode);
+			const contents = getContainerContents(nodeData.id, topoNodes2);
+			for (const id of contents.elementNodeIds) connected.add(id);
+			for (const id of contents.subcontainerIds) connected.add(id);
 		}
 
-		for (const edge of allEdges) {
-			const edgeData = edge.data as TopologyEdge | undefined;
-			if (!edgeData) continue;
+		// Use elevated edges so absorbing containers appear in the connected set.
+		// Elevation rewrites edge endpoints from elements to their outermost
+		// absorbing container, which is exactly what highlighting needs.
+		const rawEdges = topology?.edges ?? [];
+		const topologyNodes = topology?.nodes ?? [];
+		const elevatedEdges = elevateEdgesToContainers(rawEdges, topologyNodes);
 
-			// Add directly connected nodes (regular edges)
-			if (edgeData.source === selectedNode.id) {
-				connected.add(edgeData.target as string);
+		for (const edge of elevatedEdges) {
+			// Skip disabled edges entirely
+			if (isDisabledEdge(edge)) continue;
+
+			// Use highlight_behavior to decide if this edge contributes
+			const behavior = getHighlightBehavior(edge);
+			if (behavior === 'never') continue;
+			if (behavior === 'when_visible' && hiddenEdgeTypes?.includes(edge.edge_type)) continue;
+
+			// Add directly connected nodes
+			if (edge.source === selectedNode.id) {
+				connected.add(edge.target);
 			}
-			if (edgeData.target === selectedNode.id) {
-				connected.add(edgeData.source as string);
+			if (edge.target === selectedNode.id) {
+				connected.add(edge.source);
 			}
 
-			// Include virtualized nodes
-			if (edgeData.edge_type === 'ServiceVirtualization') {
-				if (edgeData.source === selectedNode.id || edgeData.target === selectedNode.id) {
-					connected.add(edgeData.source as string);
-
-					// Add all virtualized container nodes
-					const virtualizedNodes = getVirtualizedContainerNodes(
-						edgeData.source as string,
-						queryClient,
-						topology
-					);
+			// For virtualization edges, also add virtualized container nodes
+			if (edge.edge_type === 'ContainerRuntime') {
+				if (edge.source === selectedNode.id || edge.target === selectedNode.id) {
+					const virtualizedNodes = getVirtualizedContainerNodes(edge.source, queryClient, topology);
 					virtualizedNodes.forEach((nodeId) => connected.add(nodeId));
 				}
-			} else if (edgeData.edge_type === 'HostVirtualization') {
-				if (edgeData.source === selectedNode.id || edgeData.target === selectedNode.id) {
-					connected.add(edgeData.source as string);
-					connected.add(edgeData.target as string);
-				}
 			}
 		}
+
+		addContainerHighlights(connected, allNodes, topology);
 
 		connectedNodeIds.set(connected);
 		return;
@@ -295,25 +492,42 @@ export function updateConnectedNodes(
 			connectedNodeIds.set(new Set());
 			return;
 		}
+
+		// Bundle edge: highlight all bundled edges' source/target nodes
+		const anyData = selectedEdge.data as Record<string, unknown> | undefined;
+		if (anyData?.isBundle && Array.isArray(anyData.bundleEdges)) {
+			for (const bundledEdge of anyData.bundleEdges as TopologyEdge[]) {
+				connected.add(bundledEdge.source as string);
+				connected.add(bundledEdge.target as string);
+			}
+			addContainerHighlights(connected, allNodes, topology);
+			connectedNodeIds.set(connected);
+			return;
+		}
+
 		const edgeTypeMetadata = edgeTypes.getMetadata(edgeData.edge_type);
 
 		// For group edges
-		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
-			const groupId = edgeData.group_id as string;
+		if (edgeTypeMetadata.is_dependency_edge && 'dependency_id' in edgeData) {
+			const dependencyId = edgeData.dependency_id as string;
 
-			// Find all edges in this group and add their connected nodes
+			// Find all edges in this dependency and add their connected nodes
 			for (const edge of allEdges) {
 				const eData = edge.data as TopologyEdge | undefined;
 				if (!eData) continue;
 				const eMetadata = edgeTypes.getMetadata(eData.edge_type);
 
-				if (eMetadata.is_group_edge && 'group_id' in eData && eData.group_id === groupId) {
+				if (
+					eMetadata.is_dependency_edge &&
+					'dependency_id' in eData &&
+					eData.dependency_id === dependencyId
+				) {
 					connected.add(eData.source as string);
 					connected.add(eData.target as string);
 				}
 			}
-		} else if (edgeData.edge_type === 'ServiceVirtualization') {
-			// For ServiceVirtualization edges, add source, target, and all virtualized containers
+		} else if (edgeData.edge_type === 'ContainerRuntime') {
+			// For ContainerRuntime edges, add source, target, and all virtualized containers
 			connected.add(edgeData.source as string);
 			connected.add(edgeData.target as string);
 
@@ -324,8 +538,8 @@ export function updateConnectedNodes(
 				topology
 			);
 			virtualizedNodes.forEach((nodeId) => connected.add(nodeId));
-		} else if (edgeData.edge_type === 'HostVirtualization') {
-			// For HostVirtualization edges, add source and target
+		} else if (edgeData.edge_type === 'Hypervisor') {
+			// For Hypervisor edges, add source and target
 			connected.add(edgeData.source as string);
 			connected.add(edgeData.target as string);
 		} else {
@@ -334,6 +548,7 @@ export function updateConnectedNodes(
 			connected.add(edgeData.target as string);
 		}
 
+		addContainerHighlights(connected, allNodes, topology);
 		connectedNodeIds.set(connected);
 		return;
 	}
@@ -343,24 +558,23 @@ export function updateConnectedNodes(
 }
 
 /**
- * Toggle edge hover state - updates both individual edge and group hover states
+ * Set edge hover state explicitly — avoids toggle desync when enter/leave events fire asymmetrically
  */
-export function toggleEdgeHover(edge: Edge, allEdges: Edge[]) {
+export function setEdgeHover(edge: Edge, hovered: boolean, allEdges: Edge[]) {
 	const edgeData = edge.data as TopologyEdge | undefined;
 	if (!edgeData) return;
 	const edgeTypeMetadata = edgeTypes.getMetadata(edgeData.edge_type);
 
-	// Toggle individual edge hover state
+	// Set individual edge hover state
 	edgeHoverState.update((state) => {
-		const currentHoverState = state.get(edge.id) || false;
 		const newState = new Map(state);
-		newState.set(edge.id, !currentHoverState);
+		newState.set(edge.id, hovered);
 		return newState;
 	});
 
 	// For group edges, update group hover state
-	if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
-		const groupId = edgeData.group_id as string;
+	if (edgeTypeMetadata.is_dependency_edge && 'dependency_id' in edgeData) {
+		const dependencyId = edgeData.dependency_id as string;
 
 		groupHoverState.update((state) => {
 			const newState = new Map(state);
@@ -369,12 +583,16 @@ export function toggleEdgeHover(edge: Edge, allEdges: Edge[]) {
 			const updatedEdgeStates = get(edgeHoverState);
 			let anyEdgeInGroupHovered = false;
 
-			// Check if ANY edge in this group is hovered
+			// Check if ANY edge in this dependency is hovered
 			for (const e of allEdges) {
 				const eData = e.data as TopologyEdge | undefined;
 				if (!eData) continue;
 				const eMetadata = edgeTypes.getMetadata(eData.edge_type);
-				if (eMetadata.is_group_edge && 'group_id' in eData && eData.group_id === groupId) {
+				if (
+					eMetadata.is_dependency_edge &&
+					'dependency_id' in eData &&
+					eData.dependency_id === dependencyId
+				) {
 					const eIsHovered = updatedEdgeStates.get(e.id) || false;
 					if (eIsHovered) {
 						anyEdgeInGroupHovered = true;
@@ -383,27 +601,51 @@ export function toggleEdgeHover(edge: Edge, allEdges: Edge[]) {
 				}
 			}
 
-			newState.set(groupId, anyEdgeInGroupHovered);
+			newState.set(dependencyId, anyEdgeInGroupHovered);
 			return newState;
 		});
 	}
 }
 
+export interface EdgeDisplayState {
+	shouldShowFull: boolean;
+	shouldAnimate: boolean;
+	isEndpointSearchHidden: boolean;
+	isEndpointTagHidden: boolean;
+}
+
 /**
- * Get display state for an edge based on hover and selection
- * Returns: { shouldShowFull, shouldAnimate }
+ * Get display state for an edge based on hover, selection, search, and tag filters.
+ * Single source of truth for edge visual state computation.
  */
 export function getEdgeDisplayState(
 	edge: Edge,
 	selectedNode: Node | null,
-	selectedEdge: Edge | null
-): { shouldShowFull: boolean; shouldAnimate: boolean } {
+	selectedEdge: Edge | null,
+	searchHidden?: Set<string>,
+	tagHidden?: Set<string>
+): EdgeDisplayState {
 	const edgeData = edge.data as TopologyEdge | undefined;
 	if (!edgeData) {
-		return { shouldShowFull: false, shouldAnimate: false };
+		return {
+			shouldShowFull: false,
+			shouldAnimate: false,
+			isEndpointSearchHidden: false,
+			isEndpointTagHidden: false
+		};
 	}
+
+	const source = edgeData.source as string;
+	const target = edgeData.target as string;
+
+	// Centralized endpoint-hidden checks
+	const isEndpointSearchHidden = searchHidden
+		? searchHidden.has(source) || searchHidden.has(target)
+		: false;
+	const isEndpointTagHidden = tagHidden ? tagHidden.has(source) || tagHidden.has(target) : false;
+
 	const edgeTypeMetadata = edgeTypes.getMetadata(edgeData.edge_type);
-	const isGroupEdge = edgeTypeMetadata.is_group_edge;
+	const isGroupEdge = edgeTypeMetadata.is_dependency_edge;
 
 	let shouldShowFull: boolean;
 	let shouldAnimate: boolean;
@@ -415,9 +657,9 @@ export function getEdgeDisplayState(
 	const isThisEdgeSelected = selectedEdge?.id === edge.id;
 
 	// For group edges, check group hover/selection state
-	if (isGroupEdge && 'group_id' in edgeData) {
-		const groupId = edgeData.group_id as string;
-		const isGroupHovered = get(groupHoverState).get(groupId) || false;
+	if (isGroupEdge && 'dependency_id' in edgeData) {
+		const dependencyId = edgeData.dependency_id as string;
+		const isGroupHovered = get(groupHoverState).get(dependencyId) || false;
 
 		// Check if any edge in this group is selected
 		let isGroupSelected = false;
@@ -425,8 +667,8 @@ export function getEdgeDisplayState(
 			const selectedEdgeData = selectedEdge.data as TopologyEdge | undefined;
 			if (selectedEdgeData) {
 				const selectedMetadata = edgeTypes.getMetadata(selectedEdgeData.edge_type);
-				if (selectedMetadata.is_group_edge && 'group_id' in selectedEdgeData) {
-					isGroupSelected = selectedEdgeData.group_id === groupId;
+				if (selectedMetadata.is_dependency_edge && 'dependency_id' in selectedEdgeData) {
+					isGroupSelected = selectedEdgeData.dependency_id === dependencyId;
 				}
 			}
 		}
@@ -438,64 +680,135 @@ export function getEdgeDisplayState(
 		// Should show full if: group hovered, group selected, or connected node selected
 		shouldShowFull = isGroupHovered || isGroupSelected || !!isConnectedNodeSelected;
 
-		// Should animate if: group hovered, group selected, or connected node selected
-		shouldAnimate = isGroupHovered || isGroupSelected || !!isConnectedNodeSelected;
+		// Animate only if view config enables directionality
+		shouldAnimate = showDirectionality(edgeData)
+			? isGroupHovered || isGroupSelected || !!isConnectedNodeSelected
+			: false;
 	} else {
 		// Non-group edges: show full if hovered, selected, or connected node selected
 		const isConnectedNodeSelected =
 			selectedNode && (edgeData.source === selectedNode.id || edgeData.target === selectedNode.id);
 
 		shouldShowFull = isThisEdgeHovered || isThisEdgeSelected || !!isConnectedNodeSelected;
-		shouldAnimate = false; // Non-group edges don't animate
+
+		// Animate only if view config enables directionality
+		shouldAnimate = showDirectionality(edgeData)
+			? isThisEdgeHovered || isThisEdgeSelected || !!isConnectedNodeSelected
+			: false;
 	}
 
-	return { shouldShowFull, shouldAnimate };
+	return { shouldShowFull, shouldAnimate, isEndpointSearchHidden, isEndpointTagHidden };
 }
 
-/**
- * Add interface nodes for a service based on its bindings.
- * If binding.interface_id is set, add that interface.
- * If binding.interface_id is null (all-interfaces binding), add all host interfaces.
- */
-function addBoundInterfaces(
-	topology: Topology,
-	service: Topology['services'][number],
-	matchingNodeIds: string[]
-) {
-	const getNonContainerHostInterfaces = () =>
-		topology.interfaces.filter((i) => {
-			if (i.host_id !== service.host_id) return false;
-			const subnet = topology.subnets.find((s) => s.id === i.subnet_id);
-			if (!subnet) return true;
-			return !subnetTypes.getMetadata(subnet.subnet_type).is_for_containers;
-		});
+interface ViewElementConfig {
+	container_entity: string | null;
+	element_entities: string[];
+	inline_entities: string[];
+}
 
-	for (const binding of service.bindings) {
-		if (binding.interface_id) {
-			if (!matchingNodeIds.includes(binding.interface_id)) {
-				matchingNodeIds.push(binding.interface_id);
-			}
-		} else {
-			// null interface_id = bound to all host interfaces (exclude container subnets)
-			getNonContainerHostInterfaces().forEach((i) => {
-				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
-			});
+/** Read ViewElementConfig from views metadata store, with safe defaults */
+function getViewElementConfig(view?: string): ViewElementConfig {
+	if (!view) return { container_entity: null, element_entities: [], inline_entities: [] };
+	const meta = views.getMetadata(view) as {
+		element_config?: {
+			container_entity: string | null;
+			element_entities: string[];
+			inline_entities: string[];
+		};
+	} | null;
+	return {
+		container_entity: meta?.element_config?.container_entity ?? null,
+		element_entities: meta?.element_config?.element_entities ?? [],
+		inline_entities: meta?.element_config?.inline_entities ?? []
+	};
+}
+
+interface EntityResolution {
+	elementNodeIds: string[];
+	containerNodeIds: string[];
+}
+
+/** Index map for looking up element nodes by entity type */
+const ENTITY_ELEMENT_INDEX: Record<string, (idx: EntityNodeIndex) => Map<string, string[]>> = {
+	Host: (idx) => idx.hostIdToNodes,
+	IPAddress: (idx) => idx.ipAddressIdToNodes,
+	Service: (idx) => idx.serviceIdToNodes,
+	Interface: (idx) => idx.interfaceIdToNodes
+};
+
+/**
+ * Resolve an entity to topology node IDs based on the current view's element config.
+ * Returns element and container node IDs separately so callers can decide behavior
+ * (search: add both to matches; tag filter: hide containers + descendants).
+ */
+function resolveEntityToNodes(
+	entityType: string,
+	entityId: string,
+	config: ViewElementConfig,
+	index: EntityNodeIndex,
+	topology: Topology
+): EntityResolution {
+	const elementNodeIds: string[] = [];
+	const containerNodeIds: string[] = [];
+
+	// 1. Direct element: entity type is an element in this view
+	if (config.element_entities.includes(entityType)) {
+		const getIndex = ENTITY_ELEMENT_INDEX[entityType];
+		if (getIndex) {
+			const nodeIds = getIndex(index).get(entityId);
+			if (nodeIds) elementNodeIds.push(...nodeIds);
 		}
 	}
-	// If service has no bindings, fall back to all host interfaces (exclude container subnets)
-	if (service.bindings.length === 0) {
-		getNonContainerHostInterfaces().forEach((i) => {
-			if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
-		});
+
+	// 2. Container: entity type is the container in this view
+	if (entityType === config.container_entity) {
+		if (entityType === 'Host') {
+			const cids = index.hostIdToContainerIds.get(entityId);
+			if (cids) containerNodeIds.push(...cids);
+		} else {
+			// Subnet containers: entity ID is the container node ID
+			containerNodeIds.push(entityId);
+		}
 	}
+
+	// 3. Parent propagation: entity type is parent_taggable_entity of an element entity
+	const isParent = config.element_entities.some(
+		(e) => entities.getMetadata(e)?.parent_taggable_entity === entityType
+	);
+	if (
+		isParent &&
+		entityType !== config.container_entity &&
+		!config.element_entities.includes(entityType)
+	) {
+		// hostIdToNodes maps host_id to all element nodes with that host_id,
+		// regardless of element type — works across views
+		const nodeIds = index.hostIdToNodes.get(entityId);
+		if (nodeIds) elementNodeIds.push(...nodeIds);
+	}
+
+	// 4. Inline entity: resolve through bindings to element nodes
+	if (config.inline_entities.includes(entityType) && entityType === 'Service') {
+		const service = topology.services.find((s) => s.id === entityId);
+		if (service) {
+			for (const binding of service.bindings) {
+				if (binding.ip_address_id) {
+					const nodeIds = index.ipAddressIdToNodes.get(binding.ip_address_id);
+					if (nodeIds) elementNodeIds.push(...nodeIds);
+				}
+			}
+		}
+	}
+
+	return { elementNodeIds, containerNodeIds };
 }
 
 /**
  * Update search filter: find nodes matching query, set non-matching nodes to fade.
- * Searches hosts (name/hostname), interfaces (ip_address/name), services (name),
+ * Uses resolveEntityToNodes for view-aware entity→node resolution.
+ * Searches hosts (name/hostname), ip addresses (ip_address/name), services (name),
  * subnets (name/cidr), and tags (name matched to entities).
  */
-export function updateSearchFilter(topology: Topology | undefined, query: string) {
+export function updateSearchFilter(topology: Topology | undefined, query: string, view?: string) {
 	if (!topology || !query.trim()) {
 		searchHiddenNodeIds.set(new Set());
 		searchMatchNodeIds.set([]);
@@ -504,56 +817,68 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 	}
 
 	const q = query.toLowerCase().trim();
-	const matchingNodeIds: string[] = [];
-	const allNodeIds = new Set<string>();
+	const index = buildEntityNodeIndex(topology.nodes);
+	const config = getViewElementConfig(view);
+	const matchingSet = new Set<string>();
 
-	// Collect all node IDs (interfaces + subnets)
-	for (const iface of topology.interfaces) {
-		allNodeIds.add(iface.id);
-	}
-	for (const subnet of topology.subnets) {
-		allNodeIds.add(subnet.id);
-	}
+	/** Resolve an entity match to visible nodes and add them to matchingSet */
+	const addResolved = (entityType: string, entityId: string) => {
+		const { elementNodeIds, containerNodeIds } = resolveEntityToNodes(
+			entityType,
+			entityId,
+			config,
+			index,
+			topology
+		);
+		for (const id of elementNodeIds) matchingSet.add(id);
+		for (const id of containerNodeIds) matchingSet.add(id);
+	};
 
-	// Search hosts -> match their interface nodes
+	// allNodeIds = all element nodes + container nodes
+	const allNodeIds = new Set<string>([...index.allElementNodeIds, ...index.allContainerNodeIds]);
+
+	// Search hosts
 	for (const host of topology.hosts) {
 		const nameMatch = host.name.toLowerCase().includes(q);
 		const hostnameMatch = host.hostname?.toLowerCase().includes(q) ?? false;
 		if (nameMatch || hostnameMatch) {
-			const hostInterfaces = topology.interfaces.filter((i) => {
-				if (i.host_id !== host.id) return false;
-				const subnet = topology.subnets.find((s) => s.id === i.subnet_id);
-				if (!subnet) return true;
-				return !subnetTypes.getMetadata(subnet.subnet_type).is_for_containers;
-			});
-			hostInterfaces.forEach((i) => {
-				if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
-			});
+			addResolved('Host', host.id);
 		}
 	}
 
-	// Search interfaces -> match by ip_address or name
-	for (const iface of topology.interfaces) {
-		const ipMatch = iface.ip_address?.toLowerCase().includes(q) ?? false;
-		const nameMatch = iface.name?.toLowerCase().includes(q) ?? false;
+	// Search IP addresses
+	for (const ipAddr of topology.ip_addresses) {
+		const ipMatch = ipAddr.ip_address?.toLowerCase().includes(q) ?? false;
+		const nameMatch = ipAddr.name?.toLowerCase().includes(q) ?? false;
 		if (ipMatch || nameMatch) {
-			if (!matchingNodeIds.includes(iface.id)) matchingNodeIds.push(iface.id);
+			addResolved('IPAddress', ipAddr.id);
 		}
 	}
 
-	// Search services -> match bound interface nodes (binding-aware)
+	// Search services
 	for (const service of topology.services) {
 		if (service.name.toLowerCase().includes(q)) {
-			addBoundInterfaces(topology, service, matchingNodeIds);
+			addResolved('Service', service.id);
 		}
 	}
 
-	// Search subnets -> match subnet nodes
+	// Search subnets
 	for (const subnet of topology.subnets) {
 		const nameMatch = subnet.name.toLowerCase().includes(q);
 		const cidrMatch = subnet.cidr.toLowerCase().includes(q);
 		if (nameMatch || cidrMatch) {
-			if (!matchingNodeIds.includes(subnet.id)) matchingNodeIds.push(subnet.id);
+			addResolved('Subnet', subnet.id);
+		}
+	}
+
+	// Search interfaces
+	if (topology.interfaces) {
+		for (const iface of topology.interfaces) {
+			const aliasMatch = iface.if_alias?.toLowerCase().includes(q) ?? false;
+			const nameMatch = iface.if_name?.toLowerCase().includes(q) ?? false;
+			if (aliasMatch || nameMatch) {
+				addResolved('Interface', iface.id);
+			}
 		}
 	}
 
@@ -563,26 +888,17 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 		for (const tagId of host.tags) {
 			const tag = entityTags.find((t) => t.id === tagId);
 			if (tag && tag.name.toLowerCase().includes(q)) {
-				const hostInterfaces = topology.interfaces.filter((i) => {
-					if (i.host_id !== host.id) return false;
-					const subnet = topology.subnets.find((s) => s.id === i.subnet_id);
-					if (!subnet) return true;
-					return !subnetTypes.getMetadata(subnet.subnet_type).is_for_containers;
-				});
-				hostInterfaces.forEach((i) => {
-					if (!matchingNodeIds.includes(i.id)) matchingNodeIds.push(i.id);
-				});
+				addResolved('Host', host.id);
 				break;
 			}
 		}
 	}
 
-	// Service tag search -> match bound interfaces (binding-aware)
 	for (const service of topology.services) {
 		for (const tagId of service.tags) {
 			const tag = entityTags.find((t) => t.id === tagId);
 			if (tag && tag.name.toLowerCase().includes(q)) {
-				addBoundInterfaces(topology, service, matchingNodeIds);
+				addResolved('Service', service.id);
 				break;
 			}
 		}
@@ -592,7 +908,7 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 		for (const tagId of subnet.tags) {
 			const tag = entityTags.find((t) => t.id === tagId);
 			if (tag && tag.name.toLowerCase().includes(q)) {
-				if (!matchingNodeIds.includes(subnet.id)) matchingNodeIds.push(subnet.id);
+				addResolved('Subnet', subnet.id);
 				break;
 			}
 		}
@@ -601,14 +917,58 @@ export function updateSearchFilter(topology: Topology | undefined, query: string
 	// Hidden = all nodes NOT in the matching set
 	const hiddenIds = new Set<string>();
 	for (const nodeId of allNodeIds) {
-		if (!matchingNodeIds.includes(nodeId)) {
+		if (!matchingSet.has(nodeId)) {
 			hiddenIds.add(nodeId);
 		}
 	}
 
 	searchHiddenNodeIds.set(hiddenIds);
-	searchMatchNodeIds.set(matchingNodeIds);
+	searchMatchNodeIds.set([...matchingSet]);
 	searchActiveIndex.set(0);
+}
+
+/**
+ * Recompute navigation list by resolving matches against collapse state.
+ * Replaces element IDs inside collapsed containers with their outermost collapsed ancestor.
+ */
+export function recomputeSearchNavigation(
+	matchNodeIds: string[],
+	collapsed: Set<string>,
+	nodes: TopologyNode[]
+) {
+	if (matchNodeIds.length === 0 || collapsed.size === 0) {
+		searchMatchContainerMap.set(new Map());
+		searchNavigableNodeIds.set(matchNodeIds);
+		return;
+	}
+
+	const parentMap = buildFullParentMap(nodes);
+	const containerMap = new Map<string, string[]>();
+	const navigable: string[] = [];
+	const seenContainers = new Set<string>();
+
+	for (const id of matchNodeIds) {
+		const ancestor = resolveCollapsedAncestor(id, collapsed, parentMap);
+		if (ancestor) {
+			if (!containerMap.has(ancestor)) containerMap.set(ancestor, []);
+			containerMap.get(ancestor)!.push(id);
+			if (!seenContainers.has(ancestor)) {
+				seenContainers.add(ancestor);
+				navigable.push(ancestor);
+			}
+		} else {
+			navigable.push(id);
+		}
+	}
+
+	searchMatchContainerMap.set(containerMap);
+	searchNavigableNodeIds.set(navigable);
+
+	// Clamp active index if navigable list shrank
+	const currentIndex = get(searchActiveIndex);
+	if (navigable.length > 0 && currentIndex >= navigable.length) {
+		searchActiveIndex.set(navigable.length - 1);
+	}
 }
 
 /**
@@ -619,4 +979,6 @@ export function clearSearch() {
 	searchMatchNodeIds.set([]);
 	searchActiveIndex.set(0);
 	searchOpen.set(false);
+	searchMatchContainerMap.set(new Map());
+	searchNavigableNodeIds.set([]);
 }

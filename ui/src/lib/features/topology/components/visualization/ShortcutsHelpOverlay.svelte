@@ -11,25 +11,34 @@
 		topology_shortcutHelp,
 		topology_shortcutSelectAll,
 		topology_shortcutBoxSelect,
-		topology_shortcutToggleSelect
+		topology_shortcutToggleSelect,
+		topology_shortcutToggleEditMode,
+		topology_shortcutStepExpand,
+		topology_shortcutStepCollapse
 	} from '$lib/paraglide/messages';
 	import KbdKey from '$lib/shared/components/feedback/KbdKey.svelte';
 
-	let { isOpen = $bindable(false) }: { isOpen: boolean } = $props();
+	let { isOpen = $bindable(false), readonly = false }: { isOpen: boolean; readonly?: boolean } =
+		$props();
 
-	const shortcuts = [
+	const allShortcuts = [
 		{ keys: ['Ctrl/Cmd', 'F'], description: () => topology_shortcutSearch() },
 		{ keys: ['/'], description: () => topology_shortcutSearch() },
 		{ keys: ['F'], description: () => topology_shortcutFitView() },
 		{ keys: ['Z'], description: () => topology_shortcutZoomSelection() },
-		{ keys: ['L'], description: () => topology_shortcutToggleLock() },
-		{ keys: ['R'], description: () => topology_shortcutRebuild() },
+		{ keys: ['E'], description: () => topology_shortcutToggleEditMode(), editOnly: true },
+		{ keys: ['L'], description: () => topology_shortcutToggleLock(), editOnly: true },
+		{ keys: ['R'], description: () => topology_shortcutRebuild(), editOnly: true },
 		{ keys: ['Escape'], description: () => topology_shortcutDeselect() },
 		{ keys: ['?'], description: () => topology_shortcutHelp() },
 		{ keys: ['Ctrl/Cmd', 'A'], description: () => topology_shortcutSelectAll() },
 		{ keys: ['Shift', 'Drag'], description: () => topology_shortcutBoxSelect() },
-		{ keys: ['Shift', 'Click'], description: () => topology_shortcutToggleSelect() }
+		{ keys: ['Shift', 'Click'], description: () => topology_shortcutToggleSelect() },
+		{ keys: [']'], description: () => topology_shortcutStepExpand() },
+		{ keys: ['['], description: () => topology_shortcutStepCollapse() }
 	];
+
+	let shortcuts = $derived(readonly ? allShortcuts.filter((s) => !s.editOnly) : allShortcuts);
 </script>
 
 <GenericModal title={topology_shortcutsTitle()} {isOpen} onClose={() => (isOpen = false)} size="sm">

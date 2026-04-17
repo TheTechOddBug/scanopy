@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashSet, net::SocketAddr, str::FromStr, sync::Arc, time::Duration};
 
 use axum::{
     Extension, Router,
@@ -15,7 +15,7 @@ use scanopy::server::{
     },
     billing::plans::get_purchasable_plans,
     config::{AppState, ServerCli, ServerConfig, get_deployment_type},
-    services::definitions::ALLOWED_LOGO_DOMAINS,
+    license::middleware::license_guard_middleware,
     shared::handlers::{
         cache::AppCache,
         factory::{create_public_share_routes, create_router},
@@ -41,6 +41,20 @@ async fn main() -> anyhow::Result<()> {
 
     // Load configuration using figment
     let config = ServerConfig::load(cli)?;
+    let oidc_domains: HashSet<String> = config
+        .oidc_providers
+        .clone()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|o| {
+            o.logo.as_ref().and_then(|u| {
+                let url = url::Url::parse(u).ok()?;
+                let host = url.host_str()?;
+
+                Some(format!("{}://{}", url.scheme(), host))
+            })
+        })
+        .collect();
     let listen_addr = format!("0.0.0.0:{}", &config.server_port);
     let web_external_path = config.web_external_path.clone();
     let client_ip_source = config.client_ip_source.clone();
@@ -157,6 +171,16 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // License key periodic re-validation (every 5 minutes)
+    let license_revalidate = state.license_service.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(300));
+        loop {
+            interval.tick().await;
+            license_revalidate.revalidate().await;
+        }
+    });
+
     tracing::info!(target: LOG_TARGET, "  Background tasks started");
 
     let (base_router, _openapi) = create_router(state.clone());
@@ -246,27 +270,25 @@ async fn main() -> anyhow::Result<()> {
         HeaderValue::from_static("strict-origin-when-cross-origin"),
     );
 
-    let img_src_domains: String = ALLOWED_LOGO_DOMAINS
-        .iter()
-        .map(|d| format!("https://{}", d))
-        .collect::<Vec<_>>()
-        .join(" ");
+    let oidc_logo_sources = oidc_domains.iter().cloned().collect::<Vec<_>>().join(" ");
+
     let csp_value = format!(
         "default-src 'self'; \
-         script-src 'self' 'unsafe-inline' https://ph.scanopy.net; \
-         style-src 'self' 'unsafe-inline'; \
-         img-src 'self' data: blob: {}; \
-         font-src 'self'; \
-         connect-src 'self' https://ph.scanopy.net; \
-         frame-src 'self' https://demo.scanopy.net; \
-         frame-ancestors 'self'; \
-         base-uri 'self'; \
-         form-action 'self'",
-        img_src_domains
+        script-src 'self' 'unsafe-inline' https://ph.scanopy.net; \
+        style-src 'self' 'unsafe-inline'; \
+        img-src 'self' data: blob: {oidc_logo_sources}; \
+        font-src 'self'; \
+        connect-src 'self' https://ph.scanopy.net; \
+        frame-src 'self' https://demo.scanopy.net; \
+        frame-ancestors 'self'; \
+        base-uri 'self'; \
+        form-action 'self'",
+        oidc_logo_sources = oidc_logo_sources
     );
+
     let csp = SetResponseHeaderLayer::if_not_present(
         HeaderName::from_static("content-security-policy"),
-        HeaderValue::try_from(csp_value).expect("Invalid CSP header value"),
+        HeaderValue::from_str(&csp_value).expect("OIDC values will not change during runtime"),
     );
 
     let app_cache = Arc::new(AppCache::new());
@@ -285,6 +307,10 @@ async fn main() -> anyhow::Result<()> {
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 demo_mode_middleware,
+            ))
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                license_guard_middleware,
             ))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
@@ -391,6 +417,26 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(target: LOG_TARGET, "  Public URL:      {}", public_url);
     tracing::info!(target: LOG_TARGET, "  Log level:       {}", log_level);
     tracing::info!(target: LOG_TARGET, "  Deployment:      {:?}", deployment_type);
+    {
+        let license_status = state.license_service.current_status().await;
+        match &license_status {
+            scanopy::server::license::types::LicenseStatus::NotRequired => {
+                tracing::info!(target: LOG_TARGET, "  License:         not required (community)");
+            }
+            scanopy::server::license::types::LicenseStatus::Valid(claims) => {
+                let exp = chrono::DateTime::from_timestamp(claims.exp, 0)
+                    .map(|d| d.format("%Y-%m-%d").to_string())
+                    .unwrap_or_else(|| "unknown".to_string());
+                tracing::info!(target: LOG_TARGET, "  License:         valid (expires {})", exp);
+            }
+            scanopy::server::license::types::LicenseStatus::Expired(_) => {
+                tracing::warn!(target: LOG_TARGET, "  License:         EXPIRED — server is in read-only mode");
+            }
+            scanopy::server::license::types::LicenseStatus::Invalid(reason) => {
+                tracing::error!(target: LOG_TARGET, "  License:         INVALID ({}) — server is in read-only mode", reason);
+            }
+        }
+    }
     if web_external_path.is_some() {
         tracing::info!(target: LOG_TARGET, "  Web UI:          enabled");
     } else {

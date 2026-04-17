@@ -42,7 +42,7 @@ use crate::server::{
         },
     },
     shares::r#impl::{
-        api::{CreateUpdateShareRequest, PublicShareMetadata, ShareWithTopology},
+        api::{CreateUpdateShareRequest, ExportFeatures, PublicShareMetadata, ShareWithTopology},
         base::Share,
     },
     topology::types::base::Topology,
@@ -90,6 +90,8 @@ pub struct ShareQuery {
 pub struct ShareTopologyRequest {
     #[serde(default)]
     pub password: Option<String>,
+    /// Which topology view to return data for
+    pub view: crate::server::topology::types::views::TopologyView,
 }
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
@@ -284,8 +286,30 @@ async fn get_public_share_metadata(
         return Err(ApiError::entity_disabled::<Share>());
     }
 
-    Ok(Json(ApiResponse::success(PublicShareMetadata::from(
+    // Fetch topology to resolve available views based on data
+    let topology = state
+        .services
+        .topology_service
+        .storage()
+        .get_by_id(&share.base.topology_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?
+        .ok_or_else(|| ApiError::entity_not_found::<Topology>(share.base.topology_id))?;
+
+    // Compute view-support from raw entity tables so availability doesn't
+    // flap based on which view the main app last rebuilt under.
+    let support = state
+        .services
+        .topology_service
+        .get_view_support(topology.base.network_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+    let enabled_views = topology.resolve_available_views(&share.base.enabled_views, &support);
+
+    Ok(Json(ApiResponse::success(PublicShareMetadata::new(
         &share,
+        enabled_views,
     ))))
 }
 
@@ -355,9 +379,10 @@ async fn get_share_topology(
         return Err(ApiError::entity_disabled::<Share>());
     }
 
-    // Get org's plan to check embed feature
+    // Get org's plan to check embed feature and export permissions
     let plan = get_share_org_plan(&state, &share).await?;
-    let has_embeds_feature = plan.features().embeds;
+    let plan_features = plan.features();
+    let has_embeds_feature = plan_features.embeds;
 
     // If requesting embed mode, check if org has embeds feature
     if query.embed && !has_embeds_feature {
@@ -403,7 +428,7 @@ async fn get_share_topology(
     }
 
     // Get topology data
-    let topology = state
+    let mut topology = state
         .services
         .topology_service
         .storage()
@@ -412,10 +437,106 @@ async fn get_share_topology(
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
         .ok_or_else(|| ApiError::entity_not_found::<Topology>(share.base.topology_id))?;
 
+    // Resolve available views based on share config + data availability.
+    // Support flags come from raw entity tables — independent of whichever
+    // view the topology was last rebuilt under.
+    let support = state
+        .services
+        .topology_service
+        .get_view_support(topology.base.network_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+    let enabled_views = topology.resolve_available_views(&share.base.enabled_views, &support);
+
+    // Validate requested view is available
+    if !enabled_views.contains(&body.view) {
+        return Err(ApiError::bad_request(&format!(
+            "View {:?} is not available for this share",
+            body.view
+        )));
+    }
+
+    // If requested view differs from stored view, do an ephemeral rebuild
+    let stored_view = topology.base.options.request.view;
+    if stored_view != body.view {
+        let service = &state.services.topology_service;
+        let network_id = topology.base.network_id;
+
+        let (hosts, ip_addresses, subnets, dependencies, ports, bindings, interfaces) = service
+            .get_entity_data(network_id)
+            .await
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+        let services = service
+            .get_service_data(network_id)
+            .await
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+        let entity_tags = service
+            .get_entity_tags(
+                &hosts,
+                &services,
+                &subnets,
+                &topology.base.options.request.element_rules,
+            )
+            .await
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+        let vlans = service.get_vlans(network_id).await.unwrap_or_default();
+
+        // Build graph with requested view
+        let mut options = topology.base.options.clone();
+        options.request.view = body.view;
+
+        let (nodes, edges) =
+            service.build_graph(crate::server::topology::service::main::BuildGraphParams {
+                options: &options,
+                hosts: &hosts,
+                ip_addresses: &ip_addresses,
+                subnets: &subnets,
+                services: &services,
+                dependencies: &dependencies,
+                ports: &ports,
+                bindings: &bindings,
+                interfaces: &interfaces,
+                entity_tags: &entity_tags,
+                vlans: &vlans,
+                old_nodes: &[],
+                old_edges: &[],
+                old_view: Some(stored_view),
+            });
+
+        topology.set_entities(crate::server::topology::types::base::SetEntitiesParams {
+            hosts,
+            ip_addresses,
+            services,
+            subnets,
+            dependencies,
+            ports,
+            bindings,
+            interfaces,
+            entity_tags,
+            vlans,
+        });
+        topology.set_graph(nodes, edges);
+        topology.base.options = options;
+    }
+
+    let export_features = ExportFeatures {
+        png_export: plan_features.png_export,
+        svg_export: plan_features.svg_export,
+        mermaid_export: plan_features.mermaid_export,
+        confluence_export: plan_features.confluence_export,
+        pdf_export: plan_features.pdf_export,
+        html_export: plan_features.html_export,
+        remove_created_with: plan_features.remove_created_with,
+    };
+
     let response_data = ShareWithTopology {
-        share: PublicShareMetadata::from(&share),
+        share: PublicShareMetadata::new(&share, enabled_views),
         topology: serde_json::to_value(&topology)
             .map_err(|e| ApiError::internal_error(&e.to_string()))?,
+        export_features,
     };
 
     // Track share/embed view via event bus

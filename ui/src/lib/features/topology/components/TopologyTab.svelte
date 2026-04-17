@@ -7,10 +7,12 @@
 	import { Edit, Lock, Plus, Radar, Radio, RefreshCcw, Share2, Trash2 } from 'lucide-svelte';
 	import ExportButton from './ExportButton.svelte';
 	import ExportModal from './ExportModal.svelte';
-	import ShareModal from '$lib/features/shares/components/ShareModal.svelte';
+	import SharesModal from '$lib/features/shares/components/SharesModal.svelte';
 	import { tooltip } from '$lib/shared/actions/tooltip';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { onMount, onDestroy } from 'svelte';
+	import { get } from 'svelte/store';
 	import {
 		useTopologiesQuery,
 		useDeleteTopologyMutation,
@@ -21,11 +23,23 @@
 		hasConflicts,
 		selectedTopologyId,
 		selectedNodes,
-		consumePreferredNetwork
+		consumePreferredNetwork,
+		activeView,
+		topologyOptions,
+		updateTopologyOptions,
+		hydrateStoresFromTopology,
+		getTopologyParamsFromUrl,
+		pushTopologyParams,
+		showViewSwitcherHint,
+		showDependencyTutorial,
+		type TopologyView
 	} from '../queries';
+	import { makeGraphRule } from '../types/grouping';
+	import type { ContainerGraphRule } from '../types/grouping';
 	import type { Topology } from '../types/base';
 	import TopologyModal from './TopologyModal.svelte';
-	import { newNodeIds } from '../interactions';
+	import { newNodeIds, updateTagFilter } from '../interactions';
+	import { clearSelection } from '../selection';
 	import { getTopologyState } from '../state';
 	import StateBadge from './StateBadge.svelte';
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
@@ -33,17 +47,28 @@
 	import RefreshConflictsModal from './RefreshConflictsModal.svelte';
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
 	import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
+	import {
+		SimpleOptionDisplay,
+		type SimpleOption
+	} from '$lib/shared/components/forms/selection/display/SimpleOptionDisplay';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { trackEvent } from '$lib/shared/utils/analytics';
 	import { useSubnetsQuery } from '$lib/features/subnets/queries';
+	import { useTagsQuery } from '$lib/features/tags/queries';
 	import { useActiveSessionsQuery } from '$lib/features/discovery/queries';
-	import { useGroupsQuery } from '$lib/features/groups/queries';
+	import { useDependenciesQuery } from '$lib/features/dependencies/queries';
+	import ApplicationSetupWizard from './application-wizard/ApplicationSetupWizard.svelte';
+	import L2EmptyStateOverlay from './L2EmptyStateOverlay.svelte';
+	import ViewSwitcherHint from './ViewSwitcherHint.svelte';
+	import DependencyTutorial from './DependencyTutorial.svelte';
+	import { TUTORIAL_TOPOLOGY } from './dependency-tutorial-data';
 	import { useUsersQuery } from '$lib/features/users/queries';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import type { components } from '$lib/api/schema';
-	import { entities, permissions } from '$lib/shared/stores/metadata';
+	import { entities, permissions, views } from '$lib/shared/stores/metadata';
+	import { getInspectorConfig } from './panel/inspectors/view-config';
 	import { modalState, openModal } from '$lib/shared/stores/modal-registry';
 	import type { TabProps } from '$lib/shared/types';
 	import {
@@ -78,8 +103,9 @@
 	);
 
 	// Queries - TanStack Query handles deduplication
+	const tagsQuery = useTagsQuery();
 	const subnetsQuery = useSubnetsQuery();
-	const groupsQuery = useGroupsQuery();
+	const dependenciesQuery = useDependenciesQuery();
 	const usersQuery = useUsersQuery({ enabled: () => canViewUsers });
 	const topologiesQuery = useTopologiesQuery();
 	const organizationQuery = useOrganizationQuery();
@@ -90,15 +116,61 @@
 	let usersData = $derived(usersQuery.data ?? []);
 	let topologiesData = $derived(topologiesQuery.data ?? []);
 	let isLoading = $derived(
-		subnetsQuery.isPending || groupsQuery.isPending || topologiesQuery.isPending
+		subnetsQuery.isPending || dependenciesQuery.isPending || topologiesQuery.isPending
 	);
 
 	let hasEmail = $derived(configQuery.data?.has_email_service ?? false);
+
+	// Application wizard gate
+	let appTags = $derived((tagsQuery.data ?? []).filter((t) => t.is_application));
+	let wizardOpen = $state(false);
+
+	let currentInspectorConfig = $derived(getInspectorConfig($activeView));
+
+	// Auto-open wizard when entering a view with app picker and no app tags
+	// Wait for tags query to load before deciding — otherwise empty pre-load state triggers wizard
+	let tagsLoaded = $derived(!tagsQuery.isLoading && !tagsQuery.isPending);
+	$effect(() => {
+		if (
+			isActive &&
+			tagsLoaded &&
+			currentInspectorConfig.show_application_picker &&
+			appTags.length === 0 &&
+			!wizardOpen
+		) {
+			wizardOpen = true;
+		}
+	});
+
+	let showAppWizard = $derived(
+		isActive && currentInspectorConfig.show_application_picker && wizardOpen
+	);
 
 	// Selected topology (derived from ID + query data)
 	let currentTopology = $derived(
 		$selectedTopologyId ? topologiesData.find((t) => t.id === $selectedTopologyId) : null
 	);
+
+	// L2 Physical: show empty state overlay when no nodes (no neighbor data discovered)
+	let showL2EmptyState = $derived(
+		isActive &&
+			$activeView === 'L2Physical' &&
+			currentTopology != null &&
+			!currentTopology.is_stale &&
+			currentTopology.nodes.length === 0
+	);
+
+	// Update tag filter stores when topology or options change (always-mounted, unlike OptionsContent)
+	$effect(() => {
+		updateTagFilter(
+			currentTopology ?? undefined,
+			$topologyOptions.local.tag_filter,
+			$activeView,
+			(($topologyOptions.request.hide_service_categories ?? {}) as Record<string, string[]>)[
+				$activeView
+			] ?? []
+		);
+	});
 
 	// Find active discovery session for current topology's network
 	let activeSession = $derived(
@@ -107,6 +179,18 @@
 			: null
 	);
 	let discoveryColor = $derived(entities.getColorHelper('Discovery'));
+
+	// View selector — built from fixture data
+	import viewsJson from '$lib/data/views.json';
+
+	const viewOptions: SimpleOption[] = viewsJson.map((p) => ({
+		value: p.id,
+		label: p.name,
+		description: p.description,
+		icon: views.getIconComponent(p.id),
+		iconColor: views.getColorHelper(p.id).icon
+	}));
+	let viewColorStyle = $derived(views.getColorHelper($activeView));
 
 	type OnboardingOperation = components['schemas']['OnboardingOperation'];
 	let onboarding = $derived((organizationQuery.data?.onboarding ?? []) as OnboardingOperation[]);
@@ -123,10 +207,24 @@
 	const lockTopologyMutation = useLockTopologyMutation();
 	const unlockTopologyMutation = useUnlockTopologyMutation();
 
+	// URL params: read once on init for topology/view deep-linking
+	const urlParams = getTopologyParamsFromUrl();
+	let urlViewConsumed = false;
+
 	// Initialize selected topology when data loads
+	let lastHydratedId: string | null = null;
+	let isFirstHydration = true;
 	$effect(() => {
 		if (topologiesData.length > 0 && !$selectedTopologyId) {
-			// Check for preferred network from onboarding
+			// Priority 1: URL param topologyId
+			if (urlParams.topologyId) {
+				const fromUrl = topologiesData.find((t) => t.id === urlParams.topologyId);
+				if (fromUrl) {
+					selectedTopologyId.set(fromUrl.id);
+					return;
+				}
+			}
+			// Priority 2: preferred network from onboarding
 			const preferredNetworkId = consumePreferredNetwork();
 			if (preferredNetworkId) {
 				const preferred = topologiesData.find((t) => t.network_id === preferredNetworkId);
@@ -137,6 +235,32 @@
 			}
 			// Default to first topology
 			selectedTopologyId.set(topologiesData[0].id);
+		}
+	});
+
+	// Hydrate stores from topology options when a topology is selected.
+	// On first hydration (page load), use the topology's stored view.
+	// On subsequent switches, preserve the user's current view and rebuild
+	// if the topology's data was built for a different view.
+	$effect(() => {
+		if (currentTopology && currentTopology.id !== lastHydratedId) {
+			lastHydratedId = currentTopology.id;
+			hydrateStoresFromTopology(currentTopology, isFirstHydration);
+			// Override view from URL param on first hydration only
+			if (!urlViewConsumed && urlParams.view) {
+				urlViewConsumed = true;
+				activeView.set(urlParams.view);
+			}
+			// When switching topologies, the data may be built for a different
+			// view. Trigger a rebuild so the server returns data for activeView.
+			if (!isFirstHydration) {
+				const currentView = get(activeView);
+				const dataView = currentTopology.options?.request?.view;
+				if (dataView && dataView !== currentView) {
+					rebuildTopologyMutation.mutateAsync(currentTopology);
+				}
+			}
+			isFirstHydration = false;
 		}
 	});
 
@@ -266,14 +390,11 @@
 		// Mark as checked BEFORE triggering rebuild to prevent race conditions
 		initialRebuildChecked.add(currentTopology.id);
 
-		// Determine if rebuild is needed: stale or empty
-		const needsRebuild = currentTopology.is_stale || currentTopology.nodes.length === 0;
-
-		if (needsRebuild) {
-			void rebuildTopologyMutation.mutateAsync(currentTopology).then(() => {
-				topologyViewer?.triggerFitView();
-			});
-		}
+		// Always rebuild on initial load to ensure topology data matches
+		// current options/view (stored data may be from a different session)
+		void rebuildTopologyMutation.mutateAsync(currentTopology).then(() => {
+			topologyViewer?.triggerFitView();
+		});
 	});
 
 	function handleCreateTopology() {
@@ -302,9 +423,42 @@
 
 	// Handle topology selection
 	function handleTopologyChange(value: string) {
+		pushTopologyParams(value, get(activeView));
 		selectedTopologyId.set(value);
-		selectedNodes.set([]);
+		clearSelection();
 	}
+
+	// Handle view selection (user-initiated)
+	function handleViewChange(value: string) {
+		const view = value as TopologyView;
+		pushTopologyParams(get(selectedTopologyId), view);
+		activeView.set(view);
+		clearSelection();
+		// Dismiss view switcher hint on first view change
+		showViewSwitcherHint.set(false);
+	}
+
+	// Tutorial / hint state
+	let viewSwitcherEl: HTMLDivElement | undefined = $state();
+	let tutorialTypeToggled = $state(false);
+
+	function dismissDependencyTutorial() {
+		showDependencyTutorial.set(false);
+		selectedNodes.set([]);
+		tutorialTypeToggled = false;
+	}
+
+	// Auto-dismiss tutorial when user leaves the tab
+	$effect(() => {
+		// Only track isActive — don't re-run when showDependencyTutorial changes
+		const active = isActive;
+		return () => {
+			// Cleanup runs when isActive changes — if we became inactive, dismiss
+			if (active && get(showDependencyTutorial)) {
+				dismissDependencyTutorial();
+			}
+		};
+	});
 
 	async function handleDelete() {
 		if (!currentTopology) return;
@@ -376,6 +530,34 @@
 		}
 	}
 
+	function handleWizardComplete() {
+		wizardOpen = false;
+		const tagIds = appTags.map((t) => t.id);
+		updateTopologyOptions((current) => {
+			const allRules = current.request.container_rules ?? {};
+			const appRules: ContainerGraphRule[] = allRules['Application'] ?? [];
+			return {
+				...current,
+				request: {
+					...current.request,
+					container_rules: {
+						...allRules,
+						Application: [
+							...appRules.filter(
+								(r) =>
+									typeof r.rule === 'string' ||
+									!('ByApplication' in (r.rule as Record<string, unknown>))
+							),
+							makeGraphRule({ ByApplication: { tag_ids: tagIds } }) as ContainerGraphRule
+						]
+					}
+				}
+			};
+		});
+		// Refresh rather than rebuild — safer if topology entered conflict state during wizard
+		handleRefresh();
+	}
+
 	let stateConfig = $derived(
 		currentTopology
 			? getTopologyState(currentTopology, $autoRebuild, {
@@ -391,17 +573,40 @@
 	let lockedByDisplay = $derived(
 		lockedByUser?.email ?? (currentTopology?.locked_by ? topology_anotherUser() : null)
 	);
+
+	// Browser back/forward: restore topology + view from URL params
+	function handlePopState() {
+		const params = getTopologyParamsFromUrl();
+		if (params.topologyId && params.topologyId !== get(selectedTopologyId)) {
+			selectedTopologyId.set(params.topologyId);
+			selectedNodes.set([]);
+		}
+		if (params.view && params.view !== get(activeView)) {
+			activeView.set(params.view);
+		}
+	}
+
+	onMount(() => {
+		window.addEventListener('popstate', handlePopState);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('popstate', handlePopState);
+	});
 </script>
 
 <SvelteFlowProvider>
 	{#if !hasDaemon(onboarding)}
 		<PreDaemonEmptyState title="Install a daemon to start mapping your network topology." />
 	{:else}
-		<div class="space-y-6">
+		<div class="space-y-3">
 			<!-- Header -->
-			<div class="card card-static flex items-center justify-evenly gap-4 px-4 py-2">
+			<div
+				class="card card-static flex items-center justify-evenly gap-2 px-2 py-2"
+				style="border-bottom: 2px solid {viewColorStyle.rgb}; transition: border-color 0.3s ease;"
+			>
 				{#if currentTopology}
-					<div class="flex items-center gap-4 py-2">
+					<div class="flex items-center gap-2">
 						<ExportButton onclick={() => (isExportModalOpen = true)} />
 						{#if !isReadOnly}
 							{#if currentUser && !currentUser.email_verified}
@@ -433,7 +638,7 @@
 									: ''}
 								use:tooltip
 							>
-								<div class="flex items-center p-2">
+								<div class="flex items-center">
 									<Radar class="mr-2 h-4 w-4 animate-pulse [animation-duration:5s]" />
 									{#if activeSession.progress > 0}
 										<span class="text-xs">{activeSession.progress}%</span>
@@ -445,12 +650,14 @@
 									<span class="text-[10px]">Estimating...</span>
 								{/if}
 							</div>
-							<div class="card-divider-v self-stretch"></div>
+							{#if hasCompletedFirstRebuild}
+								<div class="card-divider-v self-stretch"></div>
+							{/if}
 						{/if}
 						{#if hasCompletedFirstRebuild}
 							<div class="flex items-center">
-								<div class="mx-2 flex flex-col text-center">
-									<div class="flex justify-around gap-6">
+								<div class="flex flex-col text-center">
+									<div class="flex justify-around gap-4">
 										<button
 											onclick={handleToggleLock}
 											class={`text-xs ${currentTopology.is_locked ? 'btn-icon-info' : 'btn-icon'}`}
@@ -498,17 +705,15 @@
 									{/if}
 								</div>
 								<!-- State Badge / Action Button -->
-								{#if stateConfig && !currentTopology.is_locked && !$autoRebuild}
-									<div class="flex flex-col items-center gap-2">
-										<div class="flex items-center">
-											<StateBadge
-												disabled={stateConfig?.disabled || false}
-												Icon={stateConfig.icon}
-												label={stateConfig.buttonText}
-												cls={stateConfig.class}
-												onClick={stateConfig.action}
-											/>
-										</div>
+								{#if stateConfig && !currentTopology.is_locked && !$autoRebuild && !showAppWizard}
+									<div class="flex items-center">
+										<StateBadge
+											disabled={stateConfig?.disabled || false}
+											Icon={stateConfig.icon}
+											label={stateConfig.buttonText}
+											cls={stateConfig.class}
+											onClick={stateConfig.action}
+										/>
 									</div>
 								{/if}
 							</div>
@@ -517,7 +722,7 @@
 						{/if}
 					{/if}
 
-					{#if topologiesData.length > 0}
+					{#if hasCompletedFirstRebuild && topologiesData.length > 0}
 						<RichSelect
 							label=""
 							selectedValue={currentTopology.id}
@@ -525,15 +730,28 @@
 							onSelect={handleTopologyChange}
 							options={topologiesData}
 						/>
+
+						<div class="card-divider-v self-stretch"></div>
+
+						<div bind:this={viewSwitcherEl}>
+							<RichSelect
+								label=""
+								selectedValue={$activeView}
+								displayComponent={SimpleOptionDisplay}
+								onSelect={handleViewChange}
+								options={viewOptions}
+								minWidth="22rem"
+							/>
+						</div>
 					{/if}
 				{/if}
 
-				{#if !isReadOnly}
+				{#if !isReadOnly && hasCompletedFirstRebuild}
 					{#if currentTopology}
 						<div class="card-divider-v self-stretch"></div>
 					{/if}
 
-					<div class="flex items-center gap-4 py-2">
+					<div class="flex items-center gap-2">
 						{#if currentTopology}
 							<button class="btn-primary" onclick={handleEditTopology}>
 								<Edit class="my-1 h-4 w-4" />
@@ -553,8 +771,8 @@
 				{/if}
 			</div>
 
-			<!-- Contextual Info Banner -->
-			{#if currentTopology && stateConfig}
+			<!-- Contextual Info Banner (hidden during wizard) -->
+			{#if currentTopology && stateConfig && !showAppWizard}
 				{#if stateConfig.type === 'locked'}
 					<InlineInfo
 						dismissableKey="topology-locked-info"
@@ -576,17 +794,37 @@
 				{/if}
 			{/if}
 
+			{#if $showViewSwitcherHint && viewSwitcherEl}
+				<ViewSwitcherHint anchor={viewSwitcherEl} />
+			{/if}
+
 			{#if isLoading}
 				<Loading />
 			{:else if currentTopology}
-				<div class="relative">
+				<div class="relative" id="topology-view-area">
 					<TopologyOptionsPanel
+						topology={currentTopology}
+						tutorialTopology={$showDependencyTutorial ? TUTORIAL_TOPOLOGY : undefined}
 						{isReadOnly}
-						onClearSelection={clearMultiSelect}
+						onClearSelection={$showDependencyTutorial
+							? dismissDependencyTutorial
+							: clearMultiSelect}
 						onGroupCreated={() => {
 							clearMultiSelect();
+							updateTopologyOptions((opts) => ({
+								...opts,
+								local: {
+									...opts.local,
+									hide_edge_types: opts.local.hide_edge_types.filter(
+										(e) => e !== 'RequestPath' && e !== 'HubAndSpoke'
+									)
+								}
+							}));
 							handleRefresh();
 						}}
+						onDependencyTypeChange={$showDependencyTutorial
+							? () => (tutorialTypeToggled = true)
+							: undefined}
 					/>
 					<TopologyViewer
 						bind:this={topologyViewer}
@@ -594,6 +832,24 @@
 						onRebuild={handleRefresh}
 						{isActive}
 					/>
+					{#if $showDependencyTutorial}
+						<DependencyTutorial
+							onDismiss={dismissDependencyTutorial}
+							dependencyTypeToggled={tutorialTypeToggled}
+						/>
+					{/if}
+					{#if showAppWizard}
+						<ApplicationSetupWizard
+							{appTags}
+							networkId={currentTopology.network_id}
+							onComplete={handleWizardComplete}
+						/>
+					{/if}
+					{#if showL2EmptyState}
+						<L2EmptyStateOverlay
+							hasSnmpCredential={onboarding.includes('FirstSnmpCredentialCreated')}
+						/>
+					{/if}
 				</div>
 			{:else}
 				<div class="card card-static text-secondary">
@@ -603,7 +859,11 @@
 		</div>
 
 		{#if currentTopology}
-			<ExportModal topologyId={currentTopology.id} bind:isOpen={isExportModalOpen} />
+			<ExportModal
+				topologyId={currentTopology.id}
+				topologyName={currentTopology.name}
+				bind:isOpen={isExportModalOpen}
+			/>
 		{/if}
 	{/if}
 </SvelteFlowProvider>
@@ -624,7 +884,7 @@
 		onLock={handleLockFromConflicts}
 		onCancel={() => (isRefreshConflictsOpen = false)}
 	/>
-	<ShareModal
+	<SharesModal
 		name="topology-share"
 		isOpen={isShareModalOpen}
 		topologyId={currentTopology.id}

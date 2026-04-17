@@ -10,14 +10,15 @@
 	import { entities } from '$lib/shared/stores/metadata';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
-	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
 	import { usePortsQuery } from '$lib/features/ports/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import {
 		common_back,
 		common_cancel,
 		common_consolidating,
 		common_next,
 		hosts_consolidateModal_chooseHost,
+		hosts_consolidateModal_credentialsMigrated,
 		hosts_consolidateModal_hostWillBeDeleted,
 		hosts_consolidateModal_interfacesMigrated,
 		hosts_consolidateModal_portsMigrated,
@@ -43,12 +44,12 @@
 	// Use limit: 0 to get all hosts for consolidation modal dropdown
 	const hostsQuery = useHostsQuery({ limit: 0 });
 	const servicesQuery = useServicesCacheQuery();
-	const interfacesQuery = useInterfacesQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const portsQuery = usePortsQuery();
 
 	let hostsData = $derived(hostsQuery.data?.items ?? []);
 	let servicesData = $derived(servicesQuery.data ?? []);
-	let interfacesData = $derived(interfacesQuery.data ?? []);
+	let ipAddressesData = $derived(ipAddressesQuery.data ?? []);
 	let portsData = $derived(portsQuery.data ?? []);
 
 	let selectedDestinationHostId = $state('');
@@ -79,7 +80,7 @@
 
 			// Get children counts from query data
 			const services = servicesData.filter((s) => s.host_id === otherHost.id);
-			const interfaces = interfacesData.filter((i) => i.host_id === otherHost.id);
+			const interfaces = ipAddressesData.filter((i) => i.host_id === otherHost.id);
 			const ports = portsData.filter((p) => p.host_id === otherHost.id);
 
 			const actions = [
@@ -116,6 +117,18 @@
 					id: 'ports',
 					name: hosts_consolidateModal_portsMigrated({
 						count: ports.length,
+						source: otherHost.name,
+						destination: selectedTargetHost.name
+					})
+				});
+			}
+
+			const credentialCount = otherHost.credential_assignments?.length ?? 0;
+			if (credentialCount > 0) {
+				actions.push({
+					id: 'credentials',
+					name: hosts_consolidateModal_credentialsMigrated({
+						count: credentialCount,
 						source: otherHost.name,
 						destination: selectedTargetHost.name
 					})

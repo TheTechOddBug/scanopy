@@ -223,6 +223,8 @@ export function useUpdateServiceMutation() {
 				queryKeys.services.all,
 				(old) => old?.map((s) => (s.id === updatedService.id ? updatedService : s)) ?? []
 			);
+			// Invalidate paginated service queries so ServiceTab reflects the update
+			queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
 		}
 	}));
 }
@@ -243,11 +245,8 @@ export function useDeleteServiceMutation() {
 			}
 			return id;
 		},
-		onSuccess: (id: string) => {
-			queryClient.setQueryData<Service[]>(
-				queryKeys.services.all,
-				(old) => old?.filter((s) => s.id !== id) ?? []
-			);
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
 		}
 	}));
 }
@@ -266,11 +265,8 @@ export function useBulkDeleteServicesMutation() {
 			}
 			return ids;
 		},
-		onSuccess: (ids: string[]) => {
-			queryClient.setQueryData<Service[]>(
-				queryKeys.services.all,
-				(old) => old?.filter((s) => !ids.includes(s.id)) ?? []
-			);
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
 		}
 	}));
 }

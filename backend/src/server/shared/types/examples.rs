@@ -8,33 +8,33 @@ use chrono::{TimeZone, Utc};
 use cidr::{IpCidr, Ipv4Cidr};
 use email_address::EmailAddress;
 use mac_address::MacAddress;
-use secrecy::SecretString;
 use semver::Version;
 use std::net::{IpAddr, Ipv4Addr};
 
 use crate::server::{
     bindings::r#impl::base::Binding,
+    credentials::r#impl::mapping::SnmpCredentialMapping,
     daemon_api_keys::r#impl::base::{DaemonApiKey, DaemonApiKeyBase},
     daemons::r#impl::{
         api::DaemonCapabilities,
         base::{Daemon, DaemonBase, DaemonMode},
     },
+    dependencies::r#impl::{
+        base::{Dependency, DependencyBase, DependencyMembers},
+        types::DependencyType,
+    },
     discovery::r#impl::{
         base::{Discovery, DiscoveryBase},
         types::{DiscoveryType, RunType},
     },
-    groups::r#impl::{
-        base::{Group, GroupBase},
-        types::GroupType,
-    },
     hosts::r#impl::{
         api::{
-            BindingInput, CreateHostRequest, HostResponse, InterfaceInput, PortInput, ServiceInput,
+            BindingInput, CreateHostRequest, HostResponse, IPAddressInput, PortInput, ServiceInput,
         },
         base::{Host, HostBase},
     },
-    if_entries::r#impl::base::{IfAdminStatus, IfEntry, IfEntryBase, IfOperStatus},
-    interfaces::r#impl::base::{Interface, InterfaceBase},
+    interfaces::r#impl::base::{IfAdminStatus, IfOperStatus, Interface, InterfaceBase},
+    ip_addresses::r#impl::base::{IPAddress, IPAddressBase},
     networks::r#impl::{Network, NetworkBase},
     organizations::r#impl::base::{Organization, OrganizationBase},
     ports::r#impl::base::{Port, PortBase, PortType, TransportProtocol},
@@ -43,10 +43,6 @@ use crate::server::{
         r#impl::base::{Service, ServiceBase},
     },
     shared::types::{Color, entities::EntitySource},
-    snmp_credentials::r#impl::{
-        base::{SnmpCredential, SnmpCredentialBase, SnmpVersion},
-        discovery::SnmpCredentialMapping,
-    },
     subnets::r#impl::{
         base::{Subnet, SubnetBase},
         types::SubnetType,
@@ -83,7 +79,6 @@ pub mod ids {
     pub const USER: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000d);
     pub const DISCOVERY: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000e);
     pub const IF_ENTRY: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000f);
-    pub const SNMP_CREDENTIAL: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_446655440010);
 }
 
 /// Example timestamp for created_at/updated_at fields.
@@ -105,7 +100,7 @@ pub fn network() -> Network {
             name: "Home Network".to_string(),
             organization_id: ids::ORGANIZATION,
             tags: vec![],
-            snmp_credential_id: None,
+            credential_ids: vec![],
         },
     }
 }
@@ -131,7 +126,11 @@ pub fn host() -> Host {
             sys_contact: None,
             management_url: None,
             chassis_id: None,
-            snmp_credential_id: None,
+            sys_name: None,
+            manufacturer: None,
+            model: None,
+            serial_number: None,
+            credential_assignments: vec![],
         },
     }
 }
@@ -148,6 +147,7 @@ pub fn subnet() -> Subnet {
             network_id: ids::NETWORK,
             cidr: IpCidr::V4(Ipv4Cidr::new(Ipv4Addr::new(192, 168, 1, 0), 24).unwrap()),
             subnet_type: SubnetType::Lan,
+            virtualization: None,
             source: EntitySource::Manual,
             tags: vec![],
         },
@@ -155,12 +155,12 @@ pub fn subnet() -> Subnet {
 }
 
 /// Example Interface entity.
-pub fn interface() -> Interface {
-    Interface {
+pub fn ip_address() -> IPAddress {
+    IPAddress {
         id: ids::INTERFACE,
         created_at: example_timestamp(),
         updated_at: example_timestamp(),
-        base: InterfaceBase {
+        base: IPAddressBase {
             network_id: ids::NETWORK,
             host_id: ids::HOST,
             subnet_id: ids::SUBNET,
@@ -186,19 +186,19 @@ pub fn port() -> Port {
     }
 }
 
-/// Example Group entity.
-pub fn group() -> Group {
-    Group {
+/// Example Dependency entity.
+pub fn dependency() -> Dependency {
+    Dependency {
         id: ids::GROUP,
         created_at: example_timestamp(),
         updated_at: example_timestamp(),
-        base: GroupBase {
+        base: DependencyBase {
             name: "Web Services".to_string(),
-            description: Some("HTTP/HTTPS services group".to_string()),
+            description: Some("HTTP/HTTPS services dependency".to_string()),
             network_id: ids::NETWORK,
             color: Color::Blue,
-            group_type: GroupType::RequestPath,
-            binding_ids: vec![],
+            dependency_type: DependencyType::RequestPath,
+            members: DependencyMembers::default(),
             source: EntitySource::Manual,
             edge_style: EdgeStyle::Bezier,
             tags: vec![],
@@ -245,6 +245,7 @@ pub fn tag() -> Tag {
             description: Some("Production environment resources".to_string()),
             color: Color::Green,
             organization_id: ids::ORGANIZATION,
+            is_application: false,
         },
     }
 }
@@ -340,7 +341,7 @@ pub fn organization() -> Organization {
             trial_end_date: None,
             brevo_company_id: None,
             plan_limit_notifications: Default::default(),
-            use_case: None,
+            use_case: Default::default(),
         },
     }
 }
@@ -359,23 +360,25 @@ pub fn discovery() -> Discovery {
                 subnet_ids: Some(vec![ids::SUBNET]),
                 host_naming_fallback: Default::default(),
                 snmp_credentials: SnmpCredentialMapping::default(),
-                probe_raw_socket_ports: false,
             },
             run_type: RunType::AdHoc {
                 last_run: Some(example_timestamp()),
             },
             tags: vec![],
         },
+        scan_count: 0,
+        force_full_scan: false,
+        pending_credential_ids: vec![],
     }
 }
 
-/// Example IfEntry entity.
-pub fn if_entry() -> IfEntry {
-    IfEntry {
+/// Example Interface entity.
+pub fn interface() -> Interface {
+    Interface {
         id: ids::IF_ENTRY,
         created_at: example_timestamp(),
         updated_at: example_timestamp(),
-        base: IfEntryBase {
+        base: InterfaceBase {
             host_id: ids::HOST,
             network_id: ids::NETWORK,
             if_index: 1,
@@ -387,7 +390,7 @@ pub fn if_entry() -> IfEntry {
             admin_status: IfAdminStatus::Up,
             oper_status: IfOperStatus::Up,
             mac_address: Some(MacAddress::new([0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE])),
-            interface_id: Some(ids::INTERFACE),
+            ip_address_id: Some(ids::INTERFACE),
             neighbor: None,
             lldp_chassis_id: None,
             lldp_port_id: None,
@@ -399,22 +402,9 @@ pub fn if_entry() -> IfEntry {
             cdp_port_id: None,
             cdp_platform: None,
             cdp_address: None,
-        },
-    }
-}
-
-/// Example SnmpCredential entity.
-pub fn snmp_credential() -> SnmpCredential {
-    SnmpCredential {
-        id: ids::SNMP_CREDENTIAL,
-        created_at: example_timestamp(),
-        updated_at: example_timestamp(),
-        base: SnmpCredentialBase {
-            organization_id: ids::ORGANIZATION,
-            name: "Default SNMPv2c".to_string(),
-            version: SnmpVersion::V2c,
-            community: SecretString::from("public".to_string()),
-            tags: Vec::new(),
+            fdb_macs: None,
+            native_vlan_id: None,
+            vlan_ids: None,
         },
     }
 }
@@ -443,8 +433,8 @@ pub fn create_host_request() -> CreateHostRequest {
         sys_contact: None,
         management_url: None,
         chassis_id: None,
-        snmp_credential_id: None,
-        interfaces: vec![InterfaceInput {
+        credential_assignments: vec![],
+        ip_addresses: vec![IPAddressInput {
             id: ids::INTERFACE,
             subnet_id: ids::SUBNET,
             ip_address: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
@@ -464,13 +454,13 @@ pub fn create_host_request() -> CreateHostRequest {
             bindings: vec![BindingInput::Port {
                 id: ids::BINDING,
                 port_id: ids::PORT,
-                interface_id: Some(ids::INTERFACE),
+                ip_address_id: Some(ids::INTERFACE),
             }],
             virtualization: None,
             tags: vec![],
             position: Some(0),
         }],
-        if_entries: vec![],
+        interfaces: vec![],
     }
 }
 
@@ -482,9 +472,9 @@ pub fn create_host_request() -> CreateHostRequest {
 pub fn host_response() -> HostResponse {
     HostResponse::from_host_with_children(
         host(),
-        vec![interface()],
+        vec![ip_address()],
         vec![port()],
         vec![service()],
-        vec![if_entry()],
+        vec![interface()],
     )
 }

@@ -24,6 +24,8 @@ pub struct TagBase {
     pub description: Option<String>,
     pub color: Color,
     pub organization_id: Uuid,
+    #[serde(default)]
+    pub is_application: bool,
 }
 
 impl Default for TagBase {
@@ -33,6 +35,7 @@ impl Default for TagBase {
             description: None,
             color: Color::Yellow,
             organization_id: Uuid::nil(),
+            is_application: false,
         }
     }
 }
@@ -57,8 +60,13 @@ pub struct Tag {
 }
 
 impl ChangeTriggersTopologyStaleness<Tag> for Tag {
+    /// Always returns true — the actual determination of whether a Tag change
+    /// should mark a topology stale lives downstream in the topology subscriber,
+    /// which has the cross-service access needed to check if the tag is an
+    /// application tag or is referenced by a ByTag element rule.
+    /// See `TopologyService::tag_affects_any_topology`.
     fn triggers_staleness(&self, _other: Option<Tag>) -> bool {
-        false
+        true
     }
 }
 

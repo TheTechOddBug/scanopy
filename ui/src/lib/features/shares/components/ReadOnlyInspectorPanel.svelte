@@ -5,6 +5,12 @@
 	import { ChevronLeft, ChevronRight, Info } from 'lucide-svelte';
 	import InspectorNode from '$lib/features/topology/components/panel/inspectors/InspectorNode.svelte';
 	import InspectorEdge from '$lib/features/topology/components/panel/inspectors/InspectorEdge.svelte';
+	import { optionsPanelExpanded, MINIMAP_FITVIEW_BOTTOM_PX } from '$lib/features/topology/queries';
+
+	interface Props {
+		showMinimap?: boolean;
+	}
+	let { showMinimap = false }: Props = $props();
 
 	setContext('staticTags', true);
 
@@ -12,12 +18,18 @@
 	const selectedNode = getContext<Writable<Node | null>>('selectedNode');
 	const selectedEdge = getContext<Writable<Edge | null>>('selectedEdge');
 
-	let expanded = $state(true);
+	let expanded = $state(false);
+
+	function setExpanded(value: boolean) {
+		expanded = value;
+		// Sync to global store so BaseTopologyViewer auto-fits viewport
+		optionsPanelExpanded.set(value);
+	}
 
 	// Automatically expand when something is selected
 	$effect(() => {
 		if ($selectedNode || $selectedEdge) {
-			expanded = true;
+			setExpanded(true);
 		}
 	});
 </script>
@@ -33,7 +45,7 @@
 				<!-- Collapse button -->
 				<button
 					class="btn-icon rounded-xl p-3"
-					onclick={() => (expanded = false)}
+					onclick={() => setExpanded(false)}
 					aria-label="Collapse panel"
 				>
 					<ChevronLeft class="text-secondary h-5 w-5" />
@@ -46,7 +58,10 @@
 			</div>
 
 			<!-- Content -->
-			<div class="overflow-y-auto p-3" style="max-height: calc(100vh - 200px);">
+			<div
+				class="overflow-y-auto p-3"
+				style="max-height: calc(100vh - {showMinimap ? MINIMAP_FITVIEW_BOTTOM_PX + 20 : 180}px);"
+			>
 				{#if $selectedNode}
 					{#key $selectedNode.id}
 						<InspectorNode node={$selectedNode} />
@@ -65,7 +80,7 @@
 			<!-- Collapsed toggle button -->
 			<button
 				class="btn-icon rounded-2xl p-3"
-				onclick={() => (expanded = true)}
+				onclick={() => setExpanded(true)}
 				aria-label="Expand panel"
 			>
 				<ChevronRight class="text-secondary h-5 w-5" />

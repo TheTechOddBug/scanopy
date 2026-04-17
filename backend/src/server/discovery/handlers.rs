@@ -4,7 +4,7 @@ use crate::server::{
         permissions::{Authorized, IsDaemon, Member, Viewer},
     },
     config::AppState,
-    daemons::r#impl::api::DiscoveryUpdatePayload,
+    daemons::r#impl::{api::DiscoveryUpdatePayload, version::supports_unified_discovery},
     discovery::r#impl::{
         base::Discovery,
         types::{DiscoveryType, RunType},
@@ -29,7 +29,6 @@ use axum::{
     },
     routing::get,
 };
-use chrono::Utc;
 use futures::Stream;
 use std::{convert::Infallible, sync::Arc};
 use tokio::sync::broadcast;
@@ -46,15 +45,25 @@ mod generated {
     crate::crud_export_csv_handler!(Discovery);
 }
 
+fn active_session_error() -> ApiError {
+    ApiError::coded(
+        StatusCode::CONFLICT,
+        ErrorCode::EntityDeleteForbidden {
+            entity: "discovery".to_string(),
+            reason: Some("has an active discovery session — cancel the session first".to_string()),
+        },
+    )
+}
+
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .routes(routes!(generated::get_all, create_discovery))
         .routes(routes!(
             generated::get_by_id,
             update_discovery,
-            generated::delete
+            delete_discovery
         ))
-        .routes(routes!(generated::bulk_delete))
+        .routes(routes!(bulk_delete_discoveries))
         .routes(routes!(generated::export_csv))
         .routes(routes!(start_session))
         .routes(routes!(get_active_sessions))
@@ -63,6 +72,69 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(receive_discovery_update))
         // SSE endpoint (internal - not well-supported by OpenAPI)
         .route("/stream", get(discovery_stream))
+}
+
+/// Delete discovery — blocks if discovery has an active session.
+#[utoipa::path(
+    delete,
+    path = "/{id}",
+    tag = Discovery::ENTITY_NAME_PLURAL,
+    operation_id = "delete_discovery",
+    summary = "Delete discovery",
+    params(("id" = Uuid, Path, description = "discovery ID")),
+    responses(
+        (status = 200, description = "discovery deleted", body = EmptyApiResponse),
+        (status = 404, description = "discovery not found", body = ApiErrorResponse),
+        (status = 409, description = "discovery has active session", body = ApiErrorResponse),
+    ),
+    security(("user_api_key" = []), ("session" = []))
+)]
+async fn delete_discovery(
+    state: State<Arc<AppState>>,
+    auth: Authorized<Member>,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    if state
+        .services
+        .discovery_service
+        .has_active_session_for_discovery(&id)
+        .await
+    {
+        return Err(active_session_error());
+    }
+    generated::delete(state, auth, Path(id)).await
+}
+
+/// Bulk delete discoveries — blocks if any discovery has an active session.
+#[utoipa::path(
+    post,
+    path = "/bulk-delete",
+    tag = Discovery::ENTITY_NAME_PLURAL,
+    operation_id = "bulk_delete_discoveries",
+    summary = "Bulk delete discoveries",
+    request_body(content = Vec<Uuid>, description = "Array of discovery IDs to delete"),
+    responses(
+        (status = 200, description = "discoveries deleted", body = ApiResponse<crate::server::shared::handlers::traits::BulkDeleteResponse>),
+        (status = 409, description = "discovery has active session", body = ApiErrorResponse),
+    ),
+    security(("user_api_key" = []), ("session" = []))
+)]
+async fn bulk_delete_discoveries(
+    state: State<Arc<AppState>>,
+    auth: Authorized<Member>,
+    Json(ids): Json<Vec<Uuid>>,
+) -> ApiResult<Json<ApiResponse<crate::server::shared::handlers::traits::BulkDeleteResponse>>> {
+    for id in &ids {
+        if state
+            .services
+            .discovery_service
+            .has_active_session_for_discovery(id)
+            .await
+        {
+            return Err(active_session_error());
+        }
+    }
+    generated::bulk_delete(state, auth, Json(ids)).await
 }
 
 /// Create new Discovery
@@ -87,40 +159,47 @@ pub async fn create_discovery(
         return Err(ApiError::discovery_historical_read_only());
     }
 
-    // Check scheduled discovery restriction
-    if matches!(discovery.base.run_type, RunType::Scheduled { .. })
-        && let Some(org_id) = auth.organization_id()
-        && let Some(org) = state
-            .services
-            .organization_service
-            .get_by_id(&org_id)
-            .await?
-        && let Some(plan) = &org.base.plan
-        && !plan.features().scheduled_discovery
-    {
-        return Err(ApiError::coded(
-            StatusCode::FORBIDDEN,
-            ErrorCode::BillingFeatureNotAvailable {
-                feature: "Scheduled Discovery".into(),
-            },
-        ));
+    // Reject legacy discovery types — only Unified can be created
+    if discovery.base.discovery_type.is_legacy() {
+        return Err(ApiError::bad_request(&format!(
+            "{} discoveries are frozen. Create a Unified discovery instead.",
+            discovery.base.discovery_type,
+        )));
     }
 
-    // Custom validation: Check if any subnets aren't on the same network as the discovery
-    #[allow(clippy::single_match)]
-    match &discovery.base.discovery_type {
-        DiscoveryType::Network { subnet_ids, .. } => {
-            for subnet_id in subnet_ids.as_ref().unwrap_or(&vec![]) {
-                if let Some(subnet) = state.services.subnet_service.get_by_id(subnet_id).await?
-                    && subnet.base.network_id != discovery.base.network_id
-                {
-                    return Err(ApiError::discovery_subnet_network_mismatch(
-                        &subnet.base.name,
-                    ));
-                }
+    // For Unified: check daemon version supports it
+    if let DiscoveryType::Unified { .. } = &discovery.base.discovery_type {
+        let daemon = state
+            .services
+            .daemon_service
+            .get_by_id(&discovery.base.daemon_id)
+            .await?
+            .ok_or_else(|| ApiError::not_found("Daemon not found".to_string()))?;
+
+        if !supports_unified_discovery(daemon.base.version.as_ref()) {
+            return Err(ApiError::bad_request(
+                "Daemon does not support unified discovery. Upgrade to version 0.15.0 or later.",
+            ));
+        }
+    }
+
+    // Validate subnet network membership for Network and Unified types
+    let subnet_ids_to_check = match &discovery.base.discovery_type {
+        DiscoveryType::Network { subnet_ids, .. } | DiscoveryType::Unified { subnet_ids, .. } => {
+            subnet_ids.clone()
+        }
+        _ => None,
+    };
+    if let Some(ids) = subnet_ids_to_check {
+        for subnet_id in &ids {
+            if let Some(subnet) = state.services.subnet_service.get_by_id(subnet_id).await?
+                && subnet.base.network_id != discovery.base.network_id
+            {
+                return Err(ApiError::discovery_subnet_network_mismatch(
+                    &subnet.base.name,
+                ));
             }
         }
-        DiscoveryType::Docker { .. } | DiscoveryType::SelfReport { .. } => (),
     }
 
     // Delegate to generic handler (handles validation, auth checks, creation)
@@ -151,22 +230,14 @@ pub async fn update_discovery(
         return Err(ApiError::discovery_historical_read_only());
     }
 
-    // Check scheduled discovery restriction
-    if matches!(discovery.base.run_type, RunType::Scheduled { .. })
-        && let Some(org_id) = auth.organization_id()
-        && let Some(org) = state
-            .services
-            .organization_service
-            .get_by_id(&org_id)
-            .await?
-        && let Some(plan) = &org.base.plan
-        && !plan.features().scheduled_discovery
+    // Reject changing a legacy discovery's type
+    if let Some(existing) = state.services.discovery_service.get_by_id(&id).await?
+        && existing.base.discovery_type.is_legacy()
+        && std::mem::discriminant(&existing.base.discovery_type)
+            != std::mem::discriminant(&discovery.base.discovery_type)
     {
-        return Err(ApiError::coded(
-            StatusCode::FORBIDDEN,
-            ErrorCode::BillingFeatureNotAvailable {
-                feature: "Scheduled Discovery".into(),
-            },
+        return Err(ApiError::bad_request(
+            "Cannot change the type of a legacy discovery. Create a new Unified discovery instead.",
         ));
     }
 
@@ -241,7 +312,7 @@ async fn start_session(
     let network_ids = auth.network_ids();
     let entity = auth.into_entity();
 
-    let mut discovery = state
+    let discovery = state
         .services
         .discovery_service
         .get_by_id(&discovery_id)
@@ -275,29 +346,10 @@ async fn start_session(
         );
     }
 
-    // Update last_run BEFORE moving any fields
-    if let RunType::Scheduled {
-        ref mut last_run, ..
-    } = discovery.base.run_type
-    {
-        *last_run = Some(Utc::now());
-    } else if let RunType::AdHoc {
-        ref mut last_run, ..
-    } = discovery.base.run_type
-    {
-        *last_run = Some(Utc::now());
-    }
-
     let update = state
         .services
         .discovery_service
-        .start_session(discovery.clone(), entity.clone())
-        .await?;
-
-    state
-        .services
-        .discovery_service
-        .update(&mut discovery, entity)
+        .start_session(discovery, entity)
         .await?;
 
     Ok(Json(ApiResponse::success(update)))

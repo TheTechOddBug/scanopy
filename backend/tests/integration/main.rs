@@ -119,9 +119,15 @@ async fn integration_tests() {
     clear_discovery_data().expect("Failed to clear discovery data");
 
     // Trigger discovery for the ServerPoll daemon and get the session_id
-    let session_id = discovery::trigger_discovery(&client, serverpoll_daemon_id, network.id)
-        .await
-        .expect("Failed to trigger discovery for ServerPoll daemon");
+    let serverpoll_host_id = serverpoll_provision.daemon.base.host_id;
+    let session_id = discovery::trigger_discovery(
+        &client,
+        serverpoll_daemon_id,
+        serverpoll_host_id,
+        network.id,
+    )
+    .await
+    .expect("Failed to trigger discovery for ServerPoll daemon");
 
     // Wait for this specific session to complete via SSE stream
     // (filters by session_id to avoid catching stalled sessions from other daemons)
@@ -144,9 +150,9 @@ async fn integration_tests() {
         .await
         .expect("Failed to apply tag to discovered service");
 
-    let _group = discovery::create_group(&client, network.id)
+    let _dependency = discovery::create_dependency(&client, network.id)
         .await
-        .expect("Failed to create group");
+        .expect("Failed to create dependency");
 
     println!("\n✅ ServerPoll discovery completed!");
 

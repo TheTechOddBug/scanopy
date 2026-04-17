@@ -6,17 +6,18 @@ use crate::server::shared::types::api::ApiResponse;
 use crate::server::{
     auth::handlers as auth_handlers, billing::handlers as billing_handlers,
     bindings::handlers as binding_handlers, config::AppState,
+    credentials::handlers as credential_handlers,
     daemon_api_keys::handlers as daemon_api_key_handlers, daemons::handlers as daemon_handlers,
-    dashboard::handlers as dashboard_handlers, discovery::handlers as discovery_handlers,
-    groups::handlers as group_handlers, hosts::handlers as host_handlers,
-    if_entries::handlers as if_entry_handlers, interfaces::handlers as interface_handlers,
-    invites::handlers as invite_handlers, metrics::handlers as metrics_handlers,
+    dashboard::handlers as dashboard_handlers, dependencies::handlers as dependency_handlers,
+    discovery::handlers as discovery_handlers, hosts::handlers as host_handlers,
+    interfaces::handlers as if_entry_handlers, invites::handlers as invite_handlers,
+    ip_addresses::handlers as interface_handlers, metrics::handlers as metrics_handlers,
     networks::handlers as network_handlers, organizations::handlers as organization_handlers,
     ports::handlers as port_handlers, services::handlers as service_handlers,
-    shares::handlers as share_handlers, snmp_credentials::handlers as snmp_credential_handlers,
-    subnets::handlers as subnet_handlers, tags::handlers as tag_handlers,
-    topology::handlers as topology_handlers, user_api_keys::handlers as user_api_key_handlers,
-    users::handlers as user_handlers,
+    shares::handlers as share_handlers, subnets::handlers as subnet_handlers,
+    tags::handlers as tag_handlers, topology::handlers as topology_handlers,
+    user_api_keys::handlers as user_api_key_handlers, users::handlers as user_handlers,
+    vlans::handlers as vlan_handlers,
 };
 use axum::Json;
 use axum::Router;
@@ -67,10 +68,10 @@ pub async fn get_version() -> Json<ApiResponse<VersionInfo>> {
 fn create_billed_openapi_routes() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .nest("/api/v1/hosts", host_handlers::create_router())
-        .nest("/api/v1/interfaces", interface_handlers::create_router())
+        .nest("/api/v1/ip-addresses", interface_handlers::create_router())
         .nest("/api/v1/subnets", subnet_handlers::create_router())
         .nest("/api/v1/networks", network_handlers::create_router())
-        .nest("/api/v1/groups", group_handlers::create_router())
+        .nest("/api/v1/dependencies", dependency_handlers::create_router())
         .nest("/api/v1/daemons", daemon_handlers::create_router())
         .nest("/api/v1/dashboard", dashboard_handlers::create_router())
         .nest("/api/v1/discovery", discovery_handlers::create_router())
@@ -90,12 +91,10 @@ fn create_billed_openapi_routes() -> OpenApiRouter<Arc<AppState>> {
             "/api/v1/auth/daemon",
             daemon_api_key_handlers::create_router(),
         )
-        // SNMP entity routes
-        .nest(
-            "/api/v1/snmp-credentials",
-            snmp_credential_handlers::create_router(),
-        )
+        // Credential routes
+        .nest("/api/v1/credentials", credential_handlers::create_router())
         .nest("/api/v1/if-entries", if_entry_handlers::create_router())
+        .nest("/api/v1/vlans", vlan_handlers::create_router())
         // Topology endpoints (tagged as internal - hidden from public docs)
         .nest("/api/v1/topology", topology_handlers::create_router())
 }
@@ -167,7 +166,10 @@ pub fn create_router(state: Arc<AppState>) -> (Router<Arc<AppState>>, OpenApi) {
         .nest("/api/hosts", host_handlers::create_router().into())
         .nest("/api/subnets", subnet_handlers::create_router().into())
         .nest("/api/services", service_handlers::create_router().into())
-        .nest("/api/groups", group_handlers::create_router().into())
+        .nest(
+            "/api/dependencies",
+            dependency_handlers::create_router().into(),
+        )
         .nest("/api/discovery", discovery_handlers::create_router().into());
 
     // Cacheable routes with cache headers

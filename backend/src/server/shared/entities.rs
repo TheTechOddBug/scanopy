@@ -1,15 +1,15 @@
 use crate::server::bindings::r#impl::base::Binding;
-use crate::server::if_entries::r#impl::base::IfEntry;
+use crate::server::credentials::r#impl::base::Credential;
 use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::invites::r#impl::base::Invite;
+use crate::server::ip_addresses::r#impl::base::IPAddress;
 use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
-use crate::server::shared::concepts::Concept;
 use crate::server::shares::r#impl::base::Share;
-use crate::server::snmp_credentials::r#impl::base::SnmpCredential;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::topology::types::base::Topology;
-use crate::server::{groups::r#impl::base::Group, tags::r#impl::base::Tag};
+use crate::server::vlans::r#impl::base::Vlan;
+use crate::server::{dependencies::r#impl::base::Dependency, tags::r#impl::base::Tag};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use utoipa::ToSchema;
@@ -21,9 +21,12 @@ use crate::server::{
     hosts::r#impl::base::Host,
     networks::r#impl::Network,
     organizations::r#impl::base::Organization,
-    shared::types::{
-        Color, Icon,
-        metadata::{EntityMetadataProvider, HasId},
+    shared::{
+        storage::traits::Entity as EntityTrait,
+        types::{
+            Color, Icon,
+            metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+        },
     },
     user_api_keys::r#impl::base::UserApiKey,
     users::r#impl::base::User,
@@ -32,24 +35,6 @@ use crate::server::{
 // Trait use to determine whether a given property change on an entity should trigger a rebuild of topology
 pub trait ChangeTriggersTopologyStaleness<T> {
     fn triggers_staleness(&self, _other: Option<T>) -> bool;
-}
-
-/// Single source of truth for which entity types support tagging.
-/// Used by the Entity trait's default is_taggable() implementation and tag handlers.
-pub fn is_entity_taggable(entity_type: EntityDiscriminants) -> bool {
-    matches!(
-        entity_type,
-        EntityDiscriminants::Host
-            | EntityDiscriminants::Service
-            | EntityDiscriminants::Subnet
-            | EntityDiscriminants::Group
-            | EntityDiscriminants::Network
-            | EntityDiscriminants::Discovery
-            | EntityDiscriminants::Daemon
-            | EntityDiscriminants::DaemonApiKey
-            | EntityDiscriminants::UserApiKey
-            | EntityDiscriminants::SnmpCredential
-    )
 }
 
 #[derive(
@@ -90,12 +75,13 @@ pub enum Entity {
     Service(Service),
     Port(Port),
     Binding(Binding),
+    IPAddress(IPAddress),
     Interface(Interface),
-    IfEntry(IfEntry),
 
-    SnmpCredential(SnmpCredential),
+    Credential(Credential),
     Subnet(Subnet),
-    Group(Group),
+    Vlan(Vlan),
+    Dependency(Dependency),
     Topology(Box<Topology>),
 
     #[default]
@@ -109,31 +95,212 @@ impl HasId for EntityDiscriminants {
     }
 }
 
+impl Entity {
+    /// Title-case singular/plural names sourced from each concrete type's
+    /// `Entity::ENTITY_NAME_SINGULAR` / `ENTITY_NAME_PLURAL` const. Single
+    /// match for all variants; both names in one tuple to avoid duplicating
+    /// the enumeration.
+    pub fn entity_names(&self) -> (&'static str, &'static str) {
+        match self {
+            Entity::Organization(_) => (
+                <Organization as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Organization as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Invite(_) => (
+                <Invite as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Invite as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Share(_) => (
+                <Share as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Share as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Network(_) => (
+                <Network as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Network as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::DaemonApiKey(_) => (
+                <DaemonApiKey as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <DaemonApiKey as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::UserApiKey(_) => (
+                <UserApiKey as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <UserApiKey as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::User(_) => (
+                <User as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <User as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Tag(_) => (
+                <Tag as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Tag as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Discovery(_) => (
+                <Discovery as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Discovery as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Daemon(_) => (
+                <Daemon as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Daemon as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Host(_) => (
+                <Host as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Host as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Service(_) => (
+                <Service as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Service as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Port(_) => (
+                <Port as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Port as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Binding(_) => (
+                <Binding as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Binding as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::IPAddress(_) => (
+                <IPAddress as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <IPAddress as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Interface(_) => (
+                <Interface as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Interface as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Credential(_) => (
+                <Credential as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Credential as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Subnet(_) => (
+                <Subnet as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Subnet as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Vlan(_) => (
+                <Vlan as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Vlan as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Dependency(_) => (
+                <Dependency as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Dependency as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Topology(_) => (
+                <Topology as EntityTrait>::ENTITY_NAME_SINGULAR,
+                <Topology as EntityTrait>::ENTITY_NAME_PLURAL,
+            ),
+            Entity::Unknown => ("Entity", "Entities"),
+        }
+    }
+}
+
+impl EntityDiscriminants {
+    /// Title-case singular name, e.g. "Host", "IP Address". Delegates to
+    /// `Entity::entity_names` via the existing `From<EntityDiscriminants> for Entity`.
+    pub fn entity_name_singular(&self) -> &'static str {
+        Entity::from(*self).entity_names().0
+    }
+
+    /// Title-case plural name, e.g. "Hosts", "IP Addresses".
+    pub fn entity_name_plural(&self) -> &'static str {
+        Entity::from(*self).entity_names().1
+    }
+}
+
+impl EntityDiscriminants {
+    /// Whether this entity type supports being tagged directly.
+    /// Exhaustive match — adding a new variant forces a decision.
+    pub fn is_taggable(&self) -> bool {
+        match self {
+            EntityDiscriminants::Host
+            | EntityDiscriminants::Service
+            | EntityDiscriminants::Subnet
+            | EntityDiscriminants::Dependency
+            | EntityDiscriminants::Network
+            | EntityDiscriminants::Discovery
+            | EntityDiscriminants::Daemon
+            | EntityDiscriminants::DaemonApiKey
+            | EntityDiscriminants::UserApiKey
+            | EntityDiscriminants::Credential => true,
+            EntityDiscriminants::Organization
+            | EntityDiscriminants::Invite
+            | EntityDiscriminants::Share
+            | EntityDiscriminants::User
+            | EntityDiscriminants::Tag
+            | EntityDiscriminants::Port
+            | EntityDiscriminants::Binding
+            | EntityDiscriminants::IPAddress
+            | EntityDiscriminants::Interface
+            | EntityDiscriminants::Vlan
+            | EntityDiscriminants::Topology
+            | EntityDiscriminants::Unknown => false,
+        }
+    }
+
+    /// The nearest taggable ancestor of this entity — used to resolve which
+    /// entity's tags apply when a non-taggable entity is involved in tag-based
+    /// rules, filters, or selections (e.g. IP addresses/interfaces/ports
+    /// resolve to their owning Host).
+    ///
+    /// Returns `None` when the entity is itself taggable (see `is_taggable`)
+    /// or when no taggable ancestor exists.
+    pub fn parent_taggable_entity(&self) -> Option<EntityDiscriminants> {
+        match self {
+            EntityDiscriminants::Interface => Some(EntityDiscriminants::Host),
+            EntityDiscriminants::IPAddress => Some(EntityDiscriminants::Host),
+            EntityDiscriminants::Port => Some(EntityDiscriminants::Host),
+            EntityDiscriminants::Service
+            | EntityDiscriminants::Binding
+            | EntityDiscriminants::Organization
+            | EntityDiscriminants::Network
+            | EntityDiscriminants::User
+            | EntityDiscriminants::Invite
+            | EntityDiscriminants::Share
+            | EntityDiscriminants::Tag
+            | EntityDiscriminants::DaemonApiKey
+            | EntityDiscriminants::UserApiKey
+            | EntityDiscriminants::Daemon
+            | EntityDiscriminants::Discovery
+            | EntityDiscriminants::Credential
+            | EntityDiscriminants::Host
+            | EntityDiscriminants::Subnet
+            | EntityDiscriminants::Vlan
+            | EntityDiscriminants::Dependency
+            | EntityDiscriminants::Topology
+            | EntityDiscriminants::Unknown => None,
+        }
+    }
+}
+
 impl EntityMetadataProvider for EntityDiscriminants {
     fn color(&self) -> Color {
         match self {
             EntityDiscriminants::Organization => Color::Blue,
-            EntityDiscriminants::Network => Color::Gray,
-            EntityDiscriminants::Daemon => Color::Green,
-            EntityDiscriminants::Discovery => Color::Green,
-            EntityDiscriminants::DaemonApiKey => Color::Yellow,
-            EntityDiscriminants::UserApiKey => Color::Yellow,
-            EntityDiscriminants::SnmpCredential => Concept::SNMP.color(),
+            EntityDiscriminants::Network => Color::Blue,
             EntityDiscriminants::User => Color::Blue,
-            EntityDiscriminants::Invite => Color::Green,
-            EntityDiscriminants::Share => Color::Teal,
+            EntityDiscriminants::Invite => Color::Sky,
+
             EntityDiscriminants::Tag => Color::Yellow,
 
-            EntityDiscriminants::Host => Color::Blue,
-            EntityDiscriminants::Service => Color::Purple,
-            EntityDiscriminants::Interface => Color::Cyan,
-            EntityDiscriminants::Port => Color::Cyan,
-            EntityDiscriminants::Binding => Color::Purple,
-            EntityDiscriminants::IfEntry => Color::Teal,
+            EntityDiscriminants::Daemon => Color::Green,
+            EntityDiscriminants::Discovery => Color::Green,
 
-            EntityDiscriminants::Subnet => Color::Orange,
-            EntityDiscriminants::Group => Color::Rose,
+            EntityDiscriminants::DaemonApiKey => Color::Yellow,
+            EntityDiscriminants::UserApiKey => Color::Yellow,
+            EntityDiscriminants::Credential => Color::Yellow,
+
             EntityDiscriminants::Topology => Color::Pink,
+            EntityDiscriminants::Share => Color::Pink,
+
+            EntityDiscriminants::Dependency => Color::Rose,
+            EntityDiscriminants::Service => Color::Fuchsia,
+
+            EntityDiscriminants::Host => Color::Blue,
+
+            EntityDiscriminants::Interface => Color::Teal,
+            EntityDiscriminants::IPAddress => Color::Emerald,
+            EntityDiscriminants::Port => Color::Sky,
+            EntityDiscriminants::Binding => Color::Cyan,
+
+            EntityDiscriminants::Subnet => Color::Indigo,
+            EntityDiscriminants::Vlan => Color::Violet,
 
             EntityDiscriminants::Unknown => Color::Gray,
         }
@@ -142,7 +309,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
     fn icon(&self) -> Icon {
         match self {
             EntityDiscriminants::Organization => Icon::Building,
-            EntityDiscriminants::Network => Icon::Globe,
+            EntityDiscriminants::Network => Icon::LandPlot,
             EntityDiscriminants::User => Icon::User,
             EntityDiscriminants::Tag => Icon::Tag,
             EntityDiscriminants::Invite => Icon::UserPlus,
@@ -153,17 +320,47 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Discovery => Icon::Radar,
             EntityDiscriminants::Host => Icon::Server,
             EntityDiscriminants::Service => Icon::Layers,
-            EntityDiscriminants::Interface => Icon::Binary,
-            EntityDiscriminants::Port => Icon::EthernetPort,
+            EntityDiscriminants::IPAddress => Icon::MapPin,
+            EntityDiscriminants::Port => Icon::Binary,
             EntityDiscriminants::Binding => Icon::Link,
-            EntityDiscriminants::IfEntry => Icon::Cable,
-            EntityDiscriminants::SnmpCredential => Icon::Asterisk,
-            EntityDiscriminants::Subnet => Icon::Network,
-            EntityDiscriminants::Group => Icon::Group,
+            EntityDiscriminants::Interface => Icon::EthernetPort,
+            EntityDiscriminants::Credential => Icon::Asterisk,
+            EntityDiscriminants::Subnet => Icon::Cloud,
+            EntityDiscriminants::Vlan => Icon::Network,
+            EntityDiscriminants::Dependency => Icon::Waypoints,
             EntityDiscriminants::Topology => Icon::ChartBarStacked,
 
             EntityDiscriminants::Unknown => Icon::CircleQuestionMark,
         }
+    }
+}
+
+impl TypeMetadataProvider for EntityDiscriminants {
+    fn name(&self) -> &'static str {
+        self.into()
+    }
+
+    fn metadata(&self) -> serde_json::Value {
+        let mut m = serde_json::Map::new();
+        if let Some(parent) = self.parent_taggable_entity() {
+            m.insert(
+                "parent_taggable_entity".to_string(),
+                serde_json::json!(parent),
+            );
+        }
+        m.insert(
+            "is_taggable".to_string(),
+            serde_json::json!(self.is_taggable()),
+        );
+        m.insert(
+            "entity_name_singular".to_string(),
+            serde_json::json!(self.entity_name_singular()),
+        );
+        m.insert(
+            "entity_name_plural".to_string(),
+            serde_json::json!(self.entity_name_plural()),
+        );
+        serde_json::Value::Object(m)
     }
 }
 
@@ -245,9 +442,9 @@ impl From<Binding> for Entity {
     }
 }
 
-impl From<Interface> for Entity {
-    fn from(value: Interface) -> Self {
-        Self::Interface(value)
+impl From<IPAddress> for Entity {
+    fn from(value: IPAddress) -> Self {
+        Self::IPAddress(value)
     }
 }
 
@@ -257,9 +454,15 @@ impl From<Subnet> for Entity {
     }
 }
 
-impl From<Group> for Entity {
-    fn from(value: Group) -> Self {
-        Self::Group(value)
+impl From<Vlan> for Entity {
+    fn from(value: Vlan) -> Self {
+        Self::Vlan(value)
+    }
+}
+
+impl From<Dependency> for Entity {
+    fn from(value: Dependency) -> Self {
+        Self::Dependency(value)
     }
 }
 
@@ -275,15 +478,15 @@ impl From<Tag> for Entity {
     }
 }
 
-impl From<SnmpCredential> for Entity {
-    fn from(value: SnmpCredential) -> Self {
-        Self::SnmpCredential(value)
+impl From<Credential> for Entity {
+    fn from(value: Credential) -> Self {
+        Self::Credential(value)
     }
 }
 
-impl From<IfEntry> for Entity {
-    fn from(value: IfEntry) -> Self {
-        Self::IfEntry(value)
+impl From<Interface> for Entity {
+    fn from(value: Interface) -> Self {
+        Self::Interface(value)
     }
 }
 
@@ -293,11 +496,12 @@ impl From<EntityDiscriminants> for Entity {
             EntityDiscriminants::Host => Entity::Host(Host::default()),
             EntityDiscriminants::Service => Entity::Service(Service::default()),
             EntityDiscriminants::Subnet => Entity::Subnet(Subnet::default()),
-            EntityDiscriminants::Group => Entity::Group(Group::default()),
+            EntityDiscriminants::Vlan => Entity::Vlan(Vlan::default()),
+            EntityDiscriminants::Dependency => Entity::Dependency(Dependency::default()),
             EntityDiscriminants::Port => Entity::Port(Port::default()),
-            EntityDiscriminants::Interface => Entity::Interface(Interface::default()),
+            EntityDiscriminants::IPAddress => Entity::IPAddress(IPAddress::default()),
             EntityDiscriminants::Binding => Entity::Binding(Binding::default()),
-            EntityDiscriminants::IfEntry => Entity::IfEntry(IfEntry::default()),
+            EntityDiscriminants::Interface => Entity::Interface(Interface::default()),
             EntityDiscriminants::Tag => Entity::Tag(Tag::default()),
             EntityDiscriminants::Network => Entity::Network(Network::default()),
             EntityDiscriminants::Organization => Entity::Organization(Organization::default()),
@@ -308,9 +512,7 @@ impl From<EntityDiscriminants> for Entity {
             EntityDiscriminants::Daemon => Entity::Daemon(Daemon::default()),
             EntityDiscriminants::DaemonApiKey => Entity::DaemonApiKey(DaemonApiKey::default()),
             EntityDiscriminants::UserApiKey => Entity::UserApiKey(UserApiKey::default()),
-            EntityDiscriminants::SnmpCredential => {
-                Entity::SnmpCredential(SnmpCredential::default())
-            }
+            EntityDiscriminants::Credential => Entity::Credential(Credential::default()),
             EntityDiscriminants::Topology => Entity::Topology(Box::default()),
             EntityDiscriminants::Unknown => Entity::Unknown,
         }

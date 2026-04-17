@@ -1,9 +1,12 @@
 use crate::server::discovery::r#impl::types::DiscoveryType;
-use crate::server::interfaces::r#impl::base::{Interface, InterfaceBase};
+use crate::server::ip_addresses::r#impl::base::{IPAddress, IPAddressBase};
 use crate::server::shared::storage::traits::Storable;
 use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
 use crate::server::subnets::r#impl::base::{Subnet, SubnetBase};
 use crate::server::subnets::r#impl::types::SubnetType;
+use crate::server::subnets::r#impl::virtualization::{
+    DockerSubnetVirtualization, SubnetVirtualization,
+};
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -23,18 +26,6 @@ use uuid::Uuid;
 
 pub const SCAN_TIMEOUT: Duration = Duration::from_millis(800);
 
-/// Parameters for scan concurrency, including both concurrent hosts and port batch size.
-/// These values must be calculated together to ensure total FD usage stays within limits.
-/// Previously, batch size was calculated independently which caused FD exhaustion when
-/// concurrent_scans * port_batch_size exceeded available file descriptors.
-#[derive(Debug, Clone)]
-pub struct ScanConcurrencyParams {
-    /// Number of hosts to scan concurrently
-    pub concurrent_scans: usize,
-    /// Port batch size per host (number of ports scanned in parallel per host)
-    pub port_batch_size: usize,
-}
-
 /// Cross-platform system utilities trait
 #[async_trait]
 pub trait DaemonUtils {
@@ -48,7 +39,7 @@ pub trait DaemonUtils {
     fn get_own_ip_address(&self) -> Result<IpAddr, Error> {
         match local_ip() {
             Ok(ip) => {
-                tracing::info!(ip = %ip, "Detected local IP address");
+                tracing::debug!(ip = %ip, "Detected local IP address");
                 Ok(ip)
             }
             Err(e) => {
@@ -80,7 +71,7 @@ pub trait DaemonUtils {
         interface_filter: &[String],
     ) -> Result<
         (
-            Vec<Interface>,
+            Vec<IPAddress>,
             Vec<Subnet>,
             HashMap<IpCidr, Option<MacAddress>>,
         ),
@@ -89,7 +80,7 @@ pub trait DaemonUtils {
         let all_interfaces = pnet::datalink::interfaces();
 
         // Apply interface filter if specified
-        let interfaces: Vec<_> = if interface_filter.is_empty() {
+        let ip_addresses: Vec<_> = if interface_filter.is_empty() {
             all_interfaces
         } else {
             let filtered: Vec<_> = all_interfaces
@@ -100,13 +91,13 @@ pub trait DaemonUtils {
             if filtered.is_empty() {
                 tracing::warn!(
                     filter = ?interface_filter,
-                    "No interfaces matched the filter. Check --interface argument."
+                    "No ip_addresses matched the filter. Check --ip_address argument."
                 );
             } else {
                 tracing::debug!(
                     filter = ?interface_filter,
                     matched = filtered.len(),
-                    "Filtered interfaces by --interfaces argument"
+                    "Filtered ip_addresses by --ip_addresses argument"
                 );
             }
 
@@ -114,20 +105,20 @@ pub trait DaemonUtils {
         };
 
         tracing::debug!(
-            interface_count = interfaces.len(),
-            "Enumerating network interfaces"
+            interface_count = ip_addresses.len(),
+            "Enumerating network ip_addresses"
         );
 
-        for interface in &interfaces {
+        for ip_address in &ip_addresses {
             tracing::debug!(
-                name = %interface.name,
-                index = interface.index,
-                is_up = interface.is_up(),
-                is_loopback = interface.is_loopback(),
-                mac = ?interface.mac,
-                ips = ?interface.ips,
-                flags = interface.flags,
-                "Found interface"
+                name = %ip_address.name,
+                index = ip_address.index,
+                is_up = ip_address.is_up(),
+                is_loopback = ip_address.is_loopback(),
+                mac = ?ip_address.mac,
+                ips = ?ip_address.ips,
+                flags = ip_address.flags,
+                "Found ip_address"
             );
         }
 
@@ -135,18 +126,35 @@ pub trait DaemonUtils {
         let mut potential_subnets: Vec<(String, IpNetwork)> = Vec::new();
         let mut interface_data: Vec<(String, IpAddr, Option<MacAddress>)> = Vec::new();
 
-        for interface in interfaces.into_iter().filter(|i| !i.is_loopback()) {
-            let name = interface.name.clone();
-            let mac_address = match interface.mac {
+        for ip_address in ip_addresses.into_iter() {
+            let name = ip_address.name.clone();
+            let mac_address = match ip_address.mac {
                 Some(mac) if !mac.octets().iter().all(|o| *o == 0) => {
                     Some(MacAddress::new(mac.octets()))
                 }
                 _ => None,
             };
 
-            for ip in interface.ips.iter() {
+            for ip in ip_address.ips.iter() {
+                // APIPA (169.254.x.x) is defined as exactly /16 by RFC 3927.
+                // Windows can report bogus prefixes (e.g. /0) via pnet — correct them.
+                let ip = match ip {
+                    IpNetwork::V4(v4)
+                        if v4.ip().octets()[0] == 169
+                            && v4.ip().octets()[1] == 254
+                            && v4.prefix() != 16 =>
+                    {
+                        tracing::warn!(
+                            ip = %v4.ip(),
+                            reported_prefix = v4.prefix(),
+                            "Correcting APIPA ip_address prefix to /16"
+                        );
+                        IpNetwork::V4(pnet::ipnetwork::Ipv4Network::new(v4.ip(), 16).unwrap_or(*v4))
+                    }
+                    other => *other,
+                };
                 interface_data.push((name.clone(), ip.ip(), mac_address));
-                potential_subnets.push((name.clone(), *ip));
+                potential_subnets.push((name.clone(), ip));
             }
         }
 
@@ -165,8 +173,8 @@ pub trait DaemonUtils {
             }
         }
 
-        // Third pass: assign all interfaces to appropriate subnets
-        let mut interfaces = Vec::new();
+        // Third pass: assign all ip_addresses to appropriate subnets
+        let mut ip_addresses = Vec::new();
         let mut cidr_to_mac = HashMap::new();
 
         for (interface_name, ip_addr, mac_address) in interface_data {
@@ -186,31 +194,31 @@ pub trait DaemonUtils {
                     })
                     .or_insert(mac_address);
 
-                interfaces.push(Interface::new(InterfaceBase {
+                ip_addresses.push(IPAddress::new(IPAddressBase {
                     network_id: subnet.base.network_id,
                     host_id: Uuid::nil(), // Placeholder - server will set correct host_id
                     name: Some(interface_name),
                     subnet_id: subnet.id,
                     ip_address: ip_addr,
                     mac_address,
-                    position: interfaces.len() as i32,
+                    position: ip_addresses.len() as i32,
                 }));
             }
         }
 
         let subnets: Vec<Subnet> = subnet_map.into_values().collect();
 
-        Ok((interfaces, subnets, cidr_to_mac))
+        Ok((ip_addresses, subnets, cidr_to_mac))
     }
 
-    async fn new_local_docker_client(
+    async fn new_docker_client(
         &self,
         docker_proxy: Result<Option<String>, Error>,
         docker_proxy_ssl_info: Result<Option<(String, String, String)>, Error>,
     ) -> Result<Docker, Error> {
         use tokio::time::timeout;
 
-        const DOCKER_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+        const DOCKER_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
         tracing::debug!("Creating Docker client connection");
         let start = std::time::Instant::now();
@@ -218,10 +226,10 @@ pub trait DaemonUtils {
         let client = if let Ok(Some(docker_proxy)) = docker_proxy {
             tracing::debug!(proxy = %docker_proxy, "Using Docker proxy");
             if docker_proxy.contains("https://")
-                && let Ok(Some((key, cert, chain))) = docker_proxy_ssl_info
+                && let Ok(Some((cert, key, chain))) = docker_proxy_ssl_info
             {
-                let key_path = PathBuf::from(key);
                 let cert_path = PathBuf::from(cert);
+                let key_path = PathBuf::from(key);
                 let chain_path = PathBuf::from(chain);
 
                 Docker::connect_with_ssl(
@@ -229,7 +237,7 @@ pub trait DaemonUtils {
                     &key_path,
                     &cert_path,
                     &chain_path,
-                    4,
+                    15,
                     API_DEFAULT_VERSION,
                 )
                 .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
@@ -243,39 +251,57 @@ pub trait DaemonUtils {
                 .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
         };
 
-        // Add timeout to Docker ping to prevent indefinite blocking
-        tracing::debug!(
-            "Pinging Docker daemon (timeout: {:?})",
-            DOCKER_CONNECT_TIMEOUT
-        );
-        match timeout(DOCKER_CONNECT_TIMEOUT, client.ping()).await {
-            Ok(Ok(_)) => {
-                tracing::info!(
-                    elapsed_ms = start.elapsed().as_millis(),
-                    "Docker client connected successfully"
-                );
-                Ok(client)
-            }
-            Ok(Err(e)) => {
-                tracing::warn!(
-                    elapsed_ms = start.elapsed().as_millis(),
-                    error = %e,
-                    "Docker ping failed"
-                );
-                Err(anyhow::anyhow!("Docker ping failed: {}", e))
-            }
-            Err(_) => {
-                tracing::warn!(
-                    elapsed_ms = start.elapsed().as_millis(),
-                    "Docker ping timed out after {:?}",
-                    DOCKER_CONNECT_TIMEOUT
-                );
-                Err(anyhow::anyhow!(
-                    "Docker connection timed out after {:?}",
-                    DOCKER_CONNECT_TIMEOUT
-                ))
+        // Ping Docker with retry and exponential backoff
+        const MAX_PING_ATTEMPTS: u32 = 3;
+        let mut last_error = None;
+        for attempt in 1..=MAX_PING_ATTEMPTS {
+            match timeout(DOCKER_CONNECT_TIMEOUT, client.ping()).await {
+                Ok(Ok(_)) => {
+                    tracing::debug!(
+                        elapsed_ms = start.elapsed().as_millis(),
+                        attempt,
+                        "Docker client connected successfully"
+                    );
+                    return Ok(client);
+                }
+                Ok(Err(e)) => {
+                    last_error = Some(format!("Docker ping failed: {}", e));
+                    if attempt < MAX_PING_ATTEMPTS {
+                        let backoff = Duration::from_millis(500 * 2u64.pow(attempt - 1));
+                        tracing::warn!(
+                            attempt,
+                            backoff_ms = backoff.as_millis(),
+                            error = %e,
+                            "Docker ping failed, retrying"
+                        );
+                        tokio::time::sleep(backoff).await;
+                    }
+                }
+                Err(_) => {
+                    last_error = Some(format!(
+                        "Docker connection timed out after {:?}",
+                        DOCKER_CONNECT_TIMEOUT
+                    ));
+                    if attempt < MAX_PING_ATTEMPTS {
+                        let backoff = Duration::from_millis(500 * 2u64.pow(attempt - 1));
+                        tracing::warn!(
+                            attempt,
+                            backoff_ms = backoff.as_millis(),
+                            "Docker ping timed out, retrying"
+                        );
+                        tokio::time::sleep(backoff).await;
+                    }
+                }
             }
         }
+        tracing::warn!(
+            elapsed_ms = start.elapsed().as_millis(),
+            "Docker ping failed after {} attempts",
+            MAX_PING_ATTEMPTS
+        );
+        Err(anyhow::anyhow!(
+            last_error.unwrap_or_else(|| "Docker connection failed".to_string())
+        ))
     }
 
     async fn get_subnets_from_docker_networks(
@@ -284,6 +310,7 @@ pub trait DaemonUtils {
         network_id: Uuid,
         client: &Docker,
         discovery_type: DiscoveryType,
+        docker_service_id: Uuid,
     ) -> Result<Vec<Subnet>, Error> {
         let subnets: Vec<Subnet> = client
             .list_networks(None::<ListNetworksOptions>)
@@ -320,6 +347,13 @@ pub trait DaemonUtils {
                     .iter()
                     .filter_map(|c| {
                         if let Some(cidr) = &c.subnet {
+                            let virtualization = if subnet_type == SubnetType::DockerBridge {
+                                Some(SubnetVirtualization::Docker(DockerSubnetVirtualization {
+                                    service_id: docker_service_id,
+                                }))
+                            } else {
+                                None
+                            };
                             return Some(Subnet::new(SubnetBase {
                                 cidr: IpCidr::from_str(cidr).ok()?,
                                 description: None,
@@ -327,6 +361,7 @@ pub trait DaemonUtils {
                                 network_id,
                                 name: network_name.clone(),
                                 subnet_type,
+                                virtualization,
                                 source: EntitySource::Discovery {
                                     metadata: vec![DiscoveryMetadata::new(
                                         discovery_type.clone(),
@@ -370,82 +405,6 @@ pub trait DaemonUtils {
         port_batch_size: usize,
         arp_subnet_count: usize,
     ) -> Result<usize, Error>;
-
-    /// Get optimal number of concurrent host scans and port batch size.
-    /// Batch-prioritized: use configured batch size, then calculate concurrent hosts.
-    /// Returns both values since they must be calculated together to stay within FD limits.
-    async fn get_optimal_concurrent_scans(
-        &self,
-        concurrency_config_value: usize,
-        port_batch_config_value: usize,
-    ) -> Result<ScanConcurrencyParams, Error> {
-        let fd_limit = Self::get_fd_limit()?;
-
-        // Reserve FDs for daemon operations
-        let reserved = 203;
-        let available = fd_limit.saturating_sub(reserved);
-
-        // FD usage per host (besides port batch)
-        let endpoint_fds_per_host = 25;
-        let overhead_per_host = 20;
-        let fixed_fds_per_host = endpoint_fds_per_host + overhead_per_host;
-
-        // Use configured batch size, clamped to reasonable bounds
-        let port_batch_size = port_batch_config_value.clamp(16, 1000);
-
-        // Calculate how many concurrent hosts we can afford with this batch size
-        let fds_per_host = port_batch_size + fixed_fds_per_host;
-        let calculated_concurrent = available / fds_per_host;
-
-        // Bound concurrent hosts (min 1, max 50)
-        let optimal_concurrent = calculated_concurrent.clamp(1, 50);
-
-        let concurrent_scans = if concurrency_config_value != 15 {
-            // User override - respect it but warn if it exceeds budget
-            let max_safe = available / fds_per_host;
-            if concurrency_config_value > max_safe {
-                tracing::warn!(
-                    configured = %concurrency_config_value,
-                    max_safe = %max_safe,
-                    fd_limit = %fd_limit,
-                    "Configured concurrent_scans exceeds FD budget, may cause EMFILE errors"
-                );
-            }
-            tracing::info!(
-                "Using configured concurrent_scans={} (automatic would be {}, \
-                 with port_batch={})",
-                concurrency_config_value,
-                optimal_concurrent,
-                port_batch_size
-            );
-            concurrency_config_value
-        } else {
-            // Use automatic
-            tracing::info!(
-                concurrent_scans = %optimal_concurrent,
-                port_batch = %port_batch_size,
-                fd_limit = %fd_limit,
-                fd_available = %available,
-                fds_per_host = %fds_per_host,
-                "Using automatic concurrent_scans",
-            );
-            optimal_concurrent
-        };
-
-        if concurrent_scans < 5 {
-            tracing::warn!(
-                fd_limit = %fd_limit,
-                concurrent_scans = %concurrent_scans,
-                port_batch = %port_batch_size,
-                "Low concurrency due to FD limits. Consider increasing ulimit or reducing port_scan_batch_size.",
-            );
-        }
-
-        Ok(ScanConcurrencyParams {
-            concurrent_scans,
-            port_batch_size,
-        })
-    }
 }
 
 /// Merge host (physical) and Docker subnets, giving host subnets precedence.
@@ -510,6 +469,7 @@ mod tests {
             name: String::new(),
             description: None,
             subnet_type,
+            virtualization: None,
             source: EntitySource::Manual,
             tags: Vec::new(),
         })
@@ -559,5 +519,79 @@ mod tests {
         assert_eq!(result[0].base.subnet_type, SubnetType::Lan);
         assert_eq!(result[1].base.subnet_type, SubnetType::DockerBridge);
         assert_eq!(result[2].base.subnet_type, SubnetType::IpVlan);
+    }
+
+    #[test]
+    fn apipa_with_bogus_prefix_corrected_to_16() {
+        use pnet::ipnetwork::{IpNetwork, Ipv4Network};
+        use std::net::Ipv4Addr;
+
+        // Simulate a Windows APIPA interface reporting /0
+        let bogus = IpNetwork::V4(Ipv4Network::new(Ipv4Addr::new(169, 254, 1, 100), 0).unwrap());
+
+        let corrected = match bogus {
+            IpNetwork::V4(v4)
+                if v4.ip().octets()[0] == 169
+                    && v4.ip().octets()[1] == 254
+                    && v4.prefix() != 16 =>
+            {
+                IpNetwork::V4(Ipv4Network::new(v4.ip(), 16).unwrap_or(v4))
+            }
+            other => other,
+        };
+
+        match corrected {
+            IpNetwork::V4(v4) => assert_eq!(v4.prefix(), 16),
+            _ => panic!("Expected V4"),
+        }
+    }
+
+    #[test]
+    fn apipa_with_correct_prefix_unchanged() {
+        use pnet::ipnetwork::{IpNetwork, Ipv4Network};
+        use std::net::Ipv4Addr;
+
+        let correct = IpNetwork::V4(Ipv4Network::new(Ipv4Addr::new(169, 254, 1, 100), 16).unwrap());
+
+        let result = match correct {
+            IpNetwork::V4(v4)
+                if v4.ip().octets()[0] == 169
+                    && v4.ip().octets()[1] == 254
+                    && v4.prefix() != 16 =>
+            {
+                IpNetwork::V4(Ipv4Network::new(v4.ip(), 16).unwrap_or(v4))
+            }
+            other => other,
+        };
+
+        match result {
+            IpNetwork::V4(v4) => assert_eq!(v4.prefix(), 16),
+            _ => panic!("Expected V4"),
+        }
+    }
+
+    #[test]
+    fn non_apipa_with_bogus_prefix_not_corrected() {
+        use pnet::ipnetwork::{IpNetwork, Ipv4Network};
+        use std::net::Ipv4Addr;
+
+        // 10.0.0.1/8 should NOT be corrected (not APIPA)
+        let normal = IpNetwork::V4(Ipv4Network::new(Ipv4Addr::new(10, 0, 0, 1), 8).unwrap());
+
+        let result = match normal {
+            IpNetwork::V4(v4)
+                if v4.ip().octets()[0] == 169
+                    && v4.ip().octets()[1] == 254
+                    && v4.prefix() != 16 =>
+            {
+                IpNetwork::V4(Ipv4Network::new(v4.ip(), 16).unwrap_or(v4))
+            }
+            other => other,
+        };
+
+        match result {
+            IpNetwork::V4(v4) => assert_eq!(v4.prefix(), 8),
+            _ => panic!("Expected V4"),
+        }
     }
 }

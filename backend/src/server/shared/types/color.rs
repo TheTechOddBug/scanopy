@@ -22,6 +22,7 @@ pub enum Color {
     Pink,
     Rose,
     Red,
+    Amber,
     Orange,
     Green,
     Emerald,
@@ -30,7 +31,11 @@ pub enum Color {
     Blue,
     Indigo,
     Purple,
+    Fuchsia,
+    Violet,
+    Sky,
     Gray,
+    Lime,
     #[default]
     #[serde(other)]
     Yellow,

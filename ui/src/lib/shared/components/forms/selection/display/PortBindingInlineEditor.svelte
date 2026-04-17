@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { formatInterface } from '$lib/features/hosts/queries';
-	import { ALL_INTERFACES, type HostFormData } from '$lib/features/hosts/types/base';
+	import { formatIPAddress } from '$lib/features/hosts/queries';
+	import { ALL_IP_ADDRESSES, type HostFormData } from '$lib/features/hosts/types/base';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import type { PortBinding, Service } from '$lib/features/services/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
+	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 
 	// TanStack Query hooks
 	const servicesQuery = useServicesCacheQuery();
@@ -58,12 +59,12 @@
 
 		for (const svc of otherServices) {
 			const hasConflict = svc.bindings.some((b) => {
-				// If either binding is to ALL_INTERFACES (null), they conflict
-				if (b.interface_id === null || interfaceId === null) {
+				// If either binding is to ALL_IP_ADDRESSES (null), they conflict
+				if (b.ip_address_id === null || interfaceId === null) {
 					return true;
 				}
 				// Otherwise, they conflict only if they're the same specific interface
-				return b.interface_id === interfaceId;
+				return b.ip_address_id === interfaceId;
 			});
 			if (hasConflict) return svc;
 		}
@@ -74,12 +75,12 @@
 				(b) => b.type === 'Port' && b.id !== binding.id && b.port_id === portId
 			);
 			const hasConflict = otherBindings.some((b) => {
-				// If either binding is to ALL_INTERFACES (null), they conflict
-				if (b.interface_id === null || interfaceId === null) {
+				// If either binding is to ALL_IP_ADDRESSES (null), they conflict
+				if (b.ip_address_id === null || interfaceId === null) {
 					return true;
 				}
 				// Otherwise, they conflict only if they're the same specific interface
-				return b.interface_id === interfaceId;
+				return b.ip_address_id === interfaceId;
 			});
 			if (hasConflict) return service;
 		}
@@ -88,23 +89,23 @@
 	}
 
 	// Create interface options with disabled state
-	let interfaceOptions = $derived(
-		host?.interfaces.map((iface) => {
-			// Check for Interface binding conflict - can't add Port binding if THIS service has Interface binding here
-			const thisServiceHasInterfaceBinding = service?.bindings.some(
-				(b) => b.type === 'Interface' && b.interface_id === iface.id && b.id !== binding.id
+	let ipAddressOptions = $derived(
+		host?.ip_addresses.map((ipAddr) => {
+			// Check for IP Address binding conflict - can't add Port binding if THIS service has IP Address binding here
+			const thisServiceHasIPAddressBinding = service?.bindings.some(
+				(b) => b.type === 'IPAddress' && b.ip_address_id === ipAddr.id && b.id !== binding.id
 			);
-			if (thisServiceHasInterfaceBinding) {
+			if (thisServiceHasIPAddressBinding) {
 				return {
-					iface,
+					ipAddr,
 					disabled: true,
-					reason: 'This service has an Interface binding here',
+					reason: 'This service has an IP Address binding here',
 					boundService: service
 				};
 			}
 
 			return {
-				iface,
+				ipAddr,
 				disabled: false,
 				reason: null,
 				boundService: null
@@ -112,23 +113,23 @@
 		}) || []
 	);
 
-	// Check ALL_INTERFACES option
-	let allInterfacesOption = $derived(
+	// Check ALL_IP_ADDRESSES option
+	let allIPAddressesOption = $derived(
 		(() => {
-			// Can't select "All Interfaces" if this service has ANY Interface bindings
-			// (since "All Interfaces" would include those interfaces)
-			const hasInterfaceBindings = service?.bindings.some((b) => b.type === 'Interface');
-			if (hasInterfaceBindings) {
+			// Can't select "All IP Addresses" if this service has ANY IP Address bindings
+			// (since "All IP Addresses" would include those interfaces)
+			const hasIPAddressBindings = service?.bindings.some((b) => b.type === 'IPAddress');
+			if (hasIPAddressBindings) {
 				return {
-					iface: ALL_INTERFACES,
+					ipAddr: ALL_IP_ADDRESSES,
 					disabled: true,
-					reason: 'Service has Interface bindings',
+					reason: 'Service has IP Address bindings',
 					boundService: service
 				};
 			}
 
 			return {
-				iface: ALL_INTERFACES,
+				ipAddr: ALL_IP_ADDRESSES,
 				disabled: false,
 				reason: null,
 				boundService: null
@@ -139,7 +140,7 @@
 	// Create port options with disabled state
 	let portOptions = $derived(
 		host?.ports.map((p) => {
-			const boundService = getConflictingService(p.id, binding.interface_id);
+			const boundService = getConflictingService(p.id, binding.ip_address_id);
 			return {
 				port: p,
 				disabled: boundService !== null && p.id !== binding.port_id,
@@ -149,17 +150,19 @@
 		}) || []
 	);
 
-	// Local state for select values - use sentinel for ALL_INTERFACES
-	const ALL_INTERFACES_SENTINEL = '__ALL_INTERFACES__';
+	// Local state for select values - use sentinel for ALL_IP_ADDRESSES
+	const ALL_IP_ADDRESSES_SENTINEL = '__ALL_INTERFACES__';
 	let selectedInterface = $state(
-		untrack(() => (binding.interface_id === null ? ALL_INTERFACES_SENTINEL : binding.interface_id))
+		untrack(() =>
+			binding.ip_address_id === null ? ALL_IP_ADDRESSES_SENTINEL : binding.ip_address_id
+		)
 	);
 	let selectedPort = $state(untrack(() => binding.port_id ?? ''));
 
 	// Sync local state when binding changes externally
 	$effect(() => {
 		selectedInterface =
-			binding.interface_id === null ? ALL_INTERFACES_SENTINEL : binding.interface_id;
+			binding.ip_address_id === null ? ALL_IP_ADDRESSES_SENTINEL : binding.ip_address_id;
 		selectedPort = binding.port_id ?? '';
 	});
 
@@ -172,8 +175,8 @@
 		const newValue = target.value;
 		selectedInterface = newValue;
 
-		const interfaceId = newValue === ALL_INTERFACES_SENTINEL ? null : newValue;
-		if (interfaceId !== binding.interface_id) {
+		const interfaceId = newValue === ALL_IP_ADDRESSES_SENTINEL ? null : newValue;
+		if (interfaceId !== binding.ip_address_id) {
 			// Check if current port is still valid on the new interface
 			const currentPortConflict = binding.port_id
 				? getConflictingService(binding.port_id, interfaceId)
@@ -183,9 +186,9 @@
 				// Current port conflicts on new interface OR no port selected - find first valid port
 				const firstValidPort = host?.ports.find((p) => !getConflictingService(p.id, interfaceId));
 				// Reset to valid port, or empty if none available
-				onUpdate({ interface_id: interfaceId, port_id: firstValidPort?.id ?? '' });
+				onUpdate({ ip_address_id: interfaceId, port_id: firstValidPort?.id ?? '' });
 			} else {
-				onUpdate({ interface_id: interfaceId });
+				onUpdate({ ip_address_id: interfaceId });
 			}
 		}
 	}
@@ -216,15 +219,11 @@
 		</div>
 	{:else}
 		<div class="flex gap-3">
-			{#if host.interfaces && host.interfaces.length === 0}
+			{#if host.ip_addresses && host.ip_addresses.length === 0}
 				<div class="flex-1">
-					<div
-						class="rounded border border-yellow-600 bg-yellow-900/20 px-2 py-1 text-xs text-warning"
-					>
-						No interfaces configured on host
-					</div>
+					<InlineWarning title="" body="No IP addresses configured on host" />
 				</div>
-			{:else if host.interfaces.length > 0}
+			{:else if host.ip_addresses.length > 0}
 				<div class="flex-1">
 					<label for="interface-select-{binding.id}" class="text-tertiary mb-1 block text-xs"
 						>Interface</label
@@ -235,17 +234,19 @@
 						value={selectedInterface}
 						onchange={handleInterfaceChange}
 					>
-						{#each interfaceOptions as { iface, disabled, reason } (iface.id)}
-							<option value={iface.id} {disabled}>
-								{formatInterface(iface, isContainerSubnetFn)}{disabled && reason
+						{#each ipAddressOptions as { ipAddr, disabled, reason } (ipAddr.id)}
+							<option value={ipAddr.id} {disabled}>
+								{formatIPAddress(ipAddr, isContainerSubnetFn)}{disabled && reason
 									? ` - ${reason}`
 									: ''}
 							</option>
 						{/each}
-						<option value={ALL_INTERFACES_SENTINEL} disabled={allInterfacesOption.disabled}>
-							{formatInterface(ALL_INTERFACES, isContainerSubnetFn)}{allInterfacesOption.disabled &&
-							allInterfacesOption.reason
-								? ` - ${allInterfacesOption.reason}`
+						<option value={ALL_IP_ADDRESSES_SENTINEL} disabled={allIPAddressesOption.disabled}>
+							{formatIPAddress(
+								ALL_IP_ADDRESSES,
+								isContainerSubnetFn
+							)}{allIPAddressesOption.disabled && allIPAddressesOption.reason
+								? ` - ${allIPAddressesOption.reason}`
 								: ''}
 						</option>
 					</select>

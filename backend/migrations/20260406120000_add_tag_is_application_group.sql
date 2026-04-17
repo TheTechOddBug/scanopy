@@ -1,0 +1,1 @@
+ALTER TABLE tags ADD COLUMN is_application BOOLEAN NOT NULL DEFAULT false;

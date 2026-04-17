@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Color } from '$lib/shared/utils/styling';
 	import type { components } from '$lib/api/schema';
 	import { UNTAGGED_SENTINEL, hoveredTag, type HoveredTag } from '../../../interactions';
-	import FilterGroup from './FilterGroup.svelte';
+	import FilterGroup, { type FilterItem } from './FilterGroup.svelte';
+	import { concepts } from '$lib/shared/stores/metadata';
 
 	type TagType = components['schemas']['Tag'];
 
@@ -14,7 +14,7 @@
 		entityType,
 		hasUntagged = false
 	}: {
-		label: string;
+		label?: string;
 		tags: TagType[];
 		hiddenTagIds: string[];
 		onToggle: (tagId: string) => void;
@@ -22,19 +22,26 @@
 		hasUntagged?: boolean;
 	} = $props();
 
-	// Build items list with untagged sentinel first if applicable
+	// Build items list with untagged sentinel first, then real tags
 	let items = $derived.by(() => {
-		const result: { value: string; label: string; color: Color }[] = [];
+		const result: FilterItem[] = [];
 		if (hasUntagged) {
 			result.push({ value: UNTAGGED_SENTINEL, label: 'Untagged', color: 'Gray' });
 		}
 		for (const tag of tags) {
-			result.push({ value: tag.id, label: tag.name, color: tag.color as Color });
+			const isApp = tag.is_application ?? false;
+			result.push({
+				value: tag.id,
+				label: tag.name,
+				color: tag.color as FilterItem['color'],
+				icon: isApp ? concepts.getIconComponent('Application') : undefined,
+				isShiny: isApp
+			});
 		}
 		return result;
 	});
 
-	function handleHoverStart(value: string, color: Color) {
+	function handleHoverStart(value: string, color: string) {
 		hoveredTag.set({ tagId: value, color: color as string, entityType });
 	}
 

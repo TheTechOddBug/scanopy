@@ -22,6 +22,7 @@
 	import { downloadCsv } from '$lib/shared/utils/csvExport';
 	import { modalState, resolveModalDeepLink } from '$lib/shared/stores/modal-registry';
 	import {
+		common_application,
 		common_color,
 		common_confirmDeleteName,
 		common_create,
@@ -134,6 +135,12 @@
 		{
 			name: { label: common_name(), type: 'string', searchable: true },
 			color: { label: common_color(), type: 'string', filterable: true },
+			is_application: {
+				label: common_application(),
+				type: 'boolean',
+				filterable: true,
+				groupable: true
+			},
 			created_at: { label: common_created(), type: 'date' },
 			updated_at: { label: common_updated(), type: 'date' }
 		},

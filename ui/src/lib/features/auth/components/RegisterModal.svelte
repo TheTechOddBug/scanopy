@@ -10,13 +10,13 @@
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
-	import { Loader2 } from 'lucide-svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
-	import { useConfigQuery } from '$lib/shared/stores/config-query';
+	import { useConfigQuery, isCloud } from '$lib/shared/stores/config-query';
 	import { useCheckEmailMutation } from '../queries';
 	import type { RegisterRequest } from '../types/base';
+	import AuthMethodSelector from './AuthMethodSelector.svelte';
 	import {
 		auth_continueWithEmail,
 		auth_createAccount,
@@ -32,10 +32,10 @@
 		auth_termsAndPrivacy,
 		auth_youreInvitedBody,
 		auth_youreInvitedTitle,
+		common_back,
 		common_change,
 		common_continue,
-		common_email,
-		common_or
+		common_email
 	} from '$lib/paraglide/messages';
 
 	let {
@@ -61,6 +61,7 @@
 	let emailError = $state<'email_in_use' | 'generic' | null>(null);
 	let checkingEmail = $state(false);
 	let honeypotValue = $state('');
+	let hasAutoAdvanced = $state(false);
 
 	const configQuery = useConfigQuery();
 	let configData = $derived(configQuery.data);
@@ -70,6 +71,7 @@
 	let hasOidcProviders = $derived(oidcProviders.length > 0);
 	let enableEmailOptIn = $derived(configData?.has_email_opt_in ?? false);
 	let enableTermsCheckbox = $derived(configData?.billing_enabled ?? false);
+	let isCloudDeployment = $derived(configData ? isCloud(configData) : false);
 
 	$effect(() => {
 		if (
@@ -77,8 +79,10 @@
 			!hasOidcProviders &&
 			!disablePasswordLogin &&
 			!enableTermsCheckbox &&
-			subStep === 'method'
+			subStep === 'method' &&
+			!hasAutoAdvanced
 		) {
+			hasAutoAdvanced = true;
 			subStep = 'email';
 		}
 	});
@@ -102,7 +106,7 @@
 						email: value.email.trim(),
 						password: value.password,
 						terms_accepted: enableTermsCheckbox && value.terms_accepted,
-						website: honeypotValue || undefined
+						company_url: isCloudDeployment ? honeypotValue || undefined : undefined
 					},
 					value.subscribed
 				);
@@ -201,15 +205,23 @@
 		}}
 		class="flex min-h-0 flex-1 flex-col"
 	>
-		<div style="position: absolute; left: -9999px; top: -9999px;" aria-hidden="true">
-			<input
-				type="text"
-				name="website"
-				tabindex="-1"
-				autocomplete="off"
-				bind:value={honeypotValue}
-			/>
-		</div>
+		{#if isCloudDeployment}
+			<div
+				style="position: absolute; left: -9999px; top: -9999px; height: 0; width: 0; overflow: hidden; opacity: 0;"
+				aria-hidden="true"
+			>
+				<input
+					type="text"
+					name="company_url"
+					tabindex="-1"
+					autocomplete="off"
+					data-1p-ignore
+					data-lpignore="true"
+					data-bwignore
+					bind:value={honeypotValue}
+				/>
+			</div>
+		{/if}
 
 		<div class="flex-1 overflow-auto p-4 sm:p-6">
 			{#if orgName && invitedBy}
@@ -253,53 +265,16 @@
 
 						<form.Subscribe selector={(state) => state.values.terms_accepted}>
 							{#snippet children(termsAccepted)}
-								{#if hasOidcProviders}
-									<div class="space-y-2">
-										{#each oidcProviders as provider (provider.slug)}
-											<button
-												onclick={() => handleOidcRegister(provider.slug)}
-												disabled={(enableTermsCheckbox && !termsAccepted) ||
-													oidcLoadingSlug !== null}
-												type="button"
-												class="btn-primary flex w-full items-center justify-center gap-3"
-											>
-												{#if oidcLoadingSlug === provider.slug}
-													<Loader2 class="h-5 w-5 animate-spin" />
-												{:else if provider.logo}
-													<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
-												{/if}
-												{auth_createAccountWith({ provider: provider.name })}
-											</button>
-										{/each}
-									</div>
-
-									{#if !disablePasswordLogin}
-										<div class="relative">
-											<div class="absolute inset-0 flex items-center">
-												<div
-													class="w-full border-t"
-													style="border-color: var(--color-border)"
-												></div>
-											</div>
-											<div class="relative flex justify-center text-sm">
-												<span class="text-tertiary bg-[var(--color-bg-elevated)] px-2"
-													>{common_or()}</span
-												>
-											</div>
-										</div>
-									{/if}
-								{/if}
-
-								{#if !disablePasswordLogin}
-									<button
-										type="button"
-										onclick={() => (subStep = 'email')}
-										disabled={enableTermsCheckbox && !termsAccepted}
-										class="btn-primary w-full"
-									>
-										{auth_continueWithEmail()}
-									</button>
-								{/if}
+								<AuthMethodSelector
+									providers={oidcProviders}
+									{disablePasswordLogin}
+									{oidcLoadingSlug}
+									disabled={enableTermsCheckbox && !termsAccepted}
+									onOidcSelect={handleOidcRegister}
+									onEmailSelect={() => (subStep = 'email')}
+									oidcButtonLabel={(name) => auth_createAccountWith({ provider: name })}
+									emailButtonLabel={auth_continueWithEmail()}
+								/>
 							{/snippet}
 						</form.Subscribe>
 					{/if}
@@ -391,7 +366,7 @@
 							}}
 							class="btn-secondary"
 						>
-							Back
+							{common_back()}
 						</button>
 						<button type="submit" disabled={checkingEmail} class="btn-primary flex-1">
 							{checkingEmail ? 'Checking...' : common_continue()}

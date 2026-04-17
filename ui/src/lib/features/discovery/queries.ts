@@ -146,10 +146,11 @@ export function createEmptyDiscoveryFormData(daemon: Daemon | null): Discovery {
 		updated_at: utcTimeZoneSentinel,
 		tags: [],
 		discovery_type: {
-			type: 'Network',
-			subnet_ids: daemon ? daemon.capabilities.interfaced_subnet_ids : [],
-			host_naming_fallback: 'Ip',
-			probe_raw_socket_ports: false
+			type: 'Unified',
+			host_id: daemon ? daemon.host_id : uuidv4Sentinel,
+			subnet_ids: null,
+			host_naming_fallback: 'BestService',
+			scan_settings: {}
 		},
 		run_type: {
 			type: 'Scheduled',
@@ -571,6 +572,15 @@ class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 						}
 					}
 				);
+
+				// If this session references a discovery not yet in cache
+				// (e.g. auto-created on daemon registration), refetch discoveries
+				if (update.discovery_id) {
+					const discoveries = queryClient.getQueryData<Discovery[]>(queryKeys.discovery.all);
+					if (discoveries && !discoveries.some((d) => d.id === update.discovery_id)) {
+						queryClient.invalidateQueries({ queryKey: queryKeys.discovery.all });
+					}
+				}
 			},
 			onError: (error) => {
 				console.error('Discovery SSE error:', error);

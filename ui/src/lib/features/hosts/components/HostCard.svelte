@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { Edit, Eye, Replace, Trash2 } from 'lucide-svelte';
-	import { formatInterface } from '../queries';
+	import { formatIPAddress } from '../queries';
 	import type { Host } from '../types/base';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { useServicesCacheQuery } from '$lib/features/services/queries';
-	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
-	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import { useIPAddressesQuery } from '$lib/features/ip-addresses/queries';
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
 	import { entityRef } from '$lib/shared/components/data/types';
 	import {
 		common_consolidate,
 		common_containers,
+		common_credentials,
 		common_delete,
 		common_description,
 		common_edit,
 		common_hide,
-		common_ifEntries,
 		common_interfaces,
+		common_ipAddresses,
 		common_services,
 		common_tags,
 		hosts_noContainers,
@@ -27,21 +27,22 @@
 		hosts_unknownService,
 		hosts_vmManagedBy
 	} from '$lib/paraglide/messages';
-	import { useIfEntriesQuery } from '$lib/features/ifEntries/queries';
+	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
+	import { useCredentialsQuery } from '$lib/features/credentials/queries';
 
 	// Queries
 	const servicesQuery = useServicesCacheQuery();
+	const ipAddressesQuery = useIPAddressesQuery();
 	const interfacesQuery = useInterfacesQuery();
-	const ifEntriesQuery = useIfEntriesQuery();
-	const daemonsQuery = useDaemonsQuery();
 	const subnetsQuery = useSubnetsQuery();
+	const credentialsQuery = useCredentialsQuery();
 
 	// Derived data
 	let servicesData = $derived(servicesQuery.data ?? []);
+	let ipAddressesData = $derived(ipAddressesQuery.data ?? []);
 	let interfacesData = $derived(interfacesQuery.data ?? []);
-	let ifEntriesData = $derived(ifEntriesQuery.data ?? []);
-	let daemonsData = $derived(daemonsQuery.data ?? []);
 	let subnetsData = $derived(subnetsQuery.data ?? []);
+	let credentialsData = $derived(credentialsQuery.data ?? []);
 
 	// Helper to check if subnet is a container subnet
 	let isContainerSubnetFn = $derived((subnetId: string) => {
@@ -69,16 +70,19 @@
 		onSelectionChange?: (selected: boolean) => void;
 	} = $props();
 
-	let hasDaemon = $derived(daemonsData.some((d) => d.host_id == host.id));
-
 	// Get filtered data for this host, sorted by position
 	let hostServices = $derived(
 		servicesData
 			.filter((s) => s.host_id === host.id)
 			.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
 	);
+	let hostIPAddresses = $derived(ipAddressesData.filter((i) => i.host_id === host.id));
 	let hostInterfaces = $derived(interfacesData.filter((i) => i.host_id === host.id));
-	let hostIfEntries = $derived(ifEntriesData.filter((i) => i.host_id === host.id));
+	let hostCredentials = $derived(
+		(host.credential_assignments ?? [])
+			.map((a: { credential_id: string }) => credentialsData.find((c) => c.id === a.credential_id))
+			.filter((c): c is NonNullable<typeof c> => c != null)
+	);
 	let virtualizationService = $derived(
 		host.virtualization
 			? servicesData.find((s) => s.id === host.virtualization?.details.service_id)
@@ -136,7 +140,7 @@
 							id: sv.id,
 							label: sv.name,
 							color: entities.getColorHelper('Service').color,
-							entityRef: entityRef('Service', sv.id, sv, { interfaceId: null })
+							entityRef: entityRef('Service', sv.id, sv, { ipAddressId: null })
 						})),
 					emptyText: hosts_noServicesAssigned()
 				},
@@ -147,28 +151,37 @@
 							id: c.id,
 							label: c.name,
 							color: concepts.getColorHelper('Virtualization').color,
-							entityRef: entityRef('Service', c.id, c, { interfaceId: null })
+							entityRef: entityRef('Service', c.id, c, { ipAddressId: null })
 						}))
 						.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
 					emptyText: hosts_noContainers()
 				},
 				{
-					label: common_interfaces(),
-					value: hostInterfaces.map((i) => ({
+					label: common_ipAddresses(),
+					value: hostIPAddresses.map((i) => ({
 						id: i.id,
-						label: formatInterface(i, isContainerSubnetFn),
-						color: entities.getColorHelper('Interface').color,
-						entityRef: entityRef('Interface', i.id, i, { subnets: subnetsData })
+						label: formatIPAddress(i, isContainerSubnetFn),
+						color: entities.getColorHelper('IPAddress').color,
+						entityRef: entityRef('IPAddress', i.id, i, { subnets: subnetsData })
 					})),
 					emptyText: hosts_noInterfaces()
 				},
 				{
-					label: common_ifEntries(),
-					value: hostIfEntries.map((i) => ({
+					label: common_credentials(),
+					value: hostCredentials.map((c) => ({
+						id: c.id,
+						label: c.name,
+						color: entities.getColorHelper('Credential').color,
+						entityRef: entityRef('Credential', c.id, c)
+					}))
+				},
+				{
+					label: common_interfaces(),
+					value: hostInterfaces.map((i) => ({
 						id: i.id,
-						label: i.if_descr && i.if_descr.length > 0 ? i.if_descr : 'Unnamed ifEntry',
-						color: entities.getColorHelper('IfEntry').color,
-						entityRef: entityRef('IfEntry', i.id, i)
+						label: i.if_descr && i.if_descr.length > 0 ? i.if_descr : 'Unnamed interface',
+						color: entities.getColorHelper('Interface').color,
+						entityRef: entityRef('Interface', i.id, i)
 					}))
 				},
 				{ label: common_tags(), snippet: tagsSnippet }
@@ -180,8 +193,7 @@
 								label: common_delete(),
 								icon: Trash2,
 								class: 'btn-icon-danger',
-								onClick: () => onDelete(host),
-								disabled: hasDaemon
+								onClick: () => onDelete(host)
 							}
 						]
 					: []),

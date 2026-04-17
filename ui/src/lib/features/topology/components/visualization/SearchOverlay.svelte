@@ -1,15 +1,19 @@
 <script lang="ts">
 	import { Search, X, ChevronUp, ChevronDown } from 'lucide-svelte';
-	import { useSvelteFlow } from '@xyflow/svelte';
 	import { get } from 'svelte/store';
+	import { useSvelteFlow } from '@xyflow/svelte';
 	import {
 		searchMatchNodeIds,
 		searchActiveIndex,
 		searchOpen,
+		searchNavigableNodeIds,
 		updateSearchFilter,
+		recomputeSearchNavigation,
 		clearSearch
 	} from '../../interactions';
-	import { useTopologiesQuery, selectedTopologyId } from '../../queries';
+	import { collapsedContainers } from '../../collapse';
+	import { useTopology, selectedTopologyId } from '../../context';
+	import { activeView } from '../../queries';
 	import {
 		topology_searchPlaceholder,
 		topology_searchNoMatches,
@@ -17,9 +21,12 @@
 	} from '$lib/paraglide/messages';
 
 	const { fitView } = useSvelteFlow();
-	const topologiesQuery = useTopologiesQuery();
-	let topologiesData = $derived(topologiesQuery.data ?? []);
-	let topology = $derived(topologiesData.find((t) => t.id === $selectedTopologyId));
+
+	const topo = useTopology();
+	const topoStore = topo.fromContext ? topo.store : null;
+	let topology = $derived(
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
+	);
 
 	let query = $state('');
 	let inputEl: HTMLInputElement | undefined = $state();
@@ -35,6 +42,21 @@
 		activeIndex = value;
 	});
 
+	let navigableIds = $state<string[]>(get(searchNavigableNodeIds));
+	searchNavigableNodeIds.subscribe((value) => {
+		navigableIds = value;
+	});
+
+	let collapsedNodes = $state(get(collapsedContainers));
+	collapsedContainers.subscribe((value) => {
+		collapsedNodes = value;
+	});
+
+	let currentView = $state(get(activeView));
+	activeView.subscribe((value) => {
+		currentView = value;
+	});
+
 	let isOpen = $state(get(searchOpen));
 	searchOpen.subscribe((value) => {
 		isOpen = value;
@@ -46,17 +68,22 @@
 		}
 	});
 
-	// Reactively update search filter when query changes
+	// Reactively update search filter when query or view changes
 	$effect(() => {
-		updateSearchFilter(topology, query);
+		updateSearchFilter(topology ?? undefined, query, currentView);
+	});
+
+	// Recompute navigable IDs when matches or collapse state change
+	$effect(() => {
+		recomputeSearchNavigation(matchNodeIds, collapsedNodes, topology?.nodes ?? []);
 	});
 
 	function focusMatch(index: number) {
-		if (matchNodeIds.length === 0) return;
+		if (navigableIds.length === 0) return;
 		const wrappedIndex =
-			((index % matchNodeIds.length) + matchNodeIds.length) % matchNodeIds.length;
+			((index % navigableIds.length) + navigableIds.length) % navigableIds.length;
 		searchActiveIndex.set(wrappedIndex);
-		const nodeId = matchNodeIds[wrappedIndex];
+		const nodeId = navigableIds[wrappedIndex];
 		fitView({ nodes: [{ id: nodeId }], padding: 0.5, duration: 300 });
 	}
 
@@ -105,21 +132,21 @@
 
 			{#if query}
 				<span class="text-tertiary whitespace-nowrap text-xs">
-					{#if matchNodeIds.length === 0}
+					{#if navigableIds.length === 0}
 						{topology_searchNoMatches()}
 					{:else}
 						{topology_searchMatchCount({
 							current: String(activeIndex + 1),
-							total: String(matchNodeIds.length)
+							total: String(navigableIds.length)
 						})}
 					{/if}
 				</span>
 
 				<div class="flex items-center gap-0.5">
-					<button class="btn-icon p-0.5" onclick={prevMatch} disabled={matchNodeIds.length === 0}>
+					<button class="btn-icon p-0.5" onclick={prevMatch} disabled={navigableIds.length === 0}>
 						<ChevronUp class="h-4 w-4" />
 					</button>
-					<button class="btn-icon p-0.5" onclick={nextMatch} disabled={matchNodeIds.length === 0}>
+					<button class="btn-icon p-0.5" onclick={nextMatch} disabled={navigableIds.length === 0}>
 						<ChevronDown class="h-4 w-4" />
 					</button>
 				</div>

@@ -21,6 +21,7 @@ pub struct TagCsvRow {
     pub description: Option<String>,
     pub color: String,
     pub organization_id: Uuid,
+    pub is_application: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -47,22 +48,6 @@ impl Storable for Tag {
         self.base.clone()
     }
 
-    fn id(&self) -> Uuid {
-        self.id
-    }
-
-    fn created_at(&self) -> DateTime<Utc> {
-        self.created_at
-    }
-
-    fn set_id(&mut self, id: Uuid) {
-        self.id = id;
-    }
-
-    fn set_created_at(&mut self, time: DateTime<Utc>) {
-        self.created_at = time;
-    }
-
     fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error> {
         let Self {
             id,
@@ -74,6 +59,7 @@ impl Storable for Tag {
                     description,
                     color,
                     organization_id,
+                    is_application,
                 },
         } = self.clone();
 
@@ -84,6 +70,7 @@ impl Storable for Tag {
                 "description",
                 "color",
                 "organization_id",
+                "is_application",
                 "created_at",
                 "updated_at",
             ],
@@ -93,6 +80,7 @@ impl Storable for Tag {
                 SqlValue::OptionalString(description),
                 SqlValue::String(color.to_string()),
                 SqlValue::Uuid(organization_id),
+                SqlValue::Bool(is_application),
                 SqlValue::Timestamp(created_at),
                 SqlValue::Timestamp(updated_at),
             ],
@@ -109,12 +97,29 @@ impl Storable for Tag {
                 description: row.get("description"),
                 organization_id: row.get("organization_id"),
                 color: row.get::<String, _>("color").parse().unwrap_or_default(),
+                is_application: row.get("is_application"),
             },
         })
     }
 }
 
 impl Entity for Tag {
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
+    }
+
     type CsvRow = TagCsvRow;
 
     fn to_csv_row(&self) -> Self::CsvRow {
@@ -124,6 +129,7 @@ impl Entity for Tag {
             description: self.base.description.clone(),
             color: self.base.color.to_string(),
             organization_id: self.base.organization_id,
+            is_application: self.base.is_application,
             created_at: self.created_at,
             updated_at: self.updated_at,
         }

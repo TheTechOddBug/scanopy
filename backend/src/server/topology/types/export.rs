@@ -1,6 +1,6 @@
 use super::base::Topology;
 use super::edges::EdgeType;
-use super::nodes::NodeType;
+use super::nodes::{ElementEntityType, NodeType};
 use std::collections::HashMap;
 use std::fmt::Write;
 use uuid::Uuid;
@@ -19,9 +19,9 @@ fn mermaid_escape(s: &str) -> String {
 
 fn edge_type_name(edge_type: &EdgeType) -> &'static str {
     match edge_type {
-        EdgeType::Interface { .. } => "Interface",
-        EdgeType::HostVirtualization { .. } => "Host Virtualization",
-        EdgeType::ServiceVirtualization { .. } => "Service Virtualization",
+        EdgeType::SameHost { .. } => "Same Host",
+        EdgeType::Hypervisor { .. } => "Hypervisor",
+        EdgeType::ContainerRuntime { .. } => "Container Runtime",
         EdgeType::RequestPath { .. } => "Request Path",
         EdgeType::HubAndSpoke { .. } => "Hub & Spoke",
         EdgeType::PhysicalLink { .. } => "Physical Link",
@@ -35,12 +35,21 @@ pub fn topology_to_mermaid(topology: &Topology) -> String {
     // Build lookup maps
     let subnets: HashMap<Uuid, _> = topology.base.subnets.iter().map(|s| (s.id, s)).collect();
     let hosts: HashMap<Uuid, _> = topology.base.hosts.iter().map(|h| (h.id, h)).collect();
-    let interfaces: HashMap<Uuid, _> = topology.base.interfaces.iter().map(|i| (i.id, i)).collect();
+    let ip_addresses: HashMap<Uuid, _> = topology
+        .base
+        .ip_addresses
+        .iter()
+        .map(|i| (i.id, i))
+        .collect();
 
-    // Group InterfaceNodes by subnet_id
+    // Group Element nodes by subnet_id (only Interface elements have subnet_id)
     let mut nodes_by_subnet: HashMap<Uuid, Vec<_>> = HashMap::new();
     for node in &topology.base.nodes {
-        if let NodeType::InterfaceNode { subnet_id, .. } = &node.node_type {
+        if let NodeType::Element {
+            element: ElementEntityType::IPAddress { subnet_id, .. },
+            ..
+        } = &node.node_type
+        {
             nodes_by_subnet.entry(*subnet_id).or_default().push(node);
         }
     }
@@ -62,9 +71,9 @@ pub fn topology_to_mermaid(topology: &Topology) -> String {
             .unwrap();
 
             for node in nodes {
-                if let NodeType::InterfaceNode {
+                if let NodeType::Element {
                     host_id,
-                    interface_id,
+                    element: ElementEntityType::IPAddress { ip_address_id, .. },
                     ..
                 } = &node.node_type
                 {
@@ -73,8 +82,8 @@ pub fn topology_to_mermaid(topology: &Topology) -> String {
                         .map(|h| h.base.name.as_str())
                         .unwrap_or("Unknown Host");
 
-                    let ip = interface_id
-                        .and_then(|iid| interfaces.get(&iid))
+                    let ip = ip_address_id
+                        .and_then(|iid| ip_addresses.get(&iid))
                         .map(|i| i.base.ip_address.to_string())
                         .unwrap_or_default();
 
@@ -92,12 +101,12 @@ pub fn topology_to_mermaid(topology: &Topology) -> String {
         }
     }
 
-    // Build set of SubnetNode IDs (their node ID == subnet ID, rendered as subgraphs)
+    // Build set of Container IDs (their node ID == subnet ID, rendered as subgraphs)
     let subnet_node_ids: std::collections::HashSet<Uuid> = topology
         .base
         .nodes
         .iter()
-        .filter(|n| matches!(n.node_type, NodeType::SubnetNode { .. }))
+        .filter(|n| matches!(n.node_type, NodeType::Container { .. }))
         .map(|n| n.id)
         .collect();
 
@@ -105,8 +114,8 @@ pub fn topology_to_mermaid(topology: &Topology) -> String {
     for edge in &topology.base.edges {
         let arrow = match &edge.edge_type {
             EdgeType::RequestPath { .. } | EdgeType::HubAndSpoke { .. } => "-->",
-            EdgeType::Interface { .. } | EdgeType::PhysicalLink { .. } => "---",
-            EdgeType::HostVirtualization { .. } | EdgeType::ServiceVirtualization { .. } => "-.->",
+            EdgeType::SameHost { .. } | EdgeType::PhysicalLink { .. } => "---",
+            EdgeType::Hypervisor { .. } | EdgeType::ContainerRuntime { .. } => "-.->",
         };
 
         let label_str = edge
@@ -165,9 +174,9 @@ pub fn topology_to_confluence(topology: &Topology) -> String {
     writeln!(output).unwrap();
 
     // Build lookup maps for hosts table
-    let mut interfaces_by_host: HashMap<Uuid, Vec<String>> = HashMap::new();
-    for iface in &topology.base.interfaces {
-        interfaces_by_host
+    let mut ip_addresses_by_host: HashMap<Uuid, Vec<String>> = HashMap::new();
+    for iface in &topology.base.ip_addresses {
+        ip_addresses_by_host
             .entry(iface.base.host_id)
             .or_default()
             .push(iface.base.ip_address.to_string());
@@ -187,7 +196,7 @@ pub fn topology_to_confluence(topology: &Topology) -> String {
     writeln!(output, "|| Name || Hostname || IP Addresses || Services ||").unwrap();
     for host in &topology.base.hosts {
         let hostname = host.base.hostname.as_deref().unwrap_or("");
-        let ips = interfaces_by_host
+        let ips = ip_addresses_by_host
             .get(&host.id)
             .map(|v| v.join(", "))
             .unwrap_or_default();
@@ -222,16 +231,16 @@ pub fn topology_to_confluence(topology: &Topology) -> String {
         let source_host = nodes_map
             .get(&edge.source)
             .and_then(|n| match &n.node_type {
-                NodeType::InterfaceNode { host_id, .. } => hosts_map.get(host_id).copied(),
-                NodeType::SubnetNode { .. } => n.header.as_deref(),
+                NodeType::Element { host_id, .. } => hosts_map.get(host_id).copied(),
+                NodeType::Container { .. } => n.header.as_deref(),
             })
             .unwrap_or("Unknown");
 
         let target_host = nodes_map
             .get(&edge.target)
             .and_then(|n| match &n.node_type {
-                NodeType::InterfaceNode { host_id, .. } => hosts_map.get(host_id).copied(),
-                NodeType::SubnetNode { .. } => n.header.as_deref(),
+                NodeType::Element { host_id, .. } => hosts_map.get(host_id).copied(),
+                NodeType::Container { .. } => n.header.as_deref(),
             })
             .unwrap_or("Unknown");
 

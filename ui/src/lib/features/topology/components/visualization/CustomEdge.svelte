@@ -6,30 +6,15 @@
 		EdgeLabel,
 		getBezierPath,
 		getStraightPath,
-		type Edge,
 		EdgeReconnectAnchor
 	} from '@xyflow/svelte';
-	import { getContext } from 'svelte';
-	import type { Writable } from 'svelte/store';
-	import {
-		selectedEdge as globalSelectedEdge,
-		selectedNode as globalSelectedNode,
-		selectedTopologyId,
-		topologyOptions,
-		useTopologiesQuery
-	} from '../../queries';
+	import { topologyOptions } from '../../queries';
+	import { useTopology, selectedTopologyId } from '../../context';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { createColorHelper, type Color } from '$lib/shared/utils/styling';
-	import type { Topology, TopologyEdge } from '../../types/base';
-	import {
-		getEdgeDisplayState,
-		edgeHoverState,
-		groupHoverState,
-		isExporting,
-		tagHiddenNodeIds,
-		hoveredEdgeType
-	} from '../../interactions';
-	import type { Node, Edge as FlowEdge } from '@xyflow/svelte';
+	import type { TopologyEdge } from '../../types/base';
+	import { isExporting, hoveredEdgeType } from '../../interactions';
+	import { isDashedEdge } from '../../layout/edge-classification';
 
 	let {
 		id,
@@ -46,73 +31,57 @@
 		interactionWidth
 	}: EdgeProps = $props();
 
-	// Use context topology if available (for share views), otherwise fall back to query data
-	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
-
-	// TanStack Query for topology data — disabled when topology context exists (share/embed views)
-	const topologiesQuery = useTopologiesQuery(() => !topologyContext);
-	let topologiesData = $derived(topologiesQuery.data ?? []);
-	let globalTopology = $derived(topologiesData.find((t) => t.id === $selectedTopologyId));
-	let topology = $derived(topologyContext ? $topologyContext : globalTopology);
-
-	// Try to get selection from context (for share/embed pages), fallback to global store
-	const selectedNodeContext = getContext<Writable<Node | null> | undefined>('selectedNode');
-	const selectedEdgeContext = getContext<Writable<FlowEdge | null> | undefined>('selectedEdge');
-	let selectedNode = $derived(
-		selectedNodeContext ? $selectedNodeContext : $globalSelectedNode
-	) as Node | null;
-	let selectedEdge = $derived(
-		selectedEdgeContext ? $selectedEdgeContext : $globalSelectedEdge
-	) as FlowEdge | null;
+	const topo = useTopology();
+	const topoStore = topo.fromContext ? topo.store : null;
+	let topology = $derived(
+		topoStore ? $topoStore : topo.query?.data?.find((t) => t.id === $selectedTopologyId)
+	);
 
 	const nodes = $derived(topology?.nodes ?? []);
 
 	const edgeData = $derived(data as TopologyEdge | undefined);
 
-	// Check if either endpoint is hidden by tag filter
-	let isEndpointHiddenByTagFilter = $derived.by(() => {
-		const hiddenNodes = $tagHiddenNodeIds;
-		if (!edgeData) return false;
-		return hiddenNodes.has(edgeData.source as string) || hiddenNodes.has(edgeData.target as string);
-	});
+	// Bundle detection
+	const anyEdgeData = $derived(data as Record<string, unknown> | undefined);
+	let isBundle = $derived(!!anyEdgeData?.isBundle);
+	let bundleStrokeWidth = $derived((anyEdgeData?.bundleStrokeWidth as number) ?? 2);
+	let bundleIsOverlay = $derived(!!anyEdgeData?.bundleIsOverlay);
+	let hasFanOffset = $derived(anyEdgeData?.bundleFanTotal != null);
+	let fanIndex = $derived((anyEdgeData?.bundleFanIndex as number) ?? 0);
+	let fanTotal = $derived((anyEdgeData?.bundleFanTotal as number) ?? 0);
+	// Endpoint hidden state — centralized in getEdgeDisplayState(), passed via edge data
+	let isEndpointHiddenByTagFilter = $derived(
+		(anyEdgeData?.isEndpointTagHidden as boolean) ?? false
+	);
+	let isEndpointHiddenBySearch = $derived(
+		(anyEdgeData?.isEndpointSearchHidden as boolean) ?? false
+	);
 	const edgeTypeMetadata = $derived(edgeData ? edgeTypes.getMetadata(edgeData.edge_type) : null);
 
-	// Get group reactively - updates when groups store changes
+	// Get dependency reactively - updates when dependencies store changes
 	let group = $derived.by(() => {
-		if (!topology?.groups || !edgeTypeMetadata || !edgeData) return null;
-		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
-			return topology.groups.find((g) => g.id == edgeData.group_id) || null;
+		if (!topology?.dependencies || !edgeTypeMetadata || !edgeData) return null;
+		if ('dependency_id' in edgeData) {
+			return topology.dependencies.find((g) => g.id == edgeData.dependency_id) || null;
 		}
 		return null;
 	});
 
 	let hideEdge = $derived(
-		edgeData ? $topologyOptions.local.hide_edge_types.includes(edgeData.edge_type) : false
+		edgeData
+			? $topologyOptions.local.hide_edge_types.includes(edgeData.edge_type) &&
+					!(edgeData as Record<string, unknown>).is_preview
+			: false
 	);
 
-	// Get display state from helper - Make reactive to hover stores
-	let displayState = $derived.by(() => {
-		// Subscribe to hover stores to trigger reactivity
-		void $edgeHoverState;
-		void $groupHoverState;
+	let isDashed = $derived(isBundle ? bundleIsOverlay : edgeData ? isDashedEdge(edgeData) : false);
 
-		if (!edgeData) {
-			return { shouldShowFull: false, shouldAnimate: false };
-		}
-
-		// Create a minimal edge object for the helper
-		const edge: Edge = {
-			id,
-			source: edgeData.source as string,
-			target: edgeData.target as string,
-			data: edgeData
-		} as Edge;
-
-		return getEdgeDisplayState(edge, selectedNode, selectedEdge);
-	});
-
-	let shouldShowFull = $derived(displayState.shouldShowFull);
-	let isSelected = $derived(selectedEdge?.id === id);
+	// Display state is passed as edge data from BaseTopologyViewer, which computes it
+	// from selection/hover stores. This avoids store subscription issues inside SvelteFlow's
+	// component tree — data props always propagate reliably.
+	let shouldShowFull = $derived((anyEdgeData?.shouldShowFull as boolean) ?? false);
+	let shouldAnimate = $derived((anyEdgeData?.shouldAnimate as boolean) ?? false);
+	let isSelected = $derived((anyEdgeData?.isSelected as boolean) ?? false);
 
 	// Calculate edge color - use group color if available, otherwise use edge type color
 	let edgeColorHelper = $derived.by(() => {
@@ -131,20 +100,31 @@
 	});
 
 	// Determine if this edge should use the two-color dashed effect
-	let isGroupEdge = $derived(edgeTypeMetadata?.is_group_edge ?? false);
+	let isGroupEdge = $derived(edgeTypeMetadata?.is_dependency_edge ?? false);
 	let isPreview = $derived(!!(edgeData as Record<string, unknown> | undefined)?.is_preview);
 	let useMultiColorDash = $derived((isGroupEdge && shouldShowFull) || isPreview);
 
 	// Edge type hover highlight
 	let isEdgeTypeHovered = $derived(
-		$hoveredEdgeType !== null && edgeData?.edge_type === $hoveredEdgeType.edgeType
+		$hoveredEdgeType !== null &&
+			edgeData?.edge_type != null &&
+			$hoveredEdgeType.edgeTypes.includes(edgeData.edge_type)
 	);
 	let isAnotherEdgeTypeHovered = $derived($hoveredEdgeType !== null && !isEdgeTypeHovered);
 
+	// Aggregated edge support
+	let isAggregated = $derived(!!(edgeData as Record<string, unknown> | undefined)?.isAggregated);
+	let aggregatedCount = $derived(
+		((edgeData as Record<string, unknown> | undefined)?.aggregatedCount as number) ?? 1
+	);
+
 	// Calculate base edge properties
 	let baseStrokeWidth = $derived.by(() => {
+		if (isAggregated) return Math.min(2 + aggregatedCount, 8);
+		if (isBundle) return bundleStrokeWidth;
 		if (isEdgeTypeHovered) return 3;
 		if (!$topologyOptions.local.no_fade_edges && (shouldShowFull || isPreview)) return 3;
+		if (isDashed) return 1.5;
 		return 2;
 	});
 	let baseOpacity = $derived.by(() => {
@@ -154,20 +134,24 @@
 		// Edge type hover: matching edges full opacity, non-matching fade
 		if (isEdgeTypeHovered) return 1;
 		if (isAnotherEdgeTypeHovered) return 0.2;
-		// Fade if either endpoint is hidden by tag filter
+		// Fade if either endpoint is hidden by tag or search filter
 		if (isEndpointHiddenByTagFilter) return 0.4;
+		if (isEndpointHiddenBySearch) return 0.4;
+		// Overlay edges: reduced opacity unless highlighted
+		if (isDashed && !shouldShowFull) return 0.5;
 		// Fade based on selection state
 		if (!$topologyOptions.local.no_fade_edges && !shouldShowFull) return 0.4;
 		return 1;
 	});
-	// Labels stay fully visible unless there's an active selection causing edges to fade
+	// Labels follow the same fade behavior as their parent edges
 	let labelOpacity = $derived.by(() => {
 		if ($isExporting) return 1;
 		if (isEdgeTypeHovered) return 1;
 		if (isAnotherEdgeTypeHovered) return 0.2;
 		if (isEndpointHiddenByTagFilter) return 0.4;
-		if (!$topologyOptions.local.no_fade_edges && (selectedNode || selectedEdge) && !shouldShowFull)
-			return 0.4;
+		if (isEndpointHiddenBySearch) return 0.4;
+		const hasActiveSelection = !!(anyEdgeData?.hasActiveSelection as boolean);
+		if (!$topologyOptions.local.no_fade_edges && hasActiveSelection && !shouldShowFull) return 0.4;
 		return 1;
 	});
 
@@ -186,8 +170,8 @@
 		} else if (useMultiColorDash && !isSelected) {
 			// Other group edges, subtler highlight
 			strokeColor = isDark ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.4)';
-		} else if (!isGroupEdge && edgeTypeMetadata?.is_dashed) {
-			dashArray = 'stroke-dasharray: 5 5;';
+		} else if (!isGroupEdge && isDashed) {
+			dashArray = 'stroke-dasharray: 6 3;';
 		}
 
 		return `stroke: ${strokeColor}; stroke-width: ${baseStrokeWidth}px; opacity: ${baseOpacity}; ${dashArray} transition: opacity 0.2s ease-in-out, stroke-width 0.2s ease-in-out;`;
@@ -225,7 +209,7 @@
 			}
 
 			// Check if this node is a subnet in the path
-			if (node.node_type == 'SubnetNode') {
+			if (node.node_type == 'Container') {
 				const nodeLeft = node.position.x;
 				const nodeRight = node.position.x + (node.size.x || 0);
 
@@ -252,12 +236,27 @@
 		const isMultiHop = (edgeData?.is_multi_hop as boolean) || false;
 		const offset = calculateDynamicOffset(isMultiHop);
 
+		// Apply fan offset for expanded bundle edges
+		let fanOffsetX = 0;
+		let fanOffsetY = 0;
+		if (hasFanOffset && fanTotal > 1) {
+			const spacing = 8;
+			const fanOffset = (fanIndex - (fanTotal - 1) / 2) * spacing;
+			// Offset perpendicular to edge direction
+			const dx = targetX - sourceX;
+			const dy = targetY - sourceY;
+			const len = Math.sqrt(dx * dx + dy * dy) || 1;
+			// Perpendicular unit vector
+			fanOffsetX = (-dy / len) * fanOffset;
+			fanOffsetY = (dx / len) * fanOffset;
+		}
+
 		const basePathProperties = {
-			sourceX,
-			sourceY,
+			sourceX: sourceX + fanOffsetX,
+			sourceY: sourceY + fanOffsetY,
 			sourcePosition,
-			targetX,
-			targetY,
+			targetX: targetX + fanOffsetX,
+			targetY: targetY + fanOffsetY,
 			targetPosition
 		};
 
@@ -266,6 +265,7 @@
 				return getStraightPath(basePathProperties);
 			case 'Smoothstep':
 			case 'SmoothStep':
+			case 'Step':
 				return getSmoothStepPath({
 					...basePathProperties,
 					borderRadius: 10,
@@ -274,12 +274,6 @@
 			case 'Bezier':
 			case 'SimpleBezier':
 				return getBezierPath(basePathProperties);
-			case 'Step':
-				return getSmoothStepPath({
-					...basePathProperties,
-					borderRadius: 10,
-					offset
-				});
 			default:
 				return getSmoothStepPath({
 					...basePathProperties,
@@ -364,13 +358,15 @@
 		<!-- Primary edge layer (white dashes for group edges when shown, normal for everything else) -->
 		<BaseEdge
 			path={edgePath}
-			style={edgeStyle}
+			style="{edgeStyle}{shouldAnimate
+				? ' stroke-dasharray: 5; animation: dashdraw 0.5s linear infinite;'
+				: ''}"
 			{id}
 			interactionWidth={interactionWidth || 20}
 			class={useMultiColorDash ? 'dashed-overlay' : ''}
 		/>
 
-		{#if label}
+		{#if !isBundle && label}
 			<EdgeLabel
 				x={labelX + labelOffsetX}
 				y={labelY + labelOffsetY}
@@ -396,11 +392,16 @@
 {/if}
 
 <style>
-	/* Override SvelteFlow's animated behavior ONLY for our solid base layer - keep it solid */
-	:global(.svelte-flow__edge.animated .svelte-flow__edge-path.solid-base) {
-		stroke-dasharray: 0 !important;
+	/* We control animation ourselves via inline styles and shouldAnimate data prop.
+	   Override SvelteFlow's .animated class to prevent double animation. */
+	:global(.svelte-flow__edge.animated .svelte-flow__edge-path) {
+		stroke-dasharray: initial !important;
 		animation: none !important;
 	}
 
-	/* Let the dashed overlay use SvelteFlow's built-in animation */
+	@keyframes dashdraw {
+		from {
+			stroke-dashoffset: 10;
+		}
+	}
 </style>

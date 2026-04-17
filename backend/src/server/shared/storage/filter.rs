@@ -97,12 +97,12 @@ impl<T: Storable> StorableFilter<T> {
         Self::new().user_ids(user_ids)
     }
 
-    pub fn new_from_interface_id(interface_id: &Uuid) -> Self {
-        Self::new().interface_id(interface_id)
+    pub fn new_from_interface_id(ip_address_id: &Uuid) -> Self {
+        Self::new().ip_address_id(ip_address_id)
     }
 
-    pub fn new_from_group_ids(group_ids: &[Uuid]) -> Self {
-        Self::new().group_ids(group_ids)
+    pub fn new_from_dependency_ids(dependency_ids: &[Uuid]) -> Self {
+        Self::new().dependency_ids(dependency_ids)
     }
 
     pub fn new_from_uuid_column(column: &str, id: &Uuid) -> Self {
@@ -119,6 +119,10 @@ impl<T: Storable> StorableFilter<T> {
 
     pub fn new_for_unresolved_lldp_in_network(network_id: Uuid) -> Self {
         Self::new().unresolved_lldp_in_network(network_id)
+    }
+
+    pub fn new_for_unresolved_fdb_in_network(network_id: Uuid) -> Self {
+        Self::new().unresolved_fdb_in_network(network_id)
     }
 
     pub fn new_without_brevo_company_id() -> Self {
@@ -384,21 +388,21 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
-    pub fn group_id(mut self, id: &Uuid) -> Self {
-        let col = self.qualify_column("group_id");
+    pub fn dependency_id(mut self, id: &Uuid) -> Self {
+        let col = self.qualify_column("dependency_id");
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
         self.values.push(SqlValue::Uuid(*id));
         self
     }
 
-    pub fn group_ids(mut self, ids: &[Uuid]) -> Self {
+    pub fn dependency_ids(mut self, ids: &[Uuid]) -> Self {
         if ids.is_empty() {
             self.conditions.push("FALSE".to_string());
             return self;
         }
 
-        let col = self.qualify_column("group_id");
+        let col = self.qualify_column("dependency_id");
         let placeholders: Vec<String> = ids
             .iter()
             .enumerate()
@@ -455,6 +459,16 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
+    /// Filter by a value within a JSONB column. E.g. `json_field_eq("credential_type", "type", "Snmp")`
+    /// generates `credential_type->>'type' = $N`.
+    pub fn json_field_eq(mut self, column: &str, key: &str, value: &str) -> Self {
+        let col = self.qualify_column(column);
+        self.conditions
+            .push(format!("{}->>'{}' = ${}", col, key, self.values.len() + 1));
+        self.values.push(SqlValue::String(value.to_string()));
+        self
+    }
+
     pub fn scheduled_discovery(mut self) -> Self {
         self.conditions
             .push("run_type->>'type' = 'Scheduled'".to_string());
@@ -466,6 +480,12 @@ impl<T: Storable> StorableFilter<T> {
     pub fn historical_discovery(mut self) -> Self {
         self.conditions
             .push("run_type->>'type' = 'Historical'".to_string());
+        self
+    }
+
+    pub fn exclude_historical(mut self) -> Self {
+        self.conditions
+            .push("run_type->>'type' != 'Historical'".to_string());
         self
     }
 
@@ -525,6 +545,15 @@ impl<T: Storable> StorableFilter<T> {
         self.conditions
             .push(format!("{} < ${}", col, self.values.len() + 1));
         self.values.push(SqlValue::Timestamp(timestamp));
+        self
+    }
+
+    /// Generic u16 filter for any SMALLINT column.
+    pub fn u16_column(mut self, column: &str, value: u16) -> Self {
+        let col = self.qualify_column(column);
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::U16(value));
         self
     }
 
@@ -665,7 +694,7 @@ impl<T: Storable> StorableFilter<T> {
     // LLDP resolution filters
     // =========================================================================
 
-    /// Filter by IP address (for interfaces table)
+    /// Filter by IP address (for ip_addresses table)
     pub fn ip_address(mut self, ip: std::net::IpAddr) -> Self {
         let col = self.qualify_column("ip_address");
         self.conditions
@@ -674,7 +703,7 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
-    /// Filter by if_descr (for if_entries table)
+    /// Filter by if_descr (for interfaces table)
     pub fn if_descr(mut self, descr: &str) -> Self {
         let col = self.qualify_column("if_descr");
         self.conditions
@@ -683,7 +712,7 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
-    /// Filter by if_name (for if_entries table)
+    /// Filter by if_name (for interfaces table)
     pub fn if_name(mut self, name: &str) -> Self {
         let col = self.qualify_column("if_name");
         self.conditions
@@ -701,23 +730,32 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
-    /// Filter by interface_id FK (for if_entries table)
-    pub fn interface_id(mut self, interface_id: &Uuid) -> Self {
-        let col = self.qualify_column("interface_id");
+    /// Filter by sys_name (for hosts table)
+    pub fn sys_name(mut self, sys_name: &str) -> Self {
+        let col = self.qualify_column("sys_name");
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
-        self.values.push(SqlValue::Uuid(*interface_id));
+        self.values.push(SqlValue::String(sys_name.to_string()));
         self
     }
 
-    /// Filter if_entries with unresolved LLDP/CDP neighbors in a network.
-    /// Matches entries that have LLDP or CDP data but no neighbor (neither if_entry nor host).
+    /// Filter by ip_address_id FK (for interfaces table)
+    pub fn ip_address_id(mut self, ip_address_id: &Uuid) -> Self {
+        let col = self.qualify_column("ip_address_id");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::Uuid(*ip_address_id));
+        self
+    }
+
+    /// Filter interfaces with unresolved LLDP/CDP neighbors in a network.
+    /// Matches entries that have LLDP or CDP data but no neighbor (neither interface nor host).
     pub fn unresolved_lldp_in_network(mut self, network_id: Uuid) -> Self {
         let network_col = self.qualify_column("network_id");
         let lldp_chassis_col = self.qualify_column("lldp_chassis_id");
         let cdp_device_col = self.qualify_column("cdp_device_id");
         let cdp_addr_col = self.qualify_column("cdp_address");
-        let neighbor_if_entry_col = self.qualify_column("neighbor_if_entry_id");
+        let neighbor_if_entry_col = self.qualify_column("neighbor_interface_id");
         let neighbor_host_col = self.qualify_column("neighbor_host_id");
 
         self.conditions
@@ -737,9 +775,40 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
-    /// Filter if_entries that have any resolved neighbor (full or partial resolution)
+    /// Filter interfaces with unresolved single-MAC FDB data in a network.
+    /// Matches entries that have exactly 1 learned MAC, no existing neighbor,
+    /// and no LLDP/CDP data (FDB is lower-priority than protocol-based discovery).
+    pub fn unresolved_fdb_in_network(mut self, network_id: Uuid) -> Self {
+        let network_col = self.qualify_column("network_id");
+        let fdb_col = self.qualify_column("fdb_macs");
+        let neighbor_if_entry_col = self.qualify_column("neighbor_interface_id");
+        let neighbor_host_col = self.qualify_column("neighbor_host_id");
+        let lldp_chassis_col = self.qualify_column("lldp_chassis_id");
+        let cdp_device_col = self.qualify_column("cdp_device_id");
+
+        self.conditions
+            .push(format!("{} = ${}", network_col, self.values.len() + 1));
+        self.values.push(SqlValue::Uuid(network_id));
+
+        // Has single-MAC FDB data, no neighbor, no LLDP/CDP
+        self.conditions.push(format!(
+            "{} IS NOT NULL AND jsonb_array_length({}) = 1",
+            fdb_col, fdb_col
+        ));
+        self.conditions
+            .push(format!("{} IS NULL", neighbor_if_entry_col));
+        self.conditions
+            .push(format!("{} IS NULL", neighbor_host_col));
+        self.conditions
+            .push(format!("{} IS NULL", lldp_chassis_col));
+        self.conditions.push(format!("{} IS NULL", cdp_device_col));
+
+        self
+    }
+
+    /// Filter interfaces that have any resolved neighbor (full or partial resolution)
     pub fn has_neighbor(mut self) -> Self {
-        let neighbor_if_entry_col = self.qualify_column("neighbor_if_entry_id");
+        let neighbor_if_entry_col = self.qualify_column("neighbor_interface_id");
         let neighbor_host_col = self.qualify_column("neighbor_host_id");
 
         self.conditions.push(format!(
@@ -750,23 +819,23 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
-    /// Filter if_entries with full neighbor resolution (specific remote port known)
+    /// Filter interfaces with full neighbor resolution (specific remote port known)
     pub fn has_neighbor_if_entry(mut self) -> Self {
-        let col = self.qualify_column("neighbor_if_entry_id");
+        let col = self.qualify_column("neighbor_interface_id");
         self.conditions.push(format!("{} IS NOT NULL", col));
         self
     }
 
-    /// Filter if_entries connected to a specific host (either resolution type)
+    /// Filter interfaces connected to a specific host (either resolution type)
     pub fn neighbor_host(mut self, host_id: Uuid) -> Self {
-        let neighbor_if_entry_col = self.qualify_column("neighbor_if_entry_id");
+        let neighbor_if_entry_col = self.qualify_column("neighbor_interface_id");
         let neighbor_host_col = self.qualify_column("neighbor_host_id");
 
         // Either directly connected to host (partial resolution)
-        // Or connected to an if_entry on that host (full resolution)
+        // Or connected to an interface on that host (full resolution)
         // For full resolution, we need a subquery
         self.conditions.push(format!(
-            "({} = ${} OR {} IN (SELECT id FROM if_entries WHERE host_id = ${}))",
+            "({} = ${} OR {} IN (SELECT id FROM interfaces WHERE host_id = ${}))",
             neighbor_host_col,
             self.values.len() + 1,
             neighbor_if_entry_col,
@@ -801,6 +870,13 @@ impl<T: Storable> StorableFilter<T> {
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
         self.values.push(SqlValue::String(id.to_string()));
+        self
+    }
+
+    /// Filter for credentials that have non-null target_ips
+    pub fn with_target_ips(mut self) -> Self {
+        let col = self.qualify_column("target_ips");
+        self.conditions.push(format!("{} IS NOT NULL", col));
         self
     }
 }

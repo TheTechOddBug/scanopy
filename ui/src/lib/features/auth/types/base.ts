@@ -1,13 +1,14 @@
 import type { components } from '$lib/api/schema';
 import {
-	common_company,
+	common_internalIt,
 	common_homelab,
-	onboarding_companyDescription,
-	onboarding_companyNetworkHelp,
-	onboarding_companyNetworkLabel,
-	onboarding_companyNetworkPlaceholder,
-	onboarding_companyOrgLabel,
-	onboarding_companyOrgPlaceholder,
+	common_other,
+	onboarding_internalItDescription,
+	onboarding_internalItNetworkHelp,
+	onboarding_internalItNetworkLabel,
+	onboarding_internalItNetworkPlaceholder,
+	onboarding_internalItOrgLabel,
+	onboarding_internalItOrgPlaceholder,
 	onboarding_homelabDescription,
 	onboarding_homelabNetworkHelp,
 	onboarding_homelabNetworkLabel,
@@ -21,7 +22,10 @@ import {
 	onboarding_mspNetworkPlaceholder,
 	onboarding_mspOrgLabel,
 	onboarding_mspOrgPlaceholder,
-	onboarding_orgHelp
+	onboarding_orgHelp,
+	onboarding_otherDescription,
+	onboarding_otherNetworkPlaceholder,
+	onboarding_otherOrgPlaceholder
 } from '$lib/paraglide/messages';
 
 // Re-export generated types
@@ -45,8 +49,8 @@ export interface SessionUser {
 	name: string;
 }
 
-// Onboarding use case types
-export type UseCase = 'homelab' | 'company' | 'msp';
+// Onboarding use case types — derived from backend-generated schema
+export type UseCase = components['schemas']['UseCase'];
 
 // Consolidated use case configuration
 // Icons are mapped separately in components (Svelte component references)
@@ -68,6 +72,21 @@ export interface UseCaseConfig {
 
 export function getUseCases(): Record<UseCase, UseCaseConfig> {
 	return {
+		internal_it: {
+			label: common_internalIt(),
+			description: onboarding_internalItDescription(),
+			orgLabel: onboarding_internalItOrgLabel(),
+			orgPlaceholder: onboarding_internalItOrgPlaceholder(),
+			orgHelp: onboarding_orgHelp(),
+			networkLabel: onboarding_internalItNetworkLabel(),
+			networkPlaceholder: onboarding_internalItNetworkPlaceholder(),
+			networkHelp: onboarding_internalItNetworkHelp(),
+			colors: {
+				ring: 'ring-blue-500',
+				bg: 'bg-blue-500/20',
+				text: 'text-blue-400'
+			}
+		},
 		homelab: {
 			label: common_homelab(),
 			description: onboarding_homelabDescription(),
@@ -83,21 +102,6 @@ export function getUseCases(): Record<UseCase, UseCaseConfig> {
 				text: 'text-emerald-400'
 			}
 		},
-		company: {
-			label: common_company(),
-			description: onboarding_companyDescription(),
-			orgLabel: onboarding_companyOrgLabel(),
-			orgPlaceholder: onboarding_companyOrgPlaceholder(),
-			orgHelp: onboarding_orgHelp(),
-			networkLabel: onboarding_companyNetworkLabel(),
-			networkPlaceholder: onboarding_companyNetworkPlaceholder(),
-			networkHelp: onboarding_companyNetworkHelp(),
-			colors: {
-				ring: 'ring-blue-500',
-				bg: 'bg-blue-500/20',
-				text: 'text-blue-400'
-			}
-		},
 		msp: {
 			label: onboarding_mspLabel(),
 			description: onboarding_mspDescription(),
@@ -111,6 +115,21 @@ export function getUseCases(): Record<UseCase, UseCaseConfig> {
 				ring: 'ring-violet-500',
 				bg: 'bg-violet-500/20',
 				text: 'text-violet-400'
+			}
+		},
+		other: {
+			label: common_other(),
+			description: onboarding_otherDescription(),
+			orgLabel: onboarding_internalItOrgLabel(),
+			orgPlaceholder: onboarding_otherOrgPlaceholder(),
+			orgHelp: onboarding_orgHelp(),
+			networkLabel: onboarding_homelabNetworkLabel(),
+			networkPlaceholder: onboarding_otherNetworkPlaceholder(),
+			networkHelp: onboarding_homelabNetworkHelp(),
+			colors: {
+				ring: 'ring-amber-500',
+				bg: 'bg-amber-500/20',
+				text: 'text-amber-400'
 			}
 		}
 	};

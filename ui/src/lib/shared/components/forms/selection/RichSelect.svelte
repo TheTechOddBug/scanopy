@@ -23,7 +23,8 @@
 		onDisabledClick = null,
 		showSearch = false,
 		displayComponent,
-		getOptionContext = () => new Object() as OC
+		getOptionContext = () => new Object() as OC,
+		minWidth = null
 	}: {
 		label?: string;
 		selectedValue?: string | null;
@@ -37,15 +38,32 @@
 		showSearch?: boolean;
 		displayComponent: EntityDisplayComponent<V, OC>;
 		getOptionContext?: (option: V, index: number) => OC;
+		/** Optional minimum width (CSS length, e.g. "18rem" or "280px") applied
+		 *  to the trigger. Use in unbounded contexts — like the topology view
+		 *  picker in a toolbar — where the trigger otherwise collapses to its
+		 *  content width and the dropdown inherits that narrowness. Bounded
+		 *  contexts (ConfigPanels, ListManagers) should leave this null so the
+		 *  trigger keeps filling its container. */
+		minWidth?: string | null;
 	} = $props();
 
 	let isOpen = $state(false);
 	let dropdownElement: HTMLDivElement | undefined = $state();
 	let triggerElement: HTMLButtonElement | undefined = $state();
 	let inputElement: HTMLInputElement | undefined = $state();
-	let dropdownPosition = $state({ top: 0, left: 0, width: 0 });
+	let dropdownPosition = $state({ top: 0, left: 0, width: 0, maxHeight: 384 });
 	let openUpward = $state(false);
 	let filterText = $state('');
+	let scrollContainerEl: HTMLDivElement | undefined = $state();
+	let canScrollUp = $state(false);
+	let canScrollDown = $state(false);
+
+	function updateScrollIndicators() {
+		if (!scrollContainerEl) return;
+		const { scrollTop, scrollHeight, clientHeight } = scrollContainerEl;
+		canScrollUp = scrollTop > 2;
+		canScrollDown = scrollTop + clientHeight < scrollHeight - 2;
+	}
 
 	// Portal container for escaping transform contexts (e.g., SvelteFlow)
 	let portalContainer: HTMLDivElement | null = $state(null);
@@ -68,6 +86,7 @@
 	$effect(() => {
 		if (isOpen) {
 			document.body.style.overflow = 'hidden';
+			requestAnimationFrame(updateScrollIndicators);
 			return () => {
 				document.body.style.overflow = '';
 			};
@@ -146,17 +165,25 @@
 		await tick();
 		const rect = triggerElement.getBoundingClientRect();
 		const viewportHeight = window.innerHeight;
-		const dropdownHeight = 384; // max-h-96 = 24rem = 384px
+		const dropdownMaxHeight = 384; // max-h-96 = 24rem = 384px
 		const gap = 1; // Minimal gap to prevent overlap
+		const viewportPadding = 8; // Minimum distance from viewport edge
 
 		// Simple logic: if not enough space below, open upward
 		const spaceBelow = viewportHeight - rect.bottom - gap;
-		openUpward = spaceBelow < dropdownHeight && rect.top > spaceBelow;
+		openUpward = spaceBelow < dropdownMaxHeight && rect.top > spaceBelow;
+
+		// Constrain dropdown height to available viewport space
+		const availableSpace = openUpward
+			? rect.top - gap - viewportPadding
+			: viewportHeight - rect.bottom - gap - viewportPadding;
+		const maxHeight = Math.min(dropdownMaxHeight, availableSpace);
 
 		dropdownPosition = {
 			top: openUpward ? rect.top - gap : rect.bottom + gap,
 			left: rect.left,
-			width: rect.width
+			width: rect.width,
+			maxHeight
 		};
 	}
 
@@ -244,6 +271,7 @@
 		class="select-trigger text-primary flex w-full items-center justify-between rounded-md px-3 py-2
            {error ? 'border-red-500' : ''}
            {disabled || options.length == 0 ? 'cursor-not-allowed opacity-50' : ''}"
+		style={minWidth ? `min-width: ${minWidth}` : undefined}
 		disabled={disabled || options.length == 0}
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-3">
@@ -277,8 +305,8 @@
 	<div
 		bind:this={dropdownElement}
 		use:portal
-		class="select-dropdown fixed z-[9999] max-h-96 overflow-hidden scroll-smooth rounded-md shadow-lg"
-		style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px; width: {dropdownPosition.width}px;
+		class="select-dropdown fixed z-[9999] overflow-hidden scroll-smooth rounded-md shadow-lg"
+		style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px; width: {dropdownPosition.width}px; max-height: {dropdownPosition.maxHeight}px;
            {openUpward ? 'transform: translateY(-100%);' : ''}"
 	>
 		<!-- Search Input -->
@@ -300,58 +328,79 @@
 		{/if}
 
 		<!-- Options list with scroll container -->
-		<div class="max-h-80 overflow-y-auto">
-			{#if groupedOptions.length === 0 || groupedOptions.every((group) => group.options.length === 0)}
-				<div class="text-tertiary px-3 py-4 text-center text-sm">
-					{common_noOptionsMatch({ filterText })}
-				</div>
-			{:else}
-				{#each groupedOptions as group, groupIndex (group.category ?? '__ungrouped__')}
-					{#if group.options.length > 0}
-						<!-- Category Header -->
-						{#if group.category !== null}
-							<div
-								class="text-secondary sticky top-0 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide"
-								style="border-color: var(--color-border); background: var(--color-bg-surface)"
-							>
-								{group.category}
-							</div>
-						{/if}
+		<div class="relative">
+			{#if canScrollUp}
+				<div
+					class="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 rounded-t-md bg-gradient-to-b from-[var(--color-bg-elevated)] to-transparent"
+				></div>
+			{/if}
+			<div
+				bind:this={scrollContainerEl}
+				class="overflow-y-auto"
+				style="max-height: {dropdownPosition.maxHeight - (showSearch ? 44 : 0)}px"
+				onscroll={updateScrollIndicators}
+			>
+				{#if groupedOptions.length === 0 || groupedOptions.every((group) => group.options.length === 0)}
+					<div class="text-tertiary px-3 py-4 text-center text-sm">
+						{common_noOptionsMatch({ filterText })}
+					</div>
+				{:else}
+					{#each groupedOptions as group, groupIndex (group.category ?? '__ungrouped__')}
+						{#if group.options.length > 0}
+							<!-- Category Header -->
+							{#if group.category !== null}
+								<div
+									class="text-secondary sticky top-0 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide"
+									style="border-color: var(--color-border); background: var(--color-bg-surface)"
+								>
+									{group.category}
+								</div>
+							{/if}
 
-						<!-- Options in this category -->
-						{#each group.options as option, optionIndex (displayComponent.getId(option))}
-							{@const context = getOptionContext(option, optionIndex)}
-							{@const isLastInGroup = optionIndex === group.options.length - 1}
-							{@const isLastGroup = groupIndex === groupedOptions.length - 1}
-							{@const isDisabled = displayComponent.getDisabled?.(option, context) ?? false}
-							{@const isClickableDisabled = isDisabled && onDisabledClick != null}
-							<button
-								type="button"
-								onclick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									if (isDisabled) {
-										isOpen = false;
-										filterText = '';
-										onDisabledClick?.(displayComponent.getId(option));
-									} else {
-										handleSelect(displayComponent.getId(option));
-									}
-								}}
-								class="select-option w-full px-3 py-3 text-left transition-colors
+							<!-- Options in this category -->
+							{#each group.options as option, optionIndex (displayComponent.getId(option))}
+								{@const context = getOptionContext(option, optionIndex)}
+								{@const isLastInGroup = optionIndex === group.options.length - 1}
+								{@const isLastGroup = groupIndex === groupedOptions.length - 1}
+								{@const isDisabled = displayComponent.getDisabled?.(option, context) ?? false}
+								{@const isClickableDisabled = isDisabled && onDisabledClick != null}
+								{@const disabledReason = isDisabled
+									? (displayComponent.getDisabledReason?.(option, context) ?? null)
+									: null}
+								<button
+									title={disabledReason}
+									type="button"
+									onclick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										if (isDisabled) {
+											isOpen = false;
+											filterText = '';
+											onDisabledClick?.(displayComponent.getId(option));
+										} else {
+											handleSelect(displayComponent.getId(option));
+										}
+									}}
+									class="select-option w-full px-3 py-3 text-left transition-colors
                        {isDisabled
-									? isClickableDisabled
-										? 'cursor-pointer'
-										: 'cursor-not-allowed opacity-60'
-									: ''}
+										? isClickableDisabled
+											? 'cursor-pointer'
+											: 'cursor-not-allowed opacity-60'
+										: ''}
                        {!isLastInGroup || !isLastGroup ? 'border-b' : ''}"
-								style={!isLastInGroup || !isLastGroup ? 'border-color: var(--color-border)' : ''}
-							>
-								<ListSelectItem {context} item={option} {displayComponent} staticTags={true} />
-							</button>
-						{/each}
-					{/if}
-				{/each}
+									style={!isLastInGroup || !isLastGroup ? 'border-color: var(--color-border)' : ''}
+								>
+									<ListSelectItem {context} item={option} {displayComponent} staticTags={true} />
+								</button>
+							{/each}
+						{/if}
+					{/each}
+				{/if}
+			</div>
+			{#if canScrollDown}
+				<div
+					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 rounded-b-md bg-gradient-to-t from-[var(--color-bg-elevated)] to-transparent"
+				></div>
 			{/if}
 		</div>
 	</div>

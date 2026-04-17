@@ -1,14 +1,21 @@
 <script lang="ts">
+	import { SvelteURL } from 'svelte/reactivity';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import EmailVerificationBanner from '$lib/shared/components/feedback/EmailVerificationBanner.svelte';
 	import DemoBanner from '$lib/shared/components/feedback/DemoBanner.svelte';
+	import LicenseLockedBanner from '$lib/shared/components/feedback/LicenseLockedBanner.svelte';
 	import Sidebar from '$lib/shared/components/layout/Sidebar.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { discoverySSEManager } from '$lib/features/discovery/queries';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 
-	import { topologySSEManager } from '$lib/features/topology/queries';
+	import {
+		topologySSEManager,
+		selectedTopologyId,
+		activeView
+	} from '$lib/features/topology/queries';
+	import { get } from 'svelte/store';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import BillingPlanModal from '$lib/features/billing/BillingPlanModal.svelte';
 	import DaemonPromptModal from '$lib/features/daemons/components/DaemonPromptModal.svelte';
@@ -49,7 +56,8 @@
 	// Without this, closeModal() clears $modalState but needsPlanSelection keeps showBillingModal true.
 	let planJustActivated = $state(false);
 	let showBillingModal = $derived(
-		(needsPlanSelection && !planJustActivated) || $modalState.name === 'billing-plan'
+		billingEnabled &&
+			((needsPlanSelection && !planJustActivated) || $modalState.name === 'billing-plan')
 	);
 
 	// Daemon prompt: driven by modal registry
@@ -74,9 +82,29 @@
 	>([]);
 
 	// Update URL hash when activeTab changes
+	// Skip the first run — on page load the topology stores haven't hydrated
+	// from URL params yet, so writing them back would overwrite with defaults.
+	let tabEffectInitialized = false;
 	$effect(() => {
 		if (typeof window !== 'undefined' && activeTab) {
-			window.location.hash = activeTab;
+			if (!tabEffectInitialized) {
+				tabEffectInitialized = true;
+				return;
+			}
+			const url = new SvelteURL(window.location.href);
+			if (activeTab === 'topology') {
+				// Set topology params when entering the topology tab
+				const topoId = get(selectedTopologyId);
+				const view = get(activeView);
+				if (topoId) url.searchParams.set('topologyId', topoId);
+				url.searchParams.set('view', view);
+			} else {
+				// Clear topology-specific URL params when leaving
+				url.searchParams.delete('topologyId');
+				url.searchParams.delete('view');
+			}
+			url.hash = activeTab;
+			window.history.replaceState(window.history.state, '', url.toString());
 		}
 	});
 
@@ -96,6 +124,25 @@
 	$effect(() => {
 		if (isPastDue && appInitialized) {
 			openModal('settings', { tab: 'billing' });
+		}
+	});
+
+	// Auto-show daemon prompt for new orgs that haven't installed a daemon yet.
+	// Centralizes logic that previously lived in each registration path.
+	let daemonPromptShown = $state(false);
+	$effect(() => {
+		if (
+			appInitialized &&
+			!daemonPromptShown &&
+			!showBillingModal &&
+			$modalState.name === null &&
+			organization?.onboarding?.includes('OrgCreated') &&
+			!organization?.onboarding?.includes('FirstDaemonRegistered') &&
+			daemonsQuery.isSuccess &&
+			daemonsQuery.data?.length === 0
+		) {
+			daemonPromptShown = true;
+			openModal('daemon-prompt');
 		}
 	});
 
@@ -121,6 +168,11 @@
 
 		appInitialized = true;
 		initModalFromUrl();
+
+		// Block billing modal deep-link in non-cloud environments
+		if (!billingEnabled && $modalState.name === 'billing-plan') {
+			closeModal();
+		}
 	}
 
 	// Reactive effect: initialize app when authenticated
@@ -166,7 +218,7 @@
 		<main
 			class="flex-1 overflow-auto transition-all duration-300"
 			class:ml-16={sidebarCollapsed}
-			class:ml-64={!sidebarCollapsed}
+			class:ml-48={!sidebarCollapsed}
 		>
 			{#if currentUserQuery.data && !currentUserQuery.data.email_verified}
 				<EmailVerificationBanner email={currentUserQuery.data.email} />
@@ -174,7 +226,10 @@
 			{#if organization?.plan?.type === 'Demo'}
 				<DemoBanner />
 			{/if}
-			<div class="p-8 [&_.sticky]:sticky [&_.sticky]:top-0">
+			{#if configQuery.data?.license_status === 'expired' || configQuery.data?.license_status === 'invalid'}
+				<LicenseLockedBanner status={configQuery.data.license_status} />
+			{/if}
+			<div class="p-4 [&_.sticky]:sticky [&_.sticky]:top-0">
 				<!-- Programmatically render all tabs based on sidebar config -->
 				{#each allTabs as tab (tab.id)}
 					{#if tab.subTabIds && tab.subTabDefs}

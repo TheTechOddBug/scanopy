@@ -1,0 +1,242 @@
+use chrono::{DateTime, Utc};
+use serde::Serialize;
+use sqlx::Row;
+use sqlx::postgres::PgRow;
+use uuid::Uuid;
+
+use crate::server::{
+    dependencies::r#impl::{
+        base::{Dependency, DependencyBase, DependencyMembers},
+        types::DependencyType,
+    },
+    shared::{
+        entities::EntityDiscriminants,
+        entity_metadata::EntityCategory,
+        storage::traits::{Entity, SqlValue, Storable},
+        types::entities::EntitySource,
+    },
+    topology::types::edges::EdgeStyle,
+};
+
+/// CSV row representation for Dependency export (excludes nested members)
+#[derive(Serialize)]
+pub struct DependencyCsvRow {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub dependency_type: String,
+    pub color: String,
+    pub network_id: Uuid,
+    pub source: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl Storable for Dependency {
+    type BaseData = DependencyBase;
+
+    fn table_name() -> &'static str {
+        "dependencies"
+    }
+
+    fn new(base: Self::BaseData) -> Self {
+        let now = chrono::Utc::now();
+
+        Self {
+            id: Uuid::new_v4(),
+            created_at: now,
+            updated_at: now,
+            base,
+        }
+    }
+
+    fn get_base(&self) -> Self::BaseData {
+        self.base.clone()
+    }
+
+    fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error> {
+        let Self {
+            id,
+            created_at,
+            updated_at,
+            base:
+                Self::BaseData {
+                    name,
+                    network_id,
+                    description,
+                    dependency_type,
+                    ref members, // member_type stored on table, IDs in junction table
+                    source,
+                    color,
+                    edge_style,
+                    tags: _, // Stored in entity_tags junction table
+                },
+        } = self.clone();
+
+        let dependency_type_str: &'static str = dependency_type.into();
+
+        Ok((
+            vec![
+                "id",
+                "created_at",
+                "updated_at",
+                "name",
+                "description",
+                "network_id",
+                "source",
+                "dependency_type",
+                "color",
+                "edge_style",
+                "member_type",
+            ],
+            vec![
+                SqlValue::Uuid(id),
+                SqlValue::Timestamp(created_at),
+                SqlValue::Timestamp(updated_at),
+                SqlValue::String(name),
+                SqlValue::OptionalString(description),
+                SqlValue::Uuid(network_id),
+                SqlValue::EntitySource(source),
+                SqlValue::String(dependency_type_str.to_string()),
+                SqlValue::String(color.to_string()),
+                SqlValue::String(serde_json::to_string(&edge_style)?),
+                SqlValue::String(
+                    if members.is_bindings() {
+                        "Bindings"
+                    } else {
+                        "Services"
+                    }
+                    .to_string(),
+                ),
+            ],
+        ))
+    }
+
+    fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
+        let dependency_type_str: String = row.get("dependency_type");
+        let dependency_type = match dependency_type_str.as_str() {
+            "RequestPath" => DependencyType::RequestPath,
+            "HubAndSpoke" => DependencyType::HubAndSpoke,
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Unknown dependency_type: {}",
+                    dependency_type_str
+                ));
+            }
+        };
+
+        let source: EntitySource =
+            serde_json::from_value(row.get::<serde_json::Value, _>("source"))
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize source: {}", e))?;
+
+        let edge_style: EdgeStyle = serde_json::from_str(&row.get::<String, _>("edge_style"))
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize edge_style: {}", e))?;
+
+        Ok(Dependency {
+            id: row.get("id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            base: DependencyBase {
+                name: row.get("name"),
+                description: row.get("description"),
+                network_id: row.get("network_id"),
+                source,
+                edge_style,
+                dependency_type,
+                // member_type discriminant determines which variant; IDs hydrated by DependencyService
+                members: match row.get::<String, _>("member_type").as_str() {
+                    "Bindings" => DependencyMembers::Bindings {
+                        binding_ids: Vec::new(),
+                    },
+                    _ => DependencyMembers::Services {
+                        service_ids: Vec::new(),
+                    },
+                },
+                color: row.get::<String, _>("color").parse().unwrap_or_default(),
+                tags: Vec::new(), // Hydrated from entity_tags junction table
+            },
+        })
+    }
+}
+
+impl Entity for Dependency {
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
+    }
+
+    type CsvRow = DependencyCsvRow;
+
+    fn to_csv_row(&self) -> Self::CsvRow {
+        let dependency_type_str: &'static str = self.base.dependency_type.into();
+        DependencyCsvRow {
+            id: self.id,
+            name: self.base.name.clone(),
+            description: self.base.description.clone(),
+            dependency_type: dependency_type_str.to_string(),
+            color: self.base.color.to_string(),
+            network_id: self.base.network_id,
+            source: format!("{:?}", self.base.source),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        }
+    }
+
+    fn entity_type() -> EntityDiscriminants {
+        EntityDiscriminants::Dependency
+    }
+
+    const ENTITY_NAME_SINGULAR: &'static str = "Dependency";
+    const ENTITY_NAME_PLURAL: &'static str = "Dependencies";
+    const ENTITY_DESCRIPTION: &'static str =
+        "Service dependency relationships. Define how services depend on each other.";
+
+    fn entity_category() -> EntityCategory {
+        EntityCategory::Visualization
+    }
+
+    fn network_id(&self) -> Option<Uuid> {
+        Some(self.base.network_id)
+    }
+
+    fn organization_id(&self) -> Option<Uuid> {
+        None
+    }
+
+    fn updated_at(&self) -> DateTime<Utc> {
+        self.updated_at
+    }
+
+    fn set_updated_at(&mut self, time: DateTime<Utc>) {
+        self.updated_at = time;
+    }
+
+    fn get_tags(&self) -> Option<&Vec<Uuid>> {
+        Some(&self.base.tags)
+    }
+
+    fn set_tags(&mut self, tags: Vec<Uuid>) {
+        self.base.tags = tags;
+    }
+
+    fn set_source(&mut self, source: EntitySource) {
+        self.base.source = source;
+    }
+
+    fn preserve_immutable_fields(&mut self, existing: &Self) {
+        self.base.source = existing.base.source.clone();
+        self.created_at = existing.created_at;
+        self.updated_at = existing.updated_at;
+    }
+}

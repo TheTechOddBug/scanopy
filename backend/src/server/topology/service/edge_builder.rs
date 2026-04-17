@@ -5,15 +5,15 @@ use strum::IntoDiscriminant;
 use uuid::Uuid;
 
 use crate::server::{
-    groups::r#impl::{base::Group, types::GroupType},
+    dependencies::r#impl::{base::Dependency, types::DependencyType},
     hosts::r#impl::virtualization::HostVirtualization,
-    if_entries::r#impl::base::Neighbor,
+    interfaces::r#impl::base::Neighbor,
     services::r#impl::virtualization::ServiceVirtualization,
     subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants},
     topology::{
         service::context::TopologyContext,
         types::{
-            edges::{DiscoveryProtocol, Edge, EdgeHandle, EdgeType},
+            edges::{DiscoveryProtocol, Edge, EdgeHandle, EdgeType, EdgeViewConfig},
             nodes::Node,
         },
     },
@@ -22,22 +22,22 @@ use crate::server::{
 pub struct EdgeBuilder;
 
 impl EdgeBuilder {
-    /// Create group edges (connecting services in a group's service chain)
-    pub fn create_group_edges(ctx: &TopologyContext) -> Vec<Edge> {
-        ctx.groups
+    /// Create dependency edges (connecting services in a dependency's service chain)
+    pub fn create_dependency_edges(ctx: &TopologyContext) -> Vec<Edge> {
+        ctx.dependencies
             .iter()
-            .flat_map(|group| {
-                let binding_ids = &group.base.binding_ids;
-                match &group.base.group_type {
-                    GroupType::RequestPath => binding_ids
+            .flat_map(|dependency| {
+                let binding_ids = dependency.binding_ids();
+                match &dependency.base.dependency_type {
+                    DependencyType::RequestPath => binding_ids
                         .windows(2)
                         .filter_map(|window| {
                             EdgeBuilder::edge_from_service_bindings(
-                                ctx, window[0], window[1], group,
+                                ctx, window[0], window[1], dependency,
                             )
                         })
                         .collect::<Vec<Edge>>(),
-                    GroupType::HubAndSpoke => {
+                    DependencyType::HubAndSpoke => {
                         let mut binding_ids = binding_ids.clone();
                         binding_ids.reverse();
                         if let Some(hub_binding_id) = binding_ids.pop() {
@@ -48,7 +48,7 @@ impl EdgeBuilder {
                                         ctx,
                                         hub_binding_id,
                                         *spoke_binding,
-                                        group,
+                                        dependency,
                                     )
                                 })
                                 .collect::<Vec<Edge>>();
@@ -60,14 +60,9 @@ impl EdgeBuilder {
             .collect()
     }
 
-    // Create edges to connect a host that virtualizes containers via docker to the docker bridge subnets
-    pub fn create_containerized_service_edges(
-        ctx: &TopologyContext,
-        group_docker_bridges_by_host: bool,
-    ) -> (Vec<Edge>, HashMap<Uuid, Uuid>) {
-        // Host id to subnet id that will be used for grouping, if enabled
-        let mut docker_bridge_host_subnet_id_to_group_on: HashMap<Uuid, Uuid> = HashMap::new();
-
+    /// Create edges to connect a host that virtualizes containers via Docker
+    /// to the containerized services on Docker bridge subnets.
+    pub fn create_containerized_service_edges(ctx: &TopologyContext) -> Vec<Edge> {
         let mut docker_service_to_containerized_service_ids: HashMap<Uuid, Vec<Uuid>> =
             HashMap::new();
 
@@ -84,8 +79,7 @@ impl EdgeBuilder {
             }
         });
 
-        let edges = ctx
-            .services
+        ctx.services
             .iter()
             .filter(|s| {
                 docker_service_to_containerized_service_ids
@@ -94,12 +88,12 @@ impl EdgeBuilder {
             })
             .filter_map(|s| {
                 let host = ctx.get_host_by_id(s.base.host_id)?;
-                let origin_interface =
-                    ctx.get_first_non_docker_bridge_interface_for_host(host.id)?;
-                Some((s, host, origin_interface))
+                let origin_ip_address =
+                    ctx.get_first_non_docker_bridge_ip_address_for_host(host.id)?;
+                Some((s, host, origin_ip_address))
             })
-            .flat_map(|(s, host, origin_interface)| {
-                let host_interfaces = ctx.get_interfaces_for_host(host.id);
+            .flat_map(|(s, host, origin_ip_address)| {
+                let host_interfaces = ctx.get_ip_addresses_for_host(host.id);
                 let container_subnets: Vec<Uuid> = host_interfaces
                     .iter()
                     .filter_map(|i| ctx.get_subnet_by_id(i.base.subnet_id))
@@ -111,7 +105,7 @@ impl EdgeBuilder {
                     })
                     .collect();
 
-                let container_subnet_interface_ids: Vec<Uuid> = host_interfaces
+                let container_subnet_ip_address_ids: Vec<Uuid> = host_interfaces
                     .iter()
                     .filter_map(|i| {
                         if container_subnets.contains(&i.base.subnet_id) {
@@ -121,101 +115,52 @@ impl EdgeBuilder {
                     })
                     .collect();
 
-                if group_docker_bridges_by_host {
-                    // If subnets are grouped, pick an arbitrary subnet ID to use for grouping
-                    if let (Some(first_interface_id), Some(first_subnet_id)) = (
-                        container_subnet_interface_ids.first(),
-                        container_subnets.first(),
-                    ) {
-                        let is_multi_hop =
-                            ctx.edge_is_multi_hop(&origin_interface.id, first_interface_id);
+                docker_service_to_containerized_service_ids
+                    .get(&s.id)
+                    .unwrap_or(&Vec::new())
+                    .iter()
+                    .filter_map(move |cs| {
+                        let containerized = ctx.get_service_by_id(*cs)?;
 
-                        if let Some((source_handle, target_handle)) =
-                            EdgeBuilder::determine_interface_handles(
-                                ctx,
-                                &origin_interface.id,
-                                first_interface_id,
-                                is_multi_hop,
-                            )
-                        {
-                            docker_bridge_host_subnet_id_to_group_on
-                                .entry(host.id)
-                                .or_insert(*first_subnet_id);
+                        let container_binding_ip_address_id = containerized
+                            .base
+                            .bindings
+                            .iter()
+                            .filter_map(|b| b.ip_address_id())
+                            .find(|i| container_subnet_ip_address_ids.contains(i))?;
 
-                            return vec![Edge {
-                                id: Uuid::new_v4(),
-                                source: origin_interface.id,
-                                target: *first_subnet_id,
-                                edge_type: EdgeType::ServiceVirtualization {
-                                    containerizing_service_id: s.id,
-                                    host_id: host.id,
-                                },
-                                label: Some(format!("{} @ {}", s.base.name, host.base.name)),
-                                source_handle,
-                                target_handle,
-                                is_multi_hop,
-                            }];
-                        }
-                    }
-                } else {
-                    return docker_service_to_containerized_service_ids
-                        .get(&s.id)
-                        .unwrap_or(&Vec::new())
-                        .iter()
-                        .filter_map(move |cs| {
-                            let containerized = ctx.get_service_by_id(*cs)?;
+                        let is_multi_hop = ctx.edge_is_multi_hop(
+                            &origin_ip_address.id,
+                            &container_binding_ip_address_id,
+                        );
 
-                            let container_binding_interface_id = containerized
-                                .base
-                                .bindings
-                                .iter()
-                                .filter_map(|b| b.interface_id())
-                                .find(|i| container_subnet_interface_ids.contains(i))?;
-
-                            let is_multi_hop = ctx.edge_is_multi_hop(
-                                &origin_interface.id,
-                                &container_binding_interface_id,
-                            );
-
-                            let (source_handle, target_handle) =
-                                EdgeBuilder::determine_interface_handles(
-                                    ctx,
-                                    &origin_interface.id,
-                                    &container_binding_interface_id,
-                                    is_multi_hop,
-                                )?;
-
-                            Some(Edge {
-                                id: Uuid::new_v4(),
-                                source: origin_interface.id,
-                                target: container_binding_interface_id,
-                                edge_type: EdgeType::ServiceVirtualization {
-                                    containerizing_service_id: s.id,
-                                    host_id: host.id,
-                                },
-                                label: Some(format!("{} on {}", s.base.name, host.base.name)),
-                                source_handle,
-                                target_handle,
-                                is_multi_hop,
-                            })
+                        Some(Edge {
+                            id: Uuid::new_v4(),
+                            source: origin_ip_address.id,
+                            target: container_binding_ip_address_id,
+                            edge_type: EdgeType::ContainerRuntime {
+                                service_id: s.id,
+                                host_id: host.id,
+                            },
+                            label: Some(format!("{} on {}", s.base.name, host.base.name)),
+                            source_handle: EdgeHandle::Bottom,
+                            target_handle: EdgeHandle::Top,
+                            is_multi_hop,
+                            view_config: EdgeViewConfig::default(),
                         })
-                        .collect();
-                }
-
-                Vec::new()
+                    })
+                    .collect::<Vec<Edge>>()
             })
-            .collect();
-
-        (edges, docker_bridge_host_subnet_id_to_group_on)
+            .collect()
     }
 
     // Create edges to connect a host that virtualizes other hosts as VMs
     pub fn create_vm_host_edges(ctx: &TopologyContext) -> Vec<Edge> {
         // Proxmox service interface binding that is present for a given subnet.
-        // There could be multiple host interfaces with a given subnet, we arbitrarily choose the first one so there's
+        // There could be multiple host ip_addresses with a given subnet, we arbitrarily choose the first one so there's
         // one clustering hub rather than multiple hubs
-        // (subnet_id, proxmox_service_id) : (interface_id)
-        let mut subnet_to_promxox_host_interface_id: HashMap<(Uuid, Uuid), Uuid> = HashMap::new();
+        // (subnet_id, proxmox_service_id) : (ip_address_id)
+        let mut subnet_to_promxox_host_ip_address_id: HashMap<(Uuid, Uuid), Uuid> = HashMap::new();
 
         // Hosts VMs managed by a given proxmox service
         let mut vm_host_id_to_proxmox_service: HashMap<Uuid, Uuid> = HashMap::new();
@@ -232,13 +177,13 @@ impl EdgeBuilder {
                         .base
                         .bindings
                         .iter()
-                        .filter_map(|b| b.interface_id())
+                        .filter_map(|b| b.ip_address_id())
                         .for_each(|i| {
-                            if let Some(subnet) = ctx.get_subnet_from_interface_id(i)
-                                && !subnet_to_promxox_host_interface_id
+                            if let Some(subnet) = ctx.get_subnet_from_ip_address_id(i)
+                                && !subnet_to_promxox_host_ip_address_id
                                     .contains_key(&(subnet.id, promxox_service.id))
                             {
-                                subnet_to_promxox_host_interface_id
+                                subnet_to_promxox_host_ip_address_id
                                     .entry((subnet.id, promxox_service.id))
                                     .insert_entry(i);
                             }
@@ -249,41 +194,34 @@ impl EdgeBuilder {
             }
         });
 
-        // Creates edges between interface that proxmox service has on a given subnet with interfaces that the virtualized host has on the subnet
+        // Creates edges between interface that proxmox service has on a given subnet with ip_addresses that the virtualized host has on the subnet
         ctx.hosts
             .iter()
             .flat_map(|h| {
                 if let Some(proxmox_service_id) = vm_host_id_to_proxmox_service.get(&h.id) {
-                    let host_interfaces = ctx.get_interfaces_for_host(h.id);
+                    let host_interfaces = ctx.get_ip_addresses_for_host(h.id);
                     return host_interfaces
                         .into_iter()
                         .filter_map(|i| {
-                            if let Some(proxmox_service_interface_id) =
-                                subnet_to_promxox_host_interface_id
+                            if let Some(proxmox_service_ip_address_id) =
+                                subnet_to_promxox_host_ip_address_id
                                     .get(&(i.base.subnet_id, *proxmox_service_id))
                             {
                                 let is_multi_hop =
-                                    ctx.edge_is_multi_hop(proxmox_service_interface_id, &i.id);
-
-                                let (source_handle, target_handle) =
-                                    EdgeBuilder::determine_interface_handles(
-                                        ctx,
-                                        proxmox_service_interface_id,
-                                        &i.id,
-                                        is_multi_hop,
-                                    )?;
+                                    ctx.edge_is_multi_hop(proxmox_service_ip_address_id, &i.id);
 
                                 return Some(Edge {
                                     id: Uuid::new_v4(),
-                                    source: *proxmox_service_interface_id,
+                                    source: *proxmox_service_ip_address_id,
                                     target: i.id,
-                                    edge_type: EdgeType::HostVirtualization {
-                                        vm_service_id: *proxmox_service_id,
+                                    edge_type: EdgeType::Hypervisor {
+                                        hypervisor_service_id: *proxmox_service_id,
                                     },
                                     label: None,
-                                    source_handle,
-                                    target_handle,
+                                    source_handle: EdgeHandle::Bottom,
+                                    target_handle: EdgeHandle::Top,
                                     is_multi_hop,
+                                    view_config: EdgeViewConfig::default(),
                                 });
                             }
                             None
@@ -295,25 +233,54 @@ impl EdgeBuilder {
             .collect()
     }
 
-    /// Create interface edges (connecting multiple interfaces on the same host)
+    /// Create host-level Hypervisor edges (hypervisor host → VM host).
+    /// Unlike `create_vm_host_edges` which uses interface IDs, this uses host IDs
+    /// as source/target for views where elements are hosts (e.g. Infrastructure).
+    pub fn create_vm_host_edges_by_host(ctx: &TopologyContext) -> Vec<Edge> {
+        ctx.hosts
+            .iter()
+            .filter_map(|h| {
+                if let Some(HostVirtualization::Proxmox(pv)) = &h.base.virtualization {
+                    let proxmox_service = ctx.get_service_by_id(pv.service_id)?;
+                    Some(Edge {
+                        id: Uuid::new_v4(),
+                        source: proxmox_service.base.host_id,
+                        target: h.id,
+                        edge_type: EdgeType::Hypervisor {
+                            hypervisor_service_id: pv.service_id,
+                        },
+                        label: None,
+                        source_handle: EdgeHandle::Bottom,
+                        target_handle: EdgeHandle::Top,
+                        is_multi_hop: false,
+                        view_config: EdgeViewConfig::default(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Create interface edges (connecting multiple ip_addresses on the same host)
     pub fn create_interface_edges(ctx: &TopologyContext) -> Vec<Edge> {
         ctx.hosts
             .iter()
             .flat_map(|host| {
-                let host_interfaces = ctx.get_interfaces_for_host(host.id);
+                let host_interfaces = ctx.get_ip_addresses_for_host(host.id);
 
                 // Use the first non-DockerBridge interface as the origin
                 // This ensures we don't try to create edges FROM a DockerBridge interface
-                if let Some(origin_interface) =
-                    ctx.get_first_non_docker_bridge_interface_for_host(host.id)
+                if let Some(origin_ip_address) =
+                    ctx.get_first_non_docker_bridge_ip_address_for_host(host.id)
                 {
                     host_interfaces
                         .iter()
-                        .filter(|interface| interface.id != origin_interface.id)
-                        .filter_map(|interface| {
+                        .filter(|ip_address| ip_address.id != origin_ip_address.id)
+                        .filter_map(|ip_address| {
                             let source_subnet =
-                                ctx.get_subnet_by_id(origin_interface.base.subnet_id);
-                            let target_subnet = ctx.get_subnet_by_id(interface.base.subnet_id);
+                                ctx.get_subnet_by_id(origin_ip_address.base.subnet_id);
+                            let target_subnet = ctx.get_subnet_by_id(ip_address.base.subnet_id);
 
                             if let Some(source_subnet) = source_subnet
                                 && source_subnet.base.subnet_type.discriminant()
@@ -330,19 +297,11 @@ impl EdgeBuilder {
                             }
 
                             let is_multi_hop =
-                                ctx.edge_is_multi_hop(&origin_interface.id, &interface.id);
+                                ctx.edge_is_multi_hop(&origin_ip_address.id, &ip_address.id);
 
-                            let (source_handle, target_handle) =
-                                EdgeBuilder::determine_interface_handles(
-                                    ctx,
-                                    &origin_interface.id,
-                                    &interface.id,
-                                    is_multi_hop,
-                                )?;
-
-                            // Hide label if both interfaces are on the same subnet
+                            // Hide label if both ip_addresses are on the same subnet
                             let label =
-                                if origin_interface.base.subnet_id == interface.base.subnet_id {
+                                if origin_ip_address.base.subnet_id == ip_address.base.subnet_id {
                                     None
                                 } else {
                                     Some(host.base.name.to_string())
@@ -350,13 +309,14 @@ impl EdgeBuilder {
 
                             Some(Edge {
                                 id: Uuid::new_v4(),
-                                source: origin_interface.id,
-                                target: interface.id,
-                                edge_type: EdgeType::Interface { host_id: host.id },
+                                source: origin_ip_address.id,
+                                target: ip_address.id,
+                                edge_type: EdgeType::SameHost { host_id: host.id },
                                 label,
-                                source_handle,
-                                target_handle,
+                                source_handle: EdgeHandle::Bottom,
+                                target_handle: EdgeHandle::Top,
                                 is_multi_hop,
+                                view_config: EdgeViewConfig::default(),
                             })
                         })
                         .collect::<Vec<_>>()
@@ -368,7 +328,7 @@ impl EdgeBuilder {
     }
 
     /// Create physical link edges from LLDP/CDP neighbor discovery
-    /// Only creates edges when both endpoints have associated interfaces (nodes)
+    /// Only creates edges when both endpoints have associated ip_addresses (nodes)
     pub fn create_physical_link_edges(ctx: &TopologyContext) -> Vec<Edge> {
         // Track processed pairs to avoid duplicate edges (A→B and B→A)
         let mut processed_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
@@ -376,17 +336,17 @@ impl EdgeBuilder {
         ctx.get_if_entries_with_neighbor()
             .into_iter()
             .filter_map(|source_entry| {
-                // Get the target IfEntry ID from resolved neighbor
-                let target_if_entry_id = match &source_entry.base.neighbor {
-                    Some(Neighbor::IfEntry(id)) => *id,
+                // Get the target Interface ID from resolved neighbor
+                let target_interface_id = match &source_entry.base.neighbor {
+                    Some(Neighbor::Interface(id)) => *id,
                     _ => return None, // Already filtered by get_if_entries_with_neighbor
                 };
 
                 // Skip if we've already processed this pair (in either direction)
-                let pair_key = if source_entry.id < target_if_entry_id {
-                    (source_entry.id, target_if_entry_id)
+                let pair_key = if source_entry.id < target_interface_id {
+                    (source_entry.id, target_interface_id)
                 } else {
-                    (target_if_entry_id, source_entry.id)
+                    (target_interface_id, source_entry.id)
                 };
 
                 if processed_pairs.contains(&pair_key) {
@@ -395,19 +355,12 @@ impl EdgeBuilder {
                 processed_pairs.insert(pair_key);
 
                 // Resolve interface IDs with single-interface host fallback
-                let source_interface_id = ctx.resolve_interface_for_if_entry(source_entry)?;
-                let target_entry = ctx.get_if_entry_by_id(target_if_entry_id)?;
-                let target_interface_id = ctx.resolve_interface_for_if_entry(target_entry)?;
+                let source_ip_address_id = ctx.resolve_ip_address_for_if_entry(source_entry)?;
+                let target_entry = ctx.get_if_entry_by_id(target_interface_id)?;
+                let target_ip_address_id = ctx.resolve_ip_address_for_if_entry(target_entry)?;
 
                 let is_multi_hop =
-                    ctx.edge_is_multi_hop(&source_interface_id, &target_interface_id);
-
-                let (source_handle, target_handle) = EdgeBuilder::determine_interface_handles(
-                    ctx,
-                    &source_interface_id,
-                    &target_interface_id,
-                    is_multi_hop,
-                )?;
+                    ctx.edge_is_multi_hop(&source_ip_address_id, &target_ip_address_id);
 
                 // Build label from port descriptions: "Gi0/1 ↔ Gi0/2"
                 let label = Some(format!(
@@ -418,50 +371,21 @@ impl EdgeBuilder {
 
                 Some(Edge {
                     id: Uuid::new_v4(),
-                    source: source_interface_id,
-                    target: target_interface_id,
+                    source: source_ip_address_id,
+                    target: target_ip_address_id,
                     edge_type: EdgeType::PhysicalLink {
-                        source_if_entry_id: source_entry.id,
-                        target_if_entry_id: target_entry.id,
+                        source_entity_id: source_entry.id,
+                        target_entity_id: target_entry.id,
                         protocol: DiscoveryProtocol::LLDP, // TODO: Support CDP when implemented
                     },
                     label,
-                    source_handle,
-                    target_handle,
+                    source_handle: EdgeHandle::Bottom,
+                    target_handle: EdgeHandle::Top,
                     is_multi_hop,
+                    view_config: EdgeViewConfig::default(),
                 })
             })
             .collect()
-    }
-
-    /// Figure out handles for two interfaces
-    pub fn determine_interface_handles(
-        ctx: &TopologyContext,
-        source_interface_id: &Uuid,
-        target_interface_id: &Uuid,
-        is_multi_hop: bool,
-    ) -> Option<(EdgeHandle, EdgeHandle)> {
-        let source_subnet = ctx.get_subnet_from_interface_id(*source_interface_id)?;
-        let target_subnet = ctx.get_subnet_from_interface_id(*target_interface_id)?;
-
-        let source_is_infra = ctx
-            .get_interfaces_with_infra_service(source_subnet)
-            .contains(&Some(*source_interface_id));
-        let target_is_infra = ctx
-            .get_interfaces_with_infra_service(target_subnet)
-            .contains(&Some(*target_interface_id));
-
-        // Check if infra constraints are actually necessary
-        let source_needs_infra_constraint = ctx.subnet_has_mixed_infra(source_subnet);
-        let target_needs_infra_constraint = ctx.subnet_has_mixed_infra(target_subnet);
-
-        Some(EdgeHandle::from_subnet_layers(
-            source_subnet,
-            target_subnet,
-            source_is_infra && source_needs_infra_constraint,
-            target_is_infra && target_needs_infra_constraint,
-            is_multi_hop,
-        ))
     }
 
     /// Add edges to a petgraph Graph
@@ -482,72 +406,66 @@ impl EdgeBuilder {
 
     pub fn edge_from_service_bindings(
         ctx: &TopologyContext,
-        source_binding_id: Uuid,
-        target_binding_id: Uuid,
-        group: &Group,
+        source_id: Uuid,
+        target_id: Uuid,
+        dependency: &Dependency,
     ) -> Option<Edge> {
-        let source_interface = ctx.services.iter().find_map(|s| {
-            if let Some(source_binding) = s.get_binding(source_binding_id) {
-                return Some(source_binding.interface_id());
+        let source_ip_address = ctx.services.iter().find_map(|s| {
+            if let Some(source_binding) = s.get_binding(source_id) {
+                return Some(source_binding.ip_address_id());
             }
             None
         });
 
-        let target_interface = ctx.services.iter().find_map(|s| {
-            if let Some(target_binding) = s.get_binding(target_binding_id) {
-                return Some(target_binding.interface_id());
+        let target_ip_address = ctx.services.iter().find_map(|s| {
+            if let Some(target_binding) = s.get_binding(target_id) {
+                return Some(target_binding.ip_address_id());
             }
             None
         });
 
-        let (Some(Some(source_interface)), Some(Some(target_interface))) =
-            (source_interface, target_interface)
+        let (Some(Some(source_ip_address)), Some(Some(target_ip_address))) =
+            (source_ip_address, target_ip_address)
         else {
             return None;
         };
 
-        let is_multi_hop = ctx.edge_is_multi_hop(&source_interface, &target_interface);
-
-        let (source_handle, target_handle) = EdgeBuilder::determine_interface_handles(
-            ctx,
-            &source_interface,
-            &target_interface,
-            is_multi_hop,
-        )?;
+        let is_multi_hop = ctx.edge_is_multi_hop(&source_ip_address, &target_ip_address);
 
         // If edge is intra-subnet, don't label - gets too messy
         let label = if ctx
-            .get_subnet_from_interface_id(source_interface)
+            .get_subnet_from_ip_address_id(source_ip_address)
             .map(|s| s.id)
             == ctx
-                .get_subnet_from_interface_id(target_interface)
+                .get_subnet_from_ip_address_id(target_ip_address)
                 .map(|s| s.id)
         {
             None
         } else {
-            Some(group.base.name.to_string())
+            Some(dependency.base.name.to_string())
         };
 
         Some(Edge {
             id: Uuid::new_v4(),
-            source: source_interface,
-            target: target_interface,
-            edge_type: match group.base.group_type {
-                GroupType::HubAndSpoke => EdgeType::HubAndSpoke {
-                    source_binding_id,
-                    target_binding_id,
-                    group_id: group.id,
+            source: source_ip_address,
+            target: target_ip_address,
+            edge_type: match dependency.base.dependency_type {
+                DependencyType::HubAndSpoke => EdgeType::HubAndSpoke {
+                    source_id,
+                    target_id,
+                    dependency_id: dependency.id,
                 },
-                GroupType::RequestPath => EdgeType::RequestPath {
-                    source_binding_id,
-                    target_binding_id,
-                    group_id: group.id,
+                DependencyType::RequestPath => EdgeType::RequestPath {
+                    source_id,
+                    target_id,
+                    dependency_id: dependency.id,
                 },
             },
             label,
-            source_handle,
-            target_handle,
+            source_handle: EdgeHandle::Bottom,
+            target_handle: EdgeHandle::Top,
             is_multi_hop,
+            view_config: EdgeViewConfig::default(),
         })
     }
 }

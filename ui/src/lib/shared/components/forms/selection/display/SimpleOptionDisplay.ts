@@ -1,4 +1,5 @@
 import type { TagProps } from '../../../data/types';
+import type { IconComponent } from '$lib/shared/utils/types';
 import type { EntityDisplayComponent } from '../types';
 
 /**
@@ -10,8 +11,11 @@ export interface SimpleOption {
 	value: string;
 	label: string;
 	disabled?: boolean;
+	disabledReason?: string;
 	description?: string;
 	tags?: TagProps[];
+	icon?: IconComponent;
+	iconColor?: string;
 }
 
 export const SimpleOptionDisplay: EntityDisplayComponent<SimpleOption, void> = {
@@ -19,5 +23,8 @@ export const SimpleOptionDisplay: EntityDisplayComponent<SimpleOption, void> = {
 	getLabel: (item) => item.label,
 	getDescription: (item) => item.description ?? '',
 	getDisabled: (item) => item.disabled ?? false,
-	getTags: (item) => item.tags ?? []
+	getDisabledReason: (item) => item.disabledReason ?? null,
+	getTags: (item) => item.tags ?? [],
+	getIcon: (item) => item.icon ?? null,
+	getIconColor: (item) => item.iconColor ?? null
 };

@@ -14,17 +14,19 @@ use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::openapi::{Components, OpenApi, PathItem};
 
 use crate::server::bindings::r#impl::base::Binding;
+use crate::server::credentials::handlers::CredentialOrderField;
+use crate::server::credentials::r#impl::base::Credential;
 use crate::server::daemon_api_keys::r#impl::base::DaemonApiKey;
 use crate::server::daemons::handlers::DaemonOrderField;
 use crate::server::daemons::r#impl::base::Daemon;
+use crate::server::dependencies::handlers::DependencyOrderField;
+use crate::server::dependencies::r#impl::base::Dependency;
 use crate::server::discovery::r#impl::base::Discovery;
-use crate::server::groups::handlers::GroupOrderField;
-use crate::server::groups::r#impl::base::Group;
 use crate::server::hosts::handlers::HostOrderField;
 use crate::server::hosts::r#impl::base::Host;
-use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::invites::r#impl::base::Invite;
+use crate::server::ip_addresses::r#impl::base::IPAddress;
 use crate::server::networks::r#impl::Network;
 use crate::server::organizations::r#impl::base::Organization;
 use crate::server::ports::r#impl::base::Port;
@@ -33,8 +35,6 @@ use crate::server::services::r#impl::base::Service;
 use crate::server::shared::handlers::query::{OrderDirection, PaginationParams};
 use crate::server::shared::storage::traits::Entity;
 use crate::server::shares::r#impl::base::Share;
-use crate::server::snmp_credentials::handlers::SnmpCredentialOrderField;
-use crate::server::snmp_credentials::r#impl::base::SnmpCredential;
 use crate::server::subnets::handlers::SubnetOrderField;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::tags::handlers::TagOrderField;
@@ -42,6 +42,8 @@ use crate::server::tags::r#impl::base::Tag;
 use crate::server::topology::types::base::Topology;
 use crate::server::user_api_keys::r#impl::base::UserApiKey;
 use crate::server::users::r#impl::base::User;
+use crate::server::vlans::handlers::VlanOrderField;
+use crate::server::vlans::r#impl::base::Vlan;
 
 /// Tag used to mark endpoints that should be hidden from public documentation
 /// but included in the full OpenAPI spec for client generation.
@@ -60,10 +62,11 @@ pub const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
         HostOrderField,
         ServiceOrderField,
         TagOrderField,
-        GroupOrderField,
+        DependencyOrderField,
         SubnetOrderField,
         DaemonOrderField,
-        SnmpCredentialOrderField
+        CredentialOrderField,
+        VlanOrderField
     )),
     info(
         title = "Scanopy API",
@@ -158,7 +161,9 @@ All responses use a standard envelope:
 
 ## Versioning
 
-The API version is an integer (`api_version: 1`) incremented only on breaking changes. API is versioned independently from the application. Endpoints are prefixed with `/api/v1/`. Check `GET /api/version` for current versions.
+Endpoints are prefixed with `/api/v1/`. The API version is an integer (`api_version: 1`) returned in every response, versioned independently from the application. Check `GET /api/version` for current versions.
+
+**While Scanopy is pre-v1.0 (current: {{SERVER_VERSION}})**, the API should be considered unstable. Breaking changes may be introduced in any release without incrementing the API version. We recommend pinning to a specific Scanopy release if you depend on API stability, and reviewing the [changelog](/changelog) before upgrading. After Scanopy reaches v1.0, breaking API changes will only occur with an API version increment.
 
 ## Multi-Tenancy
 
@@ -177,22 +182,23 @@ Resources are scoped to your **organization** and **network(s)**:
         (name = Daemon::ENTITY_NAME_PLURAL, description = Daemon::ENTITY_DESCRIPTION),
         (name = DaemonApiKey::ENTITY_NAME_PLURAL, description = DaemonApiKey::ENTITY_DESCRIPTION),
         (name = Discovery::ENTITY_NAME_PLURAL, description = Discovery::ENTITY_DESCRIPTION),
-        (name = Group::ENTITY_NAME_PLURAL, description = Group::ENTITY_DESCRIPTION),
+        (name = Dependency::ENTITY_NAME_PLURAL, description = Dependency::ENTITY_DESCRIPTION),
         (name = Host::ENTITY_NAME_PLURAL, description = Host::ENTITY_DESCRIPTION),
-        (name = IfEntry::ENTITY_NAME_PLURAL, description = IfEntry::ENTITY_DESCRIPTION),
         (name = Interface::ENTITY_NAME_PLURAL, description = Interface::ENTITY_DESCRIPTION),
+        (name = IPAddress::ENTITY_NAME_PLURAL, description = IPAddress::ENTITY_DESCRIPTION),
         (name = Invite::ENTITY_NAME_PLURAL, description = Invite::ENTITY_DESCRIPTION),
         (name = Network::ENTITY_NAME_PLURAL, description = Network::ENTITY_DESCRIPTION),
         (name = Organization::ENTITY_NAME_PLURAL, description = Organization::ENTITY_DESCRIPTION),
         (name = Port::ENTITY_NAME_PLURAL, description = Port::ENTITY_DESCRIPTION),
         (name = Service::ENTITY_NAME_PLURAL, description = Service::ENTITY_DESCRIPTION),
         (name = Share::ENTITY_NAME_PLURAL, description = Share::ENTITY_DESCRIPTION),
-        (name = SnmpCredential::ENTITY_NAME_PLURAL, description = SnmpCredential::ENTITY_DESCRIPTION),
+        (name = Credential::ENTITY_NAME_PLURAL, description = Credential::ENTITY_DESCRIPTION),
         (name = Subnet::ENTITY_NAME_PLURAL, description = Subnet::ENTITY_DESCRIPTION),
         (name = Tag::ENTITY_NAME_PLURAL, description = Tag::ENTITY_DESCRIPTION),
         (name = Topology::ENTITY_NAME_PLURAL, description = Topology::ENTITY_DESCRIPTION),
         (name = User::ENTITY_NAME_PLURAL, description = User::ENTITY_DESCRIPTION),
         (name = UserApiKey::ENTITY_NAME_PLURAL, description = UserApiKey::ENTITY_DESCRIPTION),
+        (name = Vlan::ENTITY_NAME_PLURAL, description = Vlan::ENTITY_DESCRIPTION),
         // Non-entity tags with inline descriptions
         (name = "auth", description = "Authentication and session management. Handle user login, logout, and session state."),
         (name = "config", description = "Server configuration. Public configuration settings for client applications."),

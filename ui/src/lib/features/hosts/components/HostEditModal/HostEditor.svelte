@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { createForm } from '@tanstack/svelte-form';
-	import { submitForm, validateForm } from '$lib/shared/components/forms/form-context';
+	import { validateForm, clearStaleFieldInfo } from '$lib/shared/components/forms/form-context';
 	import { Info, ArrowRight } from 'lucide-svelte';
 	import type {
 		Host,
 		HostFormData,
-		IfEntry,
+		Interface,
 		CreateHostWithServicesRequest,
 		UpdateHostWithServicesRequest
 	} from '$lib/features/hosts/types/base';
@@ -18,7 +18,7 @@
 	import { queryKeys } from '$lib/api/query-client';
 	import DetailsForm from './Details/HostDetailsForm.svelte';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
-	import InterfacesForm from './Interfaces/InterfacesForm.svelte';
+	import IPAddressesForm from './IPAddresses/IPAddressesForm.svelte';
 	import ServicesForm from './Services/ServicesForm.svelte';
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Service } from '$lib/features/services/types/base';
@@ -27,7 +27,7 @@
 	import PortsForm from './Ports/PortsForm.svelte';
 	import VirtualizationForm from './Virtualization/VirtualizationForm.svelte';
 	import SnmpForm from './Snmp/SnmpForm.svelte';
-	import IfEntriesForm from './IfEntries/IfEntriesForm.svelte';
+	import InterfacesForm from './Interfaces/InterfacesForm.svelte';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { pushError } from '$lib/shared/stores/feedback';
@@ -38,23 +38,26 @@
 		common_deleting,
 		common_details,
 		common_editName,
-		common_ifEntries,
 		common_interfaces,
+		common_ipAddresses,
 		common_next,
 		common_ports,
 		common_saving,
 		common_serviceConfiguration,
 		common_services,
-		common_virtualization,
+		common_workloads,
 		hosts_createHost,
 		hosts_editor_basicInfo,
 		hosts_editor_interfacesDesc,
-		hosts_editor_snmpTab,
 		hosts_editor_snmpTabDesc,
 		hosts_editor_updateHost,
-		hosts_editor_virtualizationDesc,
+		hosts_editor_workloadsDesc,
 		hosts_failedToSave,
-		hosts_ifEntries_subtitle
+		hosts_interfaces_subtitle,
+		hosts_validation_interfaceIndex,
+		hosts_validation_portField,
+		hosts_validation_serviceIndex,
+		common_validation_entityField
 	} from '$lib/paraglide/messages';
 
 	interface Props {
@@ -83,14 +86,14 @@
 	let networksData = $derived(networksQuery.data ?? []);
 	let defaultNetworkId = $derived(networksData[0]?.id ?? '');
 
-	// Subscribe to ifEntries cache for this host - reactive to cache updates
-	// Since ifEntries are read-only (populated by SNMP discovery), we bypass formData
+	// Subscribe to interfaces cache for this host - reactive to cache updates
+	// Since interfaces are read-only (populated by SNMP discovery), we bypass formData
 	// and read directly from the cache for both tab visibility and form data
-	const ifEntriesQuery = createQuery(() => ({
-		queryKey: [...queryKeys.ifEntries.all, 'forHost', host?.id ?? 'none'],
+	const interfacesQuery = createQuery(() => ({
+		queryKey: [...queryKeys.interfaces.all, 'forHost', host?.id ?? 'none'],
 		queryFn: () => {
-			const allIfEntries = queryClient.getQueryData<IfEntry[]>(queryKeys.ifEntries.all) ?? [];
-			return allIfEntries.filter((e) => e.host_id === host?.id);
+			const allInterfaces = queryClient.getQueryData<Interface[]>(queryKeys.interfaces.all) ?? [];
+			return allInterfaces.filter((e) => e.host_id === host?.id);
 		},
 		enabled: !!host && isOpen,
 		// Check cache frequently since we're reading from another query's cache
@@ -98,8 +101,7 @@
 		refetchInterval: 2000 // Poll while modal is open
 	}));
 
-	let hostIfEntries = $derived(ifEntriesQuery.data ?? []);
-	let hasIfEntries = $derived(hostIfEntries.length > 0);
+	let hostInterfaces = $derived(interfacesQuery.data ?? []);
 
 	let loading = $state(false);
 	let deleting = $state(false);
@@ -119,11 +121,11 @@
 		formData.hostname = values.hostname;
 		formData.description = values.description;
 
-		// Sync interface field values (ip, mac, name) to formData.interfaces
-		if (values.interfaces && formData.interfaces) {
-			for (let i = 0; i < formData.interfaces.length && i < values.interfaces.length; i++) {
-				const formIface = values.interfaces[i];
-				const dataIface = formData.interfaces[i];
+		// Sync interface field values (ip, mac, name) to formData.ip_addresses
+		if (values.ip_addresses && formData.ip_addresses) {
+			for (let i = 0; i < formData.ip_addresses.length && i < values.ip_addresses.length; i++) {
+				const formIface = values.ip_addresses[i];
+				const dataIface = formData.ip_addresses[i];
 				if (formIface && dataIface) {
 					dataIface.ip_address = formIface.ip_address ?? '';
 					dataIface.mac_address = formIface.mac_address ?? null;
@@ -159,7 +161,7 @@
 				const promises = [
 					onUpdate({
 						host: hostPrimitive,
-						interfaces: formData.interfaces,
+						ip_addresses: formData.ip_addresses,
 						ports: formData.ports,
 						services: formData.services
 					})
@@ -170,7 +172,7 @@
 					promises.push(
 						onUpdate({
 							host: updatedHost,
-							interfaces: null,
+							ip_addresses: null,
 							ports: null,
 							services: null
 						})
@@ -201,12 +203,12 @@
 			name: formData.name,
 			hostname: formData.hostname || '',
 			description: formData.description || '',
-			interfaces: formData.interfaces || [],
+			ip_addresses: formData.ip_addresses || [],
 			ports: formData.ports || [],
 			services: formData.services || [],
-			credential_mode: (formData.snmp_credential_id ? 'override' : 'default') as
-				| 'default'
-				| 'override'
+			credential_mode: ((formData.credential_assignments?.length ?? 0) > 0
+				? 'override'
+				: 'default') as 'default' | 'override'
 		},
 		onSubmit: async ({ value }) => {
 			await performSubmission(value);
@@ -278,7 +280,7 @@
 	let activeTab = $state('details');
 	let furthestReached = $state(0);
 
-	// Sub-entity deep link: when navigating to a specific interface/port/ifEntry
+	// Sub-entity deep link: when navigating to a specific interface/port/interface
 	let pendingSubEntityId = $state<string | null>(null);
 
 	function handleSubEntityNavigation(subEntityId: string) {
@@ -296,26 +298,25 @@
 		},
 		{
 			id: 'snmp',
-			label: hosts_editor_snmpTab(),
-			icon: concepts.getIconComponent('SNMP'),
+			label: 'Credentials',
+			icon: entities.getIconComponent('Credential'),
 			description: hosts_editor_snmpTabDesc(),
 			disabled: !isEditing && furthestReached < 1
 		},
 		...(isEditing
 			? [
 					{
-						id: 'if-entries',
-						label: common_ifEntries(),
-						icon: entities.getIconComponent('IfEntry'),
-						description: hosts_ifEntries_subtitle(),
-						disabled: !hasIfEntries
+						id: 'interfaces',
+						label: common_interfaces(),
+						icon: entities.getIconComponent('Interface'),
+						description: hosts_interfaces_subtitle()
 					}
 				]
 			: []),
 		{
-			id: 'interfaces',
-			label: common_interfaces(),
-			icon: entities.getIconComponent('Interface'),
+			id: 'ip-addresses',
+			label: common_ipAddresses(),
+			icon: entities.getIconComponent('IPAddress'),
 			description: hosts_editor_interfacesDesc(),
 			disabled: !isEditing && furthestReached < 2
 		},
@@ -333,13 +334,13 @@
 			description: common_serviceConfiguration(),
 			disabled: !isEditing && furthestReached < 4
 		},
-		...(isEditing && vmManagerServices.length > 0
+		...(isEditing
 			? [
 					{
-						id: 'virtualization',
-						label: common_virtualization(),
-						icon: concepts.getIconComponent('Virtualization'),
-						description: hosts_editor_virtualizationDesc()
+						id: 'workloads',
+						label: common_workloads(),
+						icon: concepts.getIconComponent('Workloads'),
+						description: hosts_editor_workloadsDesc()
 					}
 				]
 			: [])
@@ -376,11 +377,15 @@
 			name: formData.name,
 			hostname: formData.hostname || '',
 			description: formData.description || '',
-			interfaces: formData.interfaces || [],
+			ip_addresses: formData.ip_addresses || [],
 			ports: formData.ports || [],
 			services: formData.services || [],
-			credential_mode: formData.snmp_credential_id ? 'override' : 'default'
+			credential_mode: (formData.credential_assignments?.length ?? 0) > 0 ? 'override' : 'default'
 		});
+
+		// Clear stale field registrations from previous modal sessions to prevent
+		// fieldMetaDerived from carrying over stale validation errors
+		clearStaleFieldInfo(form);
 
 		activeTab = 'details'; // Reset to first tab
 		furthestReached = 0;
@@ -390,13 +395,50 @@
 	const wizardSteps = ['details', 'snmp', 'interfaces', 'ports', 'services'];
 	let isLastWizardStep = $derived(activeTab === wizardSteps[wizardSteps.length - 1]);
 
+	// Resolve form field paths to human-readable names for error messages
+	function resolveFieldName(fieldPath: string): string {
+		const serviceMatch = fieldPath.match(/^services\[(\d+)]\.(.+)$/);
+		if (serviceMatch) {
+			const index = parseInt(serviceMatch[1]);
+			const field = serviceMatch[2].replace(/_/g, ' ');
+			const service = formData.services[index];
+			const name =
+				service?.name ||
+				serviceDefinitions.getItem(service?.service_definition)?.name ||
+				hosts_validation_serviceIndex({ index: index + 1 });
+			return common_validation_entityField({ name, field });
+		}
+
+		const ifaceMatch = fieldPath.match(/^interfaces\[(\d+)]\.(.+)$/);
+		if (ifaceMatch) {
+			const index = parseInt(ifaceMatch[1]);
+			const field = ifaceMatch[2].replace(/_/g, ' ');
+			const iface = formData.ip_addresses[index];
+			const name =
+				iface?.name || iface?.ip_address || hosts_validation_interfaceIndex({ index: index + 1 });
+			return common_validation_entityField({ name, field });
+		}
+
+		const portMatch = fieldPath.match(/^ports\[(\d+)]\.(.+)$/);
+		if (portMatch) {
+			const index = parseInt(portMatch[1]);
+			const field = portMatch[2].replace(/_/g, ' ');
+			return hosts_validation_portField({ index: index + 1, field });
+		}
+
+		return fieldPath.replace(/_/g, ' ');
+	}
+
 	// Handle form-based submission for create flow with steps
 	async function handleFormSubmit() {
 		if (isEditing || isLastWizardStep) {
-			await submitForm(form);
+			const isValid = await validateForm(form, undefined, resolveFieldName);
+			if (isValid) {
+				await form.handleSubmit();
+			}
 		} else {
 			// Validate all fields before advancing to next tab
-			const isValid = await validateForm(form);
+			const isValid = await validateForm(form, undefined, resolveFieldName);
 			if (isValid) {
 				const wizardIndex = wizardSteps.indexOf(activeTab);
 				if (wizardIndex >= 0 && wizardIndex + 1 > furthestReached) {
@@ -465,7 +507,7 @@
 			{#if activeTab === 'details'}
 				<div class="flex h-full flex-col">
 					<div class="min-h-0 flex-1 overflow-y-auto">
-						<DetailsForm {form} bind:formData />
+						<DetailsForm {form} bind:formData {isEditing} />
 					</div>
 					{#if isEditing && host}
 						<EntityMetadataSection entities={[host]} />
@@ -473,10 +515,10 @@
 				</div>
 			{/if}
 
-			<!-- Interfaces Tab -->
-			{#if activeTab === 'interfaces'}
+			<!-- IP Addresses Tab -->
+			{#if activeTab === 'ip-addresses'}
 				<div class="flex h-full flex-col">
-					<InterfacesForm
+					<IPAddressesForm
 						bind:formData
 						{form}
 						{isEditing}
@@ -508,7 +550,7 @@
 			{/if}
 
 			<!-- Virtualization Tab -->
-			{#if activeTab === 'virtualization'}
+			{#if activeTab === 'workloads'}
 				<div class="flex h-full flex-col">
 					<VirtualizationForm
 						virtualizationManagerServices={vmManagerServices}
@@ -520,15 +562,15 @@
 
 			<!-- SNMP Tab -->
 			{#if activeTab === 'snmp'}
-				<div class="h-full overflow-y-auto">
-					<SnmpForm bind:formData {form} {isEditing} network={currentNetwork} />
+				<div class="flex h-full flex-col">
+					<SnmpForm bind:formData network={currentNetwork} />
 				</div>
 			{/if}
 
-			<!-- IfEntries Tab -->
-			{#if activeTab === 'if-entries'}
+			<!-- Interfaces Tab -->
+			{#if activeTab === 'interfaces'}
 				<div class="flex h-full flex-col">
-					<IfEntriesForm ifEntries={hostIfEntries} bind:targetEntityId={pendingSubEntityId} />
+					<InterfacesForm interfaces={hostInterfaces} bind:targetEntityId={pendingSubEntityId} />
 				</div>
 			{/if}
 		</div>

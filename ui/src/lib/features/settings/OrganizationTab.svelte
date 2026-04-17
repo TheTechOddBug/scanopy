@@ -8,12 +8,17 @@
 		useOrganizationQuery,
 		useUpdateOrganizationMutation,
 		useResetOrganizationDataMutation,
-		usePopulateDemoDataMutation
+		usePopulateDemoDataMutation,
+		useDeleteOrganizationMutation
 	} from '$lib/features/organizations/queries';
+	import ConfirmationDialog from '$lib/shared/components/feedback/ConfirmationDialog.svelte';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { createForm } from '@tanstack/svelte-form';
 	import { required, max } from '$lib/shared/components/forms/validators';
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
+	import { useConfigQuery } from '$lib/shared/stores/config-query';
 	import {
 		common_back,
 		common_close,
@@ -22,13 +27,22 @@
 		common_id,
 		common_loading,
 		common_name,
+		common_plan,
 		common_populate,
 		common_populating,
 		common_reset,
 		common_saveChanges,
 		common_saving,
+		common_delete,
 		common_tryAgainLater,
+		settings_org_delete,
+		settings_org_deleteConfirm,
+		settings_org_deleteFailed,
+		settings_org_deleteHelp,
+		settings_org_deleteSuccess,
+		settings_org_deleteTypeName,
 		settings_org_info,
+		settings_org_licenseExpiry,
 		settings_org_nameLabel,
 		settings_org_namePlaceholder,
 		settings_org_populateConfirm,
@@ -64,10 +78,15 @@
 	const updateOrganizationMutation = useUpdateOrganizationMutation();
 	const resetOrganizationDataMutation = useResetOrganizationDataMutation();
 	const populateDemoDataMutation = usePopulateDemoDataMutation();
+	const deleteOrganizationMutation = useDeleteOrganizationMutation();
 
 	let saving = $derived(updateOrganizationMutation.isPending);
 	let resetting = $derived(resetOrganizationDataMutation.isPending);
 	let populating = $derived(populateDemoDataMutation.isPending);
+	let deleting = $derived(deleteOrganizationMutation.isPending);
+	let showDeleteConfirm = $state(false);
+
+	const configQuery = useConfigQuery();
 
 	let org = $derived(organizationQuery.data);
 	let isOwner = $derived(currentUser?.permissions === 'Owner');
@@ -129,6 +148,19 @@
 		}
 	}
 
+	async function handleDelete() {
+		if (!org) return;
+
+		try {
+			await deleteOrganizationMutation.mutateAsync(org.id);
+			pushSuccess(settings_org_deleteSuccess());
+			await goto(resolve('/onboarding'));
+		} catch {
+			pushError(settings_org_deleteFailed());
+			showDeleteConfirm = false;
+		}
+	}
+
 	async function handlePopulateDemo() {
 		if (!org) return;
 
@@ -160,6 +192,14 @@
 							{formatTimestamp(org.created_at)}
 						</InfoRow>
 						<InfoRow label={common_id()} mono={true}>{org.id}</InfoRow>
+						{#if org.plan}
+							<InfoRow label={common_plan()}>{org.plan.type}</InfoRow>
+						{/if}
+						{#if configQuery.data?.license_expiry}
+							<InfoRow label={settings_org_licenseExpiry()}
+								>{configQuery.data.license_expiry}</InfoRow
+							>
+						{/if}
 					</InfoCard>
 
 					<!-- Actions -->
@@ -213,6 +253,25 @@
 								</div>
 							</InfoCard>
 						{/if}
+
+						<!-- Delete Organization -->
+						<InfoCard>
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-primary text-sm font-medium">{settings_org_delete()}</p>
+									<p class="text-secondary text-xs">
+										{settings_org_deleteHelp()}
+									</p>
+								</div>
+								<button
+									onclick={() => (showDeleteConfirm = true)}
+									disabled={deleting}
+									class="btn-danger"
+								>
+									{deleting ? common_loading() : common_delete()}
+								</button>
+							</div>
+						</InfoCard>
 					{/if}
 				</div>
 			</div>
@@ -267,3 +326,19 @@
 		</div>
 	</div>
 </div>
+
+{#if org}
+	<ConfirmationDialog
+		isOpen={showDeleteConfirm}
+		title={settings_org_delete()}
+		message={settings_org_deleteConfirm()}
+		confirmLabel={settings_org_delete()}
+		cancelLabel={common_back()}
+		variant="danger"
+		confirmText={org.name}
+		confirmPlaceholder={settings_org_deleteTypeName()}
+		onConfirm={handleDelete}
+		onCancel={() => (showDeleteConfirm = false)}
+		onClose={() => (showDeleteConfirm = false)}
+	/>
+{/if}

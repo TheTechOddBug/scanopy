@@ -199,13 +199,13 @@ const entityTypeToQueryKeyName: Record<EntityDiscriminants, keyof typeof queryKe
 	Host: 'hosts',
 	Service: 'services',
 	Subnet: 'subnets',
-	Group: 'groups',
+	Dependency: 'dependencies',
 	Network: 'networks',
 	Discovery: 'discovery',
 	Daemon: 'daemons',
 	DaemonApiKey: 'apiKeys',
 	UserApiKey: 'userApiKeys',
-	SnmpCredential: 'snmpCredentials',
+	Credential: 'credentials',
 	// Non-taggable entities (null = no cache invalidation needed)
 	Organization: null,
 	Invite: null,
@@ -214,8 +214,9 @@ const entityTypeToQueryKeyName: Record<EntityDiscriminants, keyof typeof queryKe
 	Tag: null,
 	Port: null,
 	Binding: null,
+	IPAddress: null,
 	Interface: null,
-	IfEntry: null,
+	Vlan: null,
 	Topology: null,
 	Unknown: null
 };

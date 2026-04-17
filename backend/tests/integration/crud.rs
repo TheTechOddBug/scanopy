@@ -1016,8 +1016,6 @@ async fn test_user_api_key_owner_isolation(ctx: &TestContext) -> Result<(), Stri
 
     let created: UserApiKeyResponse = ctx.client.post("/api/v1/auth/keys", &api_key).await?;
     let key_id = created.api_key.id;
-    let user_id = created.api_key.base.user_id;
-    println!("  ✓ Created API key owned by user {}", user_id);
 
     // Create another user's API key directly in the database
     // (simulating another user who created a key)

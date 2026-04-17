@@ -530,6 +530,11 @@ impl ApiError {
         Self::coded(StatusCode::FORBIDDEN, ErrorCode::SharePasswordIncorrect)
     }
 
+    /// Unauthorized (401) - share access token invalid or expired
+    pub fn share_token_invalid() -> Self {
+        Self::coded(StatusCode::UNAUTHORIZED, ErrorCode::ShareTokenInvalid)
+    }
+
     // === Invite errors ===
 
     /// Forbidden (403) - invite already accepted

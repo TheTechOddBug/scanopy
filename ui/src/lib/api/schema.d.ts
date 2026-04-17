@@ -2185,7 +2185,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify password for a password-protected share (returns success/failure only) */
+        /**
+         * Verify password for a password-protected share and return an access token.
+         * @description The returned token is an HS256 JWT tied to the share's current password
+         *     hash; subsequent `/topology` calls send the token instead of the raw
+         *     password. Changing the share password invalidates outstanding tokens.
+         */
         post: operations["verify_share_password"];
         delete?: never;
         options?: never;
@@ -2963,14 +2968,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-17T16:32:49.063378Z",
-             *       "id": "5acb63f9-250d-46f2-a65c-45867bf6b261",
+             *       "created_at": "2026-04-17T22:46:57.206328Z",
+             *       "id": "5a204be3-61b2-4c78-9aff-359cac615c4c",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-17T16:32:49.063378Z"
+             *       "updated_at": "2026-04-17T22:46:57.206328Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3262,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-17T16:32:49.045938Z",
-             *               "id": "f6486502-c8d7-489c-a00a-207bc7131f48",
+             *               "created_at": "2026-04-17T22:46:57.189516Z",
+             *               "id": "072759ac-e445-436d-be6c-efb221b67bfc",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-17T16:32:49.045938Z"
+             *               "updated_at": "2026-04-17T22:46:57.189516Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3278,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "GitLab",
+             *           "service_definition": "Memos",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3542,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-17T16:32:49.058689Z",
-             *           "id": "6d96f3e1-bcc0-4ccb-a9b7-74ec2779474a",
+             *           "created_at": "2026-04-17T22:46:57.201589Z",
+             *           "id": "c9542fcc-a425-4d52-a118-6dc9697ef673",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-17T16:32:49.058689Z"
+             *           "updated_at": "2026-04-17T22:46:57.201589Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3558,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "GitLab",
+             *       "service_definition": "Memos",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3592,6 +3597,22 @@ export interface components {
                 readonly id: string;
                 /** Format: date-time */
                 readonly updated_at: string;
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
+        ApiResponse_ShareAccessTokenResponse: {
+            /**
+             * @description Access token returned after successful password verification.
+             *
+             *     The token is an HS256 JWT tied to the share's `password_hash` — changing
+             *     the share password implicitly invalidates all outstanding tokens.
+             */
+            data?: {
+                access_token: string;
+                /** Format: date-time */
+                expires_at: string;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -3858,12 +3879,6 @@ export interface components {
             meta: components["schemas"]["ApiMeta"];
             success: boolean;
         };
-        ApiResponse_bool: {
-            data?: boolean;
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
         ApiResponse_u32: {
             /** Format: int32 */
             data?: number;
@@ -3904,14 +3919,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-17T16:32:49.046429Z",
-         *       "id": "773b9e54-f09d-45f2-9504-a9f929e6c5b5",
+         *       "created_at": "2026-04-17T22:46:57.189866Z",
+         *       "id": "02a0c053-8564-413a-8c67-18f3f1dd4dfb",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-17T16:32:49.046429Z"
+         *       "updated_at": "2026-04-17T22:46:57.189866Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4111,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "GitLab",
+         *           "service_definition": "Memos",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4955,14 +4970,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-17T16:32:49.045380Z",
-         *               "id": "7ca16e26-60cf-46d9-bcd1-403639d6f90d",
+         *               "created_at": "2026-04-17T22:46:57.189011Z",
+         *               "id": "9f3fe284-9b7f-4c42-be60-5d37f3cd93c2",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-17T16:32:49.045380Z"
+         *               "updated_at": "2026-04-17T22:46:57.189011Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4971,7 +4986,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "GitLab",
+         *           "service_definition": "Memos",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6135,14 +6150,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-17T16:32:49.046217Z",
-         *           "id": "0e336d9e-59f5-4822-9a63-9fa2a629f638",
+         *           "created_at": "2026-04-17T22:46:57.189743Z",
+         *           "id": "0c3bc475-16f4-4b78-bd61-001d0f259375",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-17T16:32:49.046217Z"
+         *           "updated_at": "2026-04-17T22:46:57.189743Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6151,7 +6166,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "GitLab",
+         *       "service_definition": "Memos",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6260,6 +6275,17 @@ export interface components {
             readonly id: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        /**
+         * @description Access token returned after successful password verification.
+         *
+         *     The token is an HS256 JWT tied to the share's `password_hash` — changing
+         *     the share password implicitly invalidates all outstanding tokens.
+         */
+        ShareAccessTokenResponse: {
+            access_token: string;
+            /** Format: date-time */
+            expires_at: string;
         };
         ShareBase: {
             allowed_domains: string[] | null;
@@ -11946,13 +11972,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password verified */
+            /** @description Password verified; access token issued */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_bool"];
+                    "application/json": components["schemas"]["ApiResponse_ShareAccessTokenResponse"];
                 };
             };
             /** @description Invalid password */

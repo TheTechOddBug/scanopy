@@ -45,6 +45,7 @@ export const ERROR_CODES = {
 	networks_access_denied: "You don't have access to network '{network}'",
 	share_password_required: 'Password required for this share',
 	share_password_incorrect: 'Incorrect password',
+	share_token_invalid: 'Access token is invalid or expired',
 	share_domain_not_allowed: "Domain '{domain}' not allowed",
 	invite_already_accepted: 'This invite has already been accepted',
 	invite_email_mismatch: "Invite email doesn't match your account",
@@ -120,6 +121,7 @@ export interface ErrorParams {
 	networks_access_denied: { network: string | number };
 	share_password_required: Record<string, never>;
 	share_password_incorrect: Record<string, never>;
+	share_token_invalid: Record<string, never>;
 	share_domain_not_allowed: { domain: string | number };
 	invite_already_accepted: Record<string, never>;
 	invite_email_mismatch: Record<string, never>;

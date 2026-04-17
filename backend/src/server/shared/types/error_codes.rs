@@ -130,6 +130,8 @@ pub enum ErrorCode {
     SharePasswordRequired,
     /// Incorrect password for share
     SharePasswordIncorrect,
+    /// Share access token is invalid, expired, or signed with a stale password hash
+    ShareTokenInvalid,
     /// Domain not allowed for this share
     ShareDomainNotAllowed { domain: String },
 
@@ -272,6 +274,7 @@ impl ErrorCode {
             // Shares
             Self::SharePasswordRequired => "Password required for this share",
             Self::SharePasswordIncorrect => "Incorrect password",
+            Self::ShareTokenInvalid => "Access token is invalid or expired",
             Self::ShareDomainNotAllowed { .. } => "Domain '{domain}' not allowed",
 
             // Invites
@@ -359,6 +362,7 @@ impl ErrorCode {
             | Self::AuthOidcNotConfigured
             | Self::SharePasswordRequired
             | Self::SharePasswordIncorrect
+            | Self::ShareTokenInvalid
             | Self::InviteAlreadyAccepted
             | Self::InviteEmailMismatch
             | Self::DiscoveryHistoricalReadOnly

@@ -9540,7 +9540,8 @@
           "Shares",
           "internal"
         ],
-        "summary": "Verify password for a password-protected share (returns success/failure only)",
+        "summary": "Verify password for a password-protected share and return an access token.",
+        "description": "The returned token is an HS256 JWT tied to the share's current password\nhash; subsequent `/topology` calls send the token instead of the raw\npassword. Changing the share password invalidates outstanding tokens.",
         "operationId": "verify_share_password",
         "parameters": [
           {
@@ -9566,11 +9567,11 @@
         },
         "responses": {
           "200": {
-            "description": "Password verified",
+            "description": "Password verified; access token issued",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_bool"
+                  "$ref": "#/components/schemas/ApiResponse_ShareAccessTokenResponse"
                 }
               }
             }
@@ -13115,14 +13116,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-17T16:32:49.063378Z",
-              "id": "5acb63f9-250d-46f2-a65c-45867bf6b261",
+              "created_at": "2026-04-17T22:46:57.206328Z",
+              "id": "5a204be3-61b2-4c78-9aff-359cac615c4c",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-17T16:32:49.063378Z"
+              "updated_at": "2026-04-17T22:46:57.206328Z"
             }
           },
           "error": {
@@ -14021,14 +14022,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-17T16:32:49.045938Z",
-                      "id": "f6486502-c8d7-489c-a00a-207bc7131f48",
+                      "created_at": "2026-04-17T22:46:57.189516Z",
+                      "id": "072759ac-e445-436d-be6c-efb221b67bfc",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-17T16:32:49.045938Z"
+                      "updated_at": "2026-04-17T22:46:57.189516Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -14037,7 +14038,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "GitLab",
+                  "service_definition": "Memos",
                   "source": {
                     "type": "Manual"
                   },
@@ -14760,14 +14761,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-17T16:32:49.058689Z",
-                  "id": "6d96f3e1-bcc0-4ccb-a9b7-74ec2779474a",
+                  "created_at": "2026-04-17T22:46:57.201589Z",
+                  "id": "c9542fcc-a425-4d52-a118-6dc9697ef673",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-17T16:32:49.058689Z"
+                  "updated_at": "2026-04-17T22:46:57.201589Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14776,7 +14777,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "Memos",
               "source": {
                 "type": "Manual"
               },
@@ -14871,6 +14872,44 @@
                 }
               }
             ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiResponse_ShareAccessTokenResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Access token returned after successful password verification.\n\nThe token is an HS256 JWT tied to the share's `password_hash` — changing\nthe share password implicitly invalidates all outstanding tokens.",
+            "required": [
+              "access_token",
+              "expires_at"
+            ],
+            "properties": {
+              "access_token": {
+                "type": "string"
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
           },
           "error": {
             "type": [
@@ -15858,30 +15897,6 @@
           }
         }
       },
-      "ApiResponse_bool": {
-        "type": "object",
-        "required": [
-          "success",
-          "meta"
-        ],
-        "properties": {
-          "data": {
-            "type": "boolean"
-          },
-          "error": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ApiMeta"
-          },
-          "success": {
-            "type": "boolean"
-          }
-        }
-      },
       "ApiResponse_u32": {
         "type": "object",
         "required": [
@@ -16141,14 +16156,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-17T16:32:49.046429Z",
-          "id": "773b9e54-f09d-45f2-9504-a9f929e6c5b5",
+          "created_at": "2026-04-17T22:46:57.189866Z",
+          "id": "02a0c053-8564-413a-8c67-18f3f1dd4dfb",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-17T16:32:49.046429Z"
+          "updated_at": "2026-04-17T22:46:57.189866Z"
         }
       },
       "BindingBase": {
@@ -16678,7 +16693,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "Memos",
               "tags": [],
               "virtualization": null
             }
@@ -19196,14 +19211,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-17T16:32:49.045380Z",
-                  "id": "7ca16e26-60cf-46d9-bcd1-403639d6f90d",
+                  "created_at": "2026-04-17T22:46:57.189011Z",
+                  "id": "9f3fe284-9b7f-4c42-be60-5d37f3cd93c2",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-17T16:32:49.045380Z"
+                  "updated_at": "2026-04-17T22:46:57.189011Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -19212,7 +19227,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "Memos",
               "source": {
                 "type": "Manual"
               },
@@ -21439,14 +21454,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-17T16:32:49.035509Z",
-                        "id": "55c980f3-c38b-48eb-8706-9546de5a7c61",
+                        "created_at": "2026-04-17T22:46:57.177958Z",
+                        "id": "8ac5f223-469b-44db-8301-33a658bd3c34",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-17T16:32:49.035509Z"
+                        "updated_at": "2026-04-17T22:46:57.177958Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -21455,7 +21470,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "GitLab",
+                    "service_definition": "Memos",
                     "source": {
                       "type": "Manual"
                     },
@@ -21532,14 +21547,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-17T16:32:49.057318Z",
-                    "id": "7923a86a-9180-437b-9abe-416d713cfd0a",
+                    "created_at": "2026-04-17T22:46:57.200314Z",
+                    "id": "bf947303-96a8-4243-ab23-889fe0f163ed",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-17T16:32:49.057318Z"
+                    "updated_at": "2026-04-17T22:46:57.200314Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -21548,7 +21563,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "GitLab",
+                "service_definition": "Memos",
                 "source": {
                   "type": "Manual"
                 },
@@ -22786,14 +22801,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-17T16:32:49.046217Z",
-              "id": "0e336d9e-59f5-4822-9a63-9fa2a629f638",
+              "created_at": "2026-04-17T22:46:57.189743Z",
+              "id": "0c3bc475-16f4-4b78-bd61-001d0f259375",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-17T16:32:49.046217Z"
+              "updated_at": "2026-04-17T22:46:57.189743Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -22802,7 +22817,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "GitLab",
+          "service_definition": "Memos",
           "source": {
             "type": "Manual"
           },
@@ -23107,6 +23122,23 @@
             }
           }
         ]
+      },
+      "ShareAccessTokenResponse": {
+        "type": "object",
+        "description": "Access token returned after successful password verification.\n\nThe token is an HS256 JWT tied to the share's `password_hash` — changing\nthe share password implicitly invalidates all outstanding tokens.",
+        "required": [
+          "access_token",
+          "expires_at"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "ShareBase": {
         "type": "object",
@@ -24620,7 +24652,7 @@
     },
     {
       "name": "Interfaces",
-      "description": "SNMP ip_address entries (ifTable). Physical and logical ip_addresses discovered via SNMP on hosts."
+      "description": "SNMP ifTable entries. Physical and logical interfaces discovered via SNMP on hosts."
     },
     {
       "name": "IP Addresses",

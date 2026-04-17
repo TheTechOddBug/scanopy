@@ -55,6 +55,7 @@
 	"errors_share_domain_not_allowed": "Domain '{domain}' not allowed",
 	"errors_share_password_incorrect": "Incorrect password",
 	"errors_share_password_required": "Password required for this share",
+	"errors_share_token_invalid": "Access token is invalid or expired",
 	"errors_user_email_in_use": "Email '{email}' is already in use",
 	"errors_validation_bulk_empty": "No IDs provided for bulk operation",
 	"errors_validation_empty": "Field '{field}' cannot be empty",

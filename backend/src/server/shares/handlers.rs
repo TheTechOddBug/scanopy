@@ -42,7 +42,10 @@ use crate::server::{
         },
     },
     shares::r#impl::{
-        api::{CreateUpdateShareRequest, ExportFeatures, PublicShareMetadata, ShareWithTopology},
+        api::{
+            CreateUpdateShareRequest, ExportFeatures, PublicShareMetadata,
+            ShareAccessTokenResponse, ShareWithTopology,
+        },
         base::Share,
     },
     topology::types::base::Topology,
@@ -88,8 +91,9 @@ pub struct ShareQuery {
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ShareTopologyRequest {
+    /// Server-issued access token obtained from `/verify`. Required when the share has a password.
     #[serde(default)]
-    pub password: Option<String>,
+    pub access_token: Option<String>,
     /// Which topology view to return data for
     pub view: crate::server::topology::types::views::TopologyView,
 }
@@ -313,7 +317,11 @@ async fn get_public_share_metadata(
     ))))
 }
 
-/// Verify password for a password-protected share (returns success/failure only)
+/// Verify password for a password-protected share and return an access token.
+///
+/// The returned token is an HS256 JWT tied to the share's current password
+/// hash; subsequent `/topology` calls send the token instead of the raw
+/// password. Changing the share password invalidates outstanding tokens.
 #[utoipa::path(
     post,
     path = "/public/{id}/verify",
@@ -321,7 +329,7 @@ async fn get_public_share_metadata(
     params(("id" = Uuid, Path, description = "Share ID")),
     request_body = String,
     responses(
-        (status = 200, description = "Password verified", body = ApiResponse<bool>),
+        (status = 200, description = "Password verified; access token issued", body = ApiResponse<ShareAccessTokenResponse>),
         (status = 401, description = "Invalid password", body = ApiErrorResponse),
         (status = 404, description = "Share not found", body = ApiErrorResponse),
     )
@@ -330,7 +338,7 @@ async fn verify_share_password(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Json(password): Json<String>,
-) -> ApiResult<Json<ApiResponse<bool>>> {
+) -> ApiResult<Json<ApiResponse<ShareAccessTokenResponse>>> {
     check_share_rate_limit(&id)?;
 
     let share = state
@@ -356,7 +364,12 @@ async fn verify_share_password(
         .verify_share_password(&share, &password)
         .map_err(|_| ApiError::share_password_incorrect())?;
 
-    Ok(Json(ApiResponse::success(true)))
+    let issued = state.services.share_service.issue_access_token(&share)?;
+
+    Ok(Json(ApiResponse::success(ShareAccessTokenResponse {
+        access_token: issued.token,
+        expires_at: issued.expires_at,
+    })))
 }
 
 /// Get topology data for a public share
@@ -391,16 +404,16 @@ async fn get_share_topology(
         ));
     }
 
-    // Handle password-protected shares
+    // Handle password-protected shares: require a valid access token (issued
+    // by `/verify`) in place of the raw password.
     if share.requires_password() {
         check_share_rate_limit(&id)?;
-        match &body.password {
-            Some(password) => {
+        match &body.access_token {
+            Some(token) => {
                 state
                     .services
                     .share_service
-                    .verify_share_password(&share, password)
-                    .map_err(|_| ApiError::share_password_incorrect())?;
+                    .verify_access_token(&share, token)?;
             }
             None => {
                 return Err(ApiError::share_password_required());

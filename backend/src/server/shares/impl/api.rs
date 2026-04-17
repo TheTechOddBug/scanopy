@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -54,4 +55,14 @@ pub struct ShareWithTopology {
     pub share: PublicShareMetadata,
     pub topology: serde_json::Value,
     pub export_features: ExportFeatures,
+}
+
+/// Access token returned after successful password verification.
+///
+/// The token is an HS256 JWT tied to the share's `password_hash` — changing
+/// the share password implicitly invalidates all outstanding tokens.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ShareAccessTokenResponse {
+    pub access_token: String,
+    pub expires_at: DateTime<Utc>,
 }

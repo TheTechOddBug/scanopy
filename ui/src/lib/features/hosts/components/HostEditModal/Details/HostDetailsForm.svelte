@@ -33,11 +33,11 @@
 
 	let { form, formData = $bindable(), isEditing = false }: Props = $props();
 
-	// Track network_id separately (not a form field, so needs manual sync)
-	let selectedNetworkId = $state(formData.network_id);
-	$effect(() => {
-		formData.network_id = selectedNetworkId;
-	});
+	// network_id is read/written directly against formData — no local
+	// snapshot. A prior `$state(formData.network_id)` mirror captured the
+	// value once at mount, went stale when HostEditor reassigned formData
+	// via resetForm(host), and then got clobbered by SelectNetwork's
+	// auto-default (first network) on the falsy initial capture.
 
 	// Check if host has any SNMP system info
 	let hasSnmpInfo = $derived(
@@ -91,7 +91,10 @@
 				</form.Field>
 			</div>
 
-			<SelectNetwork bind:selectedNetworkId />
+			<SelectNetwork
+				selectedNetworkId={formData.network_id}
+				onNetworkChange={(id) => (formData.network_id = id)}
+			/>
 
 			<form.Field
 				name="description"

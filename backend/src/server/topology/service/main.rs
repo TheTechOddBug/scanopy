@@ -428,41 +428,23 @@ impl TopologyService {
             .iter()
             .any(|i| matches!(i.base.neighbor, Some(Neighbor::Interface(_))));
 
-        // Application support: any application-flagged tag is assigned to any
-        // host / service / subnet in this network.
-        let hosts = self
-            .host_service
-            .get_all(StorableFilter::<Host>::new_from_network_ids(&[network_id]).hidden_is(false))
-            .await?;
-        let services = self.get_service_data(network_id).await?;
-        let subnets = self
-            .subnet_service
-            .get_all(StorableFilter::<Subnet>::new_from_network_ids(&[
-                network_id,
-            ]))
-            .await?;
-
-        let mut tag_ids: Vec<Uuid> = Vec::new();
-        for h in &hosts {
-            tag_ids.extend(&h.base.tags);
-        }
-        for s in &services {
-            tag_ids.extend(&s.base.tags);
-        }
-        for s in &subnets {
-            tag_ids.extend(&s.base.tags);
-        }
-        tag_ids.sort();
-        tag_ids.dedup();
-
-        let application = if tag_ids.is_empty() {
-            false
-        } else {
-            self.tag_service
-                .get_all(StorableFilter::<Tag>::new_from_entity_ids(&tag_ids))
+        // Application support: the topology's organization has at least one
+        // application-flagged tag defined. We deliberately do NOT require the
+        // tag to be applied to an entity in this specific network — the main
+        // app always exposes the Application view (rendering services as
+        // "Ungrouped" when no app tags are assigned yet), and the share must
+        // match that behavior. If the org has no application tags at all,
+        // Application grouping is meaningless and we gate it out.
+        let application = match self.network_service.get_by_id(&network_id).await? {
+            Some(network) => self
+                .tag_service
+                .get_all(StorableFilter::<Tag>::new_from_org_id(
+                    &network.base.organization_id,
+                ))
                 .await?
                 .iter()
-                .any(|t| t.base.is_application)
+                .any(|t| t.base.is_application),
+            None => false,
         };
 
         Ok(TopologyViewSupport {

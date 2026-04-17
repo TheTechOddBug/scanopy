@@ -629,10 +629,17 @@
 		lastAutoName = newName;
 	});
 
+	// Any host / IPAddress target with zero candidate services is invalid — its
+	// card shows an inline error and submit is blocked until the user removes it.
+	let hasTargetWithoutServices = $derived(
+		depTargets.some((t) => t.kind !== 'service' && t.candidateServiceIds.length === 0)
+	);
+
 	let canCreate = $derived.by(() => {
 		if (!formValues.name.trim()) return false;
 		if (createDependencyMutation.isPending || updateDependencyMutation.isPending) return false;
 		if (resolvedServices.length < 2) return false;
+		if (hasTargetWithoutServices) return false;
 		if (formValues.memberMode === 'Bindings' && !allServicesHaveBindings) return false;
 		return true;
 	});

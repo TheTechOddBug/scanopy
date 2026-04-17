@@ -8,7 +8,12 @@
 		type EntityTagOption
 	} from '$lib/shared/components/forms/selection/EntityTagSelect.svelte';
 	import BindingPicker from './BindingPicker.svelte';
-	import { common_host, common_at, common_remove } from '$lib/paraglide/messages';
+	import {
+		common_host,
+		common_at,
+		common_remove,
+		dependencies_noServicesError
+	} from '$lib/paraglide/messages';
 	import type { DependencyTarget } from '../../../../resolvers';
 	import type { Topology } from '../../../../types/base';
 
@@ -99,6 +104,11 @@
 
 	let hasPicker = $derived(target.kind !== 'service' && candidates.length > 1);
 
+	// Host / IPAddress targets with zero candidate services are invalid members —
+	// the card surfaces an inline error, and InspectorMultiSelect blocks submit.
+	let hasNoServices = $derived(target.kind !== 'service' && candidates.length === 0);
+	let noServicesLabel = $derived(target.kind === 'ipAddress' ? target.label : (host?.name ?? ''));
+
 	let serviceOptions = $derived<EntityTagOption[]>(
 		candidates.map((svc) => ({
 			id: svc.id,
@@ -132,46 +142,52 @@
 			{/if}
 		</div>
 
-		<!-- Line 2: running {service} (tag or picker) -->
-		<div class="flex items-center gap-1.5">
-			<span class="text-tertiary flex-shrink-0">running</span>
-			{#if hasPicker}
-				<form.Field name="picks.{target.elementId}">
-					{#snippet children(field: AnyFieldApi)}
-						<div class="min-w-0 flex-1">
-							<EntityTagSelect
-								options={serviceOptions}
-								selectedValue={field.state.value ?? resolvedServiceId}
-								onSelect={(id) => field.handleChange(id)}
-							/>
-						</div>
-					{/snippet}
-				</form.Field>
-			{:else if resolvedService}
-				<EntityTag
-					entityRef={entityRef('Service', resolvedService.id, resolvedService)}
-					label={resolvedService.name}
-					icon={serviceIcon(resolvedService.service_definition)}
-					color={serviceIconColor(resolvedService.service_definition)}
-				/>
-			{:else}
-				<span class="text-tertiary text-xs italic">—</span>
-			{/if}
-		</div>
-
-		<!-- Line 3 (Bindings mode): at {binding} (tag or picker) -->
-		{#if memberMode === 'Bindings' && resolvedServiceId}
+		<!-- Line 2: running {service} (tag or picker), or error when no services -->
+		{#if hasNoServices}
+			<p class="text-danger text-xs">
+				{dependencies_noServicesError({ name: noServicesLabel })}
+			</p>
+		{:else}
 			<div class="flex items-center gap-1.5">
-				<span class="text-tertiary flex-shrink-0">{common_at()}</span>
-				<BindingPicker
-					{form}
-					{topology}
-					serviceId={resolvedServiceId}
-					elementId={target.elementId}
-					{flatIndex}
-					{ipAddressIdFilter}
-				/>
+				<span class="text-tertiary flex-shrink-0">running</span>
+				{#if hasPicker}
+					<form.Field name="picks.{target.elementId}">
+						{#snippet children(field: AnyFieldApi)}
+							<div class="min-w-0 flex-1">
+								<EntityTagSelect
+									options={serviceOptions}
+									selectedValue={field.state.value ?? resolvedServiceId}
+									onSelect={(id) => field.handleChange(id)}
+								/>
+							</div>
+						{/snippet}
+					</form.Field>
+				{:else if resolvedService}
+					<EntityTag
+						entityRef={entityRef('Service', resolvedService.id, resolvedService)}
+						label={resolvedService.name}
+						icon={serviceIcon(resolvedService.service_definition)}
+						color={serviceIconColor(resolvedService.service_definition)}
+					/>
+				{:else}
+					<span class="text-tertiary text-xs italic">—</span>
+				{/if}
 			</div>
+
+			<!-- Line 3 (Bindings mode): at {binding} (tag or picker) -->
+			{#if memberMode === 'Bindings' && resolvedServiceId}
+				<div class="flex items-center gap-1.5">
+					<span class="text-tertiary flex-shrink-0">{common_at()}</span>
+					<BindingPicker
+						{form}
+						{topology}
+						serviceId={resolvedServiceId}
+						elementId={target.elementId}
+						{flatIndex}
+						{ipAddressIdFilter}
+					/>
+				</div>
+			{/if}
 		{/if}
 	</div>
 

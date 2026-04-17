@@ -43,7 +43,11 @@ use anyhow::{Error, Result, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
 use mac_address::MacAddress;
-use std::{collections::HashMap, net::IpAddr, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    net::IpAddr,
+    sync::Arc,
+};
 use strum::IntoDiscriminant;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -309,7 +313,7 @@ impl HostService {
         }
 
         let host_ids: Vec<Uuid> = hosts.iter().map(|h| h.id).collect();
-        let (ip_addresses_map, ports_map, services_map, if_entries_map) =
+        let (ip_addresses_map, ports_map, services_map, interfaces_map) =
             self.load_children_for_hosts(&host_ids).await?;
 
         // Hydrate tags from junction table
@@ -328,7 +332,7 @@ impl HostService {
                 let ip_addresses = ip_addresses_map.get(&host.id).cloned().unwrap_or_default();
                 let ports = ports_map.get(&host.id).cloned().unwrap_or_default();
                 let services = services_map.get(&host.id).cloned().unwrap_or_default();
-                let interfaces = if_entries_map.get(&host.id).cloned().unwrap_or_default();
+                let interfaces = interfaces_map.get(&host.id).cloned().unwrap_or_default();
                 HostResponse::from_host_with_children(
                     host,
                     ip_addresses,
@@ -359,7 +363,7 @@ impl HostService {
         }
 
         let host_ids: Vec<Uuid> = result.items.iter().map(|h| h.id).collect();
-        let (ip_addresses_map, ports_map, services_map, if_entries_map) =
+        let (ip_addresses_map, ports_map, services_map, interfaces_map) =
             self.load_children_for_hosts(&host_ids).await?;
 
         // Hydrate tags from junction table
@@ -379,7 +383,7 @@ impl HostService {
                 let ip_addresses = ip_addresses_map.get(&host.id).cloned().unwrap_or_default();
                 let ports = ports_map.get(&host.id).cloned().unwrap_or_default();
                 let services = services_map.get(&host.id).cloned().unwrap_or_default();
-                let interfaces = if_entries_map.get(&host.id).cloned().unwrap_or_default();
+                let interfaces = interfaces_map.get(&host.id).cloned().unwrap_or_default();
                 HostResponse::from_host_with_children(
                     host,
                     ip_addresses,
@@ -446,13 +450,13 @@ impl HostService {
         }
 
         // Load interfaces and group by host_id
-        let mut if_entries_map = self.interface_service.get_for_hosts(host_ids).await?;
+        let mut interfaces_map = self.interface_service.get_for_hosts(host_ids).await?;
         // Sort each host's entries by if_index
-        for entries in if_entries_map.values_mut() {
+        for entries in interfaces_map.values_mut() {
             entries.sort_by_key(|e| e.base.if_index);
         }
 
-        Ok((ip_addresses_map, ports_map, services_map, if_entries_map))
+        Ok((ip_addresses_map, ports_map, services_map, interfaces_map))
     }
 
     // =========================================================================
@@ -483,20 +487,20 @@ impl HostService {
             management_url,
             chassis_id,
             credential_assignments,
-            ip_addresses: interface_inputs,
+            ip_addresses: ip_address_inputs,
             ports: port_inputs,
             services: service_inputs,
-            interfaces: if_entry_inputs,
+            interfaces: interface_inputs,
         } = request;
 
         // Resolve and validate positions (no existing entities for create)
-        let empty_interfaces: Vec<IPAddress> = vec![];
+        let empty_ip_addresses: Vec<IPAddress> = vec![];
         let empty_services: Vec<Service> = vec![];
-        let mut interface_inputs = interface_inputs;
+        let mut ip_address_inputs = ip_address_inputs;
         let mut service_inputs = service_inputs;
         resolve_and_validate_input_positions(
-            &mut interface_inputs,
-            &empty_interfaces,
+            &mut ip_address_inputs,
+            &empty_ip_addresses,
             "ip_address",
         )
         .map_err(|e| ValidationError::new(e.message))?;
@@ -531,9 +535,9 @@ impl HostService {
         let host = Host::new(host_base);
 
         // Build ip_addresses with client-provided IDs
-        let ip_addresses: Vec<IPAddress> = interface_inputs
+        let ip_addresses: Vec<IPAddress> = ip_address_inputs
             .into_iter()
-            .map(|input| input.into_interface(host.id, network_id))
+            .map(|input| input.into_ip_address(host.id, network_id))
             .collect();
 
         // Build ports with client-provided IDs
@@ -549,9 +553,9 @@ impl HostService {
             .collect();
 
         // Build interfaces (server assigns UUIDs)
-        let interfaces: Vec<Interface> = if_entry_inputs
+        let interfaces: Vec<Interface> = interface_inputs
             .into_iter()
-            .map(|input| input.into_if_entry(host.id, network_id))
+            .map(|input| input.into_interface(host.id, network_id))
             .collect();
 
         // Use unified creation with Error behavior for API users
@@ -656,7 +660,7 @@ impl HostService {
         // These are needed because interface/port IDs may change during creation,
         // and service bindings need to be remapped to the new IDs
         let original_host = host.clone();
-        let original_interfaces = ip_addresses.clone();
+        let original_ip_addresses = ip_addresses.clone();
         let original_ports = ports.clone();
 
         // Stage 2: Create or upsert host via ID matching
@@ -665,7 +669,7 @@ impl HostService {
 
         // Capture daemon interface ID → IP mapping before ip_addresses are consumed.
         // Used later to remap credential assignment ip_address_ids to server-assigned IDs.
-        let daemon_interface_ips: Vec<(Uuid, IpAddr)> = ip_addresses
+        let daemon_ip_address_ips: Vec<(Uuid, IpAddr)> = ip_addresses
             .iter()
             .map(|i| (i.id, i.base.ip_address))
             .collect();
@@ -786,7 +790,7 @@ impl HostService {
                 acc
             });
 
-        let mut created_interfaces = Vec::new();
+        let mut created_ip_addresses = Vec::new();
         for mut ip_address in ip_addresses {
             ip_address.base.host_id = created_host.id;
 
@@ -800,7 +804,7 @@ impl HostService {
                 if let Some(existing_iface) =
                     self.ip_address_service.get_by_id(&ip_address.id).await?
                 {
-                    created_interfaces.push(existing_iface);
+                    created_ip_addresses.push(existing_iface);
                     continue;
                 }
 
@@ -814,7 +818,7 @@ impl HostService {
                     .into_iter()
                     .find(|i| i.base.ip_address == ip_address.base.ip_address)
                 {
-                    created_interfaces.push(existing_iface);
+                    created_ip_addresses.push(existing_iface);
                     continue;
                 }
 
@@ -844,7 +848,7 @@ impl HostService {
                             incoming_subnet_id = %ip_address.base.subnet_id,
                             "Found existing ip_address by MAC address (subnet_id differs, 1:1 MAC match)"
                         );
-                        created_interfaces.push(existing_iface);
+                        created_ip_addresses.push(existing_iface);
                         continue;
                     }
                 }
@@ -854,15 +858,15 @@ impl HostService {
                 .ip_address_service
                 .create(ip_address, authentication.clone())
                 .await?;
-            created_interfaces.push(created);
+            created_ip_addresses.push(created);
         }
 
-        // Build scanner→DB interface ID mapping using positional correspondence.
-        // original_interfaces and created_interfaces are 1:1 in order (the interface
+        // Build scanner→DB ip_address ID mapping using positional correspondence.
+        // original_ip_addresses and created_ip_addresses are 1:1 in order (the ip_address
         // creation loop produces exactly one entry per input ip_address).
-        let interface_id_remap: std::collections::HashMap<Uuid, Uuid> = original_interfaces
+        let ip_address_id_remap: std::collections::HashMap<Uuid, Uuid> = original_ip_addresses
             .iter()
-            .zip(created_interfaces.iter())
+            .zip(created_ip_addresses.iter())
             .filter(|(orig, created)| orig.id != created.id)
             .map(|(orig, created)| (orig.id, created.id))
             .collect();
@@ -880,12 +884,12 @@ impl HostService {
                 .reassign_service_interface_bindings(
                     service,
                     &original_host,
-                    &original_interfaces,
+                    &original_ip_addresses,
                     &original_ports,
                     &created_host,
-                    &created_interfaces,
+                    &created_ip_addresses,
                     &created_ports,
-                    &interface_id_remap,
+                    &ip_address_id_remap,
                 )
                 .await;
 
@@ -1203,9 +1207,9 @@ impl HostService {
         // Binding fixup: remap provisional daemon interface/port IDs to server-assigned IDs.
         // This handles the case where interface or port UUIDs changed during dedup (upsert).
         // Idempotent — no-op if no IDs changed.
-        // Reuse the zip-based interface_id_remap built before service creation.
+        // Reuse the zip-based ip_address_id_remap built before service creation.
         // The old structural-matching approach (ip_address + subnet_id) failed on second
-        // scan because original_interfaces retain scanner subnet_ids while created_interfaces
+        // scan because original_ip_addresses retain scanner subnet_ids while created_ip_addresses
         // have DB subnet_ids.
         {
             let port_id_remap: std::collections::HashMap<Uuid, Uuid> = original_ports
@@ -1224,11 +1228,11 @@ impl HostService {
                 })
                 .collect();
 
-            if !interface_id_remap.is_empty() || !port_id_remap.is_empty() {
+            if !ip_address_id_remap.is_empty() || !port_id_remap.is_empty() {
                 for svc in &created_services {
                     let needs_update = svc.base.bindings.iter().any(|b| {
                         b.ip_address_id()
-                            .is_some_and(|id| interface_id_remap.contains_key(&id))
+                            .is_some_and(|id| ip_address_id_remap.contains_key(&id))
                             || b.port_id()
                                 .is_some_and(|id| port_id_remap.contains_key(&id))
                     });
@@ -1237,7 +1241,7 @@ impl HostService {
                         for binding in &mut updated.base.bindings {
                             match &mut binding.base.binding_type {
                                 BindingType::IPAddress { ip_address_id } => {
-                                    if let Some(&new_id) = interface_id_remap.get(ip_address_id) {
+                                    if let Some(&new_id) = ip_address_id_remap.get(ip_address_id) {
                                         *ip_address_id = new_id;
                                     }
                                 }
@@ -1249,7 +1253,7 @@ impl HostService {
                                         *port_id = new_id;
                                     }
                                     if let Some(iface_id) = ip_address_id
-                                        && let Some(&new_id) = interface_id_remap.get(iface_id)
+                                        && let Some(&new_id) = ip_address_id_remap.get(iface_id)
                                     {
                                         *iface_id = new_id;
                                     }
@@ -1265,7 +1269,7 @@ impl HostService {
         tracing::info!(
             host_id = %created_host.id,
             host_name = %created_host.base.name,
-            interface_count = %created_interfaces.len(),
+            interface_count = %created_ip_addresses.len(),
             port_count = %created_ports.len(),
             service_count = %created_services.len(),
             "Created host with children"
@@ -1283,17 +1287,47 @@ impl HostService {
         }
 
         // Create interfaces with correct host_id
-        // Uses create_or_update_by_if_index for deduplication on (host_id, if_index)
-        let mut created_if_entries = Vec::new();
+        // Uses create_or_update_from_discovery for tiered dedup on
+        // (host_id, if_name) → (host_id, if_index) → (host_id, mac_address).
+        let mut created_interfaces = Vec::new();
         for mut entry in interfaces {
             entry.base.host_id = created_host.id;
             entry.base.network_id = created_host.base.network_id;
 
             let created = self
                 .interface_service
-                .create_or_update_by_if_index(entry, authentication.clone())
+                .create_or_update_from_discovery(entry, authentication.clone())
                 .await?;
-            created_if_entries.push(created);
+            created_interfaces.push(created);
+        }
+
+        // Full-sweep prune of interfaces no longer reported for this host.
+        //
+        // Scanopy has no partial-scan mode; a successful SNMP query returns the
+        // host's complete ifTable. Zero incoming interfaces means discovery
+        // couldn't run (network error, credentials revoked), NOT "all removed" —
+        // the empty-set guard below preserves existing rows in that case.
+        if !created_interfaces.is_empty() {
+            let kept_ids: HashSet<Uuid> = created_interfaces.iter().map(|i| i.id).collect();
+            let existing = self
+                .interface_service
+                .get_for_host(&created_host.id)
+                .await?;
+            for iface in existing {
+                if !kept_ids.contains(&iface.id)
+                    && let Err(e) = self
+                        .interface_service
+                        .delete(&iface.id, authentication.clone())
+                        .await
+                {
+                    tracing::warn!(
+                        host_id = %created_host.id,
+                        interface_id = %iface.id,
+                        error = %e,
+                        "Failed to prune orphan interface"
+                    );
+                }
+            }
         }
 
         // Remap credential assignment ip_address_ids from daemon UUIDs to server UUIDs
@@ -1307,11 +1341,11 @@ impl HostService {
                 *ids = ids
                     .iter()
                     .filter_map(|daemon_id| {
-                        let ip = daemon_interface_ips
+                        let ip = daemon_ip_address_ips
                             .iter()
                             .find(|(id, _)| id == daemon_id)
                             .map(|(_, ip)| *ip)?;
-                        created_interfaces
+                        created_ip_addresses
                             .iter()
                             .find(|i| i.base.ip_address == ip)
                             .map(|i| i.id)
@@ -1335,10 +1369,10 @@ impl HostService {
 
         Ok(HostResponse::from_host_with_children(
             created_host,
-            created_interfaces,
+            created_ip_addresses,
             created_ports,
             created_services,
-            created_if_entries,
+            created_interfaces,
         ))
     }
 
@@ -1431,7 +1465,7 @@ impl HostService {
 
         // Sync ip_addresses only if provided (None means preserve existing)
         if let Some(ip_addresses) = ip_addresses {
-            self.sync_interfaces(
+            self.sync_ip_addresses(
                 &updated.id,
                 &network_id,
                 ip_addresses,
@@ -1467,7 +1501,7 @@ impl HostService {
 
     /// Sync ip_addresses for a host: delete removed, update existing, create new.
     /// Client provides UUIDs - if ID exists for this host, update; if not, create.
-    async fn sync_interfaces(
+    async fn sync_ip_addresses(
         &self,
         host_id: &Uuid,
         network_id: &Uuid,
@@ -1499,7 +1533,7 @@ impl HostService {
         // Process each input - create or update based on whether ID exists for this host
         for input in inputs {
             let id = input.id;
-            let mut ip_address = input.into_interface(*host_id, *network_id);
+            let mut ip_address = input.into_ip_address(*host_id, *network_id);
 
             if existing_ids.contains(&id) {
                 // Update existing interface - preserve created_at from existing
@@ -1693,6 +1727,17 @@ impl HostService {
         authentication: AuthenticatedEntity,
         limit_ctx: Option<&HostLimitContext>,
     ) -> Result<HostResponse> {
+        // Capture the subnets the matched host touched before the upsert. If the
+        // host migrates subnets (or an interface stops reporting), we need to
+        // revisit the old subnet during reconciliation so its stale VLAN links
+        // can drop. Post-upsert `get_for_host` alone would miss subnets that
+        // disappeared entirely from the host.
+        let previous_subnets: HashSet<Uuid> = self
+            .find_matching_host_by_interfaces(&host.base.network_id, &ip_addresses)
+            .await?
+            .map(|(_, existing_ips)| existing_ips.iter().map(|i| i.base.subnet_id).collect())
+            .unwrap_or_default();
+
         let host_response = self
             .create_with_children(
                 host,
@@ -1707,31 +1752,35 @@ impl HostService {
             )
             .await?;
 
-        // Link IfEntries to Interfaces via MAC address matching (if any were created)
+        // Link Interfaces to IPAddresses via MAC address matching (if any were created)
         if !interfaces.is_empty()
             && let Err(e) = self
-                .link_if_entries_to_interfaces(&host_response.id, authentication)
+                .link_interfaces_to_ip_addresses(&host_response.id, authentication)
                 .await
         {
-            tracing::warn!(error = %e, "Failed to link IfEntries to Interfaces");
+            tracing::warn!(error = %e, "Failed to link Interfaces to IPAddresses");
         }
 
-        // Auto-link subnets to VLANs based on Interface VLAN assignments
+        // Reconcile subnet↔VLAN junction records across previous ∪ current subnets.
+        // Aggregates native_vlan_id observations from all hosts so stale links drop
+        // when nobody reports them anymore.
         if !interfaces.is_empty()
-            && let Err(e) = self.link_subnets_to_vlans(&host_response.id).await
+            && let Err(e) = self
+                .reconcile_subnet_vlans_for_host(&host_response.id, &previous_subnets)
+                .await
         {
-            tracing::warn!(error = %e, "Failed to auto-link subnets to VLANs");
+            tracing::warn!(error = %e, "Failed to reconcile subnet_vlans");
         }
 
         Ok(host_response)
     }
 
-    /// Link Interface records to Interface records for a host by matching MAC addresses.
+    /// Link Interface records (SNMP if-entries) to IPAddress records for a host by matching MAC addresses.
     ///
-    /// For each Interface with a MAC address, finds an Interface on the same host with
+    /// For each Interface with a MAC address, finds an IPAddress on the same host with
     /// the same MAC address and sets `interface.ip_address_id = ip_address.id`.
     /// This enables PhysicalLink topology edges to have source/target Interface IDs.
-    async fn link_if_entries_to_interfaces(
+    async fn link_interfaces_to_ip_addresses(
         &self,
         host_id: &Uuid,
         authentication: AuthenticatedEntity,
@@ -1784,7 +1833,7 @@ impl HostService {
                     tracing::warn!(
                         interface_id = %interface.id,
                         error = %e,
-                        "Failed to link Interface to Interface"
+                        "Failed to link Interface to IPAddress"
                     );
                 } else {
                     linked_count += 1;
@@ -1796,51 +1845,85 @@ impl HostService {
             tracing::debug!(
                 host_id = %host_id,
                 linked = linked_count,
-                "Linked IfEntries to Interfaces via MAC address and loopback type"
+                "Linked Interfaces to IPAddresses via MAC address and loopback type"
             );
         }
 
         Ok(())
     }
 
-    /// Auto-link subnets to VLANs based on Interface native VLAN assignments.
+    /// Reconcile subnet↔VLAN junction records after a host's discovery.
     ///
-    /// For each Interface with a native_vlan_id and a linked interface (which has a subnet_id),
-    /// creates a subnet ↔ VLAN link in the junction table. Idempotent.
-    async fn link_subnets_to_vlans(&self, host_id: &Uuid) -> Result<()> {
-        let interfaces = self.interface_service.get_for_host(host_id).await?;
-        let ip_addresses = self.ip_address_service.get_for_host(host_id).await?;
-
-        // Build ip_address_id → subnet_id lookup
-        let interface_to_subnet: std::collections::HashMap<Uuid, Uuid> = ip_addresses
+    /// For each subnet in `previous_subnets ∪ current_subnets`, aggregates
+    /// `native_vlan_id` observations across ALL hosts' Interfaces on that subnet
+    /// and replaces the junction set via `save_for_subnet`. The union ensures
+    /// that a host which migrated off a subnet still triggers cleanup for that
+    /// old subnet; post-upsert `get_for_host` captures "current" subnets.
+    ///
+    /// Inside each reconciled subnet, aggregating across all hosts means host A's
+    /// rescan preserves host B's contribution — stale (subnet, vlan) pairs drop
+    /// only when NO host reports them anymore.
+    ///
+    /// NOTE: the reads of fresh data and the `save_for_subnet` calls are not
+    /// transactionally linked. Two hosts on the same subnet discovering
+    /// concurrently can briefly produce a wrong VLAN set; the next scan of any
+    /// host on that subnet corrects it. Eventually consistent.
+    async fn reconcile_subnet_vlans_for_host(
+        &self,
+        host_id: &Uuid,
+        previous_subnets: &HashSet<Uuid>,
+    ) -> Result<()> {
+        let current: HashSet<Uuid> = self
+            .ip_address_service
+            .get_for_host(host_id)
+            .await?
             .iter()
-            .map(|i| (i.id, i.base.subnet_id))
+            .map(|i| i.base.subnet_id)
             .collect();
 
-        let mut linked_count = 0;
-        for interface in &interfaces {
-            let Some(vlan_id) = interface.base.native_vlan_id else {
+        let to_reconcile: HashSet<Uuid> = previous_subnets.union(&current).copied().collect();
+
+        let mut reconciled = 0usize;
+        for subnet_id in to_reconcile {
+            // All IPAddresses on this subnet across all hosts
+            let subnet_ip_addresses = self.ip_address_service.get_for_subnet(&subnet_id).await?;
+            if subnet_ip_addresses.is_empty() {
+                // Subnet has no ip_addresses at all; drop any leftover links.
+                self.vlan_service
+                    .subnet_vlan_storage
+                    .save_for_subnet(&subnet_id, &[])
+                    .await?;
+                reconciled += 1;
                 continue;
-            };
-            let Some(ip_address_id) = interface.base.ip_address_id else {
-                continue;
-            };
-            let Some(subnet_id) = interface_to_subnet.get(&ip_address_id) else {
-                continue;
-            };
+            }
+
+            let ip_address_ids: Vec<Uuid> = subnet_ip_addresses.iter().map(|i| i.id).collect();
+
+            // All Interface rows linked to those IPAddresses across all hosts
+            let linked_interfaces = self
+                .interface_service
+                .get_by_ip_address_ids(&ip_address_ids)
+                .await?;
+
+            let mut fresh_vlan_ids: Vec<Uuid> = linked_interfaces
+                .iter()
+                .filter_map(|iface| iface.base.native_vlan_id)
+                .collect();
+            fresh_vlan_ids.sort();
+            fresh_vlan_ids.dedup();
 
             self.vlan_service
                 .subnet_vlan_storage
-                .link(subnet_id, &vlan_id)
+                .save_for_subnet(&subnet_id, &fresh_vlan_ids)
                 .await?;
-            linked_count += 1;
+            reconciled += 1;
         }
 
-        if linked_count > 0 {
+        if reconciled > 0 {
             tracing::debug!(
                 host_id = %host_id,
-                linked = linked_count,
-                "Auto-linked subnets to VLANs from Interface data"
+                subnets_reconciled = reconciled,
+                "Reconciled subnet_vlans links from Interface data"
             );
         }
 

@@ -10,7 +10,11 @@ use crate::server::{
     shared::{
         events::bus::EventBus,
         services::traits::{ChildCrudService, CrudService, EventBusService},
-        storage::{filter::StorableFilter, generic::GenericPostgresStorage, traits::Storage},
+        storage::{
+            filter::StorableFilter,
+            generic::GenericPostgresStorage,
+            traits::{Entity, Storage},
+        },
     },
     tags::entity_tags::EntityTagService,
 };
@@ -155,30 +159,94 @@ impl InterfaceService {
         Ok(())
     }
 
-    /// Create or update an interface based on host_id + if_index (unique identifier)
-    /// Used during SNMP discovery to upsert interface table entries.
-    /// Skips validation for discovery flow (data comes from trusted SNMP source).
-    pub async fn create_or_update_by_if_index(
+    /// Lookup an interface by (host_id, if_name). Returns None if no match.
+    /// Used as tier-1 dedup during discovery — if_name (ifXTable.ifName) is the
+    /// most stable SNMP port identifier, surviving reboots and if_index shifts.
+    pub async fn get_by_host_and_name(
+        &self,
+        host_id: &Uuid,
+        if_name: &str,
+    ) -> Result<Option<Interface>> {
+        let filter = StorableFilter::<Interface>::new_from_host_ids(&[*host_id]).if_name(if_name);
+        let mut rows = self.storage.get_all(filter).await?;
+        Ok(rows.pop())
+    }
+
+    /// Lookup interfaces whose ip_address_id is in the given set.
+    /// Used by subnet_vlans reconciliation to aggregate native_vlan_id observations.
+    pub async fn get_by_ip_address_ids(&self, ids: &[Uuid]) -> Result<Vec<Interface>> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let filter = StorableFilter::<Interface>::new_from_uuids_column("ip_address_id", ids);
+        self.storage.get_all(filter).await
+    }
+
+    /// Create or update an interface during discovery, matching on a tiered identity:
+    ///
+    /// 1. `(host_id, if_name)` when incoming `if_name.is_some()` — strong identifier
+    ///    from ifXTable, survives reboots/config reloads
+    /// 2. `(host_id, if_index)` — fallback for legacy devices without ifXTable, and
+    ///    for pre-existing rows written before the `if_name` column was added (first
+    ///    post-upgrade rescan finds those rows by `if_index` and writes `if_name`,
+    ///    after which tier 1 owns the match)
+    /// 3. `(host_id, mac_address)` with single-MAC guard — last resort for ports
+    ///    that got both renamed and renumbered but kept their NIC
+    ///
+    /// On match, preserves id + created_at + mac_address + if_name (via
+    /// `preserve_immutable_fields`) and overwrites the rest with the incoming payload.
+    /// Skips relationship validation (data from trusted SNMP source).
+    pub async fn create_or_update_from_discovery(
         &self,
         entry: Interface,
         authentication: AuthenticatedEntity,
     ) -> Result<Interface> {
-        // Check for existing entry with same host_id and if_index
-        let existing = self
-            .get_for_host(&entry.base.host_id)
-            .await?
-            .into_iter()
-            .find(|e| e.base.if_index == entry.base.if_index);
+        let existing = self.find_matching_existing(&entry).await?;
 
         if let Some(existing_entry) = existing {
-            // Update existing entry, preserving the ID
             let mut updated = entry;
             updated.id = existing_entry.id;
-            updated.created_at = existing_entry.created_at;
+            updated.preserve_immutable_fields(&existing_entry);
             self.update(&mut updated, authentication).await
         } else {
-            // Create new entry
             self.create(entry, authentication).await
         }
+    }
+
+    /// Tiered lookup: if_name → if_index → mac_address with single-MAC guard.
+    async fn find_matching_existing(&self, entry: &Interface) -> Result<Option<Interface>> {
+        let host_id = entry.base.host_id;
+
+        // Tier 1: (host_id, if_name) — strong identifier when present
+        if let Some(ref if_name) = entry.base.if_name
+            && let Some(found) = self.get_by_host_and_name(&host_id, if_name).await?
+        {
+            return Ok(Some(found));
+        }
+
+        // Load host's interfaces once for tiers 2 + 3
+        let existing = self.get_for_host(&host_id).await?;
+
+        // Tier 2: (host_id, if_index)
+        if let Some(found) = existing
+            .iter()
+            .find(|e| e.base.if_index == entry.base.if_index)
+        {
+            return Ok(Some(found.clone()));
+        }
+
+        // Tier 3: (host_id, mac_address) with single-MAC guard. A MAC shared by
+        // multiple existing rows indicates VLAN sub-interfaces or bond members and
+        // must not collapse into a single match — only accept a 1:1 MAC pairing.
+        if let Some(mac) = entry.base.mac_address {
+            let mut candidates = existing.iter().filter(|e| e.base.mac_address == Some(mac));
+            if let Some(first) = candidates.next()
+                && candidates.next().is_none()
+            {
+                return Ok(Some(first.clone()));
+            }
+        }
+
+        Ok(None)
     }
 }

@@ -356,7 +356,8 @@ impl Entity for Interface {
 
     const ENTITY_NAME_SINGULAR: &'static str = "Interface";
     const ENTITY_NAME_PLURAL: &'static str = "Interfaces";
-    const ENTITY_DESCRIPTION: &'static str = "SNMP ip_address entries (ifTable). Physical and logical ip_addresses discovered via SNMP on hosts.";
+    const ENTITY_DESCRIPTION: &'static str =
+        "SNMP ifTable entries. Physical and logical interfaces discovered via SNMP on hosts.";
 
     fn entity_category() -> EntityCategory {
         EntityCategory::NetworkInfrastructure
@@ -384,6 +385,12 @@ impl Entity for Interface {
         if existing.base.mac_address.is_some() {
             self.base.mac_address = existing.base.mac_address;
         }
+        // Keep a previously-captured if_name if the current scan happens to lack it
+        // (partial SNMP response, or device that stopped reporting ifXTable). Losing
+        // if_name silently breaks tier-1 matching on the next scan.
+        if existing.base.if_name.is_some() && self.base.if_name.is_none() {
+            self.base.if_name = existing.base.if_name.clone();
+        }
     }
 }
 
@@ -394,5 +401,83 @@ impl ChildStorableEntity for Interface {
 
     fn parent_id(&self) -> Uuid {
         self.base.host_id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mac_address::MacAddress;
+
+    fn make_interface(if_index: i32, if_name: Option<&str>, mac: Option<&str>) -> Interface {
+        let mut base = InterfaceBase::default();
+        base.host_id = Uuid::new_v4();
+        base.network_id = Uuid::new_v4();
+        base.if_index = if_index;
+        base.if_name = if_name.map(String::from);
+        base.mac_address = mac.map(|s| s.parse::<MacAddress>().unwrap());
+        Interface::new(base)
+    }
+
+    #[test]
+    fn preserve_immutable_fields_keeps_existing_if_name_when_incoming_is_none() {
+        let existing = make_interface(5, Some("GigabitEthernet0/1"), None);
+        let mut incoming = make_interface(5, None, None);
+
+        incoming.preserve_immutable_fields(&existing);
+
+        assert_eq!(
+            incoming.base.if_name.as_deref(),
+            Some("GigabitEthernet0/1"),
+            "Existing if_name must survive a scan that dropped it; otherwise tier-1 matching silently breaks next time."
+        );
+    }
+
+    #[test]
+    fn preserve_immutable_fields_allows_if_name_to_be_updated_when_incoming_has_value() {
+        let existing = make_interface(5, Some("Old"), None);
+        let mut incoming = make_interface(5, Some("New"), None);
+
+        incoming.preserve_immutable_fields(&existing);
+
+        assert_eq!(incoming.base.if_name.as_deref(), Some("New"));
+    }
+
+    #[test]
+    fn preserve_immutable_fields_populates_if_name_from_legacy_null_row() {
+        // Scenario: pre-existing prod row has if_name = NULL; rescan reports "eth0".
+        // Incoming.if_name is Some, existing.if_name is None. Incoming value wins.
+        let existing = make_interface(5, None, None);
+        let mut incoming = make_interface(5, Some("eth0"), None);
+
+        incoming.preserve_immutable_fields(&existing);
+
+        assert_eq!(incoming.base.if_name.as_deref(), Some("eth0"));
+    }
+
+    #[test]
+    fn preserve_immutable_fields_keeps_existing_mac_when_incoming_is_none() {
+        let existing = make_interface(5, Some("eth0"), Some("aa:bb:cc:dd:ee:ff"));
+        let mut incoming = make_interface(5, Some("eth0"), None);
+
+        incoming.preserve_immutable_fields(&existing);
+
+        assert_eq!(
+            incoming.base.mac_address, existing.base.mac_address,
+            "MAC address should be treated as immutable once captured from SNMP ifPhysAddress."
+        );
+    }
+
+    #[test]
+    fn preserve_immutable_fields_copies_created_at() {
+        let existing = make_interface(5, Some("eth0"), None);
+        let mut incoming = make_interface(5, Some("eth0"), None);
+        // Incoming has a fresh created_at; after preservation it should match the
+        // existing row's created_at so the row's age is not reset on every scan.
+        assert_ne!(existing.created_at, incoming.created_at);
+
+        incoming.preserve_immutable_fields(&existing);
+
+        assert_eq!(incoming.created_at, existing.created_at);
     }
 }

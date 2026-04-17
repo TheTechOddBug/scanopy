@@ -109,8 +109,8 @@ pub struct LegacyIPAddress {
 }
 
 impl LegacyIPAddress {
-    /// Convert to new Interface format, filling in missing fields.
-    pub fn into_interface(self, network_id: Uuid, host_id: Uuid) -> IPAddress {
+    /// Convert to new IPAddress format, filling in missing fields.
+    pub fn into_ip_address(self, network_id: Uuid, host_id: Uuid) -> IPAddress {
         IPAddress {
             id: self.id,
             created_at: self.created_at.unwrap_or_else(Utc::now),
@@ -302,7 +302,7 @@ impl LegacyHostWithServicesRequest {
         let ip_addresses: Vec<IPAddress> = host
             .ip_addresses
             .into_iter()
-            .map(|i| i.into_interface(network_id, host_id))
+            .map(|i| i.into_ip_address(network_id, host_id))
             .collect();
 
         // Convert legacy ports to new format

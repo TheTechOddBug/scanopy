@@ -182,9 +182,9 @@ pub struct IPAddressInput {
 }
 
 impl IPAddressInput {
-    /// Convert to Interface entity with the given host_id and network_id.
+    /// Convert to IPAddress entity with the given host_id and network_id.
     /// Position must be resolved before calling this (via `resolve_and_validate_input_positions`).
-    pub fn into_interface(self, host_id: Uuid, network_id: Uuid) -> IPAddress {
+    pub fn into_ip_address(self, host_id: Uuid, network_id: Uuid) -> IPAddress {
         let now = chrono::Utc::now();
         IPAddress {
             id: self.id,
@@ -426,7 +426,7 @@ pub struct InterfaceInput {
 
 impl InterfaceInput {
     /// Convert to Interface entity with the given host_id and network_id.
-    pub fn into_if_entry(self, host_id: Uuid, network_id: Uuid) -> Interface {
+    pub fn into_interface(self, host_id: Uuid, network_id: Uuid) -> Interface {
         let now = chrono::Utc::now();
         Interface {
             id: Uuid::new_v4(),

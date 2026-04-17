@@ -740,6 +740,7 @@
 								displayComponent={SimpleOptionDisplay}
 								onSelect={handleViewChange}
 								options={viewOptions}
+								minWidth="22rem"
 							/>
 						</div>
 					{/if}

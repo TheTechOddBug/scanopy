@@ -304,7 +304,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
     fn icon(&self) -> Icon {
         match self {
             EntityDiscriminants::Organization => Icon::Building,
-            EntityDiscriminants::Network => Icon::Globe,
+            EntityDiscriminants::Network => Icon::LandPlot,
             EntityDiscriminants::User => Icon::User,
             EntityDiscriminants::Tag => Icon::Tag,
             EntityDiscriminants::Invite => Icon::UserPlus,
@@ -316,12 +316,12 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Host => Icon::Server,
             EntityDiscriminants::Service => Icon::Layers,
             EntityDiscriminants::IPAddress => Icon::MapPin,
-            EntityDiscriminants::Port => Icon::EthernetPort,
+            EntityDiscriminants::Port => Icon::Binary,
             EntityDiscriminants::Binding => Icon::Link,
-            EntityDiscriminants::Interface => Icon::Cable,
+            EntityDiscriminants::Interface => Icon::EthernetPort,
             EntityDiscriminants::Credential => Icon::Asterisk,
-            EntityDiscriminants::Subnet => Icon::Network,
-            EntityDiscriminants::Vlan => Icon::CircleDashed,
+            EntityDiscriminants::Subnet => Icon::Cloud,
+            EntityDiscriminants::Vlan => Icon::Network,
             EntityDiscriminants::Dependency => Icon::Waypoints,
             EntityDiscriminants::Topology => Icon::ChartBarStacked,
 

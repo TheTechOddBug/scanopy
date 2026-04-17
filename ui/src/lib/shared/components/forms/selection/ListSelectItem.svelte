@@ -185,7 +185,7 @@
 			{/if}
 		</div>
 		{#if description.length > 0}
-			<span class="text-tertiary mt-1 block truncate text-xs">{description}</span>
+			<span class="text-tertiary mt-1 block text-xs">{description}</span>
 		{/if}
 		{#if showEditableDescription && descriptionOnSave}
 			<div class="mt-2 border-t border-gray-700/50 pt-2">

@@ -65,7 +65,7 @@
     "name": "L3 Logical",
     "description": "IP addresses and connectivity across subnets",
     "category": null,
-    "icon": "globe",
+    "icon": "signpost",
     "color": "Blue",
     "metadata": {
       "edge_view_configs": {

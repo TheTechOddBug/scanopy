@@ -76,7 +76,7 @@ impl EntityMetadataProvider for Concept {
             Concept::Workloads => Icon::Boxes,
             Concept::SNMP => Icon::Activity,
             Concept::L2 => Icon::Cable,
-            Concept::L3 => Icon::Globe,
+            Concept::L3 => Icon::Signpost,
             Concept::Application => Icon::Workflow,
             Concept::Compute => Icon::Cpu,
         }

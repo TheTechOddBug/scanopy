@@ -23,7 +23,8 @@
 		onDisabledClick = null,
 		showSearch = false,
 		displayComponent,
-		getOptionContext = () => new Object() as OC
+		getOptionContext = () => new Object() as OC,
+		minWidth = null
 	}: {
 		label?: string;
 		selectedValue?: string | null;
@@ -37,6 +38,13 @@
 		showSearch?: boolean;
 		displayComponent: EntityDisplayComponent<V, OC>;
 		getOptionContext?: (option: V, index: number) => OC;
+		/** Optional minimum width (CSS length, e.g. "18rem" or "280px") applied
+		 *  to the trigger. Use in unbounded contexts — like the topology view
+		 *  picker in a toolbar — where the trigger otherwise collapses to its
+		 *  content width and the dropdown inherits that narrowness. Bounded
+		 *  contexts (ConfigPanels, ListManagers) should leave this null so the
+		 *  trigger keeps filling its container. */
+		minWidth?: string | null;
 	} = $props();
 
 	let isOpen = $state(false);
@@ -263,6 +271,7 @@
 		class="select-trigger text-primary flex w-full items-center justify-between rounded-md px-3 py-2
            {error ? 'border-red-500' : ''}
            {disabled || options.length == 0 ? 'cursor-not-allowed opacity-50' : ''}"
+		style={minWidth ? `min-width: ${minWidth}` : undefined}
 		disabled={disabled || options.length == 0}
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-3">

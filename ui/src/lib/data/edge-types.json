@@ -84,7 +84,7 @@
     "name": "Physical Link",
     "description": null,
     "category": null,
-    "icon": "cable",
+    "icon": "ethernet-port",
     "color": "Teal",
     "metadata": {
       "edge_style": "Bezier",

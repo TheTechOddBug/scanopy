@@ -51,7 +51,7 @@ export const ERROR_CODES = {
 	discovery_historical_read_only: 'Historical discovery cannot be modified via API',
 	discovery_subnet_network_mismatch: "Subnet '{subnet}' is on a different network",
 	discovery_session_not_found: "Discovery session '{id}' not found",
-	interface_ip_out_of_range: "IP address '{ip}' is not within subnet '{subnet}' range",
+	ip_address_out_of_range: "IP address '{ip}' is not within subnet '{subnet}' range",
 	daemon_network_mismatch: 'Cannot send updates for a different network',
 	daemon_identity_mismatch: 'Cannot send updates for a different daemon',
 	daemon_standby:
@@ -126,7 +126,7 @@ export interface ErrorParams {
 	discovery_historical_read_only: Record<string, never>;
 	discovery_subnet_network_mismatch: { subnet: string | number };
 	discovery_session_not_found: { id: string | number };
-	interface_ip_out_of_range: { ip: string | number; subnet: string | number };
+	ip_address_out_of_range: { ip: string | number; subnet: string | number };
 	daemon_network_mismatch: Record<string, never>;
 	daemon_identity_mismatch: Record<string, never>;
 	daemon_standby: Record<string, never>;

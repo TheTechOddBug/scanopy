@@ -47,7 +47,7 @@ impl ViewBuilder for L2Builder {
         //    (unlike create_physical_link_edges which uses ip_address_id)
         let mut processed_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
 
-        for source_entry in ctx.get_if_entries_with_neighbor() {
+        for source_entry in ctx.get_interfaces_with_neighbor() {
             let target_interface_id = match &source_entry.base.neighbor {
                 Some(Neighbor::Interface(id)) => *id,
                 _ => continue,
@@ -63,7 +63,7 @@ impl ViewBuilder for L2Builder {
                 continue;
             }
 
-            let target_entry = match ctx.get_if_entry_by_id(target_interface_id) {
+            let target_entry = match ctx.get_interface_by_id(target_interface_id) {
                 Some(e) => e,
                 None => continue,
             };
@@ -102,7 +102,7 @@ impl ViewBuilder for L2Builder {
         let mut qualifying_host_ids: HashSet<Uuid> = HashSet::new();
 
         // Hosts with neighbor data
-        for entry in ctx.get_if_entries_with_neighbor() {
+        for entry in ctx.get_interfaces_with_neighbor() {
             qualifying_host_ids.insert(entry.base.host_id);
         }
 
@@ -111,7 +111,7 @@ impl ViewBuilder for L2Builder {
             if let EdgeType::PhysicalLink {
                 target_entity_id, ..
             } = &edge.edge_type
-                && let Some(entry) = ctx.get_if_entry_by_id(*target_entity_id)
+                && let Some(entry) = ctx.get_interface_by_id(*target_entity_id)
             {
                 qualifying_host_ids.insert(entry.base.host_id);
             }
@@ -148,7 +148,7 @@ impl ViewBuilder for L2Builder {
         // 4. Create Port elements for qualifying hosts' IfEntries
         for &host_id in &qualifying_host_ids {
             let container_id = Self::container_id_for_host(host_id);
-            for entry in ctx.get_if_entries_for_host(host_id) {
+            for entry in ctx.get_interfaces_for_host(host_id) {
                 // Skip virtual/software interface types
                 if EXCLUDED_IF_TYPES.contains(&entry.base.if_type) {
                     continue;

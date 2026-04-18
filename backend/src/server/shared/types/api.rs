@@ -505,13 +505,13 @@ impl ApiError {
         Self::coded(StatusCode::BAD_REQUEST, ErrorCode::ValidationBulkEmpty)
     }
 
-    // === Interface errors ===
+    // === IP address errors ===
 
     /// Bad request (400) - IP address is not within subnet range
-    pub fn interface_ip_out_of_range(ip: &str, subnet: &str) -> Self {
+    pub fn ip_address_out_of_range(ip: &str, subnet: &str) -> Self {
         Self::coded(
             StatusCode::BAD_REQUEST,
-            ErrorCode::InterfaceIpOutOfRange {
+            ErrorCode::IpAddressOutOfRange {
                 ip: ip.to_string(),
                 subnet: subnet.to_string(),
             },

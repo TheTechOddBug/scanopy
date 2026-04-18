@@ -333,13 +333,13 @@ impl EdgeBuilder {
         // Track processed pairs to avoid duplicate edges (A→B and B→A)
         let mut processed_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
 
-        ctx.get_if_entries_with_neighbor()
+        ctx.get_interfaces_with_neighbor()
             .into_iter()
             .filter_map(|source_entry| {
                 // Get the target Interface ID from resolved neighbor
                 let target_interface_id = match &source_entry.base.neighbor {
                     Some(Neighbor::Interface(id)) => *id,
-                    _ => return None, // Already filtered by get_if_entries_with_neighbor
+                    _ => return None, // Already filtered by get_interfaces_with_neighbor
                 };
 
                 // Skip if we've already processed this pair (in either direction)
@@ -355,9 +355,9 @@ impl EdgeBuilder {
                 processed_pairs.insert(pair_key);
 
                 // Resolve interface IDs with single-interface host fallback
-                let source_ip_address_id = ctx.resolve_ip_address_for_if_entry(source_entry)?;
-                let target_entry = ctx.get_if_entry_by_id(target_interface_id)?;
-                let target_ip_address_id = ctx.resolve_ip_address_for_if_entry(target_entry)?;
+                let source_ip_address_id = ctx.resolve_ip_address_for_interface(source_entry)?;
+                let target_entry = ctx.get_interface_by_id(target_interface_id)?;
+                let target_ip_address_id = ctx.resolve_ip_address_for_interface(target_entry)?;
 
                 let is_multi_hop =
                     ctx.edge_is_multi_hop(&source_ip_address_id, &target_ip_address_id);

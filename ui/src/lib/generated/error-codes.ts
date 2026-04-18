@@ -46,7 +46,6 @@ export const ERROR_CODES = {
 	share_password_required: 'Password required for this share',
 	share_password_incorrect: 'Incorrect password',
 	share_token_invalid: 'Access token is invalid or expired',
-	share_domain_not_allowed: "Domain '{domain}' not allowed",
 	invite_already_accepted: 'This invite has already been accepted',
 	invite_email_mismatch: "Invite email doesn't match your account",
 	discovery_historical_read_only: 'Historical discovery cannot be modified via API',
@@ -122,7 +121,6 @@ export interface ErrorParams {
 	share_password_required: Record<string, never>;
 	share_password_incorrect: Record<string, never>;
 	share_token_invalid: Record<string, never>;
-	share_domain_not_allowed: { domain: string | number };
 	invite_already_accepted: Record<string, never>;
 	invite_email_mismatch: Record<string, never>;
 	discovery_historical_read_only: Record<string, never>;

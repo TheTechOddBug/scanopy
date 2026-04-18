@@ -261,7 +261,7 @@ export function buildDockerCompose(
 	envVars.push(`SCANOPY_LOG_FILE=${dockerLogPath}`);
 
 	const volumeMounts = [
-		'daemon-config:/root/.config/daemon',
+		'daemon-config:/root/.config/scanopy/daemon',
 		'/var/run/docker.sock:/var/run/docker.sock:ro',
 		'/var/log/scanopy:/var/log/scanopy'
 	];

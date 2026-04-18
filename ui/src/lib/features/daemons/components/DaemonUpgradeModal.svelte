@@ -32,6 +32,9 @@
 		daemons_upgradeMultipleDaemonsBody,
 		daemons_upgradeStartProcess,
 		daemons_upgradeStopProcess,
+		daemons_upgradeVolumeMountCheckLabel,
+		daemons_upgradeVolumeMountWarningBody,
+		daemons_upgradeVolumeMountWarningTitle,
 		discovery_upgradeConsolidationWarning
 	} from '$lib/paraglide/messages';
 
@@ -152,6 +155,18 @@ docker compose up -d`;
 						{:else if linuxMethod === 'docker'}
 							<!-- Linux Docker Compose -->
 							<div class="space-y-3">
+								<InlineWarning
+									title={daemons_upgradeVolumeMountWarningTitle()}
+									body={daemons_upgradeVolumeMountWarningBody()}
+								/>
+								<p class="text-secondary text-sm">
+									{daemons_upgradeVolumeMountCheckLabel()}
+								</p>
+								<CodeContainer
+									language="bash"
+									expandable={false}
+									code="docker compose config | grep daemon-config"
+								/>
 								<div class="space-y-2">
 									<p class="text-secondary text-sm">
 										{daemons_dockerLatestTag()}

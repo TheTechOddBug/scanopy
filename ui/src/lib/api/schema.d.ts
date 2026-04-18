@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-17T16:32:49.063378Z",
-             *       "id": "5acb63f9-250d-46f2-a65c-45867bf6b261",
+             *       "created_at": "2026-04-18T17:48:33.520953Z",
+             *       "id": "78a47958-8106-4653-9144-98e42acd3c51",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-17T16:32:49.063378Z"
+             *       "updated_at": "2026-04-18T17:48:33.520953Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-17T16:32:49.045938Z",
-             *               "id": "f6486502-c8d7-489c-a00a-207bc7131f48",
+             *               "created_at": "2026-04-18T17:48:33.504358Z",
+             *               "id": "30662b56-1e46-41ce-9084-de6cc710aed1",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-17T16:32:49.045938Z"
+             *               "updated_at": "2026-04-18T17:48:33.504358Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "GitLab",
+             *           "service_definition": "Memos",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3537,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-17T16:32:49.058689Z",
-             *           "id": "6d96f3e1-bcc0-4ccb-a9b7-74ec2779474a",
+             *           "created_at": "2026-04-18T17:48:33.516401Z",
+             *           "id": "f64a694e-b3e2-4f1c-8d6f-e9240f762a29",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-17T16:32:49.058689Z"
+             *           "updated_at": "2026-04-18T17:48:33.516401Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3553,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "GitLab",
+             *       "service_definition": "Memos",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3904,14 +3904,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-17T16:32:49.046429Z",
-         *       "id": "773b9e54-f09d-45f2-9504-a9f929e6c5b5",
+         *       "created_at": "2026-04-18T17:48:33.504700Z",
+         *       "id": "74b4e90b-fadd-429d-b484-725434224387",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-17T16:32:49.046429Z"
+         *       "updated_at": "2026-04-18T17:48:33.504700Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4096,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "GitLab",
+         *           "service_definition": "Memos",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4392,6 +4392,7 @@ export interface components {
         };
         /** @description Daemon version status including health and any warnings */
         DaemonVersionStatus: {
+            has_correct_docker_volume_mount?: boolean;
             status: components["schemas"]["VersionHealthStatus"];
             supports_unified_discovery?: boolean;
             version?: string | null;
@@ -4955,14 +4956,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-17T16:32:49.045380Z",
-         *               "id": "7ca16e26-60cf-46d9-bcd1-403639d6f90d",
+         *               "created_at": "2026-04-18T17:48:33.503871Z",
+         *               "id": "45e74a70-1bf5-44b3-b47d-da7e9c297df0",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-17T16:32:49.045380Z"
+         *               "updated_at": "2026-04-18T17:48:33.503871Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4971,7 +4972,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "GitLab",
+         *           "service_definition": "Memos",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6135,14 +6136,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-17T16:32:49.046217Z",
-         *           "id": "0e336d9e-59f5-4822-9a63-9fa2a629f638",
+         *           "created_at": "2026-04-18T17:48:33.504577Z",
+         *           "id": "2c509d83-f3af-416f-838b-49aa3b649103",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-17T16:32:49.046217Z"
+         *           "updated_at": "2026-04-18T17:48:33.504577Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6151,7 +6152,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "GitLab",
+         *       "service_definition": "Memos",
          *       "source": {
          *         "type": "Manual"
          *       },

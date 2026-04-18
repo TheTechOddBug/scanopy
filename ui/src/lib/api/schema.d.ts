@@ -2185,7 +2185,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify password for a password-protected share (returns success/failure only) */
+        /**
+         * Verify password for a password-protected share and return an access token.
+         * @description The returned token is an HS256 JWT tied to the share's current password
+         *     hash; subsequent `/topology` calls send the token instead of the raw
+         *     password. Changing the share password invalidates outstanding tokens.
+         */
         post: operations["verify_share_password"];
         delete?: never;
         options?: never;
@@ -2963,14 +2968,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-18T14:12:05.071464Z",
-             *       "id": "84f62cc6-a867-44aa-a7db-33bc08326406",
+             *       "created_at": "2026-04-18T15:49:08.322494Z",
+             *       "id": "3f6a903d-fab5-44af-b98e-7dba1aba9eb2",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-18T14:12:05.071464Z"
+             *       "updated_at": "2026-04-18T15:49:08.322494Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3262,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-18T14:12:05.054642Z",
-             *               "id": "41ccb59f-0889-4e7a-b588-c44dba0045e7",
+             *               "created_at": "2026-04-18T15:49:08.301365Z",
+             *               "id": "f152f7bb-59d1-4b07-8d1d-dd5cef57360b",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-18T14:12:05.054642Z"
+             *               "updated_at": "2026-04-18T15:49:08.301365Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3278,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Nest Protect",
+             *           "service_definition": "Zabbix Agent",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3542,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-18T14:12:05.066744Z",
-             *           "id": "2fbdda81-b26a-4ce8-8dd9-9ea311a16f18",
+             *           "created_at": "2026-04-18T15:49:08.316844Z",
+             *           "id": "c04fc227-0dc8-49ac-92f5-956b727e3c11",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-18T14:12:05.066744Z"
+             *           "updated_at": "2026-04-18T15:49:08.316844Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3558,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Nest Protect",
+             *       "service_definition": "Zabbix Agent",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3592,6 +3597,22 @@ export interface components {
                 readonly id: string;
                 /** Format: date-time */
                 readonly updated_at: string;
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
+        ApiResponse_ShareAccessTokenResponse: {
+            /**
+             * @description Access token returned after successful password verification.
+             *
+             *     The token is an HS256 JWT tied to the share's `password_hash` — changing
+             *     the share password implicitly invalidates all outstanding tokens.
+             */
+            data?: {
+                access_token: string;
+                /** Format: date-time */
+                expires_at: string;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -3858,12 +3879,6 @@ export interface components {
             meta: components["schemas"]["ApiMeta"];
             success: boolean;
         };
-        ApiResponse_bool: {
-            data?: boolean;
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
         ApiResponse_u32: {
             /** Format: int32 */
             data?: number;
@@ -3904,14 +3919,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-18T14:12:05.054973Z",
-         *       "id": "e60d7bd3-82fd-4008-a67b-c055d23de82a",
+         *       "created_at": "2026-04-18T15:49:08.301812Z",
+         *       "id": "144f91ea-7572-4f3c-be4d-ea399ce641ff",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-18T14:12:05.054973Z"
+         *       "updated_at": "2026-04-18T15:49:08.301812Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4111,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Nest Protect",
+         *           "service_definition": "Zabbix Agent",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4955,14 +4970,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-18T14:12:05.054181Z",
-         *               "id": "c0a56e78-7b7e-4c93-9bb9-63b30c8697bf",
+         *               "created_at": "2026-04-18T15:49:08.300750Z",
+         *               "id": "6eb5e1f9-7c1f-4935-8d12-77a900da9986",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-18T14:12:05.054181Z"
+         *               "updated_at": "2026-04-18T15:49:08.300750Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4971,7 +4986,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Nest Protect",
+         *           "service_definition": "Zabbix Agent",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6135,14 +6150,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-18T14:12:05.054860Z",
-         *           "id": "8291f08b-2983-4cf3-8df7-2669274d4ab1",
+         *           "created_at": "2026-04-18T15:49:08.301658Z",
+         *           "id": "8dc45508-23e6-4c42-9fb0-e3a9ba3f1353",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-18T14:12:05.054860Z"
+         *           "updated_at": "2026-04-18T15:49:08.301658Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6151,7 +6166,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Nest Protect",
+         *       "service_definition": "Zabbix Agent",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6260,6 +6275,17 @@ export interface components {
             readonly id: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        /**
+         * @description Access token returned after successful password verification.
+         *
+         *     The token is an HS256 JWT tied to the share's `password_hash` — changing
+         *     the share password implicitly invalidates all outstanding tokens.
+         */
+        ShareAccessTokenResponse: {
+            access_token: string;
+            /** Format: date-time */
+            expires_at: string;
         };
         ShareBase: {
             allowed_domains: string[] | null;
@@ -6578,7 +6604,7 @@ export interface components {
          * @description Which topology view is being rendered
          * @enum {string}
          */
-        TopologyView: "L2Physical" | "L3Logical" | "Workloads" | "Application";
+        TopologyView: "L3Logical" | "L2Physical" | "Workloads" | "Application";
         /** @enum {string} */
         TransportProtocol: "Udp" | "Tcp";
         /**
@@ -11946,13 +11972,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password verified */
+            /** @description Password verified; access token issued */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_bool"];
+                    "application/json": components["schemas"]["ApiResponse_ShareAccessTokenResponse"];
                 };
             };
             /** @description Invalid password */

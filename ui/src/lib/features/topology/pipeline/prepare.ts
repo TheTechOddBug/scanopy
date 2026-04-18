@@ -74,6 +74,22 @@ export function prepareTopologyData(
 
 	let collapsed = get(collapsedContainers);
 
+	// Drop stale IDs from the persisted collapsed set before any level logic.
+	// A set carried over from a different topology (e.g. auth app → share) can
+	// contain IDs not present here; the inferrer's "all current containers are
+	// collapsed → level 1" fallback then triggers spuriously whenever the stale
+	// superset happens to cover every current container.
+	if (collapsed.size > 0) {
+		const currentContainerIds = new Set(
+			topology.nodes.filter((n) => n.node_type === 'Container').map((n) => n.id)
+		);
+		const stripped = new Set([...collapsed].filter((id) => currentContainerIds.has(id)));
+		if (stripped.size !== collapsed.size) {
+			collapsedContainers.set(stripped);
+			collapsed = stripped;
+		}
+	}
+
 	// Seed collapse state on first topology render.
 	//
 	// Truly fresh session (no stored level, first pipeline run this tab):

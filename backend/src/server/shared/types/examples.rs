@@ -294,6 +294,7 @@ pub fn daemon() -> Daemon {
             api_key_id: None,
             is_unreachable: false,
             standby: false,
+            standby_cleared_at: None,
         },
     }
 }

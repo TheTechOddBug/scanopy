@@ -2963,14 +2963,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-18T17:48:33.520953Z",
-             *       "id": "78a47958-8106-4653-9144-98e42acd3c51",
+             *       "created_at": "2026-04-18T18:51:57.317175Z",
+             *       "id": "c3c4de0a-7f0e-4b76-8cc2-2568c470479a",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-18T17:48:33.520953Z"
+             *       "updated_at": "2026-04-18T18:51:57.317175Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3257,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-18T17:48:33.504358Z",
-             *               "id": "30662b56-1e46-41ce-9084-de6cc710aed1",
+             *               "created_at": "2026-04-18T18:51:57.297130Z",
+             *               "id": "ce08ec9d-55b6-47fb-8fdf-fd8aa15e5bdb",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-18T17:48:33.504358Z"
+             *               "updated_at": "2026-04-18T18:51:57.297130Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3273,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Memos",
+             *           "service_definition": "Domoticz",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3537,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-18T17:48:33.516401Z",
-             *           "id": "f64a694e-b3e2-4f1c-8d6f-e9240f762a29",
+             *           "created_at": "2026-04-18T18:51:57.311894Z",
+             *           "id": "19a89ad1-f3d0-4868-8d57-061754295efb",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-18T17:48:33.516401Z"
+             *           "updated_at": "2026-04-18T18:51:57.311894Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3553,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Memos",
+             *       "service_definition": "Domoticz",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3904,14 +3904,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-18T17:48:33.504700Z",
-         *       "id": "74b4e90b-fadd-429d-b484-725434224387",
+         *       "created_at": "2026-04-18T18:51:57.297360Z",
+         *       "id": "702b915f-f35f-45ef-a1d8-a931c59303cf",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-18T17:48:33.504700Z"
+         *       "updated_at": "2026-04-18T18:51:57.297360Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4096,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Memos",
+         *           "service_definition": "Domoticz",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4274,6 +4274,16 @@ export interface components {
             network_id: string;
             /** @description Whether the daemon is on standby due to inactivity (no discovery in 30 days). */
             readonly standby?: boolean;
+            /**
+             * Format: date-time
+             * @description Timestamp of the most recent standby → active transition. Set by
+             *     `process_startup` when a restarted daemon is un-standby'd, and by
+             *     the discovery auto-wake path. Used by the nightly inactivity check
+             *     to grant a bounded grace period before re-evaluating inactivity —
+             *     prevents the "restart → cleared → re-standby'd before discovery runs"
+             *     race with weekly scheduled discoveries.
+             */
+            readonly standby_cleared_at?: string | null;
             tags: string[];
             readonly url: string;
             /**
@@ -4956,14 +4966,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-18T17:48:33.503871Z",
-         *               "id": "45e74a70-1bf5-44b3-b47d-da7e9c297df0",
+         *               "created_at": "2026-04-18T18:51:57.296823Z",
+         *               "id": "36cca985-1bc7-4288-a137-cb7ac6d1d9bb",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-18T17:48:33.503871Z"
+         *               "updated_at": "2026-04-18T18:51:57.296823Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4972,7 +4982,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Memos",
+         *           "service_definition": "Domoticz",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6136,14 +6146,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-18T17:48:33.504577Z",
-         *           "id": "2c509d83-f3af-416f-838b-49aa3b649103",
+         *           "created_at": "2026-04-18T18:51:57.297284Z",
+         *           "id": "4fd52775-1114-4b7e-8985-ee13e077dad6",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-18T17:48:33.504577Z"
+         *           "updated_at": "2026-04-18T18:51:57.297284Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6152,7 +6162,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Memos",
+         *       "service_definition": "Domoticz",
          *       "source": {
          *         "type": "Manual"
          *       },

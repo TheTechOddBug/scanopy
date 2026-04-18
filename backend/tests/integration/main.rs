@@ -13,6 +13,7 @@ mod billing;
 mod billing_fixtures;
 mod compat;
 mod crud;
+mod daemons;
 mod discovery;
 #[cfg(feature = "generate-fixtures")]
 mod fixtures;
@@ -234,6 +235,20 @@ async fn integration_tests() {
         .expect("Permission tests failed");
 
     // =========================================================================
+    // Phase 9b: Daemon Service Tests
+    // =========================================================================
+    // Runs last because it intentionally mutates the ServerPoll daemon's
+    // standby/standby_cleared_at state — no downstream phase depends on
+    // those fields.
+    println!("\n============================================================");
+    println!("Phase 9b: Daemon Service Tests");
+    println!("============================================================");
+
+    daemons::run_daemon_tests(serverpoll_daemon_id, &serverpoll_api_key)
+        .await
+        .expect("Daemon service tests failed");
+
+    // =========================================================================
     // Phase 10: Generate Fixtures (optional)
     // =========================================================================
     #[cfg(feature = "generate-fixtures")]
@@ -257,6 +272,7 @@ async fn integration_tests() {
     println!("   - Billing middleware tests");
     println!("   - Handler validation tests");
     println!("   - Permission & access control tests");
+    println!("   - Daemon service tests (/startup clears standby + grants grace)");
     #[cfg(feature = "generate-fixtures")]
     println!("   - Fixture generation");
     println!("   - API compatibility tests");

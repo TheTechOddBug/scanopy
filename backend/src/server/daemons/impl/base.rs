@@ -53,6 +53,15 @@ pub struct DaemonBase {
     #[serde(default)]
     #[schema(read_only)]
     pub standby: bool,
+    /// Timestamp of the most recent standby → active transition. Set by
+    /// `process_startup` when a restarted daemon is un-standby'd, and by
+    /// the discovery auto-wake path. Used by the nightly inactivity check
+    /// to grant a bounded grace period before re-evaluating inactivity —
+    /// prevents the "restart → cleared → re-standby'd before discovery runs"
+    /// race with weekly scheduled discoveries.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schema(read_only)]
+    pub standby_cleared_at: Option<DateTime<Utc>>,
 }
 
 #[derive(

@@ -238,20 +238,15 @@ async fn integration_tests() {
     // Phase 9b: Daemon Service Tests
     // =========================================================================
     // Runs last because it intentionally mutates the ServerPoll daemon's
-    // state (standby, name, version) via re-registration — no downstream
-    // phase depends on those fields.
+    // standby/standby_cleared_at state — no downstream phase depends on
+    // those fields.
     println!("\n============================================================");
     println!("Phase 9b: Daemon Service Tests");
     println!("============================================================");
 
-    daemons::run_daemon_tests(
-        serverpoll_daemon_id,
-        &serverpoll_api_key,
-        network.id,
-        user.id,
-    )
-    .await
-    .expect("Daemon service tests failed");
+    daemons::run_daemon_tests(serverpoll_daemon_id, &serverpoll_api_key)
+        .await
+        .expect("Daemon service tests failed");
 
     // =========================================================================
     // Phase 10: Generate Fixtures (optional)
@@ -277,7 +272,7 @@ async fn integration_tests() {
     println!("   - Billing middleware tests");
     println!("   - Handler validation tests");
     println!("   - Permission & access control tests");
-    println!("   - Daemon service tests (re-registration clears standby)");
+    println!("   - Daemon service tests (/startup clears standby + grants grace)");
     #[cfg(feature = "generate-fixtures")]
     println!("   - Fixture generation");
     println!("   - API compatibility tests");

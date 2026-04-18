@@ -4328,6 +4328,7 @@ fn generate_daemons(
                 api_key_id: None,
                 is_unreachable: false,
                 standby: false,
+                standby_cleared_at: None,
             },
         });
     }
@@ -4349,6 +4350,7 @@ fn generate_daemons(
                     interfaced_subnet_ids: vec![subnet.id],
                 },
                 mode: DaemonMode::DaemonPoll,
+                standby_cleared_at: None,
                 name: "DC Daemon".to_string(),
                 tags: vec![],
                 version: Version::parse(env!("CARGO_PKG_VERSION"))

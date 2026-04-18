@@ -870,6 +870,7 @@ async fn provision_daemon(
         api_key_id: Some(created_api_key.id),
         is_unreachable: false,
         standby: false,
+        standby_cleared_at: None,
     });
 
     let created_daemon = state

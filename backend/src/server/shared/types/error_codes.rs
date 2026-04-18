@@ -147,9 +147,9 @@ pub enum ErrorCode {
     /// Discovery session not found
     DiscoverySessionNotFound { id: Uuid },
 
-    // === Interface ===
+    // === IP address ===
     /// IP address is not within subnet range
-    InterfaceIpOutOfRange { ip: String, subnet: String },
+    IpAddressOutOfRange { ip: String, subnet: String },
 
     // === Daemon ===
     /// Cannot send updates for a different network
@@ -285,8 +285,8 @@ impl ErrorCode {
             }
             Self::DiscoverySessionNotFound { .. } => "Discovery session '{id}' not found",
 
-            // Interface
-            Self::InterfaceIpOutOfRange { .. } => {
+            // IP address
+            Self::IpAddressOutOfRange { .. } => {
                 "IP address '{ip}' is not within subnet '{subnet}' range"
             }
 
@@ -420,7 +420,7 @@ impl ErrorCode {
                 Some(json_map! { "subnet" => subnet })
             }
             Self::DiscoverySessionNotFound { id } => Some(json_map! {"id" => id}),
-            Self::InterfaceIpOutOfRange { ip, subnet } => {
+            Self::IpAddressOutOfRange { ip, subnet } => {
                 Some(json_map! { "ip" => ip, "subnet" => subnet })
             }
             Self::DaemonVersionTooOld {

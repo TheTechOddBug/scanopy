@@ -50,19 +50,19 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(generated::export_csv))
 }
 
-/// Validate that interface's host and subnet are on the same network as the interface,
-/// and that the IP address falls within the subnet's CIDR range.
+/// Validate that the IP address's host and subnet are on the same network as the IP address,
+/// and that the IP value falls within the subnet's CIDR range.
 async fn validate_ip_address_consistency(
     state: &AppState,
-    interface: &IPAddress,
+    ip_address: &IPAddress,
 ) -> Result<(), ApiError> {
     // Validate host is on the same network
     if let Some(host) = state
         .services
         .host_service
-        .get_by_id(&interface.base.host_id)
+        .get_by_id(&ip_address.base.host_id)
         .await?
-        && host.base.network_id != interface.base.network_id
+        && host.base.network_id != ip_address.base.network_id
     {
         return Err(ApiError::entity_network_mismatch::<Host>());
     }
@@ -71,17 +71,17 @@ async fn validate_ip_address_consistency(
     if let Some(subnet) = state
         .services
         .subnet_service
-        .get_by_id(&interface.base.subnet_id)
+        .get_by_id(&ip_address.base.subnet_id)
         .await?
     {
-        if subnet.base.network_id != interface.base.network_id {
+        if subnet.base.network_id != ip_address.base.network_id {
             return Err(ApiError::entity_network_mismatch::<Subnet>());
         }
 
         // Validate IP address is within subnet CIDR
-        if !subnet.base.cidr.contains(&interface.base.ip_address) {
-            return Err(ApiError::interface_ip_out_of_range(
-                &interface.base.ip_address.to_string(),
+        if !subnet.base.cidr.contains(&ip_address.base.ip_address) {
+            return Err(ApiError::ip_address_out_of_range(
+                &ip_address.base.ip_address.to_string(),
                 &subnet.base.name,
             ));
         }
@@ -90,15 +90,15 @@ async fn validate_ip_address_consistency(
     Ok(())
 }
 
-/// Create a new interface
-/// Position is automatically assigned to the end of the host's interface list.
+/// Create a new IP address
+/// Position is automatically assigned to the end of the host's IP address list.
 #[utoipa::path(
     post,
     path = "",
     tag = IPAddress::ENTITY_NAME_PLURAL,
     request_body = IPAddress,
     responses(
-        (status = 200, description = "Interface created successfully", body = ApiResponse<IPAddress>),
+        (status = 200, description = "IP address created successfully", body = ApiResponse<IPAddress>),
         (status = 400, description = "Network mismatch or invalid request", body = ApiErrorResponse),
     ),
      security(("user_api_key" = []), ("session" = []))
@@ -106,34 +106,34 @@ async fn validate_ip_address_consistency(
 async fn create_ip_address(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Member>,
-    Json(mut interface): Json<IPAddress>,
+    Json(mut ip_address): Json<IPAddress>,
 ) -> ApiResult<Json<ApiResponse<IPAddress>>> {
-    validate_ip_address_consistency(&state, &interface).await?;
+    validate_ip_address_consistency(&state, &ip_address).await?;
 
     // Auto-assign position to end of list (ignore any position in the request)
     let next_position = state
         .services
         .ip_address_service
-        .get_next_position_for_host(&interface.base.host_id)
+        .get_next_position_for_host(&ip_address.base.host_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
-    interface.base.position = next_position;
+    ip_address.base.position = next_position;
 
-    create_handler::<IPAddress>(State(state), auth, Json(interface)).await
+    create_handler::<IPAddress>(State(state), auth, Json(ip_address)).await
 }
 
-/// Update an interface
-/// Position must be within valid range and not conflict with other interfaces.
+/// Update an IP address
+/// Position must be within valid range and not conflict with other IP addresses.
 #[utoipa::path(
     put,
     path = "/{id}",
     tag = IPAddress::ENTITY_NAME_PLURAL,
-    params(("id" = Uuid, Path, description = "Interface ID")),
+    params(("id" = Uuid, Path, description = "IP address ID")),
     request_body = IPAddress,
     responses(
-        (status = 200, description = "Interface updated successfully", body = ApiResponse<IPAddress>),
+        (status = 200, description = "IP address updated successfully", body = ApiResponse<IPAddress>),
         (status = 400, description = "Network mismatch or invalid request", body = ApiErrorResponse),
-        (status = 404, description = "Interface not found", body = ApiErrorResponse),
+        (status = 404, description = "IP address not found", body = ApiErrorResponse),
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
@@ -141,30 +141,30 @@ async fn update_ip_address(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Member>,
     path: Path<Uuid>,
-    Json(interface): Json<IPAddress>,
+    Json(ip_address): Json<IPAddress>,
 ) -> ApiResult<Json<ApiResponse<IPAddress>>> {
-    validate_ip_address_consistency(&state, &interface).await?;
+    validate_ip_address_consistency(&state, &ip_address).await?;
 
     // Validate position is within range and doesn't conflict
     state
         .services
         .ip_address_service
-        .validate_position_for_update(&path, &interface.base.host_id, interface.base.position)
+        .validate_position_for_update(&path, &ip_address.base.host_id, ip_address.base.position)
         .await?;
 
-    update_handler::<IPAddress>(State(state), auth, path, Json(interface)).await
+    update_handler::<IPAddress>(State(state), auth, path, Json(ip_address)).await
 }
 
-/// Delete an interface
-/// Remaining interfaces for the host are renumbered to maintain sequential positions.
+/// Delete an IP address
+/// Remaining IP addresses for the host are renumbered to maintain sequential positions.
 #[utoipa::path(
     delete,
     path = "/{id}",
     tag = IPAddress::ENTITY_NAME_PLURAL,
-    params(("id" = Uuid, Path, description = "Interface ID")),
+    params(("id" = Uuid, Path, description = "IP address ID")),
     responses(
-        (status = 200, description = "Interface deleted successfully", body = EmptyApiResponse),
-        (status = 404, description = "Interface not found", body = ApiErrorResponse),
+        (status = 200, description = "IP address deleted successfully", body = EmptyApiResponse),
+        (status = 404, description = "IP address not found", body = ApiErrorResponse),
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
@@ -197,13 +197,13 @@ pub async fn delete_ip_address(
 
     let host_id = entity.base.host_id;
 
-    // Delete the interface
+    // Delete the IP address
     service
         .delete(&id, entity_auth.clone())
         .await
         .map_err(ApiError::from)?;
 
-    // Renumber remaining interfaces for this host
+    // Renumber remaining IP addresses for this host
     service
         .renumber_ip_addresses_for_host(&host_id, entity_auth)
         .await
@@ -212,15 +212,15 @@ pub async fn delete_ip_address(
     Ok(Json(ApiResponse::success(())))
 }
 
-/// Bulk delete interfaces
-/// Remaining interfaces for affected hosts are renumbered to maintain sequential positions.
+/// Bulk delete IP addresses
+/// Remaining IP addresses for affected hosts are renumbered to maintain sequential positions.
 #[utoipa::path(
     post,
     path = "/bulk-delete",
     tag = IPAddress::ENTITY_NAME_PLURAL,
     request_body = Vec<Uuid>,
     responses(
-        (status = 200, description = "Interfaces deleted successfully", body = ApiResponse<BulkDeleteResponse>),
+        (status = 200, description = "IP addresses deleted successfully", body = ApiResponse<BulkDeleteResponse>),
         (status = 400, description = "No IDs provided", body = ApiErrorResponse),
     ),
      security(("user_api_key" = []), ("session" = []))
@@ -266,7 +266,7 @@ async fn bulk_delete_ip_addresses(
         .await
         .map_err(ApiError::from)?;
 
-    // Renumber remaining interfaces for all affected hosts
+    // Renumber remaining IP addresses for all affected hosts
     for host_id in affected_host_ids {
         service
             .renumber_ip_addresses_for_host(&host_id, entity_auth.clone())

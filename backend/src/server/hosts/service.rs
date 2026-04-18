@@ -100,7 +100,7 @@ impl CrudService<Host> for HostService {
     ///
     /// This method uses `Host::eq` (ID comparison) to find existing hosts.
     /// For discovery workflows, `create_with_children` sets the incoming host's ID
-    /// to match an existing host found via interface comparison, so this method
+    /// to match an existing host found via IP-address comparison, so this method
     /// will find the match and trigger `upsert_host()`.
     ///
     /// Upsert conditions:
@@ -123,7 +123,7 @@ impl CrudService<Host> for HostService {
 
         // Find existing host by ID (Host::eq only compares IDs)
         // For discovery, create_with_children already set host.id to the existing host's ID
-        // if an interface match was found, so this will find the match
+        // if an IP-address match was found, so this will find the match
         let host_from_storage = match all_hosts.into_iter().find(|h| host.eq(h)) {
             // Upsert if both are discovery sources, or if IDs match exactly
             Some(existing_host)
@@ -580,8 +580,8 @@ impl HostService {
     ///
     /// Host deduplication happens in two stages:
     ///
-    /// 1. **Interface-based matching** (this method): `find_matching_host_by_interfaces` compares
-    ///    incoming ip_addresses against existing hosts using MAC address or subnet+IP matching.
+    /// 1. **IP-address-based matching** (this method): `find_matching_host_by_ip_addresses` compares
+    ///    incoming IP addresses against existing hosts using MAC address or subnet+IP matching.
     ///    - For API users (ConflictBehavior::Error): Returns an error telling them to edit the existing host.
     ///    - For discovery (ConflictBehavior::Upsert): Sets `host.id = existing_host.id` so the
     ///      subsequent create() call will recognize this as an existing host.
@@ -591,9 +591,9 @@ impl HostService {
     ///    a match and call `upsert_host()` to merge discovery data.
     ///
     /// This two-stage approach means:
-    /// - Interface matching handles the "is this the same physical host?" question
+    /// - IP-address matching handles the "is this the same physical host?" question
     /// - ID matching handles the "should we upsert?" question (relies on ID being set correctly)
-    /// - Discovery always upserts when ip_addresses match, even if daemon reported a different host ID
+    /// - Discovery always upserts when IP addresses match, even if daemon reported a different host ID
     #[allow(clippy::too_many_arguments)]
     async fn create_with_children(
         &self,
@@ -607,10 +607,10 @@ impl HostService {
         authentication: AuthenticatedEntity,
         limit_ctx: Option<&HostLimitContext>,
     ) -> Result<HostResponse> {
-        // Stage 1: Interface-based collision detection
+        // Stage 1: IP-address-based collision detection
         // Compares MAC addresses and subnet+IP to find hosts that represent the same physical machine
         let matching_result = self
-            .find_matching_host_by_interfaces(&host.base.network_id, &ip_addresses)
+            .find_matching_host_by_ip_addresses(&host.base.network_id, &ip_addresses)
             .await?;
 
         let is_new_host = matching_result.is_none();
@@ -620,7 +620,7 @@ impl HostService {
                 ConflictBehavior::Error => {
                     // API users should edit the existing host rather than create a duplicate
                     return Err(ValidationError::new(format!(
-                        "A host with matching ip_addresses already exists: '{}' (id: {}). \
+                        "A host with matching IP addresses already exists: '{}' (id: {}). \
                          Edit the existing host instead of creating a new one.",
                         existing_host.base.name, existing_host.id
                     ))
@@ -635,7 +635,7 @@ impl HostService {
                             incoming_host_id = %host.id,
                             matched_host_id = %existing_host.id,
                             matched_host_name = %existing_host.base.name,
-                            "Setting host ID to match existing host found via ip_address comparison"
+                            "Setting host ID to match existing host found via IP-address comparison"
                         );
                         host.id = existing_host.id;
                     }
@@ -1714,7 +1714,7 @@ impl HostService {
     // =========================================================================
 
     /// Create or update a host from daemon discovery data.
-    /// This handles interface/port matching for host deduplication and upserts on conflict.
+    /// This handles IP-address and port matching for host deduplication and upserts on conflict.
     #[allow(clippy::too_many_arguments)]
     pub async fn discover_host(
         &self,
@@ -1728,12 +1728,12 @@ impl HostService {
         limit_ctx: Option<&HostLimitContext>,
     ) -> Result<HostResponse> {
         // Capture the subnets the matched host touched before the upsert. If the
-        // host migrates subnets (or an interface stops reporting), we need to
+        // host migrates subnets (or an IP address stops reporting), we need to
         // revisit the old subnet during reconciliation so its stale VLAN links
         // can drop. Post-upsert `get_for_host` alone would miss subnets that
         // disappeared entirely from the host.
         let previous_subnets: HashSet<Uuid> = self
-            .find_matching_host_by_interfaces(&host.base.network_id, &ip_addresses)
+            .find_matching_host_by_ip_addresses(&host.base.network_id, &ip_addresses)
             .await?
             .map(|(_, existing_ips)| existing_ips.iter().map(|i| i.base.subnet_id).collect())
             .unwrap_or_default();
@@ -1930,18 +1930,18 @@ impl HostService {
         Ok(())
     }
 
-    /// Find an existing host that matches based on interface data (subnet+IP or MAC address).
+    /// Find an existing host that matches based on IP-address data (subnet+IP or MAC address).
     ///
     /// **Known limitation — VRRP/HSRP:** Routers sharing a virtual IP+subnet via VRRP or HSRP
-    /// could false-match on the IP+subnet branch. Virtual router MAC ip_addresses are filtered
+    /// could false-match on the IP+subnet branch. Virtual router MAC addresses are filtered
     /// out (see `is_virtual_router_mac`), but the shared virtual IP on a real interface could
     /// still cause incorrect dedup. Full VRRP awareness would require tracking group membership.
-    pub async fn find_matching_host_by_interfaces(
+    pub async fn find_matching_host_by_ip_addresses(
         &self,
         network_id: &Uuid,
-        incoming_interfaces: &[IPAddress],
+        incoming_ip_addresses: &[IPAddress],
     ) -> Result<Option<(Host, Vec<IPAddress>)>> {
-        if incoming_interfaces.is_empty() {
+        if incoming_ip_addresses.is_empty() {
             return Ok(None);
         }
 
@@ -1955,19 +1955,19 @@ impl HostService {
         let host_ids: Vec<Uuid> = all_hosts.iter().map(|h| h.id).collect();
         let ip_addresses_by_host = self.ip_address_service.get_for_hosts(&host_ids).await?;
 
-        // Exclude loopback and virtual router (VRRP/HSRP) ip_addresses from matching.
+        // Exclude loopback and virtual router (VRRP/HSRP) IP addresses from matching.
         // Loopbacks: every host has 127.0.0.1, so they would falsely match all hosts.
         // Virtual router MACs: shared across physical routers, would falsely merge peers.
-        let should_skip_for_matching = |iface: &IPAddress| {
-            iface.base.ip_address.is_loopback()
-                || iface
+        let should_skip_for_matching = |ip: &IPAddress| {
+            ip.base.ip_address.is_loopback()
+                || ip
                     .base
                     .mac_address
                     .map(|m| is_virtual_router_mac(&m))
                     .unwrap_or(false)
         };
 
-        let matchable_incoming: Vec<_> = incoming_interfaces
+        let matchable_incoming: Vec<_> = incoming_ip_addresses
             .iter()
             .filter(|i| !should_skip_for_matching(i))
             .collect();
@@ -1976,10 +1976,10 @@ impl HostService {
             return Ok(None);
         }
 
-        // Count incoming ip_addresses per MAC to detect VLAN sub-interfaces.
+        // Count incoming IP addresses per MAC to detect VLAN sub-interfaces.
         // Same approach as the upsert MAC fallback — shared MAC (count > 1) means
         // VLAN/bridge/bond sub-interfaces that must not trigger MAC-based host matching.
-        // Unique MAC (count == 1) means a standalone interface safe for MAC matching
+        // Unique MAC (count == 1) means a standalone IP address safe for MAC matching
         // (e.g., Docker container whose IP changed via DHCP).
         let incoming_mac_counts: HashMap<MacAddress, usize> = matchable_incoming
             .iter()
@@ -2006,7 +2006,7 @@ impl HostService {
                             existing_ip = %existing_iface.base.ip_address,
                             existing_host_id = %host.id,
                             existing_host_name = %host.base.name,
-                            "Found matching host via ip_address comparison"
+                            "Found matching host via IP-address comparison"
                         );
                         return Ok(Some((host, host_interfaces)));
                     }

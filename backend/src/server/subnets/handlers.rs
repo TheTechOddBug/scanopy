@@ -336,7 +336,7 @@ async fn update_subnet(
 
         for ip_address in &ip_addresses {
             if !subnet.base.cidr.contains(&ip_address.base.ip_address) {
-                return Err(ApiError::interface_ip_out_of_range(
+                return Err(ApiError::ip_address_out_of_range(
                     &ip_address.base.ip_address.to_string(),
                     &subnet.base.cidr.to_string(),
                 ));

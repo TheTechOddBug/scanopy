@@ -5399,7 +5399,7 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Create a new interface\nPosition is automatically assigned to the end of the host's interface list.",
+        "summary": "Create a new IP address\nPosition is automatically assigned to the end of the host's IP address list.",
         "operationId": "create_ip_address",
         "requestBody": {
           "content": {
@@ -5413,7 +5413,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interface created successfully",
+            "description": "IP address created successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5448,7 +5448,7 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Bulk delete interfaces\nRemaining interfaces for affected hosts are renumbered to maintain sequential positions.",
+        "summary": "Bulk delete IP addresses\nRemaining IP addresses for affected hosts are renumbered to maintain sequential positions.",
         "operationId": "bulk_delete_ip_addresses",
         "requestBody": {
           "content": {
@@ -5466,7 +5466,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interfaces deleted successfully",
+            "description": "IP addresses deleted successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5646,13 +5646,13 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Update an interface\nPosition must be within valid range and not conflict with other interfaces.",
+        "summary": "Update an IP address\nPosition must be within valid range and not conflict with other IP addresses.",
         "operationId": "update_ip_address",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Interface ID",
+            "description": "IP address ID",
             "required": true,
             "schema": {
               "type": "string",
@@ -5672,7 +5672,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interface updated successfully",
+            "description": "IP address updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5692,7 +5692,7 @@
             }
           },
           "404": {
-            "description": "Interface not found",
+            "description": "IP address not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5715,13 +5715,13 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Delete an interface\nRemaining interfaces for the host are renumbered to maintain sequential positions.",
+        "summary": "Delete an IP address\nRemaining IP addresses for the host are renumbered to maintain sequential positions.",
         "operationId": "delete_ip_address",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Interface ID",
+            "description": "IP address ID",
             "required": true,
             "schema": {
               "type": "string",
@@ -5731,7 +5731,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Interface deleted successfully",
+            "description": "IP address deleted successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5741,7 +5741,7 @@
             }
           },
           "404": {
-            "description": "Interface not found",
+            "description": "IP address not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-17T16:32:49.063369Z",
-              "id": "06700135-8b4a-4346-9710-d48423fa6404",
+              "created_at": "2026-04-18T14:12:05.071468Z",
+              "id": "ac0bc1f1-dcc9-490c-8000-dbd457e1378c",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-17T16:32:49.063369Z"
+              "updated_at": "2026-04-18T14:12:05.071468Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-17T16:32:49.045955Z",
-                      "id": "40b9463a-420c-4ddf-90b7-4eeb6fe5180f",
+                      "created_at": "2026-04-18T14:12:05.054689Z",
+                      "id": "74cfe877-f184-4454-be57-a94bc5fcea82",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-17T16:32:49.045955Z"
+                      "updated_at": "2026-04-18T14:12:05.054689Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "GitLab",
+                  "service_definition": "Nest Protect",
                   "source": {
                     "type": "Manual"
                   },
@@ -12011,14 +12011,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-17T16:32:49.058669Z",
-                  "id": "417b5800-175d-4183-97e4-7ff89902fa51",
+                  "created_at": "2026-04-18T14:12:05.066762Z",
+                  "id": "ba2aab01-662b-47ec-8f5d-77254812c789",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-17T16:32:49.058669Z"
+                  "updated_at": "2026-04-18T14:12:05.066762Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12027,7 +12027,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "Nest Protect",
               "source": {
                 "type": "Manual"
               },
@@ -13392,14 +13392,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-17T16:32:49.046361Z",
-          "id": "98c7ec97-0e52-4e8d-b007-b99c158cbefe",
+          "created_at": "2026-04-18T14:12:05.055030Z",
+          "id": "a0b59459-1f9e-4c34-8a57-32278cf20afc",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-17T16:32:49.046361Z"
+          "updated_at": "2026-04-18T14:12:05.055030Z"
         }
       },
       "BindingBase": {
@@ -13929,7 +13929,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "Nest Protect",
               "tags": [],
               "virtualization": null
             }
@@ -16447,14 +16447,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-17T16:32:49.045391Z",
-                  "id": "6cd39776-9a68-4c2c-aeb8-be2dc81c9145",
+                  "created_at": "2026-04-18T14:12:05.054212Z",
+                  "id": "be53bbc7-e7c7-4186-8689-8cba8336df25",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-17T16:32:49.045391Z"
+                  "updated_at": "2026-04-18T14:12:05.054212Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16463,7 +16463,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "Nest Protect",
               "source": {
                 "type": "Manual"
               },
@@ -16585,7 +16585,7 @@
           "position": {
             "type": "integer",
             "format": "int32",
-            "description": "Position of this interface in the host's interface list (for ordering)"
+            "description": "Position of this IP address in the host's IP address list (for ordering)"
           },
           "subnet_id": {
             "type": "string",
@@ -18690,14 +18690,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-17T16:32:49.035505Z",
-                        "id": "959c71aa-23b8-4704-92b9-cc5a2c215f53",
+                        "created_at": "2026-04-18T14:12:05.043305Z",
+                        "id": "5a47dd77-f6eb-48f7-9fe9-2b33bb2258eb",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-17T16:32:49.035505Z"
+                        "updated_at": "2026-04-18T14:12:05.043305Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18706,7 +18706,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "GitLab",
+                    "service_definition": "Nest Protect",
                     "source": {
                       "type": "Manual"
                     },
@@ -18783,14 +18783,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-17T16:32:49.057316Z",
-                    "id": "6f6e7f45-f0f7-4b41-85b3-6e3604cbb98b",
+                    "created_at": "2026-04-18T14:12:05.065466Z",
+                    "id": "4c18fe1d-6984-4f05-8155-33ed4fe93491",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-17T16:32:49.057316Z"
+                    "updated_at": "2026-04-18T14:12:05.065466Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18799,7 +18799,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "GitLab",
+                "service_definition": "Nest Protect",
                 "source": {
                   "type": "Manual"
                 },
@@ -20037,14 +20037,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-17T16:32:49.046234Z",
-              "id": "f908e904-fb01-4a4a-8688-3482f658b6c4",
+              "created_at": "2026-04-18T14:12:05.054914Z",
+              "id": "2d6eefdb-b793-4756-8b74-4656bedf8088",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-17T16:32:49.046234Z"
+              "updated_at": "2026-04-18T14:12:05.054914Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20053,7 +20053,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "GitLab",
+          "service_definition": "Nest Protect",
           "source": {
             "type": "Manual"
           },
@@ -21871,11 +21871,11 @@
     },
     {
       "name": "Interfaces",
-      "description": "SNMP ip_address entries (ifTable). Physical and logical ip_addresses discovered via SNMP on hosts."
+      "description": "SNMP ifTable entries. Physical and logical interfaces discovered via SNMP on hosts."
     },
     {
       "name": "IP Addresses",
-      "description": "Network interfaces on hosts. Each host can have multiple interfaces with different IP addresses."
+      "description": "IP addresses assigned to hosts. Each address belongs to a host and a subnet, optionally has a MAC address, and represents an observed or configured address on the network."
     },
     {
       "name": "Invites",
@@ -21927,7 +21927,7 @@
     },
     {
       "name": "Vlans",
-      "description": "Virtual LANs discovered from network switches. VLANs segment network traffic and are associated with ip_addresses and subnets."
+      "description": "VLANs (802.1Q virtual LANs) defined or discovered on the network. Each VLAN has a number (1-4094), a name, and an optional description, and is referenced by interfaces that participate in it."
     },
     {
       "name": "auth",

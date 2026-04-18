@@ -195,7 +195,7 @@ impl DemoData {
 
         let vlans = generate_vlans(&networks, organization_id, now);
         let (interfaces, neighbor_updates) =
-            generate_if_entries(&networks, &hosts, &ip_addresses, &vlans, now);
+            generate_interfaces(&networks, &hosts, &ip_addresses, &vlans, now);
         let daemons = generate_daemons(&networks, &hosts, &subnets, now, user_id);
         let api_keys = generate_api_keys(&networks, now);
         let topologies = generate_topologies(&networks, &tags, now);
@@ -3081,7 +3081,7 @@ fn generate_vlans(networks: &[Network], organization_id: Uuid, now: DateTime<Utc
     vlans
 }
 
-fn generate_if_entries(
+fn generate_interfaces(
     networks: &[Network],
     hosts: &[&Host],
     ip_addresses: &[&IPAddress],

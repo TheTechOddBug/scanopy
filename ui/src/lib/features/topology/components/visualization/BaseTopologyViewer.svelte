@@ -469,7 +469,7 @@
 							position: currentPositions.get(n.id) ?? n.position
 						}));
 					},
-					waitForNodesRendered: async () => {
+					waitForNodesRendered: async (expectedIds?: Set<string>) => {
 						// Wait for SvelteFlow to render node DOM elements.
 						// We only need DOM presence for measurement, not full initialization.
 						await tick();
@@ -478,7 +478,26 @@
 						const start = performance.now();
 						while (performance.now() - start < 2000) {
 							const nodeEls = containerElement?.querySelectorAll('.svelte-flow__node');
-							if (nodeEls && nodeEls.length > 0) break;
+							if (nodeEls && nodeEls.length > 0) {
+								if (!expectedIds || expectedIds.size === 0) break;
+								// Require every expected id to be present before breaking.
+								// Breaking on the first node (old-render leftovers) lets a
+								// newly-added SSE host miss measurement, so ELK falls back
+								// to metadata defaults and positions siblings too close.
+								const present = new Set(
+									Array.from(nodeEls)
+										.map((el) => (el as HTMLElement).dataset.id)
+										.filter((id): id is string => !!id)
+								);
+								let allPresent = true;
+								for (const id of expectedIds) {
+									if (!present.has(id)) {
+										allPresent = false;
+										break;
+									}
+								}
+								if (allPresent) break;
+							}
 							await new Promise((r) => requestAnimationFrame(r));
 						}
 					}
@@ -550,32 +569,38 @@
 
 			const fullNodes = [...allNodes];
 			const fullEdges = [...flowEdges];
-			setTimeout(() => {
-				// Phase 2: disable transitions, show all nodes.
-				// New nodes get opacity 0 initially, then fade in.
-				animatingCollapse = false;
-				const newNodeIds = new Set(
-					fullNodes.filter((n) => !previousNodeIds.has(n.id)).map((n) => n.id)
-				);
-				if (newNodeIds.size > 0) {
-					// Set new nodes with opacity 0 via style
-					const fadingNodes = fullNodes.map((n) =>
-						newNodeIds.has(n.id)
-							? { ...n, style: 'opacity: 0; transition: opacity 0.3s ease-in-out;' }
-							: n
+			// Await phase 2 + one rAF so new nodes are in the DOM with final
+			// sizes before the post-render measurement below runs. Without
+			// this, cacheCollapsedSizes would either measure pre-phase-2 state
+			// (no new nodes) or be skipped entirely — letting ELK's fallback
+			// sizes for fresh SSE hosts persist and produce the overlaps.
+			await new Promise<void>((resolve) => {
+				setTimeout(() => {
+					animatingCollapse = false;
+					const newNodeIds = new Set(
+						fullNodes.filter((n) => !previousNodeIds.has(n.id)).map((n) => n.id)
 					);
-					nodes.set(fadingNodes);
-					baseFlowEdges.set(fullEdges);
-					// Next frame: set opacity back to trigger fade
-					requestAnimationFrame(() => {
+					if (newNodeIds.size > 0) {
+						const fadingNodes = fullNodes.map((n) =>
+							newNodeIds.has(n.id)
+								? { ...n, style: 'opacity: 0; transition: opacity 0.3s ease-in-out;' }
+								: n
+						);
+						nodes.set(fadingNodes);
+						baseFlowEdges.set(fullEdges);
+						requestAnimationFrame(() => {
+							nodes.set(fullNodes);
+							baseFlowEdges.set(fullEdges);
+							requestAnimationFrame(() => resolve());
+						});
+					} else {
 						nodes.set(fullNodes);
 						baseFlowEdges.set(fullEdges);
-					});
-				} else {
-					nodes.set(fullNodes);
-					baseFlowEdges.set(fullEdges);
-				}
-			}, 350);
+						requestAnimationFrame(() => resolve());
+					}
+				}, 350);
+			});
+			if (isStale()) return;
 		} else if (!isMeasuring) {
 			nodes.set(allNodes);
 			baseFlowEdges.set(flowEdges);
@@ -601,12 +626,14 @@
 			isMeasuring = false;
 		}
 
-		// Post-render: cache collapsed sizes, re-run if needed.
-		// Skip during animation — CSS transitions on width/height would
-		// corrupt the temporary width:auto measurement. Metadata defaults
-		// are used by ELK as fallback; the next layout pass caches correct
-		// sizes via the cacheMisses full-measurement path.
-		if (!shouldAnimate && containerElement && layoutState.layoutGraph) {
+		// Post-render: measure collapsed containers at their natural content
+		// size (width:auto / height:auto) and trigger a corrective re-layout
+		// when new entries are found. This self-heals any case where ELK's
+		// first pass used stale/fallback sizes — e.g. a fresh SSE host whose
+		// DOM wasn't reconciled in time for the measurement pass. Runs in
+		// every branch; the animation branch above awaits phase 2 so new
+		// nodes are in the DOM by the time we measure.
+		if (containerElement && layoutState.layoutGraph) {
 			await tick();
 			const newEntries = cacheCollapsedSizes(
 				containerElement,

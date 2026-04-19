@@ -6,8 +6,13 @@ export interface MeasureCallbacks {
 	setNodes: (n: Node[]) => void;
 	setEdges: (e: Edge[]) => void;
 	buildMeasureNodes: () => Node[];
-	/** Wait for SvelteFlow to render nodes in the DOM (resolves when nodesInitialized) */
-	waitForNodesRendered: () => Promise<void>;
+	/**
+	 * Wait for SvelteFlow to render the given set of node IDs into the DOM.
+	 * When `expectedIds` is provided, the callback should poll until every
+	 * expected `data-id` is present (capped by its internal timeout); when
+	 * omitted it falls back to "any node present."
+	 */
+	waitForNodesRendered: (expectedIds?: Set<string>) => Promise<void>;
 }
 
 /**
@@ -103,9 +108,15 @@ export async function resolveNodeSizes(
 	if (elementNodeSizes.size === 0) {
 		callbacks.setMeasuring(true);
 		callbacks.setEdges([]);
-		callbacks.setNodes(callbacks.buildMeasureNodes());
-		// Wait for SvelteFlow to render nodes in the DOM
-		await callbacks.waitForNodesRendered();
+		const measureNodes = callbacks.buildMeasureNodes();
+		callbacks.setNodes(measureNodes);
+		// Wait for SvelteFlow to render every measure-pass node in the DOM.
+		// Waiting only for "any node present" returns stale matches from the
+		// previous render and lets newly-added nodes (fresh SSE hosts during
+		// discovery) miss measurement — ELK then falls back to metadata
+		// defaults and positions the new container's siblings too close.
+		const expectedIds = new Set(measureNodes.map((n) => n.id));
+		await callbacks.waitForNodesRendered(expectedIds);
 		if (isStale()) {
 			callbacks.setMeasuring(false);
 			return null;

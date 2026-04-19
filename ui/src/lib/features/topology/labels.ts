@@ -117,9 +117,7 @@ export function tallyDirectElements(containerId: string, topology: Topology): Ma
 		topology.nodes
 			.filter(
 				(n) =>
-					n.node_type === 'Element' &&
-					((n as { container_id?: string }).container_id === containerId ||
-						(n as { subnet_id?: string }).subnet_id === containerId)
+					n.node_type === 'Element' && (n as { container_id?: string }).container_id === containerId
 			)
 			.map((n) => n.id)
 	);
@@ -139,18 +137,20 @@ export function getViewCollectiveNoun(viewId: string | null): string | undefined
 	)?.element_config?.collective_noun;
 }
 
-/** Format an element summary string. When the view defines a collective
- *  noun, emits "{total} {collective_noun}s — {per-entity breakdown}".
- *  Otherwise emits the per-entity breakdown alone (e.g. "12 IP addresses,
- *  8 services"). */
+/** Format an element summary string for container-header surfaces. When
+ *  the view defines a collective noun, emits "{total} {collective_noun}s"
+ *  alone — the per-entity breakdown is redundant with the collective total
+ *  in those views (e.g. Workloads: every service is already a workload).
+ *  Otherwise emits the per-entity breakdown (e.g. "12 IP addresses and
+ *  8 services"). The inspector panel's element summary builds its own
+ *  breakdown alongside the collective total and does not use this. */
 export function formatElementSummary(counts: Map<Entity, number>, viewId: string | null): string {
-	const breakdown = formatEntityCounts(counts);
 	const collective = getViewCollectiveNoun(viewId);
-	if (!collective) return breakdown;
-
-	const total = [...counts.values()].reduce((s, n) => s + n, 0);
-	const collectivePart = `${total} ${total === 1 ? collective : collective + 's'}`;
-	return breakdown ? `${collectivePart} — ${breakdown}` : collectivePart;
+	if (collective) {
+		const total = [...counts.values()].reduce((s, n) => s + n, 0);
+		return `${total} ${total === 1 ? collective : collective + 's'}`;
+	}
+	return formatEntityCounts(counts);
 }
 
 /** "Common {entity} tags" header — takes typed Entity, renders i18n with lowercase plural. */

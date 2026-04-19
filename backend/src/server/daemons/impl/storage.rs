@@ -74,6 +74,7 @@ impl Storable for Daemon {
                     api_key_id,
                     is_unreachable,
                     standby,
+                    standby_cleared_at,
                 },
         } = self.clone();
 
@@ -94,6 +95,7 @@ impl Storable for Daemon {
                 "api_key_id",
                 "is_unreachable",
                 "standby",
+                "standby_cleared_at",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -111,6 +113,7 @@ impl Storable for Daemon {
                 SqlValue::OptionalUuid(api_key_id),
                 SqlValue::Bool(is_unreachable),
                 SqlValue::Bool(standby),
+                SqlValue::OptionTimestamp(standby_cleared_at),
             ],
         ))
     }
@@ -146,6 +149,7 @@ impl Storable for Daemon {
                 api_key_id: row.get("api_key_id"),
                 is_unreachable: row.get("is_unreachable"),
                 standby: row.get("standby"),
+                standby_cleared_at: row.get("standby_cleared_at"),
             },
         })
     }
@@ -229,7 +233,10 @@ impl Entity for Daemon {
         self.base.last_seen = existing.base.last_seen;
         // capabilities are reported by the daemon, not user-editable
         self.base.capabilities = existing.base.capabilities.clone();
-        // standby is managed by billing plan restrictions, not user-editable
+        // standby is managed by the inactivity background task and the
+        // reactivation paths (startup + discovery queue); not user-editable.
         self.base.standby = existing.base.standby;
+        // standby_cleared_at is server-managed alongside standby.
+        self.base.standby_cleared_at = existing.base.standby_cleared_at;
     }
 }

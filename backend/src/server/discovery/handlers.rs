@@ -326,7 +326,9 @@ async fn start_session(
         ));
     }
 
-    // Auto-wake daemon if on standby
+    // Auto-wake daemon if on standby. Grant the same grace window as the
+    // restart reactivation path so the nightly inactivity check doesn't
+    // re-standby the daemon before the just-queued discovery completes.
     if let Some(mut daemon) = state
         .services
         .daemon_service
@@ -335,6 +337,7 @@ async fn start_session(
         && daemon.base.standby
     {
         daemon.base.standby = false;
+        daemon.base.standby_cleared_at = Some(chrono::Utc::now());
         state
             .services
             .daemon_service

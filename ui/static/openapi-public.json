@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-18T17:48:33.520966Z",
-              "id": "7791489a-032d-43c3-9a9e-0d7713798e2b",
+              "created_at": "2026-04-18T18:51:57.317177Z",
+              "id": "72f1d9e4-7a19-4dde-b888-3077a48e82f6",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-18T17:48:33.520966Z"
+              "updated_at": "2026-04-18T18:51:57.317177Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-18T17:48:33.504368Z",
-                      "id": "f968e7f4-44fd-475a-bc8f-7f36f69397bd",
+                      "created_at": "2026-04-18T18:51:57.297127Z",
+                      "id": "23a4e574-c99b-4f97-a996-d3fb4b81b8d0",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-18T17:48:33.504368Z"
+                      "updated_at": "2026-04-18T18:51:57.297127Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Memos",
+                  "service_definition": "Domoticz",
                   "source": {
                     "type": "Manual"
                   },
@@ -12011,14 +12011,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-18T17:48:33.516453Z",
-                  "id": "84612467-16f5-4673-a816-b74dafc55969",
+                  "created_at": "2026-04-18T18:51:57.312105Z",
+                  "id": "d1191f73-4d8e-4421-994e-de5cdd518977",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-18T17:48:33.516453Z"
+                  "updated_at": "2026-04-18T18:51:57.312105Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12027,7 +12027,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Memos",
+              "service_definition": "Domoticz",
               "source": {
                 "type": "Manual"
               },
@@ -13392,14 +13392,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-18T17:48:33.504712Z",
-          "id": "c211d1df-bc16-4679-bb10-ef8191d14023",
+          "created_at": "2026-04-18T18:51:57.297357Z",
+          "id": "f3f74c31-8e52-41e6-bfa4-96f49b8904e2",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-18T17:48:33.504712Z"
+          "updated_at": "2026-04-18T18:51:57.297357Z"
         }
       },
       "BindingBase": {
@@ -13929,7 +13929,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Memos",
+              "service_definition": "Domoticz",
               "tags": [],
               "virtualization": null
             }
@@ -14422,6 +14422,15 @@
           "standby": {
             "type": "boolean",
             "description": "Whether the daemon is on standby due to inactivity (no discovery in 30 days).",
+            "readOnly": true
+          },
+          "standby_cleared_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Timestamp of the most recent standby → active transition. Set by\n`process_startup` when a restarted daemon is un-standby'd, and by\nthe discovery auto-wake path. Used by the nightly inactivity check\nto grant a bounded grace period before re-evaluating inactivity —\nprevents the \"restart → cleared → re-standby'd before discovery runs\"\nrace with weekly scheduled discoveries.",
             "readOnly": true
           },
           "tags": {
@@ -16450,14 +16459,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-18T17:48:33.503880Z",
-                  "id": "add1702a-24e7-4c98-95f3-2cd7f1bb90fb",
+                  "created_at": "2026-04-18T18:51:57.296818Z",
+                  "id": "f611850f-9cd0-478b-bf1d-79763cfedcdf",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-18T17:48:33.503880Z"
+                  "updated_at": "2026-04-18T18:51:57.296818Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16466,7 +16475,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Memos",
+              "service_definition": "Domoticz",
               "source": {
                 "type": "Manual"
               },
@@ -18693,14 +18702,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-18T17:48:33.492814Z",
-                        "id": "19d21b71-519b-4b1d-8bcd-585dbb330f05",
+                        "created_at": "2026-04-18T18:51:57.290339Z",
+                        "id": "9d4ad34d-02f7-4a65-8970-2e523704953b",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-18T17:48:33.492814Z"
+                        "updated_at": "2026-04-18T18:51:57.290339Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18709,7 +18718,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Memos",
+                    "service_definition": "Domoticz",
                     "source": {
                       "type": "Manual"
                     },
@@ -18786,14 +18795,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-18T17:48:33.515067Z",
-                    "id": "2f6d73c0-c45c-4e52-ab2f-6eb8696ff34f",
+                    "created_at": "2026-04-18T18:51:57.310303Z",
+                    "id": "06dd68ce-91aa-430b-af4e-a3a10c73aea1",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-18T17:48:33.515067Z"
+                    "updated_at": "2026-04-18T18:51:57.310303Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18802,7 +18811,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Memos",
+                "service_definition": "Domoticz",
                 "source": {
                   "type": "Manual"
                 },
@@ -20040,14 +20049,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-18T17:48:33.504592Z",
-              "id": "6cd0b04a-c1b1-4cda-838d-d6455f79e469",
+              "created_at": "2026-04-18T18:51:57.297278Z",
+              "id": "dd5ec8a7-a9c8-4a8f-96e8-972f8d85cf37",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-18T17:48:33.504592Z"
+              "updated_at": "2026-04-18T18:51:57.297278Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20056,7 +20065,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Memos",
+          "service_definition": "Domoticz",
           "source": {
             "type": "Manual"
           },

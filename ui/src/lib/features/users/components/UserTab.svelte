@@ -13,7 +13,6 @@
 	import { metadata, permissions } from '$lib/shared/stores/metadata';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import UpgradeButton from '$lib/shared/components/UpgradeButton.svelte';
-	import { triggerUpgrade } from '$lib/features/billing/trigger-upgrade';
 	import UserEditModal from './UserEditModal.svelte';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useUsersQuery, useBulkDeleteUsersMutation } from '../queries';
@@ -98,10 +97,6 @@
 	let isAtSeatLimit = $derived(seatLimit !== null && userCount >= seatLimit && !canBuyMoreSeats);
 
 	async function handleCreateInvite() {
-		if (isAtSeatLimit) {
-			triggerUpgrade({ feature: 'seats', source: 'users_invite_button' });
-			return;
-		}
 		showInviteModal = true;
 	}
 
@@ -191,10 +186,9 @@
 					</span>
 				{/if}
 				{#if canInviteUsers}
-					{#if !canBuyMoreSeats && isAtSeatLimit}
+					{#if isAtSeatLimit}
 						<UpgradeButton feature="seats" />
-					{/if}
-					{#if currentUser && !currentUser.email_verified}
+					{:else if currentUser && !currentUser.email_verified}
 						<span data-tooltip="Please verify email to invite users" use:tooltip>
 							<button class="btn-primary flex items-center opacity-50" disabled>
 								<UserPlus class="mr-2 h-5 w-5" />

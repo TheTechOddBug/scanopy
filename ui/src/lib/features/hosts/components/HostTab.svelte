@@ -18,7 +18,6 @@
 	import { useTagsQuery } from '$lib/features/tags/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import UpgradeButton from '$lib/shared/components/UpgradeButton.svelte';
-	import { triggerUpgrade } from '$lib/features/billing/trigger-upgrade';
 	import type { TabProps } from '$lib/shared/types';
 	import {
 		common_confirmDeleteName,
@@ -273,10 +272,6 @@
 	);
 
 	function handleCreateHost() {
-		if (isAtHostLimit) {
-			triggerUpgrade({ feature: 'hosts', source: 'hosts_create_button' });
-			return;
-		}
 		editingHost = null;
 		showHostEditor = true;
 	}
@@ -375,12 +370,16 @@
 						</span>
 					{/if}
 					{#if !isReadOnly}
-						{#if isAtHostLimit || isNearHostLimit}
+						{#if isAtHostLimit}
 							<UpgradeButton feature="hosts" />
+						{:else}
+							{#if isNearHostLimit}
+								<UpgradeButton feature="hosts" />
+							{/if}
+							<button class="btn-primary flex items-center" onclick={handleCreateHost}
+								><Plus class="h-5 w-5" />{common_create()}</button
+							>
 						{/if}
-						<button class="btn-primary flex items-center" onclick={handleCreateHost}
-							><Plus class="h-5 w-5" />{common_create()}</button
-						>
 					{/if}
 				</div>
 			{/if}

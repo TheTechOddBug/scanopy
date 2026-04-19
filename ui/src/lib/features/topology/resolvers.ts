@@ -393,9 +393,7 @@ export function getContainerContents(
 	for (const nd of topologyNodes) {
 		if (nd.node_type !== 'Element') continue;
 
-		const parentId =
-			((nd as Record<string, unknown>).container_id as string | undefined) ??
-			((nd as Record<string, unknown>).subnet_id as string | undefined);
+		const parentId = (nd as Record<string, unknown>).container_id as string | undefined;
 		if (!parentId || !containerSet.has(parentId)) continue;
 
 		elementNodeIds.add(nd.id);

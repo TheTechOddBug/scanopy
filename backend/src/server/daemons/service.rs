@@ -75,11 +75,10 @@ const UNREACHABLE_THRESHOLD: usize = 5;
 const MAX_CONCURRENT_POLLS: usize = 10;
 
 /// Number of days after a standby → active transition during which the
-/// daily inactivity check skips the daemon. Lets scheduled discoveries
-/// fire and refresh `last_finished` before inactivity is re-evaluated.
-/// Weekly discoveries complete within 7 days; 14 days gives comfortable
-/// buffer for biweekly cadence without allowing indefinite bypass.
-pub const STANDBY_GRACE_PERIOD_DAYS: i64 = 14;
+/// daily inactivity check skips the daemon. Matches the 30-day inactivity
+/// window so the grace covers at least one full scheduled-discovery
+/// cycle regardless of cadence.
+pub const STANDBY_GRACE_PERIOD_DAYS: i64 = 30;
 
 /// Returns true if a daemon with the given `standby_cleared_at` timestamp
 /// is currently within its post-reactivation grace window. Pulled out as
@@ -2181,23 +2180,23 @@ mod tests {
     #[test]
     fn grace_window_just_inside_boundary_is_within_grace() {
         let now = Utc::now();
-        let almost_fourteen_days =
+        let just_inside =
             now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS) + chrono::Duration::hours(1);
-        assert!(is_within_standby_grace(Some(almost_fourteen_days), now));
+        assert!(is_within_standby_grace(Some(just_inside), now));
     }
 
     #[test]
     fn grace_window_at_exact_boundary_is_expired() {
         let now = Utc::now();
-        let exactly_fourteen_days = now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS);
+        let exactly_at_boundary = now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS);
         // strict `>`, not `>=`
-        assert!(!is_within_standby_grace(Some(exactly_fourteen_days), now));
+        assert!(!is_within_standby_grace(Some(exactly_at_boundary), now));
     }
 
     #[test]
     fn grace_window_past_boundary_is_expired() {
         let now = Utc::now();
-        let fifteen_days_ago = now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS + 1);
-        assert!(!is_within_standby_grace(Some(fifteen_days_ago), now));
+        let past_boundary = now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS + 1);
+        assert!(!is_within_standby_grace(Some(past_boundary), now));
     }
 }

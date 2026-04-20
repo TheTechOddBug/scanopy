@@ -511,42 +511,46 @@
 		{#each filterSections as section (section.entityType)}
 			{@const tagBundle = tagListByEntity[section.entityType]}
 			{@const metadataFilters = metadataFiltersByEntity[section.entityType] ?? []}
-			<div class="filter-section border-border space-y-1.5 border-t pt-2">
-				<EntityFilterHeader
-					entityType={section.entityType}
-					hoverable={section.hoverable}
-					togglePresent={section.togglePresent}
-					toggleDisabled={section.toggleDisabled}
-					hidden={section.hidden}
-					onToggle={toggleHiddenEntity}
-				/>
-				{#if !section.hidden}
-					{#if tagBundle}
-						<TagFilterGroup
-							label={metadataFilters.length > 0 ? common_byTag() : undefined}
-							tags={tagBundle.tags}
-							hiddenTagIds={hiddenTagIdsForEntity(section.entityType)}
-							onToggle={(id) => onToggleTagForEntity(section.entityType, id)}
-							entityType={section.entityType}
-							hasUntagged={tagBundle.hasUntagged}
-						/>
+			{@const hasTagBody = !!tagBundle && (tagBundle.tags.length > 0 || tagBundle.hasUntagged)}
+			{@const hasContent = hasTagBody || metadataFilters.length > 0 || section.togglePresent}
+			{#if hasContent}
+				<div class="filter-section space-y-1.5 border-t border-gray-300 pt-2 dark:border-gray-700">
+					<EntityFilterHeader
+						entityType={section.entityType}
+						hoverable={section.hoverable}
+						togglePresent={section.togglePresent}
+						toggleDisabled={section.toggleDisabled}
+						hidden={section.hidden}
+						onToggle={toggleHiddenEntity}
+					/>
+					{#if !section.hidden}
+						{#if hasTagBody && tagBundle}
+							<TagFilterGroup
+								label={metadataFilters.length > 0 ? common_byTag() : undefined}
+								tags={tagBundle.tags}
+								hiddenTagIds={hiddenTagIdsForEntity(section.entityType)}
+								onToggle={(id) => onToggleTagForEntity(section.entityType, id)}
+								entityType={section.entityType}
+								hasUntagged={tagBundle.hasUntagged}
+							/>
+						{/if}
+						{#each metadataFilters as filter (filter.filter_type)}
+							<CategoryFilterGroup
+								categories={filter.values.map((v) => ({
+									value: v.id,
+									label: v.label,
+									color: v.color as Color
+								}))}
+								hiddenCategories={hiddenMetadataValuesFor(section.entityType, filter.filter_type)}
+								onToggle={(valueId) =>
+									toggleMetadataFilterValue(section.entityType, filter.filter_type, valueId)}
+								disabled={!editState.isEditable}
+								label={filter.label}
+							/>
+						{/each}
 					{/if}
-					{#each metadataFilters as filter (filter.filter_type)}
-						<CategoryFilterGroup
-							categories={filter.values.map((v) => ({
-								value: v.id,
-								label: v.label,
-								color: v.color as Color
-							}))}
-							hiddenCategories={hiddenMetadataValuesFor(section.entityType, filter.filter_type)}
-							onToggle={(valueId) =>
-								toggleMetadataFilterValue(section.entityType, filter.filter_type, valueId)}
-							disabled={!editState.isEditable}
-							label={filter.label}
-						/>
-					{/each}
-				{/if}
-			</div>
+				</div>
+			{/if}
 		{/each}
 	</div>
 {:else if activeTab === 'group'}

@@ -469,59 +469,84 @@
 	const containerizationColorHelper = concepts.getColorHelper('Containerization');
 	const discoveryColorHelper = entities.getColorHelper('Discovery');
 
-	// Card outline from hover — two paths:
-	//   tag-scoped hover (tagId set): original animated-pulse via color on a
-	//     tag the node's host carries.
-	//   entity-type hover (tagId null): subdued gray outline on every matching
-	//     element card, for the new filter-panel section-header affordance.
+	// How does the hovered entity type relate to this card?
+	//   'element' — the card IS the hovered entity type (Service element in
+	//     Workloads/Application; IPAddress element in L3; Host VM in
+	//     Workloads; Interface in L2).
+	//   'inline'  — the hovered entity type is declared inline on this card
+	//     (Service or Port on an L3 IPAddress; Service on a Workloads Host
+	//     VM element).
+	//   null      — no relationship; this card is unaffected by the hover.
+	// Element cards get a card-border treatment; inline cards get a
+	// card-glow / text-highlight treatment. This replaces the former
+	// Host-specific branch and makes hover behaviour view-agnostic.
+	let hoveredRelationship = $derived.by((): 'element' | 'inline' | null => {
+		if (!currentHoveredTag) return null;
+		const elType = nodeRenderData?.elementType;
+		if (elType && currentHoveredTag.entityType === elType) return 'element';
+		if (inlineForThisElement.includes(currentHoveredTag.entityType)) return 'inline';
+		return null;
+	});
+
+	// Tags carried by this card's source entity (for tag-scoped ring).
+	// IPAddress and Interface don't carry tags today — they fall back to
+	// the host's tags so per-host tag hover still highlights IP / interface
+	// element cards, matching the old Host-specific behaviour.
+	function cardEntityTags(): string[] {
+		if (!resolved) return [];
+		switch (resolved.elementType) {
+			case 'Host':
+				return resolved.host?.tags ?? [];
+			case 'Service':
+				return resolved.services[0]?.tags ?? [];
+			case 'IPAddress':
+			case 'Interface':
+				return resolved.host?.tags ?? [];
+		}
+		return [];
+	}
+
+	// Card border for element-role hover. Subdued gray when entity-wide
+	// (tagId null); tag-coloured when tag-scoped AND the card's entity
+	// actually carries the hovered tag.
 	let tagHoverRingStyle = $derived.by(() => {
-		if (!currentHoveredTag || !host) return '';
-		const elementType = nodeRenderData?.elementType;
-		// Entity-type-wide hover (no tag). Match on this element's own type.
-		if (currentHoveredTag.tagId === null) {
-			if (!elementType || currentHoveredTag.entityType !== elementType) return '';
+		if (hoveredRelationship !== 'element' || !currentHoveredTag) return '';
+		const { tagId, color } = currentHoveredTag;
+		if (tagId === null) {
 			return 'box-shadow: 0 0 0 2px rgb(156, 163, 175);';
 		}
-		// Tag-scoped hover, Host variant: retain original constraints.
-		if (currentHoveredTag.entityType !== 'Host') return '';
-		const viewMeta = views.getMetadata($activeView) as {
-			element_config?: {
-				container_entity?: string;
-				element_entities?: Array<{ entity_type: string }>;
-			};
-		} | null;
-		const containerEntity = viewMeta?.element_config?.container_entity;
-		const hostIsAlsoElement =
-			viewMeta?.element_config?.element_entities?.some((e) => e.entity_type === 'Host') ?? false;
-		if (containerEntity === 'Host') {
-			// When Host is a container, only highlight Host-type elements (VMs) in views
-			// that have Host-as-element; let the container node handle its own highlight.
-			if (!hostIsAlsoElement || elementType !== 'Host') return '';
-		}
-		const { tagId, color } = currentHoveredTag;
-		const isUntagged = host.tags.length === 0;
-		const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : host.tags.includes(tagId);
-		if (!hasTag) return '';
+		const tags = cardEntityTags();
+		const hasTag = tagId === UNTAGGED_SENTINEL ? tags.length === 0 : tags.includes(tagId);
+		if (!hasTag || !color) return '';
 		const colorHelper = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
 		return `box-shadow: 0 0 0 3px ${colorHelper.rgb};`;
 	});
 
-	// Check if any service in this node matches the hovered tag/category — for card shadow
+	// Card glow for inline-role hover (or legacy category hover).
+	// Entity-wide inline hover pulses in a neutral gray; tag-scoped inline
+	// hover pulses in the tag's color on cards that actually contain a
+	// service with the hovered tag.
 	let serviceHoverShadowStyle = $derived.by(() => {
 		if (!nodeRenderData?.showServices) return '';
 		const services = nodeRenderData.services;
-		if (
-			currentHoveredTag &&
-			currentHoveredTag.entityType === 'Service' &&
-			currentHoveredTag.tagId !== null
-		) {
-			const { tagId, color } = currentHoveredTag;
-			for (const service of services) {
-				const isUntagged = service.tags.length === 0;
-				const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : service.tags.includes(tagId);
-				if (hasTag) {
-					const colorHelper = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
-					return `--pulse-color: ${colorHelper.rgb};`;
+		if (hoveredRelationship === 'inline' && currentHoveredTag) {
+			const { tagId, color, entityType } = currentHoveredTag;
+			if (tagId === null) {
+				// Entity-wide inline hover: neutral pulse on any card that
+				// inlines this entity type.
+				return '--pulse-color: rgb(156, 163, 175);';
+			}
+			// Tag-scoped inline hover — only Service tags are wired through
+			// today (ports don't carry tags). Other entity types with tags
+			// would follow the same pattern.
+			if (entityType === 'Service' && color) {
+				for (const service of services) {
+					const isUntagged = service.tags.length === 0;
+					const hasTag = tagId === UNTAGGED_SENTINEL ? isUntagged : service.tags.includes(tagId);
+					if (hasTag) {
+						const colorHelper = createColorHelper(color as Parameters<typeof createColorHelper>[0]);
+						return `--pulse-color: ${colorHelper.rgb};`;
+					}
 				}
 			}
 		}
@@ -539,11 +564,11 @@
 		return '';
 	});
 
-	// Whether the hovered entity type matches this element — drives the
-	// dotted-underline on the header text.
+	// Entity-wide hover matching THIS element's own type — drives the
+	// dotted-underline on the header text. Inline-role hover has its own
+	// visual treatment (card glow) and doesn't underline the header.
 	let isEntityTypeHover = $derived(
-		currentHoveredTag?.tagId === null &&
-			currentHoveredTag?.entityType === nodeRenderData?.elementType
+		hoveredRelationship === 'element' && currentHoveredTag?.tagId === null
 	);
 
 	let cardClass = $derived(`card ${isNodeSelected ? 'card-selected' : ''}`);
@@ -606,10 +631,16 @@
 						service.service_definition
 					)}
 					{@const serviceTagHighlight = (() => {
+						// Tag-scoped inline Service hover: highlight the matching
+						// service's text. Only fires when this card is an inline
+						// host for Service (NOT when the card itself IS a service
+						// element — that case gets the card-border instead).
 						if (
+							hoveredRelationship !== 'inline' ||
 							!currentHoveredTag ||
 							currentHoveredTag.entityType !== 'Service' ||
-							currentHoveredTag.tagId === null
+							currentHoveredTag.tagId === null ||
+							!currentHoveredTag.color
 						)
 							return '';
 						const { tagId, color } = currentHoveredTag;

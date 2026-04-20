@@ -351,19 +351,13 @@ set-plan-starter:
 set-plan-pro:
 	@echo "Setting all organizations to Pro plan..."
 	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
-		"UPDATE organizations SET plan = '{\"type\": \"Pro\", \"base_cents\": 1999, \"rate\": \"Month\", \"trial_days\": 7, \"seat_cents\": null, \"network_cents\": null, \"included_seats\": 1, \"included_networks\": 3}'::jsonb"
-	@echo "Done!"
-
-set-plan-team:
-	@echo "Setting all organizations to Team plan..."
-	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
-		"UPDATE organizations SET plan = '{\"type\": \"Team\", \"base_cents\": 3999, \"rate\": \"Month\", \"trial_days\": 7, \"seat_cents\": 1000, \"network_cents\": 800, \"included_seats\": 5, \"included_networks\": 5}'::jsonb"
+		"UPDATE organizations SET plan = '{\"type\": \"Pro\", \"base_cents\": 1999, \"rate\": \"Month\", \"trial_days\": 7, \"seat_cents\": null, \"network_cents\": 800, \"included_seats\": 1, \"included_networks\": 3}'::jsonb"
 	@echo "Done!"
 
 set-plan-business:
 	@echo "Setting all organizations to Business plan..."
 	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
-		"UPDATE organizations SET plan = '{\"type\": \"Business\", \"base_cents\": 5999, \"rate\": \"Month\", \"trial_days\": 14, \"seat_cents\": 800, \"network_cents\": 500, \"included_seats\": 10, \"included_networks\": 25}'::jsonb"
+		"UPDATE organizations SET plan = '{\"type\": \"Business\", \"base_cents\": 5999, \"rate\": \"Month\", \"trial_days\": 14, \"seat_cents\": 800, \"network_cents\": 500, \"included_seats\": 5, \"included_networks\": 15}'::jsonb"
 	@echo "Done!"
 
 set-plan-enterprise:

@@ -675,7 +675,11 @@
 							? ' opacity: 0.3;'
 							: ''}"
 					>
-						{#if inlinesService && !serviceInlineHidden}
+						<!-- Render the service name when either: (a) this card IS
+						  a Service element (the row is the card's own identity,
+						  not inlined content — always show), or (b) the card
+						  inlines services and the user hasn't toggled them off. -->
+						{#if nodeRenderData.elementType === 'Service' || (inlinesService && !serviceInlineHidden)}
 							<div
 								class="flex items-center justify-center gap-1"
 								style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"

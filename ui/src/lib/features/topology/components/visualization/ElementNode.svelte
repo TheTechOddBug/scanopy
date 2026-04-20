@@ -223,11 +223,14 @@
 					return hiddenCategories.includes(category as CategoryType) || hiddenServices.has(s.id);
 				});
 
-				// Only inline services when the view's Host element entity declares Service
-				// inlined AND the user hasn't toggled Service off in the filter panel.
+				// Service names and port lines hide independently. Render the
+				// services block if the view declares EITHER inlined and the
+				// user hasn't hidden it — so toggling Services off still
+				// leaves port lines visible (and vice versa).
+				const showServiceNames = inlinesService && !serviceInlineHidden;
+				const showPortLines = inlinesPort && !portInlineHidden;
 				const showServices =
-					inlinesService &&
-					!serviceInlineHidden &&
+					(showServiceNames || showPortLines) &&
 					(servicesOnHost.length !== 0 || hiddenOpenPorts.length !== 0);
 
 				const hostLabel = (data as TopologyNode).header ?? (host.name || host.hostname || null);
@@ -327,11 +330,12 @@
 			let footerText: string | null = null;
 			let subtitleText: string | null = null;
 			let headerText: string | null = (data as TopologyNode).header ?? null;
-			// Only inline services when the view's IPAddress element entity declares Service
-			// inlined AND the user hasn't toggled Service off in the filter panel.
+			// Service names and port lines hide independently — see the Host
+			// branch above for the same pattern.
+			const showServiceNames = inlinesService && !serviceInlineHidden;
+			const showPortLines = inlinesPort && !portInlineHidden;
 			let showServices =
-				inlinesService &&
-				!serviceInlineHidden &&
+				(showServiceNames || showPortLines) &&
 				(servicesOnIPAddress.length != 0 || hiddenOpenPorts.length != 0);
 
 			if (ipAddress && !isContainerSubnetValue) {
@@ -665,22 +669,24 @@
 							? ' opacity: 0.3;'
 							: ''}"
 					>
-						<div
-							class="flex items-center justify-center gap-1"
-							style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
-							title={service.name}
-						>
-							<ServiceIcon class="h-5 w-5 flex-shrink-0 {serviceColorHelper.icon}" />
-							<span
-								class="text-m text-secondary truncate {serviceTagHighlight ||
-								serviceCategoryHighlight
-									? 'animate-text-pulse-highlight'
-									: ''}"
-								style="transition: color 0.15s; {serviceTagHighlight || serviceCategoryHighlight}"
+						{#if inlinesService && !serviceInlineHidden}
+							<div
+								class="flex items-center justify-center gap-1"
+								style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
+								title={service.name}
 							>
-								{service.name}
-							</span>
-						</div>
+								<ServiceIcon class="h-5 w-5 flex-shrink-0 {serviceColorHelper.icon}" />
+								<span
+									class="text-m text-secondary truncate {serviceTagHighlight ||
+									serviceCategoryHighlight
+										? 'animate-text-pulse-highlight'
+										: ''}"
+									style="transition: color 0.15s; {serviceTagHighlight || serviceCategoryHighlight}"
+								>
+									{service.name}
+								</span>
+							</div>
+						{/if}
 						{#if inlinesPort && !portInlineHidden && service.bindings.filter((b) => b.type == 'Port').length > 0}
 							<span class="text-tertiary mt-1 text-center text-xs"
 								>{service.bindings
@@ -748,16 +754,18 @@
 									class="flex flex-col items-center justify-center"
 									style="min-width: 0; max-width: 100%; width: 100%;"
 								>
-									<div
-										class="flex items-center justify-center gap-1"
-										style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
-										title={service.name}
-									>
-										<ServiceIcon class="h-5 w-5 flex-shrink-0 {svcColor.icon}" />
-										<span class="text-m text-secondary truncate" style="transition: color 0.15s;">
-											{service.name}
-										</span>
-									</div>
+									{#if inlinesService && !serviceInlineHidden}
+										<div
+											class="flex items-center justify-center gap-1"
+											style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
+											title={service.name}
+										>
+											<ServiceIcon class="h-5 w-5 flex-shrink-0 {svcColor.icon}" />
+											<span class="text-m text-secondary truncate" style="transition: color 0.15s;">
+												{service.name}
+											</span>
+										</div>
+									{/if}
 									{#if inlinesPort && !portInlineHidden && service.bindings.filter((b) => b.type == 'Port').length > 0}
 										<span class="text-tertiary mt-1 text-center text-xs"
 											>{service.bindings

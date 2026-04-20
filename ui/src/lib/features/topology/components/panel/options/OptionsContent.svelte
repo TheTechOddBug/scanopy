@@ -137,10 +137,15 @@
 				!roles.container && (roles.inline || (roles.element && elementCount >= 2));
 			// Floor: can't hide the last visible element entity.
 			const toggleDisabled = togglePresent && !hidden && roles.element && visibleElementCount <= 1;
+			// Every rendered section is hoverable. ElementNode's hovered-
+			// relationship derived decides the visual treatment per card:
+			// element-role = border, inline-role = card glow, otherwise
+			// no-op. Pure-inline entities (Port / Service in L3) rely on
+			// this path for their highlight affordance.
 			return {
 				entityType,
 				roles,
-				hoverable: roles.container || roles.element,
+				hoverable: true,
 				togglePresent,
 				toggleDisabled,
 				hidden

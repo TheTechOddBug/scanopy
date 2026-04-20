@@ -80,7 +80,10 @@
 	.filter-section-name {
 		cursor: default;
 	}
-	.filter-section-name-hoverable:hover > span {
+	/* Always-on dotted underline when the section is hoverable — acts as a
+	 * standing affordance that the name is interactive, rather than only
+	 * appearing on hover. */
+	.filter-section-name-hoverable > span {
 		text-decoration: underline dotted;
 		text-underline-offset: 3px;
 		text-decoration-thickness: 1px;

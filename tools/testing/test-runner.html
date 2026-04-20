@@ -26,6 +26,12 @@
   .dot-partial { background: var(--yellow); } .dot-skipped { background: var(--text-muted); } .dot-pending { background: var(--border); }
   .branch-group { margin-bottom: 32px; }
   .branch-header { font-size: 16px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; color: var(--purple); }
+  .branch-header.collapsible { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; }
+  .branch-header.collapsible:hover { color: var(--blue); }
+  .branch-header .chevron { display: inline-block; width: 10px; font-size: 10px; transition: transform 0.15s; color: var(--text-muted); }
+  .branch-group.collapsed .chevron { transform: rotate(-90deg); }
+  .branch-group.collapsed .branch-content { display: none; }
+  .branch-header .branch-count { font-size: 11px; font-weight: 400; color: var(--text-muted); margin-left: auto; font-family: monospace; }
   .category { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; }
   .test-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 8px; transition: border-color 0.15s; }
   .test-card.status-passed { border-left: 3px solid var(--green); }
@@ -81,6 +87,8 @@
   <div class="actions">
     <label class="btn"><input type="file" id="loadFile" accept=".json" multiple onchange="loadFiles(this.files)">Load JSON files</label>
     <button onclick="exportResults()">Export TEST_RESULTS.json</button>
+    <button onclick="collapseAll()">Collapse all</button>
+    <button onclick="expandAll()">Expand all</button>
     <button onclick="resetAll()">Reset All</button>
   </div>
   <div class="stats" id="stats"></div>
@@ -96,6 +104,7 @@ let plans = {};
 let filter = 'all';
 let allBranches = [];
 let branchNotes = JSON.parse(localStorage.getItem('test-branch-notes') || '{}');
+let collapsedBranches = new Set(JSON.parse(localStorage.getItem('test-collapsed-branches') || '[]'));
 
 function showManualLoad() {
   document.getElementById('content').innerHTML =
@@ -215,6 +224,25 @@ function resetAll() {
 
 function setFilter(f) { filter = f; render(); }
 
+function toggleBranch(branch) {
+  if (collapsedBranches.has(branch)) collapsedBranches.delete(branch);
+  else collapsedBranches.add(branch);
+  localStorage.setItem('test-collapsed-branches', JSON.stringify(Array.from(collapsedBranches)));
+  render();
+}
+
+function collapseAll() {
+  Object.keys(plans).forEach(b => collapsedBranches.add(b));
+  localStorage.setItem('test-collapsed-branches', JSON.stringify(Array.from(collapsedBranches)));
+  render();
+}
+
+function expandAll() {
+  collapsedBranches.clear();
+  localStorage.setItem('test-collapsed-branches', JSON.stringify([]));
+  render();
+}
+
 function render() {
   const content = document.getElementById('content');
   const branches = Object.keys(plans);
@@ -279,7 +307,15 @@ function render() {
       });
       if (!tests.length && filter !== 'all') return;
 
-      html += `<div class="branch-group"><div class="branch-header">${esc(branch)}</div>`;
+      const collapsed = collapsedBranches.has(branch);
+      const totalInBranch = plans[branch].tests.length;
+      const doneInBranch = plans[branch].tests.filter(t => t.status && t.status !== 'skipped').length;
+      html += `<div class="branch-group${collapsed ? ' collapsed' : ''}">`;
+      html += `<div class="branch-header collapsible" onclick="toggleBranch('${ea(branch)}')">`;
+      html += `<span class="chevron">&#9660;</span>${esc(branch)}`;
+      html += `<span class="branch-count">${doneInBranch}/${totalInBranch}</span>`;
+      html += `</div>`;
+      html += `<div class="branch-content">`;
 
       const categories = {};
       tests.forEach(t => {
@@ -296,7 +332,7 @@ function render() {
       });
       html += `<div class="branch-notes-label">General feedback for ${esc(branch)}</div>`;
       html += `<textarea class="branch-notes" placeholder="General feedback for this branch (not tied to a specific test)..." onchange="setBranchNotes('${ea(branch)}',this.value)">${esc(branchNotes[branch]||'')}</textarea>`;
-      html += `</div>`;
+      html += `</div></div>`;
     });
   }
 

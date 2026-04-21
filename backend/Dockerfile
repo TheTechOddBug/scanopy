@@ -83,13 +83,17 @@ FROM debian:bookworm-slim AS runtime
 LABEL service="scanopy"
 
 # OCI Image Spec labels — https://github.com/opencontainers/image-spec/blob/main/annotations.md
-LABEL org.opencontainers.image.title="Scanopy Server" \
-      org.opencontainers.image.description="Scanopy server — Network diagrams that update themselves." \
+# Values default to the community build; commercial CI overrides via --build-arg.
+ARG OCI_IMAGE_TITLE="Scanopy Server"
+ARG OCI_IMAGE_DESCRIPTION="Scanopy server (community edition) — Network diagrams that update themselves."
+ARG OCI_IMAGE_LICENSES="AGPL-3.0-only"
+LABEL org.opencontainers.image.title="${OCI_IMAGE_TITLE}" \
+      org.opencontainers.image.description="${OCI_IMAGE_DESCRIPTION}" \
       org.opencontainers.image.url="https://github.com/scanopy/scanopy" \
       org.opencontainers.image.source="https://github.com/scanopy/scanopy" \
       org.opencontainers.image.documentation="https://github.com/scanopy/scanopy#readme" \
       org.opencontainers.image.vendor="Scanopy" \
-      org.opencontainers.image.licenses="AGPL-3.0-only"
+      org.opencontainers.image.licenses="${OCI_IMAGE_LICENSES}"
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \

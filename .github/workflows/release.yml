@@ -321,6 +321,9 @@ jobs:
           build-args: |
             PUBLIC_SERVER_HOSTNAME=default
             PUBLIC_SERVER_PORT=60072
+            OCI_IMAGE_TITLE=Scanopy Server
+            OCI_IMAGE_DESCRIPTION=Scanopy server (community edition) — Network diagrams that update themselves.
+            OCI_IMAGE_LICENSES=AGPL-3.0-only
           tags: |
             ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -390,6 +393,9 @@ jobs:
             PUBLIC_SERVER_HOSTNAME=default
             PUBLIC_SERVER_PORT=60072
             CARGO_FEATURES=commercial
+            OCI_IMAGE_TITLE=Scanopy Server (Commercial)
+            OCI_IMAGE_DESCRIPTION=Scanopy server (commercial edition) — Network diagrams that update themselves.
+            OCI_IMAGE_LICENSES=AGPL-3.0-only OR LicenseRef-Scanopy-Commercial
           tags: |
             ghcr.io/${{ github.repository }}/server-commercial:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
           labels: ${{ steps.meta.outputs.labels }}

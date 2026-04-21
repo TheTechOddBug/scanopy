@@ -505,13 +505,13 @@ impl ApiError {
         Self::coded(StatusCode::BAD_REQUEST, ErrorCode::ValidationBulkEmpty)
     }
 
-    // === Interface errors ===
+    // === IP address errors ===
 
     /// Bad request (400) - IP address is not within subnet range
-    pub fn interface_ip_out_of_range(ip: &str, subnet: &str) -> Self {
+    pub fn ip_address_out_of_range(ip: &str, subnet: &str) -> Self {
         Self::coded(
             StatusCode::BAD_REQUEST,
-            ErrorCode::InterfaceIpOutOfRange {
+            ErrorCode::IpAddressOutOfRange {
                 ip: ip.to_string(),
                 subnet: subnet.to_string(),
             },
@@ -528,6 +528,11 @@ impl ApiError {
     /// Forbidden (403) - incorrect share password
     pub fn share_password_incorrect() -> Self {
         Self::coded(StatusCode::FORBIDDEN, ErrorCode::SharePasswordIncorrect)
+    }
+
+    /// Unauthorized (401) - share access token invalid or expired
+    pub fn share_token_invalid() -> Self {
+        Self::coded(StatusCode::UNAUTHORIZED, ErrorCode::ShareTokenInvalid)
     }
 
     // === Invite errors ===

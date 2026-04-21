@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Scanopy API",
-    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.16.0\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.16.0\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nEndpoints are prefixed with `/api/v1/`. The API version is an integer (`api_version: 1`) returned in every response, versioned independently from the application. Check `GET /api/version` for current versions.\n\n**While Scanopy is pre-v1.0 (current: 0.16.0)**, the API should be considered unstable. Breaking changes may be introduced in any release without incrementing the API version. We recommend pinning to a specific Scanopy release if you depend on API stability, and reviewing the [changelog](/changelog) before upgrading. After Scanopy reaches v1.0, breaking API changes will only occur with an API version increment.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
+    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.16.1\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.16.1\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nEndpoints are prefixed with `/api/v1/`. The API version is an integer (`api_version: 1`) returned in every response, versioned independently from the application. Check `GET /api/version` for current versions.\n\n**While Scanopy is pre-v1.0 (current: 0.16.1)**, the API should be considered unstable. Breaking changes may be introduced in any release without incrementing the API version. We recommend pinning to a specific Scanopy release if you depend on API stability, and reviewing the [changelog](/changelog) before upgrading. After Scanopy reaches v1.0, breaking API changes will only occur with an API version increment.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
     "license": {
       "name": "Dual (AGPL3.0, Commercial License Available)"
     },
@@ -5399,7 +5399,7 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Create a new interface\nPosition is automatically assigned to the end of the host's interface list.",
+        "summary": "Create a new IP address\nPosition is automatically assigned to the end of the host's IP address list.",
         "operationId": "create_ip_address",
         "requestBody": {
           "content": {
@@ -5413,7 +5413,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interface created successfully",
+            "description": "IP address created successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5448,7 +5448,7 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Bulk delete interfaces\nRemaining interfaces for affected hosts are renumbered to maintain sequential positions.",
+        "summary": "Bulk delete IP addresses\nRemaining IP addresses for affected hosts are renumbered to maintain sequential positions.",
         "operationId": "bulk_delete_ip_addresses",
         "requestBody": {
           "content": {
@@ -5466,7 +5466,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interfaces deleted successfully",
+            "description": "IP addresses deleted successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5646,13 +5646,13 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Update an interface\nPosition must be within valid range and not conflict with other interfaces.",
+        "summary": "Update an IP address\nPosition must be within valid range and not conflict with other IP addresses.",
         "operationId": "update_ip_address",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Interface ID",
+            "description": "IP address ID",
             "required": true,
             "schema": {
               "type": "string",
@@ -5672,7 +5672,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interface updated successfully",
+            "description": "IP address updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5692,7 +5692,7 @@
             }
           },
           "404": {
-            "description": "Interface not found",
+            "description": "IP address not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5715,13 +5715,13 @@
         "tags": [
           "IP Addresses"
         ],
-        "summary": "Delete an interface\nRemaining interfaces for the host are renumbered to maintain sequential positions.",
+        "summary": "Delete an IP address\nRemaining IP addresses for the host are renumbered to maintain sequential positions.",
         "operationId": "delete_ip_address",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Interface ID",
+            "description": "IP address ID",
             "required": true,
             "schema": {
               "type": "string",
@@ -5731,7 +5731,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Interface deleted successfully",
+            "description": "IP address deleted successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -5741,7 +5741,7 @@
             }
           },
           "404": {
-            "description": "Interface not found",
+            "description": "IP address not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -10287,12 +10287,12 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.16.0"
+            "example": "0.16.1"
           }
         },
         "example": {
           "api_version": 1,
-          "server_version": "0.16.0"
+          "server_version": "0.16.1"
         }
       },
       "ApiResponse": {
@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-17T16:32:49.063369Z",
-              "id": "06700135-8b4a-4346-9710-d48423fa6404",
+              "created_at": "2026-04-20T04:23:43.728453Z",
+              "id": "554a49fc-2521-4955-afa1-86e03952bed6",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-17T16:32:49.063369Z"
+              "updated_at": "2026-04-20T04:23:43.728453Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-17T16:32:49.045955Z",
-                      "id": "40b9463a-420c-4ddf-90b7-4eeb6fe5180f",
+                      "created_at": "2026-04-20T04:23:43.711884Z",
+                      "id": "a5a7c222-ce52-491f-aa5a-1d138e7ebcd6",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-17T16:32:49.045955Z"
+                      "updated_at": "2026-04-20T04:23:43.711884Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "GitLab",
+                  "service_definition": "APC",
                   "source": {
                     "type": "Manual"
                   },
@@ -12011,14 +12011,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-17T16:32:49.058669Z",
-                  "id": "417b5800-175d-4183-97e4-7ff89902fa51",
+                  "created_at": "2026-04-20T04:23:43.723772Z",
+                  "id": "f9a1cecf-9e97-47fe-ba14-2e0903352981",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-17T16:32:49.058669Z"
+                  "updated_at": "2026-04-20T04:23:43.723772Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12027,7 +12027,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "APC",
               "source": {
                 "type": "Manual"
               },
@@ -12122,6 +12122,44 @@
                 }
               }
             ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiResponse_ShareAccessTokenResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Access token returned after successful password verification.\n\nThe token is an HS256 JWT tied to the share's `password_hash` — changing\nthe share password implicitly invalidates all outstanding tokens.",
+            "required": [
+              "access_token",
+              "expires_at"
+            ],
+            "properties": {
+              "access_token": {
+                "type": "string"
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
           },
           "error": {
             "type": [
@@ -13109,30 +13147,6 @@
           }
         }
       },
-      "ApiResponse_bool": {
-        "type": "object",
-        "required": [
-          "success",
-          "meta"
-        ],
-        "properties": {
-          "data": {
-            "type": "boolean"
-          },
-          "error": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ApiMeta"
-          },
-          "success": {
-            "type": "boolean"
-          }
-        }
-      },
       "ApiResponse_u32": {
         "type": "object",
         "required": [
@@ -13392,14 +13406,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-17T16:32:49.046361Z",
-          "id": "98c7ec97-0e52-4e8d-b007-b99c158cbefe",
+          "created_at": "2026-04-20T04:23:43.712215Z",
+          "id": "a76d2998-7ed3-4b40-a34d-ccd907a273ef",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-17T16:32:49.046361Z"
+          "updated_at": "2026-04-20T04:23:43.712215Z"
         }
       },
       "BindingBase": {
@@ -13929,7 +13943,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "APC",
               "tags": [],
               "virtualization": null
             }
@@ -14027,12 +14041,6 @@
           "share"
         ],
         "properties": {
-          "password": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "share": {
             "$ref": "#/components/schemas/Share"
           }
@@ -14424,6 +14432,15 @@
             "description": "Whether the daemon is on standby due to inactivity (no discovery in 30 days).",
             "readOnly": true
           },
+          "standby_cleared_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Timestamp of the most recent standby → active transition. Set by\n`process_startup` when a restarted daemon is un-standby'd, and by\nthe discovery auto-wake path. The nightly inactivity check skips\ndaemons within the grace window (see `STANDBY_GRACE_PERIOD_DAYS`)\nto prevent the \"restart → cleared → re-standby'd before discovery\nruns\" race.",
+            "readOnly": true
+          },
           "tags": {
             "type": "array",
             "items": {
@@ -14696,6 +14713,9 @@
           "status"
         ],
         "properties": {
+          "has_correct_docker_volume_mount": {
+            "type": "boolean"
+          },
           "status": {
             "$ref": "#/components/schemas/VersionHealthStatus"
           },
@@ -16447,14 +16467,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-17T16:32:49.045391Z",
-                  "id": "6cd39776-9a68-4c2c-aeb8-be2dc81c9145",
+                  "created_at": "2026-04-20T04:23:43.711427Z",
+                  "id": "cb628bf5-04d6-44e1-bd6f-9295f37ae173",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-17T16:32:49.045391Z"
+                  "updated_at": "2026-04-20T04:23:43.711427Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16463,7 +16483,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "GitLab",
+              "service_definition": "APC",
               "source": {
                 "type": "Manual"
               },
@@ -16585,7 +16605,7 @@
           "position": {
             "type": "integer",
             "format": "int32",
-            "description": "Position of this interface in the host's interface list (for ordering)"
+            "description": "Position of this IP address in the host's IP address list (for ordering)"
           },
           "subnet_id": {
             "type": "string",
@@ -18260,7 +18280,7 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.16.0"
+            "example": "0.16.1"
           }
         },
         "example": {
@@ -18271,7 +18291,7 @@
             "offset": 0,
             "total_count": 142
           },
-          "server_version": "0.16.0"
+          "server_version": "0.16.1"
         }
       },
       "PaginatedApiResponse_Credential": {
@@ -18690,14 +18710,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-17T16:32:49.035505Z",
-                        "id": "959c71aa-23b8-4704-92b9-cc5a2c215f53",
+                        "created_at": "2026-04-20T04:23:43.700520Z",
+                        "id": "6d4be516-287f-41f5-84bc-c3c9fb694ae6",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-17T16:32:49.035505Z"
+                        "updated_at": "2026-04-20T04:23:43.700520Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18706,7 +18726,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "GitLab",
+                    "service_definition": "APC",
                     "source": {
                       "type": "Manual"
                     },
@@ -18783,14 +18803,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-17T16:32:49.057316Z",
-                    "id": "6f6e7f45-f0f7-4b41-85b3-6e3604cbb98b",
+                    "created_at": "2026-04-20T04:23:43.722486Z",
+                    "id": "e03f7c19-f241-4633-aa50-5b6500e4d89d",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-17T16:32:49.057316Z"
+                    "updated_at": "2026-04-20T04:23:43.722486Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18799,7 +18819,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "GitLab",
+                "service_definition": "APC",
                 "source": {
                   "type": "Manual"
                 },
@@ -20037,14 +20057,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-17T16:32:49.046234Z",
-              "id": "f908e904-fb01-4a4a-8688-3482f658b6c4",
+              "created_at": "2026-04-20T04:23:43.712104Z",
+              "id": "02c0998a-22d6-42d2-bb9e-95df60364aca",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-17T16:32:49.046234Z"
+              "updated_at": "2026-04-20T04:23:43.712104Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20053,7 +20073,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "GitLab",
+          "service_definition": "APC",
           "source": {
             "type": "Manual"
           },
@@ -20359,6 +20379,23 @@
           }
         ]
       },
+      "ShareAccessTokenResponse": {
+        "type": "object",
+        "description": "Access token returned after successful password verification.\n\nThe token is an HS256 JWT tied to the share's `password_hash` — changing\nthe share password implicitly invalidates all outstanding tokens.",
+        "required": [
+          "access_token",
+          "expires_at"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "ShareBase": {
         "type": "object",
         "required": [
@@ -20415,6 +20452,13 @@
           },
           "options": {
             "$ref": "#/components/schemas/ShareOptions"
+          },
+          "password": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plaintext password on ingest; redacted sentinel (`\"********\"`) or `None` on egress.\nNever stored — `password_hash` is the DB column. Wrapped in `SecretString` so\n`Debug`/logging shows `[REDACTED]` during the window between request\ndeserialization and hashing."
           },
           "topology_id": {
             "type": "string",
@@ -21164,9 +21208,6 @@
       },
       "TopologyRequestOptions": {
         "type": "object",
-        "required": [
-          "hide_ports"
-        ],
         "properties": {
           "container_rules": {
             "type": "object",
@@ -21193,15 +21234,74 @@
               "$ref": "#/components/schemas/IdentifiedRule_ElementRule"
             }
           },
-          "hide_ports": {
-            "type": "boolean"
-          },
-          "hide_service_categories": {
+          "hide_entities": {
             "type": "object",
+            "description": "Entity types hidden per view. Keyed by TopologyView, values are entity\ntypes (matching those declared as container/element/inline in the\nview's element_config). Hides every manifestation of the entity in\nthat view — element nodes, container nodes, and inline rows on\nelement cards. Supersedes the old `hide_ports` (L3-only, inline-only).",
             "additionalProperties": {
               "type": "array",
               "items": {
-                "$ref": "#/components/schemas/ServiceCategory"
+                "$ref": "#/components/schemas/EntityDiscriminants"
+              }
+            },
+            "propertyNames": {
+              "type": "string",
+              "description": "Which topology view is being rendered",
+              "enum": [
+                "L2Physical",
+                "L3Logical",
+                "Workloads",
+                "Application"
+              ]
+            }
+          },
+          "hide_metadata_values": {
+            "type": "object",
+            "description": "Generic per-(view, entity, filter) hide-set for metadata filters\n(Category, Virtualization, etc). Supersedes the old\n`hide_service_categories`; nested so JSON keys are strings all the\nway down.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "propertyNames": {
+                  "type": "string",
+                  "description": "The kind of metadata filter. One variant per conceptually-distinct filter\nacross the app — Category (on Service), Virtualization (on Host), and so\non. Kept narrow on purpose: adding a new filter means adding a variant\nhere + a `HasFilterValues` impl on the relevant entity.",
+                  "enum": [
+                    "Category",
+                    "Virtualization"
+                  ]
+                }
+              },
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "Organization",
+                  "Invite",
+                  "Share",
+                  "Network",
+                  "DaemonApiKey",
+                  "UserApiKey",
+                  "User",
+                  "Tag",
+                  "Discovery",
+                  "Daemon",
+                  "Host",
+                  "Service",
+                  "Port",
+                  "Binding",
+                  "IPAddress",
+                  "Interface",
+                  "Credential",
+                  "Subnet",
+                  "Vlan",
+                  "Dependency",
+                  "Topology",
+                  "Unknown"
+                ]
               }
             },
             "propertyNames": {
@@ -21871,11 +21971,11 @@
     },
     {
       "name": "Interfaces",
-      "description": "SNMP ip_address entries (ifTable). Physical and logical ip_addresses discovered via SNMP on hosts."
+      "description": "SNMP ifTable entries. Physical and logical interfaces discovered via SNMP on hosts."
     },
     {
       "name": "IP Addresses",
-      "description": "Network interfaces on hosts. Each host can have multiple interfaces with different IP addresses."
+      "description": "IP addresses assigned to hosts. Each address belongs to a host and a subnet, optionally has a MAC address, and represents an observed or configured address on the network."
     },
     {
       "name": "Invites",
@@ -21927,7 +22027,7 @@
     },
     {
       "name": "Vlans",
-      "description": "Virtual LANs discovered from network switches. VLANs segment network traffic and are associated with ip_addresses and subnets."
+      "description": "VLANs (802.1Q virtual LANs) defined or discovered on the network. Each VLAN has a number (1-4094), a name, and an optional description, and is referenced by interfaces that participate in it."
     },
     {
       "name": "auth",

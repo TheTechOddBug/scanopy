@@ -195,7 +195,7 @@ impl DemoData {
 
         let vlans = generate_vlans(&networks, organization_id, now);
         let (interfaces, neighbor_updates) =
-            generate_if_entries(&networks, &hosts, &ip_addresses, &vlans, now);
+            generate_interfaces(&networks, &hosts, &ip_addresses, &vlans, now);
         let daemons = generate_daemons(&networks, &hosts, &subnets, now, user_id);
         let api_keys = generate_api_keys(&networks, now);
         let topologies = generate_topologies(&networks, &tags, now);
@@ -3081,7 +3081,7 @@ fn generate_vlans(networks: &[Network], organization_id: Uuid, now: DateTime<Utc
     vlans
 }
 
-fn generate_if_entries(
+fn generate_interfaces(
     networks: &[Network],
     hosts: &[&Host],
     ip_addresses: &[&IPAddress],
@@ -4328,6 +4328,7 @@ fn generate_daemons(
                 api_key_id: None,
                 is_unreachable: false,
                 standby: false,
+                standby_cleared_at: None,
             },
         });
     }
@@ -4349,6 +4350,7 @@ fn generate_daemons(
                     interfaced_subnet_ids: vec![subnet.id],
                 },
                 mode: DaemonMode::DaemonPoll,
+                standby_cleared_at: None,
                 name: "DC Daemon".to_string(),
                 tags: vec![],
                 version: Version::parse(env!("CARGO_PKG_VERSION"))
@@ -4633,6 +4635,7 @@ fn generate_shares(
                     is_enabled: true,
                     expires_at: None,
                     password_hash: None,
+                    password: None,
                     allowed_domains: None,
                     options: ShareOptions {
                         show_inspect_panel: false,
@@ -4659,6 +4662,7 @@ fn generate_shares(
                     is_enabled: true,
                     expires_at: None,
                     password_hash: None,
+                    password: None,
                     allowed_domains: None,
                     options: ShareOptions {
                         show_inspect_panel: true,

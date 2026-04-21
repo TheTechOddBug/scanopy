@@ -79,6 +79,9 @@
 	const organizationQuery = useOrganizationQuery();
 	let org = $derived(organizationQuery.data);
 	let hostLimit = $derived(org?.plan?.included_hosts ?? null);
+	let canBuyMoreHosts = $derived(
+		org?.plan?.host_cents !== undefined && org?.plan?.host_cents !== null
+	);
 	let onboarding = $derived((org?.onboarding ?? []) as OnboardingOperation[]);
 
 	const tagsQuery = useTagsQuery();
@@ -127,9 +130,14 @@
 
 	// Host limit tracking
 	let totalHostCount = $derived(hostsPagination?.total_count ?? hostsData.length);
-	let isAtHostLimit = $derived(hostLimit !== null && totalHostCount >= hostLimit);
+	let isAtHostLimit = $derived(
+		hostLimit !== null && totalHostCount >= hostLimit && !canBuyMoreHosts
+	);
 	let isNearHostLimit = $derived(
-		hostLimit !== null && totalHostCount >= hostLimit - 5 && totalHostCount < hostLimit
+		hostLimit !== null &&
+			totalHostCount >= hostLimit - 5 &&
+			totalHostCount < hostLimit &&
+			!canBuyMoreHosts
 	);
 
 	// Page change handler for server-side pagination
@@ -350,7 +358,7 @@
 		<svelte:fragment slot="actions">
 			{#if hasDaemon(onboarding)}
 				<div class="flex items-center gap-3">
-					{#if hostLimit !== null}
+					{#if hostLimit !== null && !canBuyMoreHosts}
 						<span
 							class="text-sm {isAtHostLimit
 								? 'text-amber-400'

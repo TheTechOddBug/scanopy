@@ -71,7 +71,10 @@
 		networkLimit !== null && networksData.length >= networkLimit && !canBuyMore
 	);
 	let isNearNetworkLimit = $derived(
-		networkLimit !== null && networksData.length >= networkLimit - 2 && !isAtNetworkLimit
+		networkLimit !== null &&
+			networksData.length >= networkLimit - 2 &&
+			!isAtNetworkLimit &&
+			!canBuyMore
 	);
 
 	let showCreateNetworkModal = $state(false);
@@ -196,7 +199,7 @@
 	<TabHeader title={common_networks()}>
 		<svelte:fragment slot="actions">
 			<div class="flex items-center gap-3">
-				{#if networkLimit !== null}
+				{#if networkLimit !== null && !canBuyMore}
 					<span
 						class="text-sm {isAtNetworkLimit
 							? 'text-amber-400'

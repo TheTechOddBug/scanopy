@@ -49,20 +49,33 @@ export const searchNavigableNodeIds = writable<string[]>([]);
 // Special sentinel value for "Untagged" pseudo-tag
 export const UNTAGGED_SENTINEL = '__untagged__';
 
-// Tag hover state for highlighting nodes with a specific tag
+// Hover state for highlighting a set of nodes in the topology. Two modes:
+//   tagId string + color string  → tag-scoped hover (animated colored pulse on
+//                                   nodes whose tagged entity of `entityType`
+//                                   includes `tagId`).
+//   tagId null  + color null     → entity-type-wide hover (subdued gray outline
+//                                   + dotted-underline on every node whose
+//                                   type matches `entityType`).
+// Mutex by UX: at most one hover is active at a time, so a single store
+// handles both modes.
 export interface HoveredTag {
-	tagId: string;
-	color: string;
-	entityType: 'host' | 'service' | 'subnet';
+	entityType: import('$lib/api/schema').components['schemas']['EntityDiscriminants'];
+	tagId: string | null;
+	color: string | null;
 }
 export const hoveredTag = writable<HoveredTag | null>(null);
 
-// Service category hover state for highlighting services in the same category
-export interface HoveredServiceCategory {
-	category: string;
+// Generic metadata-value hover. Mirrors the tag hover loop but for any
+// (entity type, filter type, value id) tuple declared by a view's
+// element_config.metadata_filters — Service.Category, Host.Virtualization,
+// and future extractor registrations below.
+export interface HoveredMetadata {
+	entityType: import('$lib/api/schema').components['schemas']['EntityDiscriminants'];
+	filterType: string;
+	valueId: string;
 	color: string;
 }
-export const hoveredServiceCategory = writable<HoveredServiceCategory | null>(null);
+export const hoveredMetadata = writable<HoveredMetadata | null>(null);
 
 // Edge type hover state for highlighting edges of a specific type
 export interface HoveredEdgeType {
@@ -168,11 +181,52 @@ function hideContainersAndDescendants(
 	}
 }
 
+/**
+ * Per-(entity, filter) extractor registry. For each declared metadata filter
+ * on an entity, returns the filter value id (matching `FilterValue.id` on the
+ * backend) for a given entity instance. The updateTagFilter pass below
+ * matches these values against the user's hide set to decide whether to
+ * hide each entity. Adding a new filter = one line here + a backend impl.
+ */
+export type FilterValueExtractor = (entity: unknown) => string | null;
+export const FILTER_VALUE_EXTRACTORS: Record<string, Record<string, FilterValueExtractor>> = {
+	Service: {
+		Category: (s) =>
+			serviceDefinitions.getCategory((s as { service_definition: string }).service_definition) ??
+			null
+	},
+	Host: {
+		Virtualization: (h) =>
+			(h as { virtualization?: unknown | null }).virtualization != null
+				? 'Virtualized'
+				: 'BareMetal'
+	}
+};
+
+/** Collections on Topology indexed by the entity-type key used in filters. */
+function collectionFor(topo: Topology, entityType: string): Array<{ id: string }> | undefined {
+	switch (entityType) {
+		case 'Service':
+			return topo.services as Array<{ id: string }>;
+		case 'Host':
+			return topo.hosts as Array<{ id: string }>;
+		case 'IPAddress':
+			return topo.ip_addresses as Array<{ id: string }>;
+		case 'Interface':
+			return topo.interfaces as Array<{ id: string }>;
+		case 'Subnet':
+			return topo.subnets as Array<{ id: string }>;
+	}
+	return undefined;
+}
+
 export function updateTagFilter(
 	topology: Topology | undefined,
 	tagFilter: TagFilter | undefined,
 	view?: string,
-	hiddenCategories?: string[]
+	/** hide_metadata_values[activeView] — a nested map keyed by entity type, then filter type, to hidden value ids. */
+	hiddenMetadataValues?: Record<string, Record<string, string[]>>,
+	hiddenEntityTypes?: string[]
 ) {
 	if (!topology) {
 		tagHiddenNodeIds.set(new Set());
@@ -181,9 +235,10 @@ export function updateTagFilter(
 	}
 
 	const hasTagFilter = tagFilter && !isTagFilterEmpty(tagFilter);
-	const hasCategoryFilter = hiddenCategories && hiddenCategories.length > 0;
+	const hasMetadataFilter = hasAnyMetadataFilter(hiddenMetadataValues);
+	const hasEntityFilter = hiddenEntityTypes && hiddenEntityTypes.length > 0;
 
-	if (!hasTagFilter && !hasCategoryFilter) {
+	if (!hasTagFilter && !hasMetadataFilter && !hasEntityFilter) {
 		tagHiddenNodeIds.set(new Set());
 		tagHiddenServiceIds.set(new Set());
 		return;
@@ -193,13 +248,13 @@ export function updateTagFilter(
 
 	// Determine filter roles from element config and parent_taggable_entity relationships
 	const hostIsContainer = config.container_entity === 'Host';
-	const hostIsElement = config.element_entities.includes('Host');
+	const hostIsElement = config.element_entities.some((e) => e.entity_type === 'Host');
 	const hostIsParent = config.element_entities.some(
-		(e) => entities.getMetadata(e)?.parent_taggable_entity === 'Host'
+		(e) => entities.getMetadata(e.entity_type)?.parent_taggable_entity === 'Host'
 	);
 	const hostIsRelevant = hostIsContainer || hostIsElement || hostIsParent;
-	const serviceIsElement = config.element_entities.includes('Service');
-	const serviceIsInline = config.inline_entities.includes('Service');
+	const serviceIsElement = config.element_entities.some((e) => e.entity_type === 'Service');
+	const serviceIsInline = viewInlinesEntity(config, 'Service');
 	const serviceIsVisible = serviceIsElement || serviceIsInline;
 
 	const hiddenHostTagIds = tagFilter?.hidden_host_tag_ids ?? [];
@@ -209,7 +264,6 @@ export function updateTagFilter(
 	const hideUntaggedHosts = hiddenHostTagIds.includes(UNTAGGED_SENTINEL);
 	const hideUntaggedServices = hiddenServiceTagIds.includes(UNTAGGED_SENTINEL);
 	const hideUntaggedSubnets = hiddenSubnetTagIds.includes(UNTAGGED_SENTINEL);
-	const hiddenCategorySet = new Set(hiddenCategories ?? []);
 
 	const hiddenNodeIds = new Set<string>();
 	const hiddenServiceIds = new Set<string>();
@@ -241,16 +295,14 @@ export function updateTagFilter(
 		}
 	}
 
-	// Service filtering: behavior depends on whether Service is element vs inline
+	// Service filtering: tag-based only. Category / other metadata filters
+	// come through the generic metadata-filter pass below.
 	if (serviceIsVisible) {
 		for (const service of topology.services) {
 			const isUntagged = service.tags.length === 0;
 			const serviceHasHiddenTag = service.tags.some((t) => hiddenServiceTagIds.includes(t));
-			const serviceCategory = serviceDefinitions.getCategory(service.service_definition);
-			const isCategoryHidden = hiddenCategorySet.has(serviceCategory);
-			if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices) || isCategoryHidden) {
+			if (serviceHasHiddenTag || (isUntagged && hideUntaggedServices)) {
 				hiddenServiceIds.add(service.id);
-				// When Service IS the element entity, hide the node too
 				if (serviceIsElement) {
 					hiddenNodeIds.add(service.id);
 				}
@@ -272,6 +324,67 @@ export function updateTagFilter(
 		hideContainersAndDescendants(hiddenContainerIds, topology.nodes, hiddenNodeIds);
 	}
 
+	// Generic metadata-filter hide: for each (entity, filter) in the user's
+	// hide-set, look up the extractor, iterate the entity's collection, and
+	// add matching IDs to the hidden sets. Orphaned hide entries (value ids
+	// no longer declared by the current filter) silently match nothing.
+	if (hasMetadataFilter && hiddenMetadataValues) {
+		for (const [entityType, byFilter] of Object.entries(hiddenMetadataValues)) {
+			const extractors = FILTER_VALUE_EXTRACTORS[entityType];
+			if (!extractors) continue;
+			const collection = collectionFor(topology, entityType);
+			if (!collection) continue;
+			for (const entity of collection) {
+				for (const [filterType, hiddenValues] of Object.entries(byFilter)) {
+					if (!hiddenValues.length) continue;
+					const extract = extractors[filterType];
+					if (!extract) continue;
+					const value = extract(entity);
+					if (value && hiddenValues.includes(value)) {
+						if (entityType === 'Service') {
+							hiddenServiceIds.add(entity.id);
+							if (serviceIsElement) hiddenNodeIds.add(entity.id);
+						} else {
+							// Element-role hide for non-Service entities —
+							// only hide element nodes of that element_type,
+							// leaving containers and unrelated nodes alone.
+							for (const node of topology.nodes) {
+								if (
+									node.node_type === 'Element' &&
+									node.element_type === entityType &&
+									relatesToEntity(node, entityType, entity.id)
+								) {
+									hiddenNodeIds.add(node.id);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Entity-type hide: extend hidden sets for every entity type the user
+	// toggled off via the eye icon. Matches on element_type directly to
+	// avoid the over-broad hostIdToNodes lookup (which would include every
+	// service/port under the host).
+	if (hasEntityFilter) {
+		const entityTypes = new Set(hiddenEntityTypes);
+		for (const node of topology.nodes) {
+			if (node.node_type !== 'Element') continue;
+			if (entityTypes.has(node.element_type)) {
+				hiddenNodeIds.add(node.id);
+			}
+		}
+		if (entityTypes.has('Service')) {
+			for (const service of topology.services) {
+				hiddenServiceIds.add(service.id);
+			}
+		}
+		// Pure-inline entities (Port) have no element nodes — their hidden
+		// state is consulted directly by ElementNode render gates.
+	}
+
 	tagHiddenNodeIds.set(hiddenNodeIds);
 	tagHiddenServiceIds.set(hiddenServiceIds);
 }
@@ -286,6 +399,34 @@ function isTagFilterEmpty(filter: {
 		(filter.hidden_service_tag_ids?.length ?? 0) === 0 &&
 		(filter.hidden_subnet_tag_ids?.length ?? 0) === 0
 	);
+}
+
+function hasAnyMetadataFilter(m: Record<string, Record<string, string[]>> | undefined): boolean {
+	if (!m) return false;
+	for (const byFilter of Object.values(m)) {
+		for (const values of Object.values(byFilter)) {
+			if (values.length > 0) return true;
+		}
+	}
+	return false;
+}
+
+/** For non-Service metadata filters: check that an Element node represents
+ *  the same entity instance as the filter target. Keeps the filter match
+ *  narrowly scoped instead of leaking to unrelated elements sharing a host_id. */
+function relatesToEntity(node: TopologyNode, entityType: string, entityId: string): boolean {
+	if (node.node_type !== 'Element') return false;
+	const data = node as unknown as Record<string, string | undefined>;
+	switch (entityType) {
+		case 'Host':
+			return data.host_id === entityId;
+		case 'IPAddress':
+			return data.ip_address_id === entityId;
+		case 'Interface':
+			return data.interface_id === entityId;
+		default:
+			return false;
+	}
 }
 
 /**
@@ -700,27 +841,36 @@ export function getEdgeDisplayState(
 	return { shouldShowFull, shouldAnimate, isEndpointSearchHidden, isEndpointTagHidden };
 }
 
-interface ViewElementConfig {
-	container_entity: string | null;
-	element_entities: string[];
+export interface ViewElementEntityConfig {
+	entity_type: string;
 	inline_entities: string[];
 }
 
+export interface ViewElementConfig {
+	container_entity: string | null;
+	element_entities: ViewElementEntityConfig[];
+}
+
 /** Read ViewElementConfig from views metadata store, with safe defaults */
-function getViewElementConfig(view?: string): ViewElementConfig {
-	if (!view) return { container_entity: null, element_entities: [], inline_entities: [] };
+export function getViewElementConfig(view?: string): ViewElementConfig {
+	if (!view) return { container_entity: null, element_entities: [] };
 	const meta = views.getMetadata(view) as {
-		element_config?: {
-			container_entity: string | null;
-			element_entities: string[];
-			inline_entities: string[];
-		};
+		element_config?: ViewElementConfig;
 	} | null;
 	return {
 		container_entity: meta?.element_config?.container_entity ?? null,
-		element_entities: meta?.element_config?.element_entities ?? [],
-		inline_entities: meta?.element_config?.inline_entities ?? []
+		element_entities: meta?.element_config?.element_entities ?? []
 	};
+}
+
+/** True if any element entity in the view inlines the given entity type. */
+export function viewInlinesEntity(config: ViewElementConfig, entityType: string): boolean {
+	return config.element_entities.some((e) => e.inline_entities.includes(entityType));
+}
+
+/** Entity-type names of the view's element entities (no inline detail). */
+export function elementEntityTypes(config: ViewElementConfig): string[] {
+	return config.element_entities.map((e) => e.entity_type);
 }
 
 interface EntityResolution {
@@ -751,8 +901,10 @@ function resolveEntityToNodes(
 	const elementNodeIds: string[] = [];
 	const containerNodeIds: string[] = [];
 
+	const isDirectElement = config.element_entities.some((e) => e.entity_type === entityType);
+
 	// 1. Direct element: entity type is an element in this view
-	if (config.element_entities.includes(entityType)) {
+	if (isDirectElement) {
 		const getIndex = ENTITY_ELEMENT_INDEX[entityType];
 		if (getIndex) {
 			const nodeIds = getIndex(index).get(entityId);
@@ -773,21 +925,19 @@ function resolveEntityToNodes(
 
 	// 3. Parent propagation: entity type is parent_taggable_entity of an element entity
 	const isParent = config.element_entities.some(
-		(e) => entities.getMetadata(e)?.parent_taggable_entity === entityType
+		(e) => entities.getMetadata(e.entity_type)?.parent_taggable_entity === entityType
 	);
-	if (
-		isParent &&
-		entityType !== config.container_entity &&
-		!config.element_entities.includes(entityType)
-	) {
+	if (isParent && entityType !== config.container_entity && !isDirectElement) {
 		// hostIdToNodes maps host_id to all element nodes with that host_id,
 		// regardless of element type — works across views
 		const nodeIds = index.hostIdToNodes.get(entityId);
 		if (nodeIds) elementNodeIds.push(...nodeIds);
 	}
 
-	// 4. Inline entity: resolve through bindings to element nodes
-	if (config.inline_entities.includes(entityType) && entityType === 'Service') {
+	// 4. Inline entity: resolve through bindings to element nodes.
+	// Only Service is wired through here today; Port inline filtering would
+	// need a similar branch if product adds port tag filtering later.
+	if (viewInlinesEntity(config, entityType) && entityType === 'Service') {
 		const service = topology.services.find((s) => s.id === entityId);
 		if (service) {
 			for (const binding of service.bindings) {

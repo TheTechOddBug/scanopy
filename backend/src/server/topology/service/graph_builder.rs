@@ -135,7 +135,7 @@ impl GraphBuilder {
         // so an interface edge will be created
         let ip_addresses_with_node: Vec<&&IPAddress> = host_interfaces
             .iter()
-            .filter(|i| !ctx.get_services_bound_to_interface(i.id).is_empty())
+            .filter(|i| !ctx.get_services_bound_to_ip_address(i.id).is_empty())
             .collect();
 
         if !host_name_is_interface_ip

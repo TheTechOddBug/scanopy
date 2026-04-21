@@ -1669,8 +1669,8 @@ export interface paths {
         get: operations["list_ip_addresses"];
         put?: never;
         /**
-         * Create a new interface
-         *     Position is automatically assigned to the end of the host's interface list.
+         * Create a new IP address
+         *     Position is automatically assigned to the end of the host's IP address list.
          */
         post: operations["create_ip_address"];
         delete?: never;
@@ -1689,8 +1689,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Bulk delete interfaces
-         *     Remaining interfaces for affected hosts are renumbered to maintain sequential positions.
+         * Bulk delete IP addresses
+         *     Remaining IP addresses for affected hosts are renumbered to maintain sequential positions.
          */
         post: operations["bulk_delete_ip_addresses"];
         delete?: never;
@@ -1729,14 +1729,14 @@ export interface paths {
         /** Get IP Address by ID */
         get: operations["get_ip_address_by_id"];
         /**
-         * Update an interface
-         *     Position must be within valid range and not conflict with other interfaces.
+         * Update an IP address
+         *     Position must be within valid range and not conflict with other IP addresses.
          */
         put: operations["update_ip_address"];
         post?: never;
         /**
-         * Delete an interface
-         *     Remaining interfaces for the host are renumbered to maintain sequential positions.
+         * Delete an IP address
+         *     Remaining IP addresses for the host are renumbered to maintain sequential positions.
          */
         delete: operations["delete_ip_address"];
         options?: never;
@@ -2185,7 +2185,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify password for a password-protected share (returns success/failure only) */
+        /**
+         * Verify password for a password-protected share and return an access token.
+         * @description The returned token is an HS256 JWT tied to the share's current password
+         *     hash; subsequent `/topology` calls send the token instead of the raw
+         *     password. Changing the share password invalidates outstanding tokens.
+         */
         post: operations["verify_share_password"];
         delete?: never;
         options?: never;
@@ -2938,7 +2943,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.16.0"
+         *       "server_version": "0.16.1"
          *     }
          */
         ApiMeta: {
@@ -2949,7 +2954,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.16.0
+             * @example 0.16.1
              */
             server_version: string;
         };
@@ -2963,14 +2968,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-17T16:32:49.063378Z",
-             *       "id": "5acb63f9-250d-46f2-a65c-45867bf6b261",
+             *       "created_at": "2026-04-20T04:23:43.728453Z",
+             *       "id": "41f7b386-c0bc-447e-b8fe-da4111337732",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-17T16:32:49.063378Z"
+             *       "updated_at": "2026-04-20T04:23:43.728453Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3257,14 +3262,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-17T16:32:49.045938Z",
-             *               "id": "f6486502-c8d7-489c-a00a-207bc7131f48",
+             *               "created_at": "2026-04-20T04:23:43.711866Z",
+             *               "id": "dbcd3e5f-8f83-4d76-a762-44ef38e3c3ba",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-17T16:32:49.045938Z"
+             *               "updated_at": "2026-04-20T04:23:43.711866Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3273,7 +3278,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "GitLab",
+             *           "service_definition": "APC",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3537,14 +3542,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-17T16:32:49.058689Z",
-             *           "id": "6d96f3e1-bcc0-4ccb-a9b7-74ec2779474a",
+             *           "created_at": "2026-04-20T04:23:43.723772Z",
+             *           "id": "7a60015a-2114-4bef-bd4c-dbdfb7737b4e",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-17T16:32:49.058689Z"
+             *           "updated_at": "2026-04-20T04:23:43.723772Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3553,7 +3558,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "GitLab",
+             *       "service_definition": "APC",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3592,6 +3597,22 @@ export interface components {
                 readonly id: string;
                 /** Format: date-time */
                 readonly updated_at: string;
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
+        ApiResponse_ShareAccessTokenResponse: {
+            /**
+             * @description Access token returned after successful password verification.
+             *
+             *     The token is an HS256 JWT tied to the share's `password_hash` — changing
+             *     the share password implicitly invalidates all outstanding tokens.
+             */
+            data?: {
+                access_token: string;
+                /** Format: date-time */
+                expires_at: string;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -3858,12 +3879,6 @@ export interface components {
             meta: components["schemas"]["ApiMeta"];
             success: boolean;
         };
-        ApiResponse_bool: {
-            data?: boolean;
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
         ApiResponse_u32: {
             /** Format: int32 */
             data?: number;
@@ -3904,14 +3919,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-17T16:32:49.046429Z",
-         *       "id": "773b9e54-f09d-45f2-9504-a9f929e6c5b5",
+         *       "created_at": "2026-04-20T04:23:43.712189Z",
+         *       "id": "2907a66b-305c-480c-a08c-46046e98643f",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-17T16:32:49.046429Z"
+         *       "updated_at": "2026-04-20T04:23:43.712189Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4096,7 +4111,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "GitLab",
+         *           "service_definition": "APC",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4158,7 +4173,6 @@ export interface components {
             virtualization?: null | components["schemas"]["ServiceVirtualization"];
         };
         CreateUpdateShareRequest: {
-            password?: string | null;
             share: components["schemas"]["Share"];
         };
         Credential: components["schemas"]["CredentialBase"] & {
@@ -4274,6 +4288,16 @@ export interface components {
             network_id: string;
             /** @description Whether the daemon is on standby due to inactivity (no discovery in 30 days). */
             readonly standby?: boolean;
+            /**
+             * Format: date-time
+             * @description Timestamp of the most recent standby → active transition. Set by
+             *     `process_startup` when a restarted daemon is un-standby'd, and by
+             *     the discovery auto-wake path. The nightly inactivity check skips
+             *     daemons within the grace window (see `STANDBY_GRACE_PERIOD_DAYS`)
+             *     to prevent the "restart → cleared → re-standby'd before discovery
+             *     runs" race.
+             */
+            readonly standby_cleared_at?: string | null;
             tags: string[];
             readonly url: string;
             /**
@@ -4392,6 +4416,7 @@ export interface components {
         };
         /** @description Daemon version status including health and any warnings */
         DaemonVersionStatus: {
+            has_correct_docker_volume_mount?: boolean;
             status: components["schemas"]["VersionHealthStatus"];
             supports_unified_discovery?: boolean;
             version?: string | null;
@@ -4955,14 +4980,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-17T16:32:49.045380Z",
-         *               "id": "7ca16e26-60cf-46d9-bcd1-403639d6f90d",
+         *               "created_at": "2026-04-20T04:23:43.711419Z",
+         *               "id": "c6196ca7-bf5f-4c59-aa08-9251c12bc937",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-17T16:32:49.045380Z"
+         *               "updated_at": "2026-04-20T04:23:43.711419Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4971,7 +4996,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "GitLab",
+         *           "service_definition": "APC",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -5056,7 +5081,7 @@ export interface components {
             network_id: string;
             /**
              * Format: int32
-             * @description Position of this interface in the host's interface list (for ordering)
+             * @description Position of this IP address in the host's IP address list (for ordering)
              */
             position?: number;
             /** Format: uuid */
@@ -5609,7 +5634,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.16.0"
+         *       "server_version": "0.16.1"
          *     }
          */
         PaginatedApiMeta: {
@@ -5622,7 +5647,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.16.0
+             * @example 0.16.1
              */
             server_version: string;
         };
@@ -6135,14 +6160,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-17T16:32:49.046217Z",
-         *           "id": "0e336d9e-59f5-4822-9a63-9fa2a629f638",
+         *           "created_at": "2026-04-20T04:23:43.712081Z",
+         *           "id": "8e7faba1-f325-42db-a982-c7d70a90d0d7",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-17T16:32:49.046217Z"
+         *           "updated_at": "2026-04-20T04:23:43.712081Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6151,7 +6176,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "GitLab",
+         *       "service_definition": "APC",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -6261,6 +6286,17 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /**
+         * @description Access token returned after successful password verification.
+         *
+         *     The token is an HS256 JWT tied to the share's `password_hash` — changing
+         *     the share password implicitly invalidates all outstanding tokens.
+         */
+        ShareAccessTokenResponse: {
+            access_token: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
         ShareBase: {
             allowed_domains: string[] | null;
             /** Format: uuid */
@@ -6278,6 +6314,13 @@ export interface components {
             /** Format: uuid */
             network_id: string;
             options: components["schemas"]["ShareOptions"];
+            /**
+             * @description Plaintext password on ingest; redacted sentinel (`"********"`) or `None` on egress.
+             *     Never stored — `password_hash` is the DB column. Wrapped in `SecretString` so
+             *     `Debug`/logging shows `[REDACTED]` during the window between request
+             *     deserialization and hashing.
+             */
+            password?: string | null;
             /** Format: uuid */
             topology_id: string;
         };
@@ -6559,9 +6602,28 @@ export interface components {
                 [key: string]: components["schemas"]["IdentifiedRule_ContainerRule"][];
             };
             element_rules?: components["schemas"]["IdentifiedRule_ElementRule"][];
-            hide_ports: boolean;
-            hide_service_categories?: {
-                [key: string]: components["schemas"]["ServiceCategory"][];
+            /**
+             * @description Entity types hidden per view. Keyed by TopologyView, values are entity
+             *     types (matching those declared as container/element/inline in the
+             *     view's element_config). Hides every manifestation of the entity in
+             *     that view — element nodes, container nodes, and inline rows on
+             *     element cards. Supersedes the old `hide_ports` (L3-only, inline-only).
+             */
+            hide_entities?: {
+                [key: string]: components["schemas"]["EntityDiscriminants"][];
+            };
+            /**
+             * @description Generic per-(view, entity, filter) hide-set for metadata filters
+             *     (Category, Virtualization, etc). Supersedes the old
+             *     `hide_service_categories`; nested so JSON keys are strings all the
+             *     way down.
+             */
+            hide_metadata_values?: {
+                [key: string]: {
+                    [key: string]: {
+                        [key: string]: string[];
+                    };
+                };
             };
             view?: components["schemas"]["TopologyView"];
         };
@@ -10618,7 +10680,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Interface created successfully */
+            /** @description IP address created successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -10651,7 +10713,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Interfaces deleted successfully */
+            /** @description IP addresses deleted successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -10739,7 +10801,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Interface ID */
+                /** @description IP address ID */
                 id: string;
             };
             cookie?: never;
@@ -10750,7 +10812,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Interface updated successfully */
+            /** @description IP address updated successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -10768,7 +10830,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
-            /** @description Interface not found */
+            /** @description IP address not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -10784,14 +10846,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Interface ID */
+                /** @description IP address ID */
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Interface deleted successfully */
+            /** @description IP address deleted successfully */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -10800,7 +10862,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponse"];
                 };
             };
-            /** @description Interface not found */
+            /** @description IP address not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -11946,13 +12008,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password verified */
+            /** @description Password verified; access token issued */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_bool"];
+                    "application/json": components["schemas"]["ApiResponse_ShareAccessTokenResponse"];
                 };
             };
             /** @description Invalid password */

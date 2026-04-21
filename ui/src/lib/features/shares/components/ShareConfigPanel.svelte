@@ -57,7 +57,9 @@
 		shares_topologyViews,
 		shares_enabledViews,
 		shares_enabledViewsHelp,
-		shares_allViewsEnabled
+		shares_allViewsEnabled,
+		shares_urlAvailableAfterSaveTitle,
+		shares_urlAvailableAfterSaveBody
 	} from '$lib/paraglide/messages';
 
 	interface Props {
@@ -65,10 +67,11 @@
 		index: number;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		form: { Field: any };
+		isSaved?: boolean;
 		onChange?: (share: Share) => void;
 	}
 
-	let { share, index, form, onChange = () => {} }: Props = $props();
+	let { share, index, form, isSaved = true, onChange = () => {} }: Props = $props();
 
 	const organizationQuery = useOrganizationQuery();
 	let organization = $derived(organizationQuery.data);
@@ -143,20 +146,6 @@
 		syncEnabledViews();
 	}
 
-	function handleMoveViewUp(from: number, to: number) {
-		const arr = [...enabledViewIds];
-		[arr[from], arr[to]] = [arr[to], arr[from]];
-		enabledViewIds = arr;
-		syncEnabledViews();
-	}
-
-	function handleMoveViewDown(from: number, to: number) {
-		const arr = [...enabledViewIds];
-		[arr[from], arr[to]] = [arr[to], arr[from]];
-		enabledViewIds = arr;
-		syncEnabledViews();
-	}
-
 	function syncEnabledViews() {
 		// Empty list = null (all views enabled)
 		const value = enabledViewIds.length === 0 ? null : enabledViewIds;
@@ -195,32 +184,40 @@
 		</form.Field>
 	</div>
 
-	<!-- Share URL / Embed Code — directly below name -->
-	<div class="space-y-3">
-		<div>
-			<span class="text-secondary mb-1 block text-sm font-medium">{shares_shareUrl()}</span>
-			<CodeContainer
-				language="bash"
-				expandable={false}
-				code={generateShareUrl(share.id, themeParam)}
-			/>
-		</div>
-		<div class="space-y-2">
-			<span class="text-secondary mb-1 block text-sm font-medium">{shares_embedCode()}</span>
-			{#if !hasEmbedsFeature}
-				<InlineInfo title={shares_embedsRequirePlan()} body={shares_upgradeForEmbeds()} />
-				<div class="mt-2">
-					<UpgradeButton feature="embeds" />
-				</div>
-			{:else}
+	<!-- Share URL / Embed Code — directly below name. Hidden until the share has been
+	     saved, since the URL can't resolve until the backend has a persisted record. -->
+	{#if isSaved}
+		<div class="space-y-3">
+			<div>
+				<span class="text-secondary mb-1 block text-sm font-medium">{shares_shareUrl()}</span>
 				<CodeContainer
-					language="html"
+					language="bash"
 					expandable={false}
-					code={generateEmbedCode(share.id, 800, 600, themeParam)}
+					code={generateShareUrl(share.id, themeParam)}
 				/>
-			{/if}
+			</div>
+			<div class="space-y-2">
+				<span class="text-secondary mb-1 block text-sm font-medium">{shares_embedCode()}</span>
+				{#if !hasEmbedsFeature}
+					<InlineInfo title={shares_embedsRequirePlan()} body={shares_upgradeForEmbeds()} />
+					<div class="mt-2">
+						<UpgradeButton feature="embeds" />
+					</div>
+				{:else}
+					<CodeContainer
+						language="html"
+						expandable={false}
+						code={generateEmbedCode(share.id, 800, 600, themeParam)}
+					/>
+				{/if}
+			</div>
 		</div>
-	</div>
+	{:else}
+		<InlineInfo
+			title={shares_urlAvailableAfterSaveTitle()}
+			body={shares_urlAvailableAfterSaveBody()}
+		/>
+	{/if}
 
 	<!-- Topology Views — collapsible -->
 	<CollapsibleCard title={shares_topologyViews()} expanded={false}>
@@ -235,13 +232,11 @@
 				itemDisplayComponent={SimpleOptionDisplay}
 				allowAddFromOptions={true}
 				allowCreateNew={false}
-				allowReorder={true}
+				allowReorder={false}
 				itemClickAction={null}
 				allowItemEdit={() => false}
 				onAdd={handleAddView}
 				onRemove={handleRemoveView}
-				onMoveUp={handleMoveViewUp}
-				onMoveDown={handleMoveViewDown}
 			/>
 		</div>
 	</CollapsibleCard>

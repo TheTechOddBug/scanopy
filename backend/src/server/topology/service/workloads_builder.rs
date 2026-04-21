@@ -447,13 +447,13 @@ impl ViewBuilder for WorkloadsBuilder {
         let mut edges = Vec::new();
         let mut processed_pairs: HashSet<(Uuid, Uuid)> = HashSet::new();
 
-        for source_entry in ctx.get_if_entries_with_neighbor() {
+        for source_entry in ctx.get_interfaces_with_neighbor() {
             let target_interface_id = match &source_entry.base.neighbor {
                 Some(Neighbor::Interface(id)) => *id,
                 _ => continue,
             };
 
-            let target_entry = match ctx.get_if_entry_by_id(target_interface_id) {
+            let target_entry = match ctx.get_interface_by_id(target_interface_id) {
                 Some(e) => e,
                 None => continue,
             };

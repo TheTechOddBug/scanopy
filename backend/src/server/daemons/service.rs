@@ -12,7 +12,7 @@ use std::time::Duration;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use backon::{ExponentialBuilder, Retryable};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use futures::future::join_all;
 use secrecy::ExposeSecret;
 use semver::Version;
@@ -73,6 +73,23 @@ const UNREACHABLE_THRESHOLD: usize = 5;
 
 /// Maximum number of concurrent daemon polls
 const MAX_CONCURRENT_POLLS: usize = 10;
+
+/// Number of days after a standby → active transition during which the
+/// daily inactivity check skips the daemon. Matches the 30-day inactivity
+/// window so the grace covers at least one full scheduled-discovery
+/// cycle regardless of cadence.
+pub const STANDBY_GRACE_PERIOD_DAYS: i64 = 30;
+
+/// Returns true if a daemon with the given `standby_cleared_at` timestamp
+/// is currently within its post-reactivation grace window. Pulled out as
+/// a free function so it can be unit-tested without standing up a
+/// `DaemonService`.
+pub(crate) fn is_within_standby_grace(
+    standby_cleared_at: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
+) -> bool {
+    standby_cleared_at.is_some_and(|t| t > now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS))
+}
 
 pub struct DaemonService {
     // Storage and core dependencies
@@ -669,6 +686,21 @@ impl DaemonService {
         daemon.base.version = Some(version.clone());
         daemon.base.last_seen = Some(Utc::now());
 
+        // A daemon that just booted and reached /startup is by definition active
+        // again. Clear standby and grant a bounded grace period — the nightly
+        // inactivity check skips daemons within the grace window, letting
+        // scheduled discoveries fire and refresh `last_finished` before
+        // inactivity is re-evaluated.
+        if daemon.base.standby {
+            daemon.base.standby = false;
+            daemon.base.standby_cleared_at = Some(Utc::now());
+            tracing::info!(
+                daemon_id = %daemon_id,
+                "Cleared daemon standby on restart ({}-day grace granted)",
+                STANDBY_GRACE_PERIOD_DAYS
+            );
+        }
+
         self.update(&mut daemon, auth).await?;
 
         tracing::info!(daemon_id = %daemon_id, version = %version, "Daemon startup");
@@ -800,6 +832,8 @@ impl DaemonService {
             existing_daemon.base.last_seen = Some(Utc::now());
             existing_daemon.base.mode = request.mode;
             existing_daemon.base.name = request.name;
+            // A daemon that's re-registering is by definition no longer on standby.
+            existing_daemon.base.standby = false;
             let was_pre_unified =
                 !supports_unified_discovery(existing_daemon.base.version.as_ref());
             if let Some(v) = daemon_version.clone() {
@@ -945,6 +979,7 @@ impl DaemonService {
             api_key_id: None,
             is_unreachable: false,
             standby: false,
+            standby_cleared_at: None,
         });
 
         daemon.id = request.daemon_id;
@@ -1908,6 +1943,18 @@ impl DaemonService {
             .await?;
 
         for mut daemon in active_daemons {
+            // Skip daemons still within their post-reactivation grace window
+            // so a freshly-restarted daemon has time for a scheduled
+            // discovery to complete before inactivity is re-evaluated.
+            if is_within_standby_grace(daemon.base.standby_cleared_at, Utc::now()) {
+                tracing::debug!(
+                    daemon_id = %daemon.id,
+                    cleared_at = ?daemon.base.standby_cleared_at,
+                    "Skipping inactivity check (within standby-clear grace)"
+                );
+                continue;
+            }
+
             // Check for historical discoveries completed by this daemon
             let filter = StorableFilter::<Discovery>::new_from_uuid_column("daemon_id", &daemon.id)
                 .historical_discovery();
@@ -2110,5 +2157,46 @@ impl DaemonService {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn grace_window_none_is_not_within_grace() {
+        let now = Utc::now();
+        assert!(!is_within_standby_grace(None, now));
+    }
+
+    #[test]
+    fn grace_window_recent_clear_is_within_grace() {
+        let now = Utc::now();
+        let one_hour_ago = now - chrono::Duration::hours(1);
+        assert!(is_within_standby_grace(Some(one_hour_ago), now));
+    }
+
+    #[test]
+    fn grace_window_just_inside_boundary_is_within_grace() {
+        let now = Utc::now();
+        let just_inside =
+            now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS) + chrono::Duration::hours(1);
+        assert!(is_within_standby_grace(Some(just_inside), now));
+    }
+
+    #[test]
+    fn grace_window_at_exact_boundary_is_expired() {
+        let now = Utc::now();
+        let exactly_at_boundary = now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS);
+        // strict `>`, not `>=`
+        assert!(!is_within_standby_grace(Some(exactly_at_boundary), now));
+    }
+
+    #[test]
+    fn grace_window_past_boundary_is_expired() {
+        let now = Utc::now();
+        let past_boundary = now - chrono::Duration::days(STANDBY_GRACE_PERIOD_DAYS + 1);
+        assert!(!is_within_standby_grace(Some(past_boundary), now));
     }
 }

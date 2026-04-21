@@ -220,6 +220,26 @@ pub const PLAN_CHANGED_BODY: &str = r#"                    <!-- Main Content -->
                     </tr>
 "#;
 
+pub const ORGANIZATION_DELETED_TITLE: &str = "Your Scanopy Organization Has Been Deleted";
+
+pub const ORGANIZATION_DELETED_BODY: &str = r#"                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 0 40px 20px 40px;">
+                            <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Organization Deleted</h1>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Your Scanopy organization has been deleted. All of its data, along with every user account in the organization, has been removed.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">If you'd like to use Scanopy again, you can sign up for a new account at any time.</p>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td align="center" style="padding: 0 40px 30px 40px;">
+                            <a href="{base_url}" style="display: inline-block; padding: 14px 40px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500;">Create a New Account</a>
+                        </td>
+                    </tr>
+"#;
+
 pub const SUBSCRIPTION_CANCELLED_TITLE: &str = "Your Scanopy Subscription Has Been Cancelled";
 
 pub const SUBSCRIPTION_CANCELLED_BODY: &str = r#"                    <!-- Main Content -->
@@ -321,7 +341,7 @@ pub const DISCOVERY_GUIDE_FREE_BODY: &str = r#"                    <!-- Main Con
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Great news — your daemon <strong>{daemon_name}</strong> just registered on <strong>{network_name}</strong>. Scanopy is now running an initial discovery to map out your network.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Here's what happens next:</p>
                             <ul style="margin: 0 0 20px 0; padding-left: 20px; font-size: 16px; line-height: 28px; color: #4a4a4a;">
-                                <li><strong>Self-report:</strong> The daemon host's own services and ip_addresses are mapped automatically.</li>
+                                <li><strong>Self-report:</strong> The daemon host's own services and IP addresses are mapped automatically.</li>
                                 <li><strong>Network scan:</strong> Scanopy scans your local subnets for other hosts, ports, and services.</li>
                                 <li><strong>Topology:</strong> Once discovery finishes, your interactive topology map will be ready.</li>
                                 <li><strong>Docker discovery:</strong> If your daemon has access to the Docker socket, it'll also discover all your containers — images, ports, networks, and labels — automatically.</li>
@@ -348,7 +368,7 @@ pub const DISCOVERY_GUIDE_PAID_BODY: &str = r#"                    <!-- Main Con
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Great news — your daemon <strong>{daemon_name}</strong> just registered on <strong>{network_name}</strong>. Scanopy is now running an initial discovery to map out your network.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Here's what happens next:</p>
                             <ul style="margin: 0 0 20px 0; padding-left: 20px; font-size: 16px; line-height: 28px; color: #4a4a4a;">
-                                <li><strong>Self-report:</strong> The daemon host's own services and ip_addresses are mapped automatically.</li>
+                                <li><strong>Self-report:</strong> The daemon host's own services and IP addresses are mapped automatically.</li>
                                 <li><strong>Network scan:</strong> Scanopy scans your local subnets for other hosts, ports, and services.</li>
                                 <li><strong>Topology:</strong> Once discovery finishes, your interactive topology map will be ready.</li>
                                 <li><strong>Scheduled discovery:</strong> Your plan includes daily scheduled discovery — your network documentation stays up to date automatically.</li>

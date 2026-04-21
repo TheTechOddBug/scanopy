@@ -292,7 +292,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Dependency => Color::Rose,
             EntityDiscriminants::Service => Color::Fuchsia,
 
-            EntityDiscriminants::Host => Color::Blue,
+            EntityDiscriminants::Host => Color::Amber,
 
             EntityDiscriminants::Interface => Color::Teal,
             EntityDiscriminants::IPAddress => Color::Emerald,

@@ -130,8 +130,8 @@ pub enum ErrorCode {
     SharePasswordRequired,
     /// Incorrect password for share
     SharePasswordIncorrect,
-    /// Domain not allowed for this share
-    ShareDomainNotAllowed { domain: String },
+    /// Share access token is invalid, expired, or signed with a stale password hash
+    ShareTokenInvalid,
 
     // === Invites ===
     /// Invite has already been accepted
@@ -147,9 +147,9 @@ pub enum ErrorCode {
     /// Discovery session not found
     DiscoverySessionNotFound { id: Uuid },
 
-    // === Interface ===
+    // === IP address ===
     /// IP address is not within subnet range
-    InterfaceIpOutOfRange { ip: String, subnet: String },
+    IpAddressOutOfRange { ip: String, subnet: String },
 
     // === Daemon ===
     /// Cannot send updates for a different network
@@ -169,6 +169,10 @@ pub enum ErrorCode {
     // === User ===
     /// Email is already in use
     UserEmailInUse { email: String },
+
+    // === Organizations ===
+    /// Organization cannot be deleted while it has an active paid subscription
+    OrganizationHasActiveSubscription,
 
     // === Billing ===
     /// Payment is required to continue
@@ -272,7 +276,7 @@ impl ErrorCode {
             // Shares
             Self::SharePasswordRequired => "Password required for this share",
             Self::SharePasswordIncorrect => "Incorrect password",
-            Self::ShareDomainNotAllowed { .. } => "Domain '{domain}' not allowed",
+            Self::ShareTokenInvalid => "Access token is invalid or expired",
 
             // Invites
             Self::InviteAlreadyAccepted => "This invite has already been accepted",
@@ -285,8 +289,8 @@ impl ErrorCode {
             }
             Self::DiscoverySessionNotFound { .. } => "Discovery session '{id}' not found",
 
-            // Interface
-            Self::InterfaceIpOutOfRange { .. } => {
+            // IP address
+            Self::IpAddressOutOfRange { .. } => {
                 "IP address '{ip}' is not within subnet '{subnet}' range"
             }
 
@@ -305,6 +309,11 @@ impl ErrorCode {
 
             // User
             Self::UserEmailInUse { .. } => "Email '{email}' is already in use",
+
+            // Organizations
+            Self::OrganizationHasActiveSubscription => {
+                "Cancel your subscription before deleting your organization"
+            }
 
             // Billing
             Self::BillingPaymentRequired => "Payment is required to continue",
@@ -359,6 +368,7 @@ impl ErrorCode {
             | Self::AuthOidcNotConfigured
             | Self::SharePasswordRequired
             | Self::SharePasswordIncorrect
+            | Self::ShareTokenInvalid
             | Self::InviteAlreadyAccepted
             | Self::InviteEmailMismatch
             | Self::DiscoveryHistoricalReadOnly
@@ -366,6 +376,7 @@ impl ErrorCode {
             | Self::DaemonIdentityMismatch
             | Self::DaemonStandby
             | Self::DaemonNotRegistered
+            | Self::OrganizationHasActiveSubscription
             | Self::BillingPaymentRequired
             | Self::BillingSubscriptionRequired
             | Self::BillingSetupIncomplete
@@ -415,12 +426,11 @@ impl ErrorCode {
             // Domain-specific with params
             Self::HostsConsolidateFailed { reason } => Some(json_map! { "reason" => reason }),
             Self::NetworksAccessDenied { network } => Some(json_map! { "network" => network }),
-            Self::ShareDomainNotAllowed { domain } => Some(json_map! { "domain" => domain }),
             Self::DiscoverySubnetNetworkMismatch { subnet } => {
                 Some(json_map! { "subnet" => subnet })
             }
             Self::DiscoverySessionNotFound { id } => Some(json_map! {"id" => id}),
-            Self::InterfaceIpOutOfRange { ip, subnet } => {
+            Self::IpAddressOutOfRange { ip, subnet } => {
                 Some(json_map! { "ip" => ip, "subnet" => subnet })
             }
             Self::DaemonVersionTooOld {

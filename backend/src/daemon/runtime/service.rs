@@ -297,8 +297,8 @@ impl DaemonRuntimeService {
                     {
                         tracing::warn!(
                             target: LOG_TARGET,
-                            "Daemon is on standby due to inactivity. \
-                             Queue a discovery session and restart the daemon. \
+                            "Daemon is on standby due to inactivity (no completed discovery in 30 days). \
+                             To end standby, restart the daemon or queue a discovery from the UI. \
                              Waiting for shutdown signal (Ctrl+C)..."
                         );
                         tokio::signal::ctrl_c().await.ok();

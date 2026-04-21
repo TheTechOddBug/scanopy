@@ -32,6 +32,10 @@
 		daemons_upgradeMultipleDaemonsBody,
 		daemons_upgradeStartProcess,
 		daemons_upgradeStopProcess,
+		daemons_upgradeVolumeMountCheckLabel,
+		daemons_upgradeVolumeMountFixStep,
+		daemons_upgradeVolumeMountWarningBody,
+		daemons_upgradeVolumeMountWarningTitle,
 		discovery_upgradeConsolidationWarning
 	} from '$lib/paraglide/messages';
 
@@ -152,16 +156,45 @@ docker compose up -d`;
 						{:else if linuxMethod === 'docker'}
 							<!-- Linux Docker Compose -->
 							<div class="space-y-3">
-								<div class="space-y-2">
-									<p class="text-secondary text-sm">
+								{#if daemon.version_status?.has_correct_docker_volume_mount === false}
+									<InlineWarning
+										title={daemons_upgradeVolumeMountWarningTitle()}
+										body={daemons_upgradeVolumeMountWarningBody()}
+									/>
+									<div class="text-secondary">
+										<b>{common_stepNumber({ number: '1' })}</b>
+										{daemons_upgradeVolumeMountCheckLabel()}
+									</div>
+									<CodeContainer
+										language="bash"
+										expandable={false}
+										code="docker compose config | grep daemon-config"
+									/>
+									<div class="text-secondary">
+										<b>{common_stepNumber({ number: '2' })}</b>
+										{daemons_upgradeVolumeMountFixStep()}
+									</div>
+									<div class="text-secondary">
+										<b>{common_stepNumber({ number: '3' })}</b>
 										{daemons_dockerLatestTag()}
-									</p>
+									</div>
 									<CodeContainer
 										language="bash"
 										expandable={false}
 										code={dockerComposeLatestPull}
 									/>
-								</div>
+								{:else}
+									<div class="space-y-2">
+										<p class="text-secondary text-sm">
+											{daemons_dockerLatestTag()}
+										</p>
+										<CodeContainer
+											language="bash"
+											expandable={false}
+											code={dockerComposeLatestPull}
+										/>
+									</div>
+								{/if}
 
 								<div class="space-y-2">
 									<p class="text-secondary text-sm">

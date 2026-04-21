@@ -58,6 +58,7 @@
 	import type { Color } from '$lib/shared/utils/styling';
 	import { AVAILABLE_COLORS, createColorHelper } from '$lib/shared/utils/styling';
 	import { browser } from '$app/environment';
+	import { v4 as uuidv4 } from 'uuid';
 	import {
 		appWizard_selectedCount,
 		topology_multiSelectCreateGroupRebuildWarning,
@@ -391,7 +392,7 @@
 		updateSharedElementRules((current) => [
 			...current,
 			{
-				id: crypto.randomUUID(),
+				id: uuidv4(),
 				rule: { ByTag: { tag_ids: tagIds, title } }
 			}
 		]);
@@ -692,8 +693,14 @@
 	});
 
 	// Bubble dependency_type changes to the parent (tutorial checklist watches this).
+	// Skip the initial mount firing — only notify on real user-driven changes.
+	let previousDependencyType: DependencyType | undefined;
 	$effect(() => {
-		onDependencyTypeChange?.(formValues.dependency_type);
+		const current = formValues.dependency_type;
+		if (previousDependencyType !== undefined && previousDependencyType !== current) {
+			onDependencyTypeChange?.(current);
+		}
+		previousDependencyType = current;
 	});
 
 	let lastAutoName = $state('');

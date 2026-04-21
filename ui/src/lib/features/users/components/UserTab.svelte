@@ -180,7 +180,7 @@
 	<TabHeader title={common_users()} subtitle={users_subtitle()}>
 		<svelte:fragment slot="actions">
 			<div class="flex items-center gap-3">
-				{#if seatLimit !== null}
+				{#if seatLimit !== null && !canBuyMoreSeats}
 					<span class="text-sm {isAtSeatLimit ? 'text-amber-400' : 'text-tertiary'}">
 						{userCount} / {seatLimit}
 					</span>

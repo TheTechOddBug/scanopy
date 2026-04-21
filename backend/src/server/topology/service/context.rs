@@ -117,7 +117,7 @@ impl<'a> TopologyContext<'a> {
         })
     }
 
-    pub fn get_services_bound_to_interface(&self, ip_address_id: Uuid) -> Vec<&'a Service> {
+    pub fn get_services_bound_to_ip_address(&self, ip_address_id: Uuid) -> Vec<&'a Service> {
         self.services
             .iter()
             .filter(|s| {
@@ -133,7 +133,7 @@ impl<'a> TopologyContext<'a> {
         self.get_subnet_by_id(ip_address.base.subnet_id)
     }
 
-    pub fn get_host_from_interface_id(&self, ip_address_id: Uuid) -> Option<&'a Host> {
+    pub fn get_host_from_ip_address_id(&self, ip_address_id: Uuid) -> Option<&'a Host> {
         let ip_address = self.ip_addresses.iter().find(|i| i.id == ip_address_id)?;
         self.hosts.iter().find(|h| h.id == ip_address.base.host_id)
     }
@@ -142,15 +142,15 @@ impl<'a> TopologyContext<'a> {
     // Interface (SNMP Interface Table) Methods
     // ============================================================================
 
-    pub fn get_if_entry_by_id(&self, id: Uuid) -> Option<&'a Interface> {
+    pub fn get_interface_by_id(&self, id: Uuid) -> Option<&'a Interface> {
         self.interfaces.iter().find(|e| e.id == id)
     }
 
-    /// Resolve an interface ID from an Interface, with single-interface host fallback.
+    /// Resolve an IP address ID from an Interface, with single-IP-address host fallback.
     /// Returns Some(ip_address_id) if:
     /// - The interface has ip_address_id set, OR
-    /// - The interface's host has exactly one interface
-    pub fn resolve_ip_address_for_if_entry(&self, interface: &Interface) -> Option<Uuid> {
+    /// - The interface's host has exactly one IP address
+    pub fn resolve_ip_address_for_interface(&self, interface: &Interface) -> Option<Uuid> {
         // Direct resolution
         if let Some(ip_address_id) = interface.base.ip_address_id {
             return Some(ip_address_id);
@@ -165,7 +165,7 @@ impl<'a> TopologyContext<'a> {
         None
     }
 
-    pub fn get_if_entries_for_host(&self, host_id: Uuid) -> Vec<&'a Interface> {
+    pub fn get_interfaces_for_host(&self, host_id: Uuid) -> Vec<&'a Interface> {
         self.interfaces
             .iter()
             .filter(|e| e.base.host_id == host_id)
@@ -173,7 +173,7 @@ impl<'a> TopologyContext<'a> {
     }
 
     /// Get all interfaces that have a resolved neighbor (full resolution only)
-    pub fn get_if_entries_with_neighbor(&self) -> Vec<&'a Interface> {
+    pub fn get_interfaces_with_neighbor(&self) -> Vec<&'a Interface> {
         use crate::server::interfaces::r#impl::base::Neighbor;
         self.interfaces
             .iter()

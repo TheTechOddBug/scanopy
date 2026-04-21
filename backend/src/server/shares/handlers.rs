@@ -1,18 +1,17 @@
 use std::{num::NonZeroU32, sync::Arc};
 
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, Query, State},
-    http::{HeaderMap, header},
-    response::{IntoResponse, Response},
+    http::{HeaderValue, header},
+    response::{Html, IntoResponse, Response},
 };
 use governor::{Quota, RateLimiter, clock::DefaultClock, state::keyed::DashMapStateStore};
+use secrecy::ExposeSecret;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
-
-use axum::http::StatusCode;
 
 use chrono::Utc;
 use serde_json::json;
@@ -28,6 +27,7 @@ use crate::server::{
     },
     billing::types::base::BillingPlan,
     config::AppState,
+    credentials::r#impl::types::REDACTED_SECRET_SENTINEL,
     networks::r#impl::Network,
     organizations::r#impl::base::Organization,
     shared::validation::validate_csp_domain,
@@ -36,13 +36,13 @@ use crate::server::{
         handlers::traits::{CrudHandlers, create_handler, update_handler},
         services::traits::CrudService,
         storage::traits::{Entity, Storage},
-        types::{
-            api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult},
-            error_codes::ErrorCode,
-        },
+        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult},
     },
     shares::r#impl::{
-        api::{CreateUpdateShareRequest, ExportFeatures, PublicShareMetadata, ShareWithTopology},
+        api::{
+            CreateUpdateShareRequest, ExportFeatures, PublicShareMetadata,
+            ShareAccessTokenResponse, ShareWithTopology,
+        },
         base::Share,
     },
     topology::types::base::Topology,
@@ -88,8 +88,9 @@ pub struct ShareQuery {
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ShareTopologyRequest {
+    /// Server-issued access token obtained from `/verify`. Required when the share has a password.
     #[serde(default)]
-    pub password: Option<String>,
+    pub access_token: Option<String>,
     /// Which topology view to return data for
     pub view: crate::server::topology::types::views::TopologyView,
 }
@@ -138,10 +139,7 @@ async fn create_share(
     State(state): State<Arc<AppState>>,
     _feature: RequireFeature<ShareViewsFeature>,
     auth: Authorized<RequireVerified<Member>>,
-    Json(CreateUpdateShareRequest {
-        mut share,
-        password,
-    }): Json<CreateUpdateShareRequest>,
+    Json(CreateUpdateShareRequest { mut share }): Json<CreateUpdateShareRequest>,
 ) -> ApiResult<Json<ApiResponse<Share>>> {
     // Validate allowed_domains for CSP safety
     if let Some(ref domains) = share.base.allowed_domains {
@@ -150,13 +148,21 @@ async fn create_share(
         }
     }
 
-    // Hash password if provided
-    if let Some(password) = password
-        && !password.is_empty()
+    // Password handling — the field round-trips as the redaction sentinel, so on
+    // create we only hash when the client sent a real plaintext value. Sentinel
+    // and empty both mean "no password".
+    share.base.password_hash = match share
+        .base
+        .password
+        .as_ref()
+        .map(ExposeSecret::expose_secret)
     {
-        share.base.password_hash =
-            Some(hash_password(&password).map_err(|e| ApiError::internal_error(&e.to_string()))?);
-    }
+        Some(plaintext) if !plaintext.is_empty() && plaintext != REDACTED_SECRET_SENTINEL => {
+            Some(hash_password(plaintext).map_err(|e| ApiError::internal_error(&e.to_string()))?)
+        }
+        _ => None,
+    };
+    share.base.redact_password();
 
     share.base.created_by = auth.user_id().ok_or_else(ApiError::user_required)?;
 
@@ -180,10 +186,7 @@ async fn update_share(
     State(state): State<Arc<AppState>>,
     auth: Authorized<RequireVerified<Member>>,
     Path(id): Path<Uuid>,
-    Json(CreateUpdateShareRequest {
-        mut share,
-        password,
-    }): Json<CreateUpdateShareRequest>,
+    Json(CreateUpdateShareRequest { mut share }): Json<CreateUpdateShareRequest>,
 ) -> ApiResult<Json<ApiResponse<Share>>> {
     // Validate allowed_domains for CSP safety
     if let Some(ref domains) = share.base.allowed_domains {
@@ -198,26 +201,25 @@ async fn update_share(
         .await?
         .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
-    // Handle password field:
-    // - None: preserve existing password_hash
-    // - Some(""): remove password (clear password_hash)
-    // - Some(value): hash and set new password
-    match &password {
-        None => {
-            // Preserve existing password
-            share.base.password_hash = existing.base.password_hash;
+    // Password handling — `share.base.password` round-trips as the redaction
+    // sentinel, so:
+    // - None or Some(sentinel): preserve the existing hash (user didn't touch it).
+    // - Some(""): client explicitly cleared the field → remove the password.
+    // - Some(plaintext): hash and set the new password.
+    share.base.password_hash = match share
+        .base
+        .password
+        .as_ref()
+        .map(ExposeSecret::expose_secret)
+    {
+        None => existing.base.password_hash,
+        Some(v) if v == REDACTED_SECRET_SENTINEL => existing.base.password_hash,
+        Some("") => None,
+        Some(plaintext) => {
+            Some(hash_password(plaintext).map_err(|e| ApiError::internal_error(&e.to_string()))?)
         }
-        Some(password) if password.is_empty() => {
-            // Remove password
-            share.base.password_hash = None;
-        }
-        Some(password) => {
-            // Set new password
-            share.base.password_hash = Some(
-                hash_password(password).map_err(|e| ApiError::internal_error(&e.to_string()))?,
-            );
-        }
-    }
+    };
+    share.base.redact_password();
 
     // Delegate to generic handler
     update_handler::<Share>(
@@ -313,7 +315,11 @@ async fn get_public_share_metadata(
     ))))
 }
 
-/// Verify password for a password-protected share (returns success/failure only)
+/// Verify password for a password-protected share and return an access token.
+///
+/// The returned token is an HS256 JWT tied to the share's current password
+/// hash; subsequent `/topology` calls send the token instead of the raw
+/// password. Changing the share password invalidates outstanding tokens.
 #[utoipa::path(
     post,
     path = "/public/{id}/verify",
@@ -321,7 +327,7 @@ async fn get_public_share_metadata(
     params(("id" = Uuid, Path, description = "Share ID")),
     request_body = String,
     responses(
-        (status = 200, description = "Password verified", body = ApiResponse<bool>),
+        (status = 200, description = "Password verified; access token issued", body = ApiResponse<ShareAccessTokenResponse>),
         (status = 401, description = "Invalid password", body = ApiErrorResponse),
         (status = 404, description = "Share not found", body = ApiErrorResponse),
     )
@@ -330,7 +336,7 @@ async fn verify_share_password(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Json(password): Json<String>,
-) -> ApiResult<Json<ApiResponse<bool>>> {
+) -> ApiResult<Json<ApiResponse<ShareAccessTokenResponse>>> {
     check_share_rate_limit(&id)?;
 
     let share = state
@@ -356,7 +362,12 @@ async fn verify_share_password(
         .verify_share_password(&share, &password)
         .map_err(|_| ApiError::share_password_incorrect())?;
 
-    Ok(Json(ApiResponse::success(true)))
+    let issued = state.services.share_service.issue_access_token(&share)?;
+
+    Ok(Json(ApiResponse::success(ShareAccessTokenResponse {
+        access_token: issued.token,
+        expires_at: issued.expires_at,
+    })))
 }
 
 /// Get topology data for a public share
@@ -364,7 +375,6 @@ async fn get_share_topology(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Query(query): Query<ShareQuery>,
-    req_headers: HeaderMap,
     Json(body): Json<ShareTopologyRequest>,
 ) -> ApiResult<Response> {
     let share = state
@@ -391,16 +401,16 @@ async fn get_share_topology(
         ));
     }
 
-    // Handle password-protected shares
+    // Handle password-protected shares: require a valid access token (issued
+    // by `/verify`) in place of the raw password.
     if share.requires_password() {
         check_share_rate_limit(&id)?;
-        match &body.password {
-            Some(password) => {
+        match &body.access_token {
+            Some(token) => {
                 state
                     .services
                     .share_service
-                    .verify_share_password(&share, password)
-                    .map_err(|_| ApiError::share_password_incorrect())?;
+                    .verify_access_token(&share, token)?;
             }
             None => {
                 return Err(ApiError::share_password_required());
@@ -408,24 +418,12 @@ async fn get_share_topology(
         }
     }
 
-    // Validate allowed_domains only for embed requests
-    if query.embed && share.has_domain_restrictions() {
-        let referer = req_headers
-            .get(header::REFERER)
-            .and_then(|v| v.to_str().ok());
-
-        if !state
-            .services
-            .share_service
-            .validate_allowed_domains(&share, referer)
-        {
-            let domain = referer.unwrap_or("unknown").to_string();
-            return Err(ApiError::coded(
-                StatusCode::FORBIDDEN,
-                ErrorCode::ShareDomainNotAllowed { domain },
-            ));
-        }
-    }
+    // Parent-origin restriction for embeds is enforced by
+    // `Content-Security-Policy: frame-ancestors` on the HTML response
+    // (see `share_html_handler`). The browser blocks disallowed framings
+    // before the iframe renders; the Referer header never carries the
+    // parent frame's origin for same-origin iframe fetches, so a
+    // server-side referer check here cannot enforce what it appears to.
 
     // Get topology data
     let mut topology = state
@@ -575,53 +573,72 @@ async fn get_share_topology(
         }
     }
 
-    // Build response with appropriate headers
+    // Build response with appropriate headers. The per-share
+    // `frame-ancestors` CSP directive is set on the HTML response in
+    // `share_html_handler` — it has no effect on this JSON response.
     let mut response = Json(ApiResponse::success(response_data)).into_response();
-    let headers = response.headers_mut();
-
-    // Add cache header
-    headers.insert(
+    response.headers_mut().insert(
         header::CACHE_CONTROL,
         "public, max-age=300".parse().unwrap(),
     );
 
-    // Set CSP frame-ancestors to control iframe embedding
-    // This overrides the global 'frame-ancestors self' default
-    let frame_ancestors = if has_embeds_feature {
-        // Org has embed feature - allow based on allowed_domains
-        if let Some(ref domains) = share.base.allowed_domains {
-            // Defense-in-depth: filter out any domains with unsafe CSP characters
-            let safe_domains: Vec<&String> = domains
-                .iter()
-                .filter(|d| validate_csp_domain(d).is_ok())
-                .collect();
-            if !safe_domains.is_empty() {
-                // Specific domains allowed
-                format!(
-                    "frame-ancestors {}",
-                    safe_domains
-                        .iter()
-                        .map(|d| d.as_str())
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                )
-            } else {
-                // Empty list = allow all
-                "frame-ancestors *".to_string()
-            }
-        } else {
-            // No restrictions = allow all
-            "frame-ancestors *".to_string()
+    Ok(response)
+}
+
+/// Bytes of the SPA `index.html`, loaded once at startup and shared across
+/// all share-HTML requests. Wrapped in `Arc` so the axum Extension layer
+/// can clone cheaply.
+#[derive(Clone)]
+pub struct ShareIndexHtml(pub Arc<String>);
+
+/// Serve the SPA `index.html` for `/share/{id}` and `/share/{id}/embed`
+/// with a tight, per-share CSP.
+///
+/// The per-share `frame-ancestors` directive is derived from the share's
+/// `allowed_domains` and the organization's embed feature flag. Unknown
+/// shares (or any error determining the plan) fall back to
+/// `frame-ancestors 'none'` — safest default.
+pub async fn share_html_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(index): Extension<ShareIndexHtml>,
+    Path(id): Path<Uuid>,
+) -> Response {
+    use crate::server::shares::service::build_frame_ancestors;
+
+    let frame_ancestors = match state.services.share_service.get_by_id(&id).await {
+        Ok(Some(share)) => {
+            let has_embeds_feature = get_share_org_plan(&state, &share)
+                .await
+                .map(|p| p.features().embeds)
+                .unwrap_or(false);
+            build_frame_ancestors(&share, has_embeds_feature)
         }
-    } else {
-        // No embed feature - block all framing
-        "frame-ancestors 'none'".to_string()
+        _ => "frame-ancestors 'none'".to_string(),
     };
 
-    headers.insert(
-        header::CONTENT_SECURITY_POLICY,
-        frame_ancestors.parse().unwrap(),
+    // Tight CSP for share HTML routes. `connect-src 'self'` is the core
+    // defense — even if an XSS vector is found, stolen access tokens or
+    // topology data cannot be POSTed to a foreign origin. PostHog is
+    // deliberately omitted; share pages do not phone home.
+    let csp = format!(
+        "default-src 'self'; \
+         script-src 'self' 'unsafe-inline'; \
+         style-src 'self' 'unsafe-inline'; \
+         img-src 'self' data: blob:; \
+         font-src 'self'; \
+         connect-src 'self'; \
+         object-src 'none'; \
+         base-uri 'none'; \
+         form-action 'none'; \
+         {frame_ancestors}"
     );
 
-    Ok(response)
+    let csp_header = HeaderValue::try_from(csp)
+        .unwrap_or_else(|_| HeaderValue::from_static("default-src 'none'"));
+
+    let mut response = Html((*index.0).clone()).into_response();
+    response
+        .headers_mut()
+        .insert(header::CONTENT_SECURITY_POLICY, csp_header);
+    response
 }

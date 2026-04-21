@@ -109,7 +109,7 @@
     "description": "Physical network device",
     "category": null,
     "icon": "cable",
-    "color": "Emerald",
+    "color": "Amber",
     "metadata": {
       "collapsed_by_default": false,
       "collapsed_size": {

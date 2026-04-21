@@ -1,6 +1,7 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::{Authorized, IsUser, Member, Owner};
 use crate::server::auth::service::hash_password;
+use crate::server::billing::service::BillingService;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::bindings::r#impl::base::Binding;
 use crate::server::config::AppState;
@@ -14,6 +15,7 @@ use crate::server::shared::storage::traits::{Entity, Storable, Storage};
 use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::ApiResult;
 use crate::server::shared::types::api::{ApiError, ApiErrorResponse, EmptyApiResponse};
+use crate::server::shared::types::error_codes::ErrorCode;
 use crate::server::topology::types::base::Topology;
 use crate::server::users::r#impl::base::{User, UserBase};
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
@@ -309,6 +311,14 @@ pub async fn delete_organization(
         return Err(ApiError::permission_denied());
     }
 
+    if BillingService::has_active_paid_subscription(&org) {
+        return Err(ApiError::coded(
+            axum::http::StatusCode::CONFLICT,
+            ErrorCode::OrganizationHasActiveSubscription,
+        ));
+    }
+
+    let initiator_user_id = auth.user_id();
     let entity: AuthenticatedEntity = auth.into_entity();
 
     // 1. Delete all child entities (reuse reset logic)
@@ -324,6 +334,24 @@ pub async fn delete_organization(
         .iter()
         .map(|u| u.id)
         .collect();
+
+    // Send the org-deleted confirmation email to the initiating owner before
+    // their user row disappears. Failure is logged but does not block deletion —
+    // the user already confirmed; failing the request because the mail provider
+    // is down would be worse than not sending the email.
+    if let Some(email_service) = &state.services.email_service
+        && let Some(user_id) = initiator_user_id
+        && let Ok(Some(user)) = state.services.user_service.get_by_id(&user_id).await
+        && let Err(e) = email_service
+            .send_organization_deleted_email(user.base.email.clone())
+            .await
+    {
+        tracing::warn!(
+            organization_id = %org.id,
+            error = %e,
+            "Failed to send organization-deleted email"
+        );
+    }
 
     if !all_user_ids.is_empty() {
         state

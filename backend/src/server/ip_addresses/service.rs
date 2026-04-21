@@ -51,33 +51,33 @@ impl IPAddressService {
         Self { storage, event_bus }
     }
 
-    /// Get all interfaces for a specific host, ordered by position
+    /// Get all IP addresses for a specific host, ordered by position
     pub async fn get_for_host(&self, host_id: &Uuid) -> Result<Vec<IPAddress>> {
         let filter = StorableFilter::<IPAddress>::new_from_host_ids(&[*host_id]);
         self.storage.get_all_ordered(filter, "position ASC").await
     }
 
-    /// Get interfaces for multiple hosts, ordered by position within each host
+    /// Get IP addresses for multiple hosts, ordered by position within each host
     pub async fn get_for_hosts(&self, host_ids: &[Uuid]) -> Result<HashMap<Uuid, Vec<IPAddress>>> {
         if host_ids.is_empty() {
             return Ok(HashMap::new());
         }
 
         let filter = StorableFilter::<IPAddress>::new_from_host_ids(host_ids);
-        let interfaces = self.storage.get_all_ordered(filter, "position ASC").await?;
+        let ip_addresses = self.storage.get_all_ordered(filter, "position ASC").await?;
 
         let mut result: HashMap<Uuid, Vec<IPAddress>> = HashMap::new();
-        for interface in interfaces {
+        for ip_address in ip_addresses {
             result
-                .entry(interface.base.host_id)
+                .entry(ip_address.base.host_id)
                 .or_default()
-                .push(interface);
+                .push(ip_address);
         }
 
         Ok(result)
     }
 
-    /// Get all interfaces for a specific subnet
+    /// Get all IP addresses for a specific subnet
     pub async fn get_for_subnet(&self, subnet_id: &Uuid) -> Result<Vec<IPAddress>> {
         let filter = StorableFilter::<IPAddress>::new_from_subnet_id(subnet_id);
         self.storage.get_all(filter).await
@@ -87,39 +87,39 @@ impl IPAddressService {
     // Position management helpers (for direct API operations)
     // =========================================================================
 
-    /// Get the next available position for a new interface on a host.
-    /// Returns the count of existing interfaces (which becomes the next position).
+    /// Get the next available position for a new IP address on a host.
+    /// Returns the count of existing IP addresses (which becomes the next position).
     pub async fn get_next_position_for_host(&self, host_id: &Uuid) -> Result<i32> {
         let existing = self.get_for_host(host_id).await?;
         Ok(existing.len() as i32)
     }
 
-    /// Validate that a position is valid for an interface update.
-    /// Position must be within range [0, count-1] and not conflict with other interfaces.
+    /// Validate that a position is valid for an IP address update.
+    /// Position must be within range [0, count-1] and not conflict with other IP addresses.
     pub async fn validate_position_for_update(
         &self,
-        interface_id: &Uuid,
+        ip_address_id: &Uuid,
         host_id: &Uuid,
         new_position: i32,
     ) -> Result<()> {
-        let all_interfaces = self.get_for_host(host_id).await?;
-        let max_position = (all_interfaces.len() as i32) - 1;
+        let all_ip_addresses = self.get_for_host(host_id).await?;
+        let max_position = (all_ip_addresses.len() as i32) - 1;
 
         if new_position < 0 || new_position > max_position {
             return Err(ValidationError::new(format!(
-                "Interface position {} is out of range. Valid positions are 0 to {}.",
+                "IP address position {} is out of range. Valid positions are 0 to {}.",
                 new_position, max_position
             ))
             .into());
         }
 
         // Check for duplicate position (excluding self)
-        if all_interfaces
+        if all_ip_addresses
             .iter()
-            .any(|i| i.id != *interface_id && i.base.position == new_position)
+            .any(|i| i.id != *ip_address_id && i.base.position == new_position)
         {
             return Err(ValidationError::new(format!(
-                "Interface position {} is already used by another interface.",
+                "IP address position {} is already used by another IP address.",
                 new_position
             ))
             .into());
@@ -128,29 +128,29 @@ impl IPAddressService {
         Ok(())
     }
 
-    /// Renumber all interfaces for a host to ensure sequential positions (0, 1, 2, ...).
-    /// Called after deleting interface(s) to close gaps.
+    /// Renumber all IP addresses for a host to ensure sequential positions (0, 1, 2, ...).
+    /// Called after deleting IP address(es) to close gaps.
     pub async fn renumber_ip_addresses_for_host(
         &self,
         host_id: &Uuid,
         authentication: AuthenticatedEntity,
     ) -> Result<()> {
-        let mut interfaces = self.get_for_host(host_id).await?;
+        let mut ip_addresses = self.get_for_host(host_id).await?;
 
-        // Interfaces are already ordered by position, so just assign sequential positions
+        // IP addresses are already ordered by position, so just assign sequential positions
         let mut needs_update = false;
-        for (i, iface) in interfaces.iter_mut().enumerate() {
+        for (i, ip) in ip_addresses.iter_mut().enumerate() {
             let expected_position = i as i32;
-            if iface.base.position != expected_position {
+            if ip.base.position != expected_position {
                 needs_update = true;
-                iface.base.position = expected_position;
+                ip.base.position = expected_position;
             }
         }
 
         // Only update if there are gaps to close
         if needs_update {
-            for iface in &mut interfaces {
-                self.update(iface, authentication.clone()).await?;
+            for ip in &mut ip_addresses {
+                self.update(ip, authentication.clone()).await?;
             }
         }
 

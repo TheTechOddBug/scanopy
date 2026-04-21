@@ -26,7 +26,7 @@ pub struct IPAddressBase {
     pub mac_address: Option<MacAddress>,
     #[schema(required)]
     pub name: Option<String>,
-    /// Position of this interface in the host's interface list (for ordering)
+    /// Position of this IP address in the host's IP address list (for ordering)
     #[serde(default)]
     pub position: i32,
 }
@@ -46,7 +46,7 @@ impl Default for IPAddressBase {
 }
 
 impl IPAddressBase {
-    /// Create a conceptual interface for a subnet.
+    /// Create a conceptual IP address for a subnet.
     /// `host_id` can be `Uuid::nil()` as a placeholder - server will set the correct one.
     pub fn new_conceptual(host_id: Uuid, subnet: &Subnet) -> Self {
         let ip_address = IpAddr::V4(Ipv4Addr::new(203, 0, 113, rand::rng().random_range(1..255)));
@@ -87,19 +87,19 @@ impl Hash for IPAddress {
     }
 }
 
-/// Two interfaces are equal when they represent the same logical interface:
-/// - Same IP address on the same subnet (primary network identity), OR
+/// Two IP-address records are equal when they represent the same logical address:
+/// - Same IP value on the same subnet (primary network identity), OR
 /// - Same database ID (both non-nil)
 ///
 /// MAC address is intentionally excluded from equality. VLAN sub-interfaces, bridge
-/// members, and bond interfaces legitimately share a parent's MAC while being distinct
-/// interfaces with different IPs/subnets. MAC-based matching was previously here (added
-/// in 3f69301b for Docker DHCP dedup) but caused VLAN sub-interfaces to collapse into one.
+/// members, and bond interfaces legitimately share a parent's MAC while exposing distinct
+/// IP addresses on different subnets. MAC-based matching was previously here (added
+/// in 3f69301b for Docker DHCP dedup) but caused IP addresses on VLAN sub-interfaces to collapse into one.
 ///
 /// MAC-based matching now lives in explicit call-site logic where the context allows
 /// distinguishing shared MACs (VLANs) from unique MACs (Docker/DHCP):
-/// - Interface upsert: `create_with_children()` in `hosts/service.rs`
-/// - Host dedup: `find_matching_host_by_interfaces()` in `hosts/service.rs`
+/// - IP address upsert: `create_with_children()` in `hosts/service.rs`
+/// - Host dedup: `find_matching_host_by_ip_addresses()` in `hosts/service.rs`
 /// - Host merge: `merge_hosts()` in `hosts/service.rs`
 impl PartialEq for IPAddress {
     fn eq(&self, other: &Self) -> bool {
@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(
             hash_of(&a),
             hash_of(&b),
-            "Equal interfaces must have equal hashes"
+            "Equal IP addresses must have equal hashes"
         );
     }
 

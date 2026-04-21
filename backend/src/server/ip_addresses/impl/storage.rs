@@ -20,7 +20,7 @@ use crate::server::{
     },
 };
 
-/// CSV row representation for Interface export
+/// CSV row representation for IPAddress export
 #[derive(Serialize)]
 pub struct IPAddressCsvRow {
     pub id: Uuid,
@@ -171,7 +171,7 @@ impl Entity for IPAddress {
 
     const ENTITY_NAME_SINGULAR: &'static str = "IP Address";
     const ENTITY_NAME_PLURAL: &'static str = "IP Addresses";
-    const ENTITY_DESCRIPTION: &'static str = "Network interfaces on hosts. Each host can have multiple interfaces with different IP addresses.";
+    const ENTITY_DESCRIPTION: &'static str = "IP addresses assigned to hosts. Each address belongs to a host and a subnet, optionally has a MAC address, and represents an observed or configured address on the network.";
 
     fn entity_category() -> EntityCategory {
         EntityCategory::NetworkInfrastructure

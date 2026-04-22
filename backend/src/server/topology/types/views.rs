@@ -16,7 +16,7 @@ use crate::server::{
 };
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
-use strum_macros::{EnumIter, IntoStaticStr};
+use strum_macros::{EnumIter, IntoStaticStr, VariantNames};
 use utoipa::ToSchema;
 
 use super::edges::{
@@ -41,6 +41,7 @@ use super::edges::{
     ToSchema,
     EnumIter,
     IntoStaticStr,
+    VariantNames,
 )]
 pub enum TopologyView {
     L2Physical,

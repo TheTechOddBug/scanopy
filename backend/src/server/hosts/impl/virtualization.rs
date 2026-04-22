@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::hash::Hash;
-use strum_macros::{EnumIter, IntoStaticStr};
+use strum_macros::{EnumIter, IntoStaticStr, VariantNames};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -18,7 +18,9 @@ use crate::server::{
     topology::types::views::{HasFilterValues, MetadataFilterType},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, IntoStaticStr, ToSchema)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, IntoStaticStr, VariantNames, ToSchema,
+)]
 #[schema(title = "HostVirtualization")]
 #[serde(tag = "type", content = "details")]
 pub enum HostVirtualization {

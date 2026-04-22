@@ -29,7 +29,7 @@ help:
 	@echo "  make generate-messages - Generate i18n message functions from messages/*.json"
 	@echo "  make generate-fixtures - Regenerate billing-plans.json and features.json from backend"
 	@echo "  make generate-schema - Generate database schema diagram (requires tbls)"
-	@echo "  make issue-license  - Issue a signed Scanopy license key (OP_REF=\"op://...\" [DAYS=365])"
+	@echo "  make issue-license  - Issue a signed Scanopy license key (requires OP_LICENSE_REF env var; [DAYS=365])"
 	@echo "  make clean          - Clean build artifacts and containers"
 	@echo "  make install-dev-mac      - Install development dependencies on macOS"
 	@echo "  make install-dev-linux    - Install development dependencies on Linux"
@@ -287,16 +287,17 @@ issue-license:
 		echo "  Install via: brew install 1password-cli"; \
 		exit 1; \
 	}
-	@if [ -z "$(OP_REF)" ]; then \
-		echo "Error: OP_REF is required."; \
-		echo "  Example: make issue-license OP_REF=\"op://Private/Scanopy Signing Key/private key\" DAYS=30"; \
+	@if [ -z "$(OP_LICENSE_REF)" ]; then \
+		echo "Error: OP_LICENSE_REF is not set."; \
+		echo "  Add to ~/.zshrc:  export OP_LICENSE_REF=\"op://<vault>/<item>/<field>\""; \
+		echo "  Or pass inline:   make issue-license OP_LICENSE_REF=\"op://...\""; \
 		exit 1; \
 	fi
 	@op whoami >/dev/null 2>&1 || { \
 		echo "Error: Not signed in to 1Password. Run 'eval \$$(op signin)' first."; \
 		exit 1; \
 	}
-	@cd backend && SCANOPY_LICENSE_SIGNING_KEY="$$(op read "$(OP_REF)")" \
+	@cd backend && SCANOPY_LICENSE_SIGNING_KEY="$$(op read "$(OP_LICENSE_REF)")" \
 		cargo run --quiet --bin license -- create --days $(DAYS)
 
 clean:

@@ -388,10 +388,10 @@ async fn main() -> anyhow::Result<()> {
                 |axum::extract::State(state): axum::extract::State<Arc<AppState>>| async move {
                     // Fail fast: sqlx's default pool acquire_timeout is 30s, which makes a
                     // down-DB readiness probe look like a hang to callers (k8s, kamal,
-                    // compat-check.sh). A 2s budget is still multiple round-trips on a
-                    // healthy pool.
+                    // compat-check.sh). 5s leaves headroom for cold TCP+TLS handshake to
+                    // managed Postgres (e.g., Neon) without flapping on transient blips.
                     let probe = tokio::time::timeout(
-                        Duration::from_secs(2),
+                        Duration::from_secs(5),
                         sqlx::query("SELECT 1").execute(&state.pool),
                     )
                     .await;

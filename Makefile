@@ -29,7 +29,7 @@ help:
 	@echo "  make generate-messages - Generate i18n message functions from messages/*.json"
 	@echo "  make generate-fixtures - Regenerate billing-plans.json and features.json from backend"
 	@echo "  make generate-schema - Generate database schema diagram (requires tbls)"
-	@echo "  make issue-license  - Issue a signed Scanopy license key (requires OP_LICENSE_REF env var; [DAYS=365])"
+	@echo "  make issue-license  - Issue a signed Scanopy license key (requires LICENSE_SECRET_CMD + LICENSE_SECRET_REF env vars; [DAYS=365])"
 	@echo "  make clean          - Clean build artifacts and containers"
 	@echo "  make install-dev-mac      - Install development dependencies on macOS"
 	@echo "  make install-dev-linux    - Install development dependencies on Linux"
@@ -282,23 +282,23 @@ stripe-webhook:
 	stripe listen --forward-to http://localhost:60072/api/billing/webhooks
 
 issue-license:
-	@command -v op >/dev/null 2>&1 || { \
-		echo "Error: 1Password CLI (op) is not installed."; \
-		echo "  Install via: brew install 1password-cli"; \
-		exit 1; \
-	}
-	@if [ -z "$(OP_LICENSE_REF)" ]; then \
-		echo "Error: OP_LICENSE_REF is not set."; \
-		echo "  Add to ~/.zshrc:  export OP_LICENSE_REF=\"op://<vault>/<item>/<field>\""; \
-		echo "  Or pass inline:   make issue-license OP_LICENSE_REF=\"op://...\""; \
+	@if [ -z "$(LICENSE_SECRET_CMD)" ]; then \
+		echo "Error: LICENSE_SECRET_CMD is not set."; \
+		echo "  This is the command that prints the PEM to stdout given a reference."; \
+		echo "  Add to ~/.zshrc:  export LICENSE_SECRET_CMD=\"<fetch-cmd>\""; \
 		exit 1; \
 	fi
-	@op whoami >/dev/null 2>&1 || { \
-		echo "Error: Not signed in to 1Password. Run 'eval \$$(op signin)' first."; \
+	@if [ -z "$(LICENSE_SECRET_REF)" ]; then \
+		echo "Error: LICENSE_SECRET_REF is not set."; \
+		echo "  This is the reference passed to LICENSE_SECRET_CMD."; \
+		echo "  Add to ~/.zshrc:  export LICENSE_SECRET_REF=\"<reference>\""; \
 		exit 1; \
+	fi
+	@cd backend && { \
+		secret=$$($(LICENSE_SECRET_CMD) "$(LICENSE_SECRET_REF)") || { echo "Error: secret-fetch command failed."; exit 1; }; \
+		[ -n "$$secret" ] || { echo "Error: secret-fetch returned an empty value."; exit 1; }; \
+		SCANOPY_LICENSE_SIGNING_KEY="$$secret" cargo run --quiet --bin license -- create --days $(DAYS); \
 	}
-	@cd backend && SCANOPY_LICENSE_SIGNING_KEY="$$(op read "$(OP_LICENSE_REF)")" \
-		cargo run --quiet --bin license -- create --days $(DAYS)
 
 clean:
 	make clean-db

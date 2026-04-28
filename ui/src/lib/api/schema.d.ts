@@ -2968,14 +2968,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-04-20T04:23:43.728453Z",
-             *       "id": "41f7b386-c0bc-447e-b8fe-da4111337732",
+             *       "created_at": "2026-04-22T15:57:37.855455Z",
+             *       "id": "884790f4-3e17-4623-a93a-8a9928de57f7",
              *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-04-20T04:23:43.728453Z"
+             *       "updated_at": "2026-04-22T15:57:37.855455Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -3262,14 +3262,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-04-20T04:23:43.711866Z",
-             *               "id": "dbcd3e5f-8f83-4d76-a762-44ef38e3c3ba",
+             *               "created_at": "2026-04-22T15:57:37.842909Z",
+             *               "id": "00326136-141c-4cc4-bd84-88a80e4cd640",
              *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-04-20T04:23:43.711866Z"
+             *               "updated_at": "2026-04-22T15:57:37.842909Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -3278,7 +3278,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "APC",
+             *           "service_definition": "Portainer",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3491,7 +3491,22 @@ export interface components {
                 has_email_opt_in: boolean;
                 has_email_service: boolean;
                 has_integrated_daemon: boolean;
+                /**
+                 * @description Hard expiry — the drop-dead date after which the server rejects
+                 *     the key. Referenced by the grace-period banner.
+                 */
                 license_expiry?: string | null;
+                /**
+                 * @description True when the license is past `intended_exp` but not yet past
+                 *     the hard `exp` — the silent grace window.
+                 */
+                license_in_grace_period: boolean;
+                /**
+                 * @description User-visible expiry — the date displayed to end users under
+                 *     normal operation. 7 days earlier than `license_expiry` for keys
+                 *     issued after grace-period support landed.
+                 */
+                license_intended_expiry?: string | null;
                 license_status?: string | null;
                 needs_cookie_consent: boolean;
                 oidc_providers: components["schemas"]["OidcProviderMetadata"][];
@@ -3542,14 +3557,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-04-20T04:23:43.723772Z",
-             *           "id": "7a60015a-2114-4bef-bd4c-dbdfb7737b4e",
+             *           "created_at": "2026-04-22T15:57:37.851712Z",
+             *           "id": "c6fccd0d-a3b0-42cd-a038-5354a135769b",
              *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-04-20T04:23:43.723772Z"
+             *           "updated_at": "2026-04-22T15:57:37.851712Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3558,7 +3573,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "APC",
+             *       "service_definition": "Portainer",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3919,14 +3934,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-04-20T04:23:43.712189Z",
-         *       "id": "2907a66b-305c-480c-a08c-46046e98643f",
+         *       "created_at": "2026-04-22T15:57:37.843118Z",
+         *       "id": "1aa2632c-fd09-40b1-b2fa-94a09ab2befb",
          *       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-04-20T04:23:43.712189Z"
+         *       "updated_at": "2026-04-22T15:57:37.843118Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -4111,7 +4126,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "APC",
+         *           "service_definition": "Portainer",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4980,14 +4995,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-04-20T04:23:43.711419Z",
-         *               "id": "c6196ca7-bf5f-4c59-aa08-9251c12bc937",
+         *               "created_at": "2026-04-22T15:57:37.842617Z",
+         *               "id": "5dcf3f92-04de-4250-8a9f-69b634017f58",
          *               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-04-20T04:23:43.711419Z"
+         *               "updated_at": "2026-04-22T15:57:37.842617Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4996,7 +5011,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "APC",
+         *           "service_definition": "Portainer",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -6013,7 +6028,22 @@ export interface components {
             has_email_opt_in: boolean;
             has_email_service: boolean;
             has_integrated_daemon: boolean;
+            /**
+             * @description Hard expiry — the drop-dead date after which the server rejects
+             *     the key. Referenced by the grace-period banner.
+             */
             license_expiry?: string | null;
+            /**
+             * @description True when the license is past `intended_exp` but not yet past
+             *     the hard `exp` — the silent grace window.
+             */
+            license_in_grace_period: boolean;
+            /**
+             * @description User-visible expiry — the date displayed to end users under
+             *     normal operation. 7 days earlier than `license_expiry` for keys
+             *     issued after grace-period support landed.
+             */
+            license_intended_expiry?: string | null;
             license_status?: string | null;
             needs_cookie_consent: boolean;
             oidc_providers: components["schemas"]["OidcProviderMetadata"][];
@@ -6160,14 +6190,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-04-20T04:23:43.712081Z",
-         *           "id": "8e7faba1-f325-42db-a982-c7d70a90d0d7",
+         *           "created_at": "2026-04-22T15:57:37.843045Z",
+         *           "id": "30177052-1c1c-4ab1-9772-5b24bafe1534",
          *           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-04-20T04:23:43.712081Z"
+         *           "updated_at": "2026-04-22T15:57:37.843045Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -6176,7 +6206,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "APC",
+         *       "service_definition": "Portainer",
          *       "source": {
          *         "type": "Manual"
          *       },

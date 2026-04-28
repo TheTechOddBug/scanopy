@@ -1,0 +1,103 @@
+{
+  "BillingPlan": [
+    "Community",
+    "Free",
+    "Starter",
+    "Pro",
+    "Team",
+    "Business",
+    "Enterprise",
+    "Demo",
+    "CommercialSelfHosted"
+  ],
+  "CredentialType": [
+    "SnmpV2c",
+    "DockerProxy",
+    "DockerSocket"
+  ],
+  "DaemonMode": [
+    "ServerPoll",
+    "DaemonPoll"
+  ],
+  "DiscoveryType": [
+    "SelfReport",
+    "Network",
+    "Docker",
+    "Unified"
+  ],
+  "EdgeStyle": [
+    "Straight",
+    "SmoothStep",
+    "Bezier"
+  ],
+  "EntityDiscriminants": [
+    "Organization",
+    "Invite",
+    "Share",
+    "Network",
+    "DaemonApiKey",
+    "UserApiKey",
+    "User",
+    "Tag",
+    "Discovery",
+    "Daemon",
+    "Host",
+    "Service",
+    "Port",
+    "Binding",
+    "IPAddress",
+    "Interface",
+    "Credential",
+    "Subnet",
+    "Vlan",
+    "Dependency",
+    "Topology",
+    "Unknown"
+  ],
+  "EntitySource": [
+    "Manual",
+    "System",
+    "Discovery",
+    "DiscoveryWithMatch",
+    "Unknown"
+  ],
+  "HostVirtualization": [
+    "Proxmox"
+  ],
+  "LldpChassisId": [
+    "ChassisComponent",
+    "InterfaceAlias",
+    "PortComponent",
+    "MacAddress",
+    "NetworkAddress",
+    "InterfaceName",
+    "LocallyAssigned"
+  ],
+  "LldpPortId": [
+    "InterfaceAlias",
+    "PortComponent",
+    "MacAddress",
+    "NetworkAddress",
+    "InterfaceName",
+    "AgentCircuitId",
+    "LocallyAssigned"
+  ],
+  "RunType": [
+    "Scheduled",
+    "Historical",
+    "AdHoc"
+  ],
+  "ServiceVirtualization": [
+    "Docker"
+  ],
+  "SubnetVirtualization": [
+    "Docker"
+  ],
+  "TopologyView": [
+    "L2Physical",
+    "L3Logical",
+    "Workloads",
+    "Application"
+  ],
+  "_note": "Extra variants beyond the current binary's VARIANTS list are preserved across regens for #[serde(alias = \"…\")] tolerance. To accept a breaking rename, delete the old entry from this file manually and declare Deploy-Mode: downtime for the release."
+}

@@ -10366,14 +10366,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-04-20T04:23:43.728453Z",
-              "id": "554a49fc-2521-4955-afa1-86e03952bed6",
+              "created_at": "2026-04-22T15:57:37.855455Z",
+              "id": "b4e6036e-f983-4b84-b97e-5e509b114bd0",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-20T04:23:43.728453Z"
+              "updated_at": "2026-04-22T15:57:37.855455Z"
             }
           },
           "error": {
@@ -11272,14 +11272,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-04-20T04:23:43.711884Z",
-                      "id": "a5a7c222-ce52-491f-aa5a-1d138e7ebcd6",
+                      "created_at": "2026-04-22T15:57:37.842931Z",
+                      "id": "cb907eaa-fdbf-4129-b12a-ab78da14b13c",
                       "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-04-20T04:23:43.711884Z"
+                      "updated_at": "2026-04-22T15:57:37.842931Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -11288,7 +11288,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "APC",
+                  "service_definition": "Portainer",
                   "source": {
                     "type": "Manual"
                   },
@@ -11795,7 +11795,8 @@
               "has_email_opt_in",
               "public_url",
               "needs_cookie_consent",
-              "deployment_type"
+              "deployment_type",
+              "license_in_grace_period"
             ],
             "properties": {
               "billing_enabled": {
@@ -11823,7 +11824,19 @@
                 "type": [
                   "string",
                   "null"
-                ]
+                ],
+                "description": "Hard expiry — the drop-dead date after which the server rejects\nthe key. Referenced by the grace-period banner."
+              },
+              "license_in_grace_period": {
+                "type": "boolean",
+                "description": "True when the license is past `intended_exp` but not yet past\nthe hard `exp` — the silent grace window."
+              },
+              "license_intended_expiry": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "User-visible expiry — the date displayed to end users under\nnormal operation. 7 days earlier than `license_expiry` for keys\nissued after grace-period support landed."
               },
               "license_status": {
                 "type": [
@@ -12011,14 +12024,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-04-20T04:23:43.723772Z",
-                  "id": "f9a1cecf-9e97-47fe-ba14-2e0903352981",
+                  "created_at": "2026-04-22T15:57:37.851688Z",
+                  "id": "f8b7203e-ee5a-4b4f-9742-e45baeec7fa7",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-20T04:23:43.723772Z"
+                  "updated_at": "2026-04-22T15:57:37.851688Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -12027,7 +12040,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "APC",
+              "service_definition": "Portainer",
               "source": {
                 "type": "Manual"
               },
@@ -13406,14 +13419,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-04-20T04:23:43.712215Z",
-          "id": "a76d2998-7ed3-4b40-a34d-ccd907a273ef",
+          "created_at": "2026-04-22T15:57:37.843148Z",
+          "id": "a9167def-df89-4721-9003-09b09788a564",
           "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-04-20T04:23:43.712215Z"
+          "updated_at": "2026-04-22T15:57:37.843148Z"
         }
       },
       "BindingBase": {
@@ -13943,7 +13956,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "APC",
+              "service_definition": "Portainer",
               "tags": [],
               "virtualization": null
             }
@@ -16467,14 +16480,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-04-20T04:23:43.711427Z",
-                  "id": "cb628bf5-04d6-44e1-bd6f-9295f37ae173",
+                  "created_at": "2026-04-22T15:57:37.842625Z",
+                  "id": "4d135e82-1d6f-4d43-aea1-e799930e06c0",
                   "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-04-20T04:23:43.711427Z"
+                  "updated_at": "2026-04-22T15:57:37.842625Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -16483,7 +16496,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "APC",
+              "service_definition": "Portainer",
               "source": {
                 "type": "Manual"
               },
@@ -18710,14 +18723,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-04-20T04:23:43.700520Z",
-                        "id": "6d4be516-287f-41f5-84bc-c3c9fb694ae6",
+                        "created_at": "2026-04-22T15:57:37.836286Z",
+                        "id": "c3d3e324-1768-4148-b9e5-b76820ddeb4e",
                         "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-04-20T04:23:43.700520Z"
+                        "updated_at": "2026-04-22T15:57:37.836286Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18726,7 +18739,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "APC",
+                    "service_definition": "Portainer",
                     "source": {
                       "type": "Manual"
                     },
@@ -18803,14 +18816,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-04-20T04:23:43.722486Z",
-                    "id": "e03f7c19-f241-4633-aa50-5b6500e4d89d",
+                    "created_at": "2026-04-22T15:57:37.850696Z",
+                    "id": "3a7eb417-69ca-47cb-a12c-c1bc171f06fe",
                     "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-04-20T04:23:43.722486Z"
+                    "updated_at": "2026-04-22T15:57:37.850696Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -18819,7 +18832,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "APC",
+                "service_definition": "Portainer",
                 "source": {
                   "type": "Manual"
                 },
@@ -19611,7 +19624,8 @@
           "has_email_opt_in",
           "public_url",
           "needs_cookie_consent",
-          "deployment_type"
+          "deployment_type",
+          "license_in_grace_period"
         ],
         "properties": {
           "billing_enabled": {
@@ -19639,7 +19653,19 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Hard expiry — the drop-dead date after which the server rejects\nthe key. Referenced by the grace-period banner."
+          },
+          "license_in_grace_period": {
+            "type": "boolean",
+            "description": "True when the license is past `intended_exp` but not yet past\nthe hard `exp` — the silent grace window."
+          },
+          "license_intended_expiry": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "User-visible expiry — the date displayed to end users under\nnormal operation. 7 days earlier than `license_expiry` for keys\nissued after grace-period support landed."
           },
           "license_status": {
             "type": [
@@ -20057,14 +20083,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-04-20T04:23:43.712104Z",
-              "id": "02c0998a-22d6-42d2-bb9e-95df60364aca",
+              "created_at": "2026-04-22T15:57:37.843073Z",
+              "id": "c4d0273e-8425-4942-9500-568ff878ddbc",
               "ip_address_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-04-20T04:23:43.712104Z"
+              "updated_at": "2026-04-22T15:57:37.843073Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20073,7 +20099,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "APC",
+          "service_definition": "Portainer",
           "source": {
             "type": "Manual"
           },

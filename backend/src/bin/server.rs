@@ -365,8 +365,12 @@ async fn main() -> anyhow::Result<()> {
         .allow_methods([Method::GET, Method::OPTIONS])
         .allow_headers([header::CONTENT_TYPE]);
 
-    // Health check endpoint without middleware (for kamal-proxy health checks)
-    // Metrics endpoint is now at /api/metrics with external service auth (see factory.rs)
+    // Liveness (/api/health): static response, answers "is the process alive?"
+    // Used by kamal-proxy and similar load-balancer health checks — must not depend on DB.
+    // Readiness (/api/health/ready): runs a cheap DB probe, answers "can this process serve
+    // traffic?" Used by the release backward-compat container harness to verify that the
+    // currently-deployed binary can still execute SQL against a freshly-migrated schema.
+    // Metrics endpoint is at /api/metrics with external service auth (see factory.rs).
     let app = Router::new()
         .route(
             "/api/health",
@@ -377,6 +381,48 @@ async fn main() -> anyhow::Result<()> {
                     "error": null
                 }))
             }),
+        )
+        .route(
+            "/api/health/ready",
+            axum::routing::get(
+                |axum::extract::State(state): axum::extract::State<Arc<AppState>>| async move {
+                    // Fail fast: sqlx's default pool acquire_timeout is 30s, which makes a
+                    // down-DB readiness probe look like a hang to callers (k8s, kamal,
+                    // compat-check.sh). 5s leaves headroom for cold TCP+TLS handshake to
+                    // managed Postgres (e.g., Neon) without flapping on transient blips.
+                    let probe = tokio::time::timeout(
+                        Duration::from_secs(5),
+                        sqlx::query("SELECT 1").execute(&state.pool),
+                    )
+                    .await;
+                    match probe {
+                        Ok(Ok(_)) => (
+                            axum::http::StatusCode::OK,
+                            axum::Json(serde_json::json!({
+                                "success": true,
+                                "data": "ready",
+                                "error": null
+                            })),
+                        ),
+                        Ok(Err(e)) => (
+                            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                            axum::Json(serde_json::json!({
+                                "success": false,
+                                "data": null,
+                                "error": format!("database unavailable: {}", e)
+                            })),
+                        ),
+                        Err(_) => (
+                            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                            axum::Json(serde_json::json!({
+                                "success": false,
+                                "data": null,
+                                "error": "database unavailable: probe timed out"
+                            })),
+                        ),
+                    }
+                },
+            ),
         )
         .with_state(state.clone())
         .layer(health_cors)
@@ -430,10 +476,26 @@ async fn main() -> anyhow::Result<()> {
                 tracing::info!(target: LOG_TARGET, "  License:         not required (community)");
             }
             scanopy::server::license::types::LicenseStatus::Valid(claims) => {
-                let exp = chrono::DateTime::from_timestamp(claims.exp, 0)
+                let intended_exp = chrono::DateTime::from_timestamp(claims.intended_exp, 0)
                     .map(|d| d.format("%Y-%m-%d").to_string())
                     .unwrap_or_else(|| "unknown".to_string());
-                tracing::info!(target: LOG_TARGET, "  License:         valid (expires {})", exp);
+                if license_status.in_grace_period() {
+                    let hard_exp = chrono::DateTime::from_timestamp(claims.exp, 0)
+                        .map(|d| d.format("%Y-%m-%d").to_string())
+                        .unwrap_or_else(|| "unknown".to_string());
+                    tracing::warn!(
+                        target: LOG_TARGET,
+                        "  License:         GRACE PERIOD (expired {}, hard lockout {})",
+                        intended_exp,
+                        hard_exp,
+                    );
+                } else {
+                    tracing::info!(
+                        target: LOG_TARGET,
+                        "  License:         valid (expires {})",
+                        intended_exp,
+                    );
+                }
             }
             scanopy::server::license::types::LicenseStatus::Expired(_) => {
                 tracing::warn!(target: LOG_TARGET, "  License:         EXPIRED — server is in read-only mode");
